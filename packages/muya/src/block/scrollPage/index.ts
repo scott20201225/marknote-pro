@@ -16,6 +16,14 @@ interface IBlurFocus {
     focus: Nullable<Content>;
 }
 
+function escapeRegExp(value: string) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+export function buildReferenceLabelRegExp(label: string) {
+    return new RegExp(`\\[${escapeRegExp(label)}\\](?!:)`);
+}
+
 export class ScrollPage extends Parent {
     private _blurFocus: IBlurFocus = { blur: null, focus: null };
 
@@ -118,7 +126,7 @@ export class ScrollPage extends Parent {
     }
 
     updateRefLinkAndImage(label: string) {
-        const REG = new RegExp(`\\[${label}\\](?!:)`);
+        const REG = buildReferenceLabelRegExp(label);
 
         this.breadthFirstTraverse((node) => {
             if (node.isContent() && REG.test(node.text))
