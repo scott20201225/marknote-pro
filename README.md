@@ -122,12 +122,7 @@ The logo is retired from the screenshot area. Below are real product shots taken
     </td>
   </tr>
   <tr>
-    <td align="center">
-      <img src="docs/assets/screenshots/footnotes-reference-checklist.png" alt="Footnotes, reference links, and checklist workflows" width="100%">
-      <br>
-      <sub>Footnotes, reference links, and checklist workflows</sub>
-    </td>
-    <td align="center">
+    <td align="center" colspan="2">
       <img src="docs/assets/screenshots/insert-palette.png" alt="Inline insert palette" width="100%">
       <br>
       <sub>Inline insert palette</sub>
