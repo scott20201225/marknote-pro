@@ -92,7 +92,55 @@
 
 ## Screenshot
 
-![](docs/assets/marktextpro.png?raw=true)
+The logo is retired from the screenshot area. Below are real product shots taken from the current MarkTextPro build.
+
+[Open the full feature showcase image](docs/assets/screenshots/showcase-overview.png)
+
+<table>
+  <tr>
+    <td align="center">
+      <img src="docs/assets/screenshots/warning-callouts.png" alt="Five warning callout styles" width="100%">
+      <br>
+      <sub>Five warning callout styles</sub>
+    </td>
+    <td align="center">
+      <img src="docs/assets/screenshots/paragraph-menu-warning.png" alt="Paragraph menu and warning callouts" width="100%">
+      <br>
+      <sub>Paragraph menu and warning callouts</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="docs/assets/screenshots/task-status-bulk-action.png" alt="Bulk task status editing" width="100%">
+      <br>
+      <sub>Bulk task status editing</sub>
+    </td>
+    <td align="center">
+      <img src="docs/assets/screenshots/list-indent-context-menu.png" alt="List indent and outdent context menu" width="100%">
+      <br>
+      <sub>List indent and outdent context menu</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="docs/assets/screenshots/footnotes-reference-checklist.png" alt="Footnotes, reference links, and checklist workflows" width="100%">
+      <br>
+      <sub>Footnotes, reference links, and checklist workflows</sub>
+    </td>
+    <td align="center">
+      <img src="docs/assets/screenshots/insert-palette.png" alt="Inline insert palette" width="100%">
+      <br>
+      <sub>Inline insert palette</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" colspan="2">
+      <img src="docs/assets/screenshots/table-toolkit-overview.png" alt="Table editing toolkit overview" width="100%">
+      <br>
+      <sub>Table editing toolkit overview</sub>
+    </td>
+  </tr>
+</table>
 
 ## Features
 
