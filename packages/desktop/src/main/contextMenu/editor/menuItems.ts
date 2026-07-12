@@ -5,6 +5,7 @@ import { t } from '../../i18n'
 
 const LIST_INDENT_ACCELERATOR = process.platform === 'darwin' ? 'Command+]' : 'Ctrl+]'
 const LIST_OUTDENT_ACCELERATOR = process.platform === 'darwin' ? 'Command+[' : 'Ctrl+['
+const HYPERLINK_ACCELERATOR = process.platform === 'darwin' ? 'Command+L' : 'Ctrl+L'
 
 // Use function form to avoid calling the translation function during module load
 export const getCUT = (): MenuItemConstructorOptions => ({
@@ -71,6 +72,19 @@ export const getInsertAfter = (): MenuItemConstructorOptions => ({
   click(_menuItem, targetWindow) {
     if (targetWindow) {
       ;(targetWindow as BrowserWindow).webContents.send('mt::cm-insert-paragraph', 'after')
+    }
+  }
+})
+
+export const getHyperlink = (): MenuItemConstructorOptions => ({
+  label: t('menu.format.hyperlink'),
+  id: 'contextHyperlinkMenuItem',
+  accelerator: HYPERLINK_ACCELERATOR,
+  click(_menuItem, targetWindow) {
+    if (targetWindow) {
+      ;(targetWindow as BrowserWindow).webContents.send('mt::editor-format-action', {
+        type: 'link'
+      })
     }
   }
 })
@@ -175,6 +189,7 @@ export const COPY_AS_HTML = getCopyAsHtml()
 export const PASTE_AS_PLAIN_TEXT = getPasteAsPlainText()
 export const INSERT_BEFORE = getInsertBefore()
 export const INSERT_AFTER = getInsertAfter()
+export const HYPERLINK = getHyperlink()
 export const ORDERED_LIST = getOrderedList()
 export const BULLET_LIST = getBulletList()
 export const TASK_LIST = getTaskList()

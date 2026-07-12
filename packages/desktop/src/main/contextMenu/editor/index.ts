@@ -9,6 +9,7 @@ import {
   SEPARATOR,
   getInsertBefore,
   getInsertAfter,
+  getHyperlink,
   getOrderedList,
   getBulletList,
   getTaskList,
@@ -107,11 +108,16 @@ const getContextItems = (selectionText: string): MenuItemConstructorOptions[] =>
     inBulletList
   } = getParagraphContextState()
   const shouldShowParagraphListActions = hasSelectedText(selectionText)
+  const shouldShowLineHyperlinkAction = !hasSelectedText(selectionText)
   const shouldShowTaskStatusActions =
     canSetTaskStatus && hasSelectedText(selectionText) && hasLineBreak(selectionText)
   const shouldShowListIndentation =
     (inOrderedList || inBulletList) &&
     (!hasSelectedText(selectionText) || !hasLineBreak(selectionText))
+
+  if (shouldShowLineHyperlinkAction) {
+    items.push(getHyperlink())
+  }
 
   if (shouldShowParagraphListActions) {
     const paragraphItems: MenuItemConstructorOptions[] = []
