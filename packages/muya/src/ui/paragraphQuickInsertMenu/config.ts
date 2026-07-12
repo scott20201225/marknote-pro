@@ -197,6 +197,12 @@ export const MENU_CONFIG: IQuickInsertMenuItem[] = [
                 icon: imageIcon,
             },
             {
+                title: 'Embed link',
+                subTitle: '[text](https://example.com)',
+                label: 'choose-link',
+                icon: linkIcon,
+            },
+            {
                 title: 'Link Reference',
                 subTitle: '[label]: https://example.com',
                 label: 'reference-definition',

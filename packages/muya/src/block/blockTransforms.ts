@@ -312,11 +312,11 @@ export function canTurnInto(block: Parent, label: string): boolean {
             if (paragraphIsEmpty)
                 return label !== 'frontmatter';
 
-            return /paragraph|atx-heading|block-quote|order-list|bullet-list|task-list|admonition /.test(label);
+            return /paragraph|atx-heading|block-quote|order-list|bullet-list|task-list|admonition |choose-link/.test(label);
         }
 
         case 'atx-heading':
-            return /atx-heading|paragraph|admonition /.test(label);
+            return /atx-heading|paragraph|admonition |choose-link/.test(label);
 
         case 'order-list':
             // fall through

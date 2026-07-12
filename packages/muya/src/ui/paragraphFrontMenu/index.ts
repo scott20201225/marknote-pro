@@ -339,11 +339,11 @@ export class ParagraphFrontMenu extends BaseFloat {
 
     private _turnIntoBlock(label: string, block: Parent, oldState: TState) {
         const { muya } = this;
-        if (label === 'choose-image') {
+        if (label === 'choose-image' || label === 'choose-link') {
             const cursorBlock = block.firstContentInDescendant();
             if (cursorBlock instanceof Format) {
                 cursorBlock.setCursor(0, 0, true);
-                cursorBlock.format('image');
+                cursorBlock.format(label === 'choose-image' ? 'image' : 'link');
             }
             return null;
         }

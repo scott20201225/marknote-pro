@@ -287,10 +287,10 @@ export class ParagraphQuickInsertMenu extends BaseScrollFloat {
             return;
         }
 
-        if (label === 'choose-image') {
+        if (label === 'choose-image' || label === 'choose-link') {
             block.text = '';
             block.setCursor(0, 0, true);
-            block.format('image');
+            block.format(label === 'choose-image' ? 'image' : 'link');
             return;
         }
 
