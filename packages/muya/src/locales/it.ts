@@ -41,6 +41,7 @@ export const it = {
         'Plantuml': 'PlantUML',
         'Flowchart': 'Diagramma di flusso',
         'Sequence': 'Diagramma di sequenza',
+        'Hyperlink': 'Collegamento ipertestuale',
         'Link Reference': 'Riferimento collegamento',
         'Footnotes': 'Note a piè di pagina',
         'basic blocks': 'blocchi di base',

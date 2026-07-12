@@ -44,6 +44,7 @@ export const zhCN = {
         'Plantuml': 'Plantuml',
         'Flowchart': '流程图',
         'Sequence': '时序图',
+        'Hyperlink': '超链接',
         'Link Reference': '链接引用',
         'Footnotes': '脚注',
         'basic blocks': '基础块',

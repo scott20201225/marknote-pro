@@ -13,6 +13,7 @@ import header6Icon from '../../assets/icons/heading_6/2.png';
 import hrIcon from '../../assets/icons/horizontal_line/2.png';
 import htmlIcon from '../../assets/icons/html/2.png';
 import imageIcon from '../../assets/icons/image/2.png';
+import linkReferenceIcon from '../../assets/icons/link_jump/2.png';
 import mathBlockIcon from '../../assets/icons/math/2.png';
 import mermaidIcon from '../../assets/icons/mermaid/2.png';
 import newTableIcon from '../../assets/icons/new_table/2.png';
@@ -197,7 +198,7 @@ export const MENU_CONFIG: IQuickInsertMenuItem[] = [
                 icon: imageIcon,
             },
             {
-                title: 'Embed link',
+                title: 'Hyperlink',
                 subTitle: '[text](https://example.com)',
                 label: 'choose-link',
                 icon: linkIcon,
@@ -206,7 +207,7 @@ export const MENU_CONFIG: IQuickInsertMenuItem[] = [
                 title: 'Link Reference',
                 subTitle: '[label]: https://example.com',
                 label: 'reference-definition',
-                icon: linkIcon,
+                icon: linkReferenceIcon,
             },
             {
                 title: 'Footnotes',

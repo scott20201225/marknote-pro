@@ -44,6 +44,7 @@ export const zhTW = {
         'Plantuml': 'Plantuml',
         'Flowchart': '流程圖',
         'Sequence': '時序圖',
+        'Hyperlink': '超連結',
         'Link Reference': '連結引用',
         'Footnotes': '腳註',
         'basic blocks': '基礎區塊',

@@ -44,6 +44,7 @@ export const en = {
         'Plantuml': 'Plantuml',
         'Flowchart': 'Flowchart',
         'Sequence': 'Sequence',
+        'Hyperlink': 'Hyperlink',
         'Link Reference': 'Link Reference',
         'Footnotes': 'Footnotes',
         'basic blocks': 'basic blocks',

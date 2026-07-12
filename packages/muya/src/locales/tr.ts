@@ -44,6 +44,7 @@ export const tr = {
         'Plantuml': 'Plantuml',
         'Flowchart': 'Akış Şeması',
         'Sequence': 'Sekans Diyagramı',
+        'Hyperlink': 'Köprü',
         'Link Reference': 'Bağlantı Referansı',
         'Footnotes': 'Dipnotlar',
         'basic blocks': 'temel bloklar',

@@ -44,6 +44,7 @@ export const pt = {
         'Plantuml': 'Plantuml',
         'Flowchart': 'Fluxograma',
         'Sequence': 'Diagrama de sequência',
+        'Hyperlink': 'Hiperlink',
         'Link Reference': 'Referência de link',
         'Footnotes': 'Notas de rodapé',
         'basic blocks': 'blocos básicos',
