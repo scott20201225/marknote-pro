@@ -582,6 +582,14 @@ class Content extends TreeNode {
      * @param {boolean} needUpdate
      */
     setCursor(begin: number, end: number, needUpdate = false) {
+        // Detached content blocks can briefly survive after their parent chain
+        // was replaced/removed. In that state, computing `this.path` may walk
+        // into container getters that assume a live parent and crash on null.
+        // Ignore cursor requests on orphaned content; the caller should move
+        // the caret onto a live block instead.
+        if (this.parent == null || this.outMostBlock == null)
+            return;
+
         const anchor = { offset: begin, block: this, path: this.path };
         const focus = { offset: end, block: this, path: this.path };
 

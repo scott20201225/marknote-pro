@@ -1,5 +1,5 @@
 {
-  "autoSave": false,
+  "autoSave": true,
   "autoSaveDelay": 5000,
   "titleBarStyle": "custom",
   "openFilesInNewWindow": false,

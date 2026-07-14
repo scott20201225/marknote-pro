@@ -141,7 +141,7 @@ interface ModeTogglePayload {
 
 export const usePreferencesStore = defineStore('preferences', {
   state: (): PreferencesState => ({
-    autoSave: false,
+    autoSave: true,
     autoSaveDelay: 5000,
     titleBarStyle: isWindows ? 'native' : 'custom',
     openFilesInNewWindow: false,
