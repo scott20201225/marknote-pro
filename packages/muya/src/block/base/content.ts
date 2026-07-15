@@ -590,8 +590,16 @@ class Content extends TreeNode {
         if (this.parent == null || this.outMostBlock == null)
             return;
 
-        const anchor = { offset: begin, block: this, path: this.path };
-        const focus = { offset: end, block: this, path: this.path };
+        let path;
+
+        try {
+            path = this.path;
+        } catch {
+            return;
+        }
+
+        const anchor = { offset: begin, block: this, path };
+        const focus = { offset: end, block: this, path };
 
         if (needUpdate)
             this.update({ anchor, focus, block: this });
