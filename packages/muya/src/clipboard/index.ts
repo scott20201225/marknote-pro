@@ -150,6 +150,12 @@ class Clipboard {
         this.copyType = CopyType.NORMAL;
     }
 
+    copyAsExcel() {
+        this.copyType = CopyType.COPY_AS_EXCEL;
+        document.execCommand('copy');
+        this.copyType = CopyType.NORMAL;
+    }
+
     // Chromium removed programmatic clipboard reads via
     // `document.execCommand('paste')` — it returns false and fires no paste
     // event, so the old flag + execCommand approach pasted nothing. Read the

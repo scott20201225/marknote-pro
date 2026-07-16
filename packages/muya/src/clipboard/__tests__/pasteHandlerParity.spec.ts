@@ -132,14 +132,18 @@ function makeClipboard(
     return clipboard;
 }
 
-function makePasteEvent(data: Record<string, string> = {}) {
+function makePasteEvent(data: Record<string, string> = {}, files: File[] = []) {
     return {
         preventDefault: vi.fn(),
         stopPropagation: vi.fn(),
         clipboardData: {
             getData: (type: string) => data[type] ?? '',
-            files: [],
-            items: [],
+            files,
+            items: files.map(file => ({
+                kind: 'file',
+                type: file.type,
+                getAsFile: () => file,
+            })),
         },
     } as unknown as ClipboardEvent;
 }
@@ -383,5 +387,93 @@ describe('pasteHandler — table-cell paste guards (sub-item 4)', () => {
         );
         expect(anchor.text).toBe('old');
         expect(cursorContent.setCursor).toHaveBeenCalledWith(2, 2, true);
+    });
+
+    it('pastes TSV from Excel into the current table from the current cell', async () => {
+        installLoadBlockSpy([]);
+        const wrapper = makeWrapper('table');
+        const anchor = makeAnchorBlock('table.cell.content', 'old', wrapper, 0);
+        const cursorContent = {
+            text: '2',
+            setCursor: vi.fn(),
+        };
+        const fakeTable = {
+            pasteTableStateAt: vi.fn(() => cursorContent),
+        };
+        const fakeCell = {
+            rowOffset: 1,
+            columnOffset: 1,
+            table: fakeTable,
+        };
+        anchor.closestBlock = vi.fn((name: string) => {
+            if (name === 'table.cell')
+                return fakeCell;
+            if (name === 'table')
+                return fakeTable;
+            return null;
+        });
+        const clipboard = makeClipboard(anchor);
+
+        await clipboard.pasteHandler(makePasteEvent({
+            'text/plain': 'x\ty\n1\t2',
+        }));
+
+        expect(fakeTable.pasteTableStateAt).toHaveBeenCalledWith(
+            1,
+            1,
+            expect.objectContaining({ name: 'table' }),
+        );
+        expect(anchor.text).toBe('old');
+        expect(cursorContent.setCursor).toHaveBeenCalledWith(1, 1, true);
+    });
+});
+
+describe('pasteHandler — TSV clipboard promotion', () => {
+    it('turns pasted TSV into a real table when the cursor is in a paragraph', async () => {
+        const created: IRecordedBlock[] = [];
+        installLoadBlockSpy(created);
+        const wrapper = makeWrapper('paragraph');
+        const anchor = makeAnchorBlock('paragraph.content', '', wrapper, 0);
+        const clipboard = makeClipboard(anchor);
+
+        await clipboard.pasteHandler(makePasteEvent({
+            'text/plain': 'name\tage\nscott\t18',
+        }));
+
+        expect(created.some(block => block.name === 'table')).toBe(true);
+    });
+
+    it('prefers TSV table data over a parallel clipboard bitmap from Excel', async () => {
+        const created: IRecordedBlock[] = [];
+        installLoadBlockSpy(created);
+        const wrapper = makeWrapper('paragraph');
+        const anchor = makeAnchorBlock('', '', wrapper, 0);
+        const clipboard = makeClipboard(anchor, {
+            imageAction: vi.fn().mockResolvedValue('assets/pasted.png'),
+        });
+        const pngFile = new File([new Uint8Array([0x89, 0x50, 0x4E, 0x47])], 'excel.png', {
+            type: 'image/png',
+        });
+
+        await clipboard.pasteHandler(makePasteEvent({
+            'text/plain': 'A\tB\n1\t2',
+        }, [pngFile]));
+
+        expect(created.some(block => block.name === 'table')).toBe(true);
+        expect(anchor.text).toBe('');
+    });
+
+    it('keeps TSV literal inside code blocks', async () => {
+        installLoadBlockSpy([]);
+        const wrapper = makeWrapper('code-block');
+        const anchor = makeAnchorBlock('codeblock.content', 'pre', wrapper, 3);
+        const clipboard = makeClipboard(anchor);
+
+        await clipboard.pasteHandler(makePasteEvent({
+            'text/plain': 'x\ty',
+        }));
+
+        expect(anchor.text).toBe('prex\ty');
+        expect(anchor.setCursor).toHaveBeenCalledWith(6, 6, true);
     });
 });

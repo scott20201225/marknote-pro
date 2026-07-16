@@ -43,6 +43,37 @@ function buildHtmlOptions(options: Muya['options']) {
     return { footnote, frontMatter, math, isGitlabCompatibilityEnabled, superSubScript };
 }
 
+function escapeHtml(text: string): string {
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function tableCellTextToHtml(text: string): string {
+    return escapeHtml(text).replace(/&lt;br\s*\/?&gt;/gi, '<br>');
+}
+
+function getTableSelectionExcelClipboardData(
+    clipboard: Clipboard,
+): Nullable<IClipboardPayload> {
+    const state = clipboard.selection.table.getStateForCopy();
+    if (state == null)
+        return null;
+
+    const rows = state.children.map(row => row.children.map(cell => cell.text ?? ''));
+    const text = rows.map(row => row.join('\t')).join('\n');
+    const html = [
+        '<table>',
+        ...rows.map(row => `<tr>${row.map(cell => `<td>${tableCellTextToHtml(cell)}</td>`).join('')}</tr>`),
+        '</table>',
+    ].join('');
+
+    return { html, text };
+}
+
 /**
  * Clipboard payload for a frozen cross-cell table selection, or `null` when
  * none is active. A single selected cell with text yields its plain text and
@@ -400,8 +431,10 @@ export function writeClipboardData(
     }
 
     const { copyType } = clipboard;
-
-    const { html, text } = clipboard.getClipboardData();
+    const { html, text }
+        = copyType === CopyType.COPY_AS_EXCEL
+            ? getTableSelectionExcelClipboardData(clipboard) ?? clipboard.getClipboardData()
+            : clipboard.getClipboardData();
 
     // Mirror native copy behavior: leave the system clipboard untouched
     // when the selection has nothing to contribute, so a previous copy
@@ -435,6 +468,14 @@ export function writeClipboardData(
         // the `normal` branch; `copyAsHtml` instead blanks text/html and
         // drops the markup into text/plain as literal source.
         case CopyType.COPY_AS_RICH: {
+            if (text.length === 0)
+                return;
+            event.clipboardData.setData('text/html', html);
+            event.clipboardData.setData('text/plain', text);
+            break;
+        }
+
+        case CopyType.COPY_AS_EXCEL: {
             if (text.length === 0)
                 return;
             event.clipboardData.setData('text/html', html);

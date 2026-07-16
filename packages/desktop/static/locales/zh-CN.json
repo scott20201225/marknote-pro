@@ -239,7 +239,8 @@
       "rename": "重命名",
       "copyPath": "复制路径",
       "showInFolder": "在文件夹中显示"
-    }
+    },
+    "copyAsExcel": "复制为 Excel"
   },
   "search": {
     "searchPlaceholder": "搜索",

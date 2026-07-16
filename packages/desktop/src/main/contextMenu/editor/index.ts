@@ -5,6 +5,7 @@ import {
   getPASTE,
   getCopyAsRich,
   getCopyAsHtml,
+  getCopyAsExcel,
   getPasteAsPlainText,
   SEPARATOR,
   getInsertBefore,
@@ -59,7 +60,12 @@ interface ParagraphContextState {
   inBulletList: boolean
 }
 
-const COPY_RELATED_MENU_IDS = new Set(['copyMenuItem', 'copyAsRichMenuItem', 'copyAsHtmlMenuItem'])
+const COPY_RELATED_MENU_IDS = new Set([
+  'copyMenuItem',
+  'copyAsRichMenuItem',
+  'copyAsHtmlMenuItem',
+  'copyAsExcelMenuItem'
+])
 const CUT_RELATED_MENU_IDS = new Set(['cutMenuItem'])
 
 const hasSelectedText = (selectionText: string): boolean => selectionText.trim().length > 0
@@ -105,7 +111,10 @@ const getParagraphContextState = (): ParagraphContextState => {
 }
 
 // Dynamically fetch menu items to ensure correct translation
-const getContextItems = (selectionText: string): MenuItemConstructorOptions[] => {
+const getContextItems = (
+  selectionText: string,
+  editorContextState: EditorContextState | null = null
+): MenuItemConstructorOptions[] => {
   const items: MenuItemConstructorOptions[] = [getInsertBefore(), getInsertAfter()]
   const {
     canCreateOrderedList,
@@ -116,12 +125,14 @@ const getContextItems = (selectionText: string): MenuItemConstructorOptions[] =>
     inBulletList
   } = getParagraphContextState()
   const shouldShowParagraphListActions = hasSelectedText(selectionText)
-  const shouldShowLineHyperlinkAction = !hasSelectedText(selectionText)
+  const shouldShowLineHyperlinkAction =
+    !hasSelectedText(selectionText) && editorContextState?.hasTableSelection !== true
   const shouldShowTaskStatusActions =
     canSetTaskStatus && hasSelectedText(selectionText) && hasLineBreak(selectionText)
   const shouldShowListIndentation =
     (inOrderedList || inBulletList) &&
     (!hasSelectedText(selectionText) || !hasLineBreak(selectionText))
+  const shouldShowCopyAsExcel = editorContextState?.hasTableSelection === true
 
   if (shouldShowLineHyperlinkAction) {
     items.push(getHyperlink())
@@ -154,6 +165,7 @@ const getContextItems = (selectionText: string): MenuItemConstructorOptions[] =>
     SEPARATOR,
     getCopyAsRich(),
     getCopyAsHtml(),
+    ...(shouldShowCopyAsExcel ? [getCopyAsExcel()] : []),
     getPasteAsPlainText()
   )
 
@@ -212,7 +224,7 @@ const popupEditorContextMenu = async (
       menu.append(new MenuItem(SEPARATOR))
     }
 
-    const contextItems = getContextItems(selectionText)
+    const contextItems = getContextItems(selectionText, editorContextState)
     contextItems.forEach((item) => {
       if (!item.id) {
         return

@@ -15,7 +15,13 @@ import { tokenizer } from '../inlineRenderer/lexer';
 import HtmlToMarkdown from '../state/htmlToMarkdown';
 import { MarkdownToState } from '../state/markdownToState';
 import { isAnyListState, isParagraphState } from '../state/types';
-import { getClipboardImageFile, getCopyTextType, isStandaloneTableHtml, normalizePastedHTML } from '../utils/paste';
+import {
+    getClipboardImageFile,
+    getCopyTextType,
+    isStandaloneTableHtml,
+    normalizePastedHTML,
+    tabularTextToMarkdownTable,
+} from '../utils/paste';
 import { mergePasteIntoHeading } from './mergePasteIntoHeading';
 import { tryPasteImage, tryReplaceSelectedImage } from './pasteImage';
 import { PasteType } from './types';
@@ -470,6 +476,16 @@ function parseSingleTableState(muya: Muya, markdown: string): Nullable<ITableSta
     return (states.find(state => state.name === 'table') as ITableState | undefined) ?? null;
 }
 
+function hasPreferredTablePayload(text: string, html: string): boolean {
+    if (tabularTextToMarkdownTable(text) != null)
+        return true;
+
+    if (isStandaloneTableHtml(text))
+        return true;
+
+    return /<table\b/i.test(html);
+}
+
 function tryPasteTableIntoExistingTable(
     clipboard: Clipboard,
     anchorBlock: Content,
@@ -667,15 +683,21 @@ interface IPasteData {
 async function applyPaste(clipboard: Clipboard, data: IPasteData): Promise<void> {
     const { muya } = clipboard;
     const { bulletListMarker } = muya.options;
+    const normalizedText = data.text.replace(/\r\n?/g, '\n');
+    const preferTablePayload = hasPreferredTablePayload(normalizedText, data.html);
 
     // A selected inline image collapses the text selection, so handle the
     // "paste an image over a selected image" replace before reading the
     // (now absent) text selection.
-    if (clipboard.selection.image && await tryReplaceSelectedImage(clipboard, data.imageFile))
+    if (
+        !preferTablePayload
+        && clipboard.selection.image
+        && await tryReplaceSelectedImage(clipboard, data.imageFile)
+    )
         return;
 
     const selection = clipboard.selection.getSelection();
-    const tableAnchorContent = clipboard.selection.table.anchorCell?.firstChild as Content | undefined;
+    const tableAnchorContent = clipboard.selection.table?.anchorCell?.firstChild as Content | undefined;
     const anchorBlock = selection?.anchor.block ?? tableAnchorContent;
     const isSelectionInSameBlock = selection?.isSelectionInSameBlock ?? tableAnchorContent != null;
 
@@ -688,7 +710,7 @@ async function applyPaste(clipboard: Clipboard, data: IPasteData): Promise<void>
     const hasClipboardHtml = html !== '';
     // Normalize Windows CRLF / lone CR to LF so every downstream `split('\n')`
     // and offset calculation sees one newline convention (muyajs strips \r).
-    const text = data.text.replace(/\r\n?/g, '\n');
+    const text = normalizedText;
 
     if (!isSelectionInSameBlock) {
         clipboard.cutHandler();
@@ -699,7 +721,7 @@ async function applyPaste(clipboard: Clipboard, data: IPasteData): Promise<void>
     // When the clipboard holds an image — either a file resolved to a path
     // or an in-memory bitmap — insert it as an inline image
     // routed through `imageAction`, short-circuiting the text/HTML paste.
-    if (await tryPasteImage(clipboard, anchorBlock, imageFile))
+    if (!preferTablePayload && await tryPasteImage(clipboard, anchorBlock, imageFile))
         return;
 
     // Support pasted URLs from Firefox.
@@ -727,6 +749,7 @@ async function applyPaste(clipboard: Clipboard, data: IPasteData): Promise<void>
             ),
     });
     const copyType = getCopyTextType(html, text, pasteType);
+    const tableMarkdownFromText = tabularTextToMarkdownTable(text);
 
     if (/html|text/.test(copyType)) {
         const markdown
@@ -734,7 +757,14 @@ async function applyPaste(clipboard: Clipboard, data: IPasteData): Promise<void>
                 ? new HtmlToMarkdown({ bulletListMarker }).generate(html)
                 : text;
 
-        if (tryPasteTableIntoExistingTable(clipboard, anchorBlock, markdown))
+        const parseableMarkdown
+            = tableMarkdownFromText != null
+                && anchorBlock.blockName !== 'language-input'
+                && anchorBlock.blockName !== 'codeblock.content'
+                ? tableMarkdownFromText
+                : markdown;
+
+        if (tryPasteTableIntoExistingTable(clipboard, anchorBlock, parseableMarkdown))
             return;
 
         const ctx = buildPasteContext(anchorBlock);
@@ -754,7 +784,7 @@ async function applyPaste(clipboard: Clipboard, data: IPasteData): Promise<void>
         if (isLiteralAnchor || isPlainInlineSpaces)
             applyLiteralPaste(clipboard, ctx, isPlainInlineSpaces ? text : markdown);
         else
-            applyParsedPaste(clipboard, ctx, markdown);
+            applyParsedPaste(clipboard, ctx, parseableMarkdown);
     }
     else if (pasteType === PasteType.PASTE_AS_PLAIN_TEXT) {
         const ctx = buildPasteContext(anchorBlock);

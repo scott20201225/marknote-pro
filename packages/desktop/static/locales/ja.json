@@ -239,7 +239,8 @@
       "rename": "名前を変更",
       "copyPath": "パスをコピー",
       "showInFolder": "フォルダで表示"
-    }
+    },
+    "copyAsExcel": "Excelとしてコピー"
   },
   "search": {
     "searchPlaceholder": "検索",

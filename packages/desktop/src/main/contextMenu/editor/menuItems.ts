@@ -46,6 +46,16 @@ export const getCopyAsHtml = (): MenuItemConstructorOptions => ({
   }
 })
 
+export const getCopyAsExcel = (): MenuItemConstructorOptions => ({
+  label: t('contextMenu.copyAsExcel'),
+  id: 'copyAsExcelMenuItem',
+  click(_menuItem, targetWindow) {
+    if (targetWindow) {
+      ;(targetWindow as BrowserWindow).webContents.send('mt::cm-copy-as-excel')
+    }
+  }
+})
+
 export const getPasteAsPlainText = (): MenuItemConstructorOptions => ({
   label: t('contextMenu.pasteAsPlainText'),
   id: 'pasteAsPlainTextMenuItem',
@@ -186,6 +196,7 @@ export const COPY = getCOPY()
 export const PASTE = getPASTE()
 export const COPY_AS_RICH = getCopyAsRich()
 export const COPY_AS_HTML = getCopyAsHtml()
+export const COPY_AS_EXCEL = getCopyAsExcel()
 export const PASTE_AS_PLAIN_TEXT = getPasteAsPlainText()
 export const INSERT_BEFORE = getInsertBefore()
 export const INSERT_AFTER = getInsertAfter()

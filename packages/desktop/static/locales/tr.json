@@ -239,7 +239,8 @@
       "rename": "Yeniden Adlandır",
       "copyPath": "Yolu kopyala",
       "showInFolder": "Klasörde göster"
-    }
+    },
+    "copyAsExcel": "Excel olarak kopyala"
   },
   "search": {
     "searchPlaceholder": "Ara",

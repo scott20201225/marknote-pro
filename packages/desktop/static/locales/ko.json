@@ -239,7 +239,8 @@
       "rename": "이름 바꾸기",
       "copyPath": "경로 복사",
       "showInFolder": "폴더에서 보기"
-    }
+    },
+    "copyAsExcel": "Excel로 복사"
   },
   "search": {
     "searchPlaceholder": "검색",

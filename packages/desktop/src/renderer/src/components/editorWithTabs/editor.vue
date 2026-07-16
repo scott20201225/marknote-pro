@@ -1118,13 +1118,14 @@ const handleSelectAll = () => {
   }
 }
 
-// Custom copyAsRich copyAsHtml pasteAsPlainText.
+// Custom copyAsRich copyAsHtml copyAsExcel pasteAsPlainText.
 // `copyAsRich` writes the rendered HTML to `text/html` AND the plain text to
 // `text/plain`, so pasting into Word/email yields formatted rich text (whereas
 // `copyAsHtml` blanks `text/html` and puts the HTML source into `text/plain`).
-const COPY_PASTE_METHOD_MAP: Record<string, 'copyAsRich' | 'copyAsHtml' | 'pasteAsPlainText'> = {
+const COPY_PASTE_METHOD_MAP: Record<string, 'copyAsRich' | 'copyAsHtml' | 'copyAsExcel' | 'pasteAsPlainText'> = {
   copyAsRich: 'copyAsRich',
   copyAsHtml: 'copyAsHtml',
+  copyAsExcel: 'copyAsExcel',
   pasteAsPlainText: 'pasteAsPlainText'
 }
 const handleCopyPaste = (type: unknown) => {
@@ -1892,6 +1893,7 @@ onMounted(() => {
   bus.on('editor-focus', focusEditor)
   bus.on('copyAsRich', handleCopyPaste)
   bus.on('copyAsHtml', handleCopyPaste)
+  bus.on('copyAsExcel', handleCopyPaste)
   bus.on('pasteAsPlainText', handleCopyPaste)
   bus.on('duplicate', handleParagraph)
   bus.on('createParagraph', handleParagraph)
@@ -2050,6 +2052,7 @@ onBeforeUnmount(() => {
   bus.off('editor-focus', focusEditor)
   bus.off('copyAsRich', handleCopyPaste)
   bus.off('copyAsHtml', handleCopyPaste)
+  bus.off('copyAsExcel', handleCopyPaste)
   bus.off('pasteAsPlainText', handleCopyPaste)
   bus.off('duplicate', handleParagraph)
   bus.off('createParagraph', handleParagraph)

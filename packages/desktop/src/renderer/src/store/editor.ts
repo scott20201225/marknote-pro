@@ -1762,6 +1762,9 @@ export const useEditorStore = defineStore('editor', {
       window.electron.ipcRenderer.on('mt::cm-copy-as-html', () => {
         bus.emit('copyAsHtml', 'copyAsHtml')
       })
+      window.electron.ipcRenderer.on('mt::cm-copy-as-excel', () => {
+        bus.emit('copyAsExcel', 'copyAsExcel')
+      })
       window.electron.ipcRenderer.on('mt::cm-paste-as-plain-text', () => {
         bus.emit('pasteAsPlainText', 'pasteAsPlainText')
       })

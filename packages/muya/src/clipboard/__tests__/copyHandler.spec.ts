@@ -106,4 +106,33 @@ describe('clipboard.copyHandler — skip empty clipboard writes', () => {
         expect(setData).toHaveBeenCalledWith('text/html', '');
         expect(setData).toHaveBeenCalledWith('text/plain', 'console.log("x")');
     });
+
+    it('copyAsExcel: writes TSV and table HTML for a frozen table rectangle', () => {
+        const clipboard = new Clipboard({} as Muya);
+        clipboard.copyType = CopyType.COPY_AS_EXCEL;
+        Object.defineProperty(clipboard, 'selection', {
+            get: () => ({
+                table: {
+                    getStateForCopy: () => ({
+                        name: 'table',
+                        children: [
+                            { children: [{ text: 'A' }, { text: 'B' }] },
+                            { children: [{ text: '1' }, { text: '2' }] },
+                        ],
+                    }),
+                },
+                getSelection: () => null,
+            }),
+        });
+
+        const { event, setData } = makeEvent();
+
+        clipboard.copyHandler(event);
+
+        expect(setData).toHaveBeenCalledWith('text/plain', 'A\tB\n1\t2');
+        expect(setData).toHaveBeenCalledWith(
+            'text/html',
+            '<table><tr><td>A</td><td>B</td></tr><tr><td>1</td><td>2</td></tr></table>',
+        );
+    });
 });

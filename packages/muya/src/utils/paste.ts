@@ -179,6 +179,50 @@ export function isStandaloneTableHtml(text: string) {
     return tmp.childElementCount === 1;
 }
 
+function escapeMarkdownTableCell(text: string) {
+    return text.replace(/\\/g, '\\\\').replace(/\|/g, '\\|');
+}
+
+/**
+ * Convert clipboard TSV/tabular text into markdown table source so the normal
+ * markdown parser can build a real table or merge it into an existing one.
+ *
+ * Heuristic: require at least one tab; plain multi-line prose must stay prose.
+ * Trailing blank lines from Excel/Numbers are discarded.
+ */
+export function tabularTextToMarkdownTable(text: string): string | null {
+    if (!text.includes('\t'))
+        return null;
+
+    const rows = text
+        .split('\n')
+        .filter((row, index, allRows) => row.length > 0 || index < allRows.length - 1);
+    while (rows.length > 0 && rows[rows.length - 1] === '')
+        rows.pop();
+
+    if (rows.length === 0)
+        return null;
+
+    const matrix = rows.map(row => row.split('\t'));
+    const columnCount = Math.max(...matrix.map(row => row.length));
+    if (columnCount <= 1)
+        return null;
+
+    const normalizedRows = matrix.map(row => {
+        const padded = [...row];
+        while (padded.length < columnCount)
+            padded.push('');
+
+        return padded.map(cell => escapeMarkdownTableCell(cell));
+    });
+
+    const header = `| ${normalizedRows[0].join(' | ')} |`;
+    const separator = `| ${new Array(columnCount).fill('-').join(' | ')} |`;
+    const body = normalizedRows.slice(1).map(row => `| ${row.join(' | ')} |`);
+
+    return [header, separator, ...body].join('\n');
+}
+
 /**
  * Resolve the `clipboardFilePath` paste hook to a usable inline-image path.
  *

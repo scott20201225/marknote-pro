@@ -239,7 +239,8 @@
       "rename": "Renomear",
       "copyPath": "Copiar caminho",
       "showInFolder": "Mostrar na pasta"
-    }
+    },
+    "copyAsExcel": "Copiar como Excel"
   },
   "search": {
     "searchPlaceholder": "Pesquisar",

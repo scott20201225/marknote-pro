@@ -675,6 +675,13 @@ export class Muya {
     }
 
     /**
+     * Copy the current frozen table selection in a spreadsheet-friendly format.
+     */
+    copyAsExcel() {
+        this.editor.clipboard.copyAsExcel();
+    }
+
+    /**
      * Paste the clipboard content as plain text at the current cursor.
      */
     pasteAsPlainText(): Promise<void> {

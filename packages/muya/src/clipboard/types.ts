@@ -7,6 +7,7 @@ export enum CopyType {
     COPY_AS_MARKDOWN = 'copyAsMarkdown',
     COPY_AS_HTML = 'copyAsHtml',
     COPY_AS_RICH = 'copyAsRich',
+    COPY_AS_EXCEL = 'copyAsExcel',
     COPY_CODE_CONTENT = 'copyCodeContent',
 }
 
