@@ -4,7 +4,7 @@ import { t } from '../../i18n'
 import type Keybindings from '../../keyboard/shortcutHandler'
 import { withTopLevelMenuMnemonic } from './mnemonics'
 
-export default function(keybindings: Keybindings): MenuItemConstructorOptions {
+export default function (keybindings: Keybindings): MenuItemConstructorOptions {
   const submenu: MenuItemConstructorOptions[] = [
     {
       label: t('menu.view.commandPalette'),
@@ -57,16 +57,6 @@ export default function(keybindings: Keybindings): MenuItemConstructorOptions {
       checked: false,
       click(_item, focusedWindow) {
         actions.toggleSidebar(focusedWindow as BrowserWindow | undefined)
-      }
-    },
-    {
-      label: t('menu.view.toggleTabbar'),
-      id: 'tabBarMenuItem',
-      accelerator: keybindings.getAccelerator('view.toggle-tabbar') ?? undefined,
-      type: 'checkbox',
-      checked: false,
-      click(_item, focusedWindow) {
-        actions.toggleTabBar(focusedWindow as BrowserWindow | undefined)
       }
     },
     {

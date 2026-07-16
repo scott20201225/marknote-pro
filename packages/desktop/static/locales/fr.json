@@ -143,7 +143,6 @@
     "view": {
       "view": "Affichage",
       "toggleSidebar": "Basculer la barre latérale",
-      "toggleTabbar": "Basculer la barre d'onglets",
       "commandPalette": "Palette de commandes",
       "sourceCodeMode": "Mode code source",
       "typewriterMode": "Mode machine à écrire",
@@ -398,7 +397,6 @@
         "autoSaveDelay": "Le temps en ms après un changement avant que le fichier soit sauvegardé",
         "autoNormalizeLineEndings": "Normaliser automatiquement les fins de ligne à l'ouverture des fichiers. Lorsque désactivé, les fichiers sont ouverts tels quels.",
         "titleBarStyle": "Le style de la barre de titre (systèmes Windows et Linux uniquement)",
-        "openFilesInNewWindow": "Ouvrir les fichiers dans une nouvelle fenêtre",
         "openFolderInNewWindow": "Ouvrir le dossier via le menu dans une nouvelle fenêtre",
         "zoom": "Le niveau de zoom. Entre 0.5 et 2.0 inclus",
         "hideScrollbar": "Masquer les barres de défilement",
@@ -481,7 +479,6 @@
         },
         "requiresRestart": "Nécessite un redémarrage",
         "hideScrollbars": "Masquer les barres de défilement",
-        "openFilesInNewWindow": "Ouvrir les fichiers dans une nouvelle fenêtre",
         "openFoldersInNewWindow": "Ouvrir les dossiers dans une nouvelle fenêtre",
         "zoom": "Zoom"
       },
@@ -871,7 +868,6 @@
       "toggleFocusMode": "Basculer le mode focus",
       "toggleSidebar": "Basculer la barre latérale",
       "toggleToc": "Basculer la table des matières",
-      "toggleTabbar": "Basculer la barre d'onglets",
       "toggleDevTools": "Basculer les outils de développement",
       "devReload": "Rechargement développeur",
       "reloadImages": "Recharger les images",

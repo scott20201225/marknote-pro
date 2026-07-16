@@ -7,7 +7,6 @@ import { debouncedSendBufferedState } from './bufferedState'
 interface LayoutPartial {
   rightColumn?: string
   showSideBar?: boolean
-  showTabBar?: boolean
   sideBarWidth?: number | string
 }
 
@@ -23,7 +22,6 @@ const normalizeSideBarWidth = (width: unknown): number => {
 interface BufferedLayout {
   rightColumn: string | undefined
   showSideBar: boolean
-  showTabBar: boolean
   sideBarWidth: number
 }
 
@@ -37,7 +35,6 @@ const createBufferedLayoutState = (state: unknown): BufferedLayout | null => {
   return {
     rightColumn: s.rightColumn,
     showSideBar: !!s.showSideBar,
-    showTabBar: !!s.showTabBar,
     sideBarWidth: normalizeSideBarWidth(s.sideBarWidth)
   }
 }
@@ -48,7 +45,6 @@ const initialSideBarWidth = normalizeSideBarWidth(initialWidth)
 export const useLayoutStore = defineStore('layout', () => {
   const rightColumn = ref<string>('files')
   const showSideBar = ref(false)
-  const showTabBar = ref(false)
   const sideBarWidth = ref<number>(initialSideBarWidth)
 
   // Actual rendered sidebar width. `sideBarWidth` is the right-column width
@@ -83,7 +79,6 @@ export const useLayoutStore = defineStore('layout', () => {
     // sideBarWidth's normalization), and skip unknown keys silently.
     if (layout.rightColumn !== undefined) rightColumn.value = layout.rightColumn
     if (layout.showSideBar !== undefined) showSideBar.value = !!layout.showSideBar
-    if (layout.showTabBar !== undefined) showTabBar.value = !!layout.showTabBar
     if (layout.sideBarWidth !== undefined) sideBarWidth.value = layout.sideBarWidth as number
     if (scheduleBufferUpdate) {
       debouncedSendBufferedState()
@@ -94,7 +89,6 @@ export const useLayoutStore = defineStore('layout', () => {
     return createBufferedLayoutState({
       rightColumn: rightColumn.value,
       showSideBar: showSideBar.value,
-      showTabBar: showTabBar.value,
       sideBarWidth: sideBarWidth.value
     })
   }
@@ -107,15 +101,14 @@ export const useLayoutStore = defineStore('layout', () => {
     SET_LAYOUT(
       {
         rightColumn: layout.rightColumn,
-        showSideBar: layout.showSideBar,
-        showTabBar: layout.showTabBar
+        showSideBar: layout.showSideBar
       },
       { scheduleBufferUpdate: false }
     )
     DISPATCH_LAYOUT_MENU_ITEMS()
   }
 
-  function TOGGLE_LAYOUT_ENTRY(entryName: 'showSideBar' | 'showTabBar'): void {
+  function TOGGLE_LAYOUT_ENTRY(entryName: string): void {
     if (entryName === 'showSideBar') {
       showSideBar.value = !showSideBar.value
       const preferencesStore = usePreferencesStore()
@@ -123,8 +116,8 @@ export const useLayoutStore = defineStore('layout', () => {
         type: 'sideBarVisibility',
         value: !!showSideBar.value
       })
-    } else if (entryName === 'showTabBar') {
-      showTabBar.value = !showTabBar.value
+    } else {
+      return
     }
     debouncedSendBufferedState()
   }
@@ -157,16 +150,17 @@ export const useLayoutStore = defineStore('layout', () => {
     })
 
     window.electron.ipcRenderer.on('mt::toggle-view-layout-entry', (_e, entryName) => {
-      TOGGLE_LAYOUT_ENTRY(entryName as 'showSideBar' | 'showTabBar')
+      TOGGLE_LAYOUT_ENTRY(String(entryName))
       DISPATCH_LAYOUT_MENU_ITEMS()
     })
 
     bus.on('view:toggle-layout-entry', (entryName: unknown) => {
-      const name = entryName as 'showSideBar' | 'showTabBar'
+      const name = String(entryName)
       TOGGLE_LAYOUT_ENTRY(name)
+      if (name !== 'showSideBar') return
       const { windowId } = window.marktextpro?.env ?? {}
       window.electron.ipcRenderer.send('mt::view-layout-changed', Number(windowId), {
-        [name]: name === 'showSideBar' ? showSideBar.value : showTabBar.value
+        showSideBar: showSideBar.value
       })
     })
   }
@@ -174,7 +168,6 @@ export const useLayoutStore = defineStore('layout', () => {
   function DISPATCH_LAYOUT_MENU_ITEMS(): void {
     const { windowId } = window.marktextpro?.env ?? {}
     window.electron.ipcRenderer.send('mt::view-layout-changed', Number(windowId), {
-      showTabBar: showTabBar.value,
       showSideBar: showSideBar.value
     })
   }
@@ -186,7 +179,6 @@ export const useLayoutStore = defineStore('layout', () => {
   return {
     rightColumn,
     showSideBar,
-    showTabBar,
     sideBarWidth,
     effectiveSideBarWidth,
     SET_LAYOUT,

@@ -1,4 +1,5 @@
 import path from 'path'
+import fs from 'fs'
 import fsPromises from 'fs/promises'
 import { exec } from 'child_process'
 import dayjs from 'dayjs'
@@ -35,6 +36,21 @@ interface CliArgs {
 interface PathInfo {
   isDir: boolean
   path: string
+}
+
+interface BufferStoreInfo {
+  id: string
+  filePath: string | null
+}
+
+interface BufferedEditorState {
+  tabs: Array<{ id?: string; [key: string]: unknown }>
+  currentFileId?: string | null
+  currentFile?: { id?: string } | null
+  restoreWarnings?: unknown[]
+  project?: unknown
+  layout?: unknown
+  [key: string]: unknown
 }
 
 class App {
@@ -240,66 +256,61 @@ class App {
       selectTheme(newTheme)
     }
 
-    onInternalChannel(
-      'broadcast-preferences-changed',
-      (change: Partial<IUserPreferences>) => {
-        const nextPreferences = {
-          ...preferences.getAll(),
-          ...change
-        }
-        nativeTheme.themeSource = getNativeThemeSource(nextPreferences)
+    onInternalChannel('broadcast-preferences-changed', (change: Partial<IUserPreferences>) => {
+      const nextPreferences = {
+        ...preferences.getAll(),
+        ...change
+      }
+      nativeTheme.themeSource = getNativeThemeSource(nextPreferences)
 
       // When followSystemTheme is enabled, immediately switch to match system
-        if (change.followSystemTheme === true) {
-          const systemIsDark = nativeTheme.shouldUseDarkColors
-          const lightModeTheme = normalizeAppTheme(
-            preferences.getItem<string>('lightModeTheme'),
-            'light'
-          )
-          const darkModeTheme = normalizeAppTheme(
-            preferences.getItem<string>('darkModeTheme'),
-            'dark'
-          )
-          const newTheme = systemIsDark ? darkModeTheme : lightModeTheme
+      if (change.followSystemTheme === true) {
+        const systemIsDark = nativeTheme.shouldUseDarkColors
+        const lightModeTheme = normalizeAppTheme(
+          preferences.getItem<string>('lightModeTheme'),
+          'light'
+        )
+        const darkModeTheme = normalizeAppTheme(
+          preferences.getItem<string>('darkModeTheme'),
+          'dark'
+        )
+        const newTheme = systemIsDark ? darkModeTheme : lightModeTheme
 
-          log.info(
-            `followSystemTheme enabled, switching to: ${newTheme} (system ${systemIsDark ? 'dark' : 'light'})`
-          )
-          selectTheme(newTheme)
-          preferences.setItem('theme', newTheme)
-        }
+        log.info(
+          `followSystemTheme enabled, switching to: ${newTheme} (system ${systemIsDark ? 'dark' : 'light'})`
+        )
+        selectTheme(newTheme)
+        preferences.setItem('theme', newTheme)
+      }
       // When light/dark mode theme preferences change, apply immediately if following system
-        if (
-          preferences.getItem<boolean>('followSystemTheme') &&
+      if (
+        preferences.getItem<boolean>('followSystemTheme') &&
         (change.lightModeTheme || change.darkModeTheme)
-        ) {
-          const systemIsDark = nativeTheme.shouldUseDarkColors
+      ) {
+        const systemIsDark = nativeTheme.shouldUseDarkColors
 
         // Get current values, but prefer the NEW values from the change event
-          let lightModeTheme = normalizeAppTheme(
-            preferences.getItem<string>('lightModeTheme'),
-            'light'
-          )
-          let darkModeTheme = normalizeAppTheme(
-            preferences.getItem<string>('darkModeTheme'),
-            'dark'
-          )
+        let lightModeTheme = normalizeAppTheme(
+          preferences.getItem<string>('lightModeTheme'),
+          'light'
+        )
+        let darkModeTheme = normalizeAppTheme(preferences.getItem<string>('darkModeTheme'), 'dark')
 
         // If these preferences were just changed, use the new values from the change object
-          if (change.lightModeTheme !== undefined) {
-            lightModeTheme = normalizeAppTheme(change.lightModeTheme, 'light')
-          }
-          if (change.darkModeTheme !== undefined) {
-            darkModeTheme = normalizeAppTheme(change.darkModeTheme, 'dark')
-          }
-
-          const newTheme = systemIsDark ? darkModeTheme : lightModeTheme
-
-          log.info(`Theme preference changed, applying: ${newTheme}`)
-          selectTheme(newTheme)
-          preferences.setItem('theme', newTheme)
+        if (change.lightModeTheme !== undefined) {
+          lightModeTheme = normalizeAppTheme(change.lightModeTheme, 'light')
         }
-      })
+        if (change.darkModeTheme !== undefined) {
+          darkModeTheme = normalizeAppTheme(change.darkModeTheme, 'dark')
+        }
+
+        const newTheme = systemIsDark ? darkModeTheme : lightModeTheme
+
+        log.info(`Theme preference changed, applying: ${newTheme}`)
+        selectTheme(newTheme)
+        preferences.setItem('theme', newTheme)
+      }
+    })
 
     // Listen for system theme changes and auto-switch if enabled
     if (!this._themeListenerRegistered) {
@@ -358,21 +369,15 @@ class App {
 
     const createWindow = (): void => {
       if (isRestorePathway) {
-        // We will restore based off the previous buffer, one window per buffer store file
         const bufferStores = editorBufferStore.getAll()
-        const bufferStoreList = Object.values(bufferStores) as Array<{
-          id: string
-          filePath: string | null
-        }>
-        if (bufferStoreList.length === 0) {
+        const bufferStoreList = Object.values(bufferStores) as BufferStoreInfo[]
+        const bufferStoreInfo = this._mergeBufferStoresForSingleWindow(bufferStoreList)
+        if (!bufferStoreInfo) {
           this._createEditorWindow()
           return
         }
 
-        bufferStoreList.forEach((bufferStoreInfo) => {
-          // Read the buffer store file and pass the content
-          this._createEditorWindow(null, [], [], {}, bufferStoreInfo)
-        })
+        this._createEditorWindow(null, [], [], {}, bufferStoreInfo)
       } else if (_openFilesCache.length) {
         // We should wipe the buffer store if not it will keep creating new windows whenever we open files via double click in the file manager
         editorBufferStore.clearBufferStoresWithAllSaved()
@@ -482,6 +487,81 @@ class App {
     this._openPathList(this._openFilesCache, false)
   }
 
+  private _mergeBufferStoresForSingleWindow(
+    bufferStoreList: BufferStoreInfo[]
+  ): BufferStoreInfo | null {
+    if (!bufferStoreList.length) return null
+    if (bufferStoreList.length === 1) return bufferStoreList[0]
+
+    const { editorBufferStore } = this._accessor
+    const target = bufferStoreList[0]
+    if (!target.filePath) return null
+
+    const mergedState: BufferedEditorState = {
+      tabs: [],
+      currentFileId: null,
+      restoreWarnings: []
+    }
+    const seenTabIds = new Set<string>()
+
+    for (const bufferStoreInfo of bufferStoreList) {
+      if (!bufferStoreInfo.filePath) continue
+
+      try {
+        const state = editorBufferStore.readBufferStoreFile(
+          bufferStoreInfo.filePath
+        ) as BufferedEditorState
+
+        if (!mergedState.project && state.project) mergedState.project = state.project
+        if (!mergedState.layout && state.layout) mergedState.layout = state.layout
+
+        for (const tab of state.tabs) {
+          const tabId = typeof tab.id === 'string' ? tab.id : ''
+          if (tabId && seenTabIds.has(tabId)) continue
+          if (tabId) seenTabIds.add(tabId)
+          mergedState.tabs.push(tab)
+        }
+
+        if (!mergedState.currentFileId) {
+          const currentFileId = state.currentFileId ?? state.currentFile?.id ?? null
+          if (currentFileId && state.tabs.some((tab) => tab.id === currentFileId)) {
+            mergedState.currentFileId = currentFileId
+          }
+        }
+
+        if (Array.isArray(state.restoreWarnings)) {
+          mergedState.restoreWarnings!.push(...state.restoreWarnings)
+        }
+      } catch (error) {
+        log.error(`Failed to merge editor buffer store ${bufferStoreInfo.id}:`, error)
+      }
+    }
+
+    if (mergedState.tabs.length === 0) {
+      return null
+    }
+
+    if (!mergedState.currentFileId) {
+      mergedState.currentFileId =
+        typeof mergedState.tabs[0]?.id === 'string' ? mergedState.tabs[0].id : null
+    }
+
+    editorBufferStore.writeBufferStoreFile(target.filePath, mergedState)
+
+    const bufferStores = editorBufferStore.getAll()
+    for (const bufferStoreInfo of bufferStoreList.slice(1)) {
+      if (!bufferStoreInfo.filePath) continue
+      try {
+        fs.unlinkSync(bufferStoreInfo.filePath)
+        delete bufferStores[bufferStoreInfo.id]
+      } catch (error) {
+        log.warn(`Failed to delete merged editor buffer store ${bufferStoreInfo.id}:`, error)
+      }
+    }
+
+    return target
+  }
+
   /**
    * Open the path list in the best window(s).
    *
@@ -491,7 +571,6 @@ class App {
    */
   private _openPathList(pathsToOpen: PathInfo[], openFilesInSameWindow: boolean = false): void {
     const { _windowManager } = this
-    const openFilesInNewWindow = this._accessor.preferences.getItem<boolean>('openFilesInNewWindow')
 
     const fileSet = new Set<string>()
     const directorySet = new Set<string>()
@@ -534,7 +613,7 @@ class App {
     }
 
     // Find the best window(s) to open the files in.
-    if (!openFilesInSameWindow && !openFilesInNewWindow) {
+    if (!openFilesInSameWindow) {
       const isFirstWindow = _windowManager.getActiveEditorId() === null
 
       // Prefer new directories
@@ -596,12 +675,18 @@ class App {
         this._createEditorWindow(rootDirectory, fileList)
       }
     } else {
-      // Open each file and directory in a new window.
-
-      for (const pathname of filesToOpen) {
-        this._createEditorWindow(null, [pathname])
+      const activeEditor = _windowManager.getActiveEditorId()
+      if (activeEditor !== null && filesToOpen.length) {
+        const window = _windowManager.get(activeEditor) as EditorWindow | undefined
+        if (window) {
+          window.openTabsFromPaths(filesToOpen)
+          window.bringToFront()
+          filesToOpen.length = 0
+        }
       }
-
+      if (filesToOpen.length) {
+        this._createEditorWindow(null, filesToOpen)
+      }
       for (const item of directoriesToOpen) {
         const { rootDirectory, fileList } = item
         this._createEditorWindow(rootDirectory, fileList)
@@ -642,11 +727,11 @@ class App {
       this._createEditorWindow()
     })
 
-    onInternalChannel('screen-capture', async(win: BrowserWindow) => {
+    onInternalChannel('screen-capture', async (win: BrowserWindow) => {
       if (isOsx) {
         // Use macOs `screencapture` command line when in macOs system.
         const screenshotFileName = await this.getScreenshotFileName()
-        exec('screencapture -i -c', async(err) => {
+        exec('screencapture -i -c', async (err) => {
           if (err) {
             log.error(err)
             return
@@ -683,42 +768,27 @@ class App {
     })
 
     onInternalChannel('app-open-file-by-id', (windowId: number, filePath: string) => {
-      const openFilesInNewWindow = this._accessor.preferences.getItem<boolean>('openFilesInNewWindow')
-      if (openFilesInNewWindow) {
-        this._createEditorWindow(null, [filePath])
-      } else {
-        const editor = this._windowManager.get(windowId) as EditorWindow | undefined
-        if (editor) {
-          editor.openTab(filePath, {}, true)
-        }
+      const editor = this._windowManager.get(windowId) as EditorWindow | undefined
+      if (editor) {
+        editor.openTab(filePath, {}, true)
       }
     })
     onInternalChannel('app-open-files-by-id', (windowId: number, fileList: string[]) => {
-      const openFilesInNewWindow = this._accessor.preferences.getItem<boolean>('openFilesInNewWindow')
-      if (openFilesInNewWindow) {
-        this._createEditorWindow(null, fileList)
-      } else {
-        const editor = this._windowManager.get(windowId) as EditorWindow | undefined
-        if (editor) {
-          editor.openTabsFromPaths(
-            fileList
-              .map((p) => normalizeMarkdownPath(p))
-              .filter((i): i is PathInfo => i !== null && !i.isDir)
-              .map((i) => i.path)
-          )
-        }
+      const editor = this._windowManager.get(windowId) as EditorWindow | undefined
+      if (editor) {
+        editor.openTabsFromPaths(
+          fileList
+            .map((p) => normalizeMarkdownPath(p))
+            .filter((i): i is PathInfo => i !== null && !i.isDir)
+            .map((i) => i.path)
+        )
       }
     })
 
     onInternalChannel('app-open-markdown-by-id', (windowId: number, data: string) => {
-      const openFilesInNewWindow = this._accessor.preferences.getItem<boolean>('openFilesInNewWindow')
-      if (openFilesInNewWindow) {
-        this._createEditorWindow(null, [], [data])
-      } else {
-        const editor = this._windowManager.get(windowId) as EditorWindow | undefined
-        if (editor) {
-          editor.openUntitledTab(true, data)
-        }
+      const editor = this._windowManager.get(windowId) as EditorWindow | undefined
+      if (editor) {
+        editor.openUntitledTab(true, data)
       }
     })
 
@@ -745,18 +815,13 @@ class App {
 
     ipcMain.on('mt::open-file-by-window-id', (_e, windowId: number, filePath: string) => {
       const resolvedPath = normalizeAndResolvePath(filePath)
-      const openFilesInNewWindow = this._accessor.preferences.getItem<boolean>('openFilesInNewWindow')
-      if (openFilesInNewWindow) {
-        this._createEditorWindow(null, [resolvedPath])
-      } else {
-        const editor = this._windowManager.get(windowId) as EditorWindow | undefined
-        if (editor) {
-          editor.openTab(resolvedPath, {}, true)
-        }
+      const editor = this._windowManager.get(windowId) as EditorWindow | undefined
+      if (editor) {
+        editor.openTab(resolvedPath, {}, true)
       }
     })
 
-    ipcMain.on('mt::select-default-directory-to-open', async(e) => {
+    ipcMain.on('mt::select-default-directory-to-open', async (e) => {
       const { preferences } = this._accessor
       const { defaultDirectoryToOpen } = preferences.getAll()
       const win = BrowserWindow.fromWebContents(e.sender)
@@ -800,7 +865,7 @@ class App {
       return { defaultKeybindings, userKeybindings }
     })
 
-    ipcMain.handle('mt::keybinding-save-user-keybindings', async(_event, userKeybindings) => {
+    ipcMain.handle('mt::keybinding-save-user-keybindings', async (_event, userKeybindings) => {
       const { keybindings, menu } = this._accessor
       const editorWindows = this._windowManager
         .getWindowsByType(WindowType.EDITOR)
@@ -817,7 +882,7 @@ class App {
       return saved
     })
 
-    ipcMain.handle('mt::fs-trash-item', async(_event, fullPath: string) => {
+    ipcMain.handle('mt::fs-trash-item', async (_event, fullPath: string) => {
       return shell.trashItem(fullPath)
     })
   }

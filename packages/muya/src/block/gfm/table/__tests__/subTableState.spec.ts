@@ -118,3 +118,45 @@ describe('table.getSubTableState', () => {
         expect(state.children[0].children[1].meta.align).toBe('right');
     });
 });
+
+describe('table.pasteTableStateAt', () => {
+    it('overwrites from the target cell and appends missing rows and columns', async () => {
+        const table = firstTable(bootMuya([
+            '| a1 | b1 |',
+            '| --- | --- |',
+            '| a2 | b2 |',
+            '',
+        ].join('\n')));
+        const pasted: ITableState = {
+            name: 'table',
+            children: [
+                {
+                    name: 'table.row',
+                    children: [
+                        { name: 'table.cell', meta: { align: 'none' }, text: 'x1' },
+                        { name: 'table.cell', meta: { align: 'none' }, text: 'y1' },
+                    ],
+                },
+                {
+                    name: 'table.row',
+                    children: [
+                        { name: 'table.cell', meta: { align: 'none' }, text: 'x2' },
+                        { name: 'table.cell', meta: { align: 'none' }, text: 'y2' },
+                    ],
+                },
+            ],
+        };
+
+        const cursorContent = table.pasteTableStateAt(1, 1, pasted);
+        await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+
+        expect(table.rowCount).toBe(3);
+        expect(table.columnCount).toBe(3);
+        expect(cellTexts(table.getState())).toEqual([
+            ['a1', 'b1', ''],
+            ['a2', 'x1', 'y1'],
+            ['', 'x2', 'y2'],
+        ]);
+        expect(cursorContent?.text).toBe('y2');
+    });
+});

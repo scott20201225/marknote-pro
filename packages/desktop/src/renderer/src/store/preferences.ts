@@ -26,7 +26,6 @@ export interface PreferencesState {
   autoSave: boolean
   autoSaveDelay: number
   titleBarStyle: TitleBarStyle | string
-  openFilesInNewWindow: boolean
   openFolderInNewWindow: boolean
   zoom: number
   hideScrollbar: boolean
@@ -96,9 +95,8 @@ export interface PreferencesState {
   spellcheckerNoUnderline: boolean
   spellcheckerLanguage: string
 
-  // ----- Side bar / tab bar visibility (persisted) -----
+  // ----- Side bar visibility / source mode (persisted) -----
   sideBarVisibility: boolean
-  tabBarVisibility: boolean
   sourceCodeModeEnabled: boolean
   openedFilesInSidebar: boolean
 
@@ -144,7 +142,6 @@ export const usePreferencesStore = defineStore('preferences', {
     autoSave: true,
     autoSaveDelay: 5000,
     titleBarStyle: isWindows ? 'native' : 'custom',
-    openFilesInNewWindow: false,
     openFolderInNewWindow: false,
     zoom: 1.0,
     hideScrollbar: false,
@@ -212,7 +209,6 @@ export const usePreferencesStore = defineStore('preferences', {
 
     // Default values that are overwritten with the entries below.
     sideBarVisibility: false,
-    tabBarVisibility: false,
     sourceCodeModeEnabled: false,
     openedFilesInSidebar: true,
 

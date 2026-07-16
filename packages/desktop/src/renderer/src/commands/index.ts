@@ -67,82 +67,82 @@ const commands: CommandDescriptor[] = [
 
   {
     id: 'file.new-tab',
-    execute: async() => {
+    execute: async () => {
       bus.emit('mt::new-untitled-tab', { selected: true, markdown: '' })
     }
   },
   {
     id: 'file.new-window',
-    execute: async() => {
+    execute: async () => {
       window.electron.ipcRenderer.send('mt::cmd-new-editor-window')
     }
   },
   {
     id: 'file.open-file',
-    execute: async() => {
+    execute: async () => {
       window.electron.ipcRenderer.send('mt::cmd-open-file')
     }
   },
   {
     id: 'file.open-folder',
-    execute: async() => {
+    execute: async () => {
       window.electron.ipcRenderer.send('mt::cmd-open-folder')
     }
   },
   {
     id: 'file.save',
-    execute: async() => {
+    execute: async () => {
       bus.emit('mt::editor-ask-file-save')
     }
   },
   {
     id: 'file.save-as',
-    execute: async() => {
+    execute: async () => {
       bus.emit('mt::editor-ask-file-save-as')
     }
   },
   {
     id: 'file.print',
-    execute: async() => {
+    execute: async () => {
       await delay(50)
       bus.emit('showExportDialog', 'print')
     }
   },
   {
     id: 'file.close-tab',
-    execute: async() => {
+    execute: async () => {
       bus.emit('mt::editor-close-tab', null)
     }
   },
   {
     id: 'file.close-window',
-    execute: async() => {
+    execute: async () => {
       window.electron.ipcRenderer.send('mt::cmd-close-window')
     }
   },
 
   {
     id: 'file.toggle-auto-save',
-    execute: async() => {
+    execute: async () => {
       window.electron.ipcRenderer.send('mt::cmd-toggle-autosave')
     }
   },
   {
     id: 'file.move-file',
-    execute: async() => {
+    execute: async () => {
       bus.emit('mt::editor-move-file', null)
     }
   },
   {
     id: 'file.rename-file',
-    execute: async() => {
+    execute: async () => {
       await delay(50)
       bus.emit('mt::editor-rename-file', null)
     }
   },
   {
     id: 'file.import-file',
-    execute: async() => {
+    execute: async () => {
       window.electron.ipcRenderer.send('mt::cmd-import-file')
     }
   },
@@ -152,7 +152,7 @@ const commands: CommandDescriptor[] = [
       {
         id: 'file.export-file-html',
         description: 'Export as HTML',
-        execute: async() => {
+        execute: async () => {
           await delay(50)
           bus.emit('showExportDialog', 'styledHtml')
         }
@@ -160,7 +160,7 @@ const commands: CommandDescriptor[] = [
       {
         id: 'file.export-file-word',
         description: 'Export as Word',
-        execute: async() => {
+        execute: async () => {
           await delay(50)
           bus.emit('showExportDialog', 'docx')
         }
@@ -168,7 +168,7 @@ const commands: CommandDescriptor[] = [
       {
         id: 'file.export-file-png',
         description: 'Export as PNG',
-        execute: async() => {
+        execute: async () => {
           await delay(50)
           bus.emit('showExportDialog', 'png')
         }
@@ -176,7 +176,7 @@ const commands: CommandDescriptor[] = [
       {
         id: 'file.export-file-jpeg',
         description: 'Export as JPEG',
-        execute: async() => {
+        execute: async () => {
           await delay(50)
           bus.emit('showExportDialog', 'jpeg')
         }
@@ -184,7 +184,7 @@ const commands: CommandDescriptor[] = [
       {
         id: 'file.export-file-pdf',
         description: 'Export as PDF',
-        execute: async() => {
+        execute: async () => {
           await delay(50)
           bus.emit('showExportDialog', 'pdf')
         }
@@ -197,65 +197,65 @@ const commands: CommandDescriptor[] = [
 
   {
     id: 'edit.undo',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('undo', 'undo'))
     }
   },
   {
     id: 'edit.redo',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('redo', 'redo'))
     }
   },
   {
     id: 'edit.duplicate',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('duplicate', 'duplicate'))
     }
   },
   {
     id: 'edit.create-paragraph',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('createParagraph', 'createParagraph'))
     }
   },
   {
     id: 'edit.delete-paragraph',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('deleteParagraph', 'deleteParagraph'))
     }
   },
   {
     id: 'edit.find',
-    execute: async() => {
+    execute: async () => {
       await delay(150)
       bus.emit('find', 'find')
     }
   },
   {
     id: 'edit.find-next',
-    execute: async() => {
+    execute: async () => {
       await delay(150)
       bus.emit('findNext', 'findNext')
     }
   },
   {
     id: 'edit.find-previous',
-    execute: async() => {
+    execute: async () => {
       await delay(150)
       bus.emit('findPrev', 'findPrev')
     }
   },
   {
     id: 'edit.replace',
-    execute: async() => {
+    execute: async () => {
       await delay(150)
       bus.emit('replace', 'replace')
     }
   },
   {
     id: 'edit.find-in-folder',
-    execute: async() => {
+    execute: async () => {
       await delay(150)
       bus.emit('mt::editor-edit-action', 'findInFolder')
     }
@@ -266,127 +266,127 @@ const commands: CommandDescriptor[] = [
 
   {
     id: 'paragraph.heading-1',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('paragraph', 'heading 1'))
     }
   },
   {
     id: 'paragraph.heading-2',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('paragraph', 'heading 2'))
     }
   },
   {
     id: 'paragraph.heading-3',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('paragraph', 'heading 3'))
     }
   },
   {
     id: 'paragraph.heading-4',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('paragraph', 'heading 4'))
     }
   },
   {
     id: 'paragraph.heading-5',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('paragraph', 'heading 5'))
     }
   },
   {
     id: 'paragraph.heading-6',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('paragraph', 'heading 6'))
     }
   },
   {
     id: 'paragraph.upgrade-heading',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('paragraph', 'upgrade heading'))
     }
   },
   {
     id: 'paragraph.degrade-heading',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('paragraph', 'degrade heading'))
     }
   },
   {
     id: 'paragraph.table',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('paragraph', 'table'))
     }
   },
   {
     id: 'paragraph.code-fence',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('paragraph', 'pre'))
     }
   },
   {
     id: 'paragraph.quote-block',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('paragraph', 'blockquote'))
     }
   },
   {
     id: 'paragraph.math-formula',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('paragraph', 'mathblock'))
     }
   },
   {
     id: 'paragraph.html-block',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('paragraph', 'html'))
     }
   },
   {
     id: 'paragraph.order-list',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('paragraph', 'ol-bullet'))
     }
   },
   {
     id: 'paragraph.bullet-list',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('paragraph', 'ul-bullet'))
     }
   },
   {
     id: 'paragraph.task-list',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('paragraph', 'ul-task'))
     }
   },
   {
     id: 'paragraph.loose-list-item',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('paragraph', 'loose-list-item'))
     }
   },
   {
     id: 'paragraph.paragraph',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('paragraph', 'paragraph'))
     }
   },
   {
     id: 'paragraph.reset-paragraph',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('paragraph', 'reset-to-paragraph'))
     }
   },
   {
     id: 'paragraph.horizontal-line',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('paragraph', 'hr'))
     }
   },
   {
     id: 'paragraph.front-matter',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('paragraph', 'front-matter'))
     }
   },
@@ -398,73 +398,73 @@ const commands: CommandDescriptor[] = [
 
   {
     id: 'format.strong',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('format', 'strong'))
     }
   },
   {
     id: 'format.emphasis',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('format', 'em'))
     }
   },
   {
     id: 'format.underline',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('format', 'u'))
     }
   },
   {
     id: 'format.highlight',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('format', 'mark'))
     }
   },
   {
     id: 'format.superscript',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('format', 'sup'))
     }
   },
   {
     id: 'format.subscript',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('format', 'sub'))
     }
   },
   {
     id: 'format.inline-code',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('format', 'inline_code'))
     }
   },
   {
     id: 'format.inline-math',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('format', 'inline_math'))
     }
   },
   {
     id: 'format.strike',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('format', 'del'))
     }
   },
   {
     id: 'format.hyperlink',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('format', 'link'))
     }
   },
   {
     id: 'format.image',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('format', 'image'))
     }
   },
   {
     id: 'format.clear-format',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('format', 'clear'))
     }
   },
@@ -474,19 +474,19 @@ const commands: CommandDescriptor[] = [
 
   {
     id: 'window.minimize',
-    execute: async() => {
+    execute: async () => {
       window.electron.windowControl.minimize()
     }
   },
   {
     id: 'window.toggle-always-on-top',
-    execute: async() => {
+    execute: async () => {
       window.electron.ipcRenderer.send('mt::window-toggle-always-on-top')
     }
   },
   {
     id: 'window.toggle-full-screen',
-    execute: async() => {
+    execute: async () => {
       window.electron.windowControl.toggleFullScreen()
     }
   },
@@ -556,7 +556,7 @@ const commands: CommandDescriptor[] = [
         value: 2.0
       }
     ],
-    executeSubcommand: async(_, value) => {
+    executeSubcommand: async (_, value) => {
       bus.emit('mt::window-zoom', value)
     }
   },
@@ -598,7 +598,7 @@ const commands: CommandDescriptor[] = [
         value: 'ulysses'
       }
     ],
-    executeSubcommand: async(_, theme) => {
+    executeSubcommand: async (_, theme) => {
       window.electron.ipcRenderer.send('mt::set-user-preference', { theme })
     }
   },
@@ -608,32 +608,26 @@ const commands: CommandDescriptor[] = [
 
   {
     id: 'view.source-code-mode',
-    execute: async() => {
+    execute: async () => {
       bus.emit('view:toggle-view-entry', 'sourceCode')
     }
   },
   {
     id: 'view.typewriter-mode',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('view:toggle-view-entry', 'typewriter'))
     }
   },
   {
     id: 'view.focus-mode',
-    execute: async() => {
+    execute: async () => {
       focusEditorAndExecute(() => bus.emit('view:toggle-view-entry', 'focus'))
     }
   },
   {
     id: 'view.toggle-sidebar',
-    execute: async() => {
+    execute: async () => {
       bus.emit('view:toggle-layout-entry', 'showSideBar')
-    }
-  },
-  {
-    id: 'view.toggle-tabbar',
-    execute: async() => {
-      bus.emit('view:toggle-layout-entry', 'showTabBar')
     }
   },
 
@@ -651,7 +645,7 @@ const commands: CommandDescriptor[] = [
         value: 'rtl'
       }
     ],
-    executeSubcommand: async(_, value) => {
+    executeSubcommand: async (_, value) => {
       window.electron.ipcRenderer.send('mt::set-user-preference', { textDirection: value })
     }
   },
@@ -661,25 +655,25 @@ const commands: CommandDescriptor[] = [
 
   {
     id: 'file.preferences',
-    execute: async() => {
+    execute: async () => {
       window.electron.ipcRenderer.send('mt::open-setting-window')
     }
   },
   {
     id: 'file.quit',
-    execute: async() => {
+    execute: async () => {
       window.electron.ipcRenderer.send('mt::app-try-quit')
     }
   },
   {
     id: 'docs.user-guide',
-    execute: async() => {
+    execute: async () => {
       window.electron.shell.openExternal(`${REPO_DOCS_BASE_URL}/BASICS.md`)
     }
   },
   {
     id: 'docs.markdown-syntax',
-    execute: async() => {
+    execute: async () => {
       window.electron.shell.openExternal(`${REPO_DOCS_BASE_URL}/MARKDOWN_SYNTAX.md`)
     }
   },
@@ -689,13 +683,13 @@ const commands: CommandDescriptor[] = [
 
   {
     id: 'tabs.cycleForward',
-    execute: async() => {
+    execute: async () => {
       bus.emit('mt::tabs-cycle-right')
     }
   },
   {
     id: 'tabs.cycleBackward',
-    execute: async() => {
+    execute: async () => {
       bus.emit('mt::tabs-cycle-left')
     }
   }
@@ -708,7 +702,7 @@ if (isUpdatable()) {
   commands.push({
     id: 'file.check-update',
     description: getCommandDescriptionById('file.check-update'),
-    execute: async() => {
+    execute: async () => {
       window.electron.ipcRenderer.send('mt::check-for-update')
     }
   })
@@ -717,14 +711,14 @@ if (isUpdatable()) {
 if (isOsx) {
   commands.push({
     id: 'edit.screenshot',
-    execute: async() => {
+    execute: async () => {
       window.electron.ipcRenderer.send('mt::make-screenshot')
     }
   })
 }
 
 // Function to get commands with updated descriptions
-export const getCommandsWithDescriptions = async(): Promise<CommandDescriptor[]> => {
+export const getCommandsWithDescriptions = async (): Promise<CommandDescriptor[]> => {
   // Update descriptions for all commands
   const updateDescriptions = (commandList: Array<CommandDescriptor | CommandSubcommand>): void => {
     for (const item of commandList) {

@@ -2,7 +2,6 @@
   "autoSave": true,
   "autoSaveDelay": 5000,
   "titleBarStyle": "custom",
-  "openFilesInNewWindow": false,
   "openFolderInNewWindow": false,
   "zoom": 1.0,
   "hideScrollbar": false,
@@ -68,7 +67,6 @@
   "spellcheckerLanguage": "en-US",
 
   "sideBarVisibility": false,
-  "tabBarVisibility": false,
   "sourceCodeModeEnabled": false,
   "openedFilesInSidebar": true,
 

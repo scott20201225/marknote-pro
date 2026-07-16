@@ -218,6 +218,7 @@ class TextSelection {
         this.focusBlock = focus.block;
         this.focusPath = focus.path;
         this._updateSelection();
+        this._muya.editor.activeContentBlock = focus.block;
         this._emitSelectionChange();
     }
 
@@ -297,9 +298,9 @@ class TextSelection {
             if (!selection)
                 return;
 
-            const { anchor, focus, isSelectionInSameBlock } = selection;
+            const { anchor, focus, isCollapsed } = selection;
 
-            if (isSelectionInSameBlock) {
+            if (isCollapsed) {
                 return;
             }
 

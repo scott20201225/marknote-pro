@@ -15,11 +15,6 @@
     "enum": ["custom", "native"],
     "default": "custom"
   },
-  "openFilesInNewWindow": {
-    "description": "General--Open files in a new window.",
-    "type": "boolean",
-    "default": false
-  },
   "openFolderInNewWindow": {
     "description": "General--Open folder via menu in a new window.",
     "type": "boolean",
@@ -356,11 +351,6 @@
   },
   "sideBarVisibility": {
     "description": "View--Whether the side bar is visible.--internal",
-    "type": "boolean",
-    "default": false
-  },
-  "tabBarVisibility": {
-    "description": "View--Whether the tabs are shown.--internal",
     "type": "boolean",
     "default": false
   },

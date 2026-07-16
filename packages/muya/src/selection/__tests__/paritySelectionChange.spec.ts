@@ -71,6 +71,18 @@ function emitSelectionFor(muya: Muya, content: Content): Record<string, unknown>
 }
 
 describe('parity PG1: selection-change block affiliation', () => {
+    it('keeps the active content block in sync with a same-block range selection', () => {
+        const muya = bootMuya('first line\n\nsecond line\n');
+        const content = muya.editor.scrollPage!.firstContentInDescendant()!;
+
+        muya.editor.selection.setSelection(
+            { offset: 0, block: content, path: content.path },
+            { offset: 5, block: content, path: content.path },
+        );
+
+        expect(muya.editor.activeContentBlock).toBe(content);
+    });
+
     it(
         'PG1: selection-change payload exposes the ancestor block affiliation chain',
         () => {

@@ -3,7 +3,6 @@
     class="editor-with-tabs"
     :style="{ 'max-width': `calc(100vw - ${effectiveSideBarWidth}px)` }"
   >
-    <tabs v-show="showTabBar" />
     <div class="container">
       <editor
         :markdown="markdown"
@@ -25,7 +24,6 @@
 <script setup lang="ts">
 import { useLayoutStore } from '@/store/layout'
 import { storeToRefs } from 'pinia'
-import Tabs from './tabs.vue'
 import Editor from './editor.vue'
 import SourceCode from './sourceCode.vue'
 import TabNotifications from './notifications.vue'
@@ -38,7 +36,6 @@ defineProps<{
   cursor: unknown
   muyaIndexCursor?: unknown
   sourceCode: boolean
-  showTabBar: boolean
   textDirection: string
   platform: string
 }>()

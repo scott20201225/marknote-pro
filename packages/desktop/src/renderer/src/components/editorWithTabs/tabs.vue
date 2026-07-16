@@ -1,13 +1,7 @@
 <template>
   <div class="editor-tabs">
-    <div
-      ref="tabContainer"
-      class="scrollable-tabs"
-    >
-      <ul
-        ref="tabDropContainer"
-        class="tabs-container"
-      >
+    <div ref="tabContainer" class="scrollable-tabs">
+      <ul ref="tabDropContainer" class="tabs-container">
         <li
           v-for="file of tabs"
           :key="file.id"
@@ -20,20 +14,13 @@
         >
           <span>{{ file.filename }}</span>
           <span class="unsaved-dot" />
-          <el-icon
-            class="close-icon"
-            :size="12"
-            @click.stop="removeFileInTab(file)"
-          >
+          <el-icon class="close-icon" :size="12" @click.stop="removeFileInTab(file)">
             <Close />
           </el-icon>
         </li>
       </ul>
     </div>
-    <div
-      class="new-file"
-      @click.stop="newFile()"
-    >
+    <div class="new-file" :title="t('menu.file.newTab')" @click.stop="newFile()">
       <el-icon :size="16">
         <Plus />
       </el-icon>
@@ -49,12 +36,14 @@ import { storeToRefs } from 'pinia'
 import autoScroll from 'dom-autoscroller'
 import dragula from 'dragula'
 import { Plus, Close } from '@element-plus/icons-vue'
+import { useI18n } from 'vue-i18n'
 import { showContextMenu } from '../../contextMenu/tabs'
 import bus from '../../bus'
 import type { IFileState } from '@shared/types/files'
 
 const editorStore = useEditorStore()
 const layoutStore = useLayoutStore()
+const { t } = useI18n()
 
 const { currentFile, tabs } = storeToRefs(editorStore)
 
@@ -278,9 +267,6 @@ onBeforeUnmount(() => {
   user-select: none;
   box-shadow: 0px 0px 9px 2px rgba(0, 0, 0, 0.1);
   overflow: hidden;
-  &:hover > .new-file {
-    opacity: 1 !important;
-  }
 }
 .scrollable-tabs {
   flex: 0 1 auto;
@@ -390,10 +376,7 @@ onBeforeUnmount(() => {
   justify-content: space-around;
   cursor: pointer;
   color: var(--editorColor50);
-  opacity: 0;
-  &.always-visible {
-    opacity: 1;
-  }
+  opacity: 1;
 }
 
 .editor-tabs > .new-file:hover {

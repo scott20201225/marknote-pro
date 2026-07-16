@@ -10,7 +10,6 @@ export interface IUserPreferences {
   autoSave?: boolean
   autoSaveDelay?: number
   titleBarStyle?: 'custom' | 'native'
-  openFilesInNewWindow?: boolean
   openFolderInNewWindow?: boolean
   hideScrollbar?: boolean
   sidebarColumn?: number
@@ -74,6 +73,5 @@ export interface IUserPreferences {
 export interface LayoutState {
   rightColumn: 'files' | 'search' | 'toc'
   showSideBar: boolean
-  showTabBar: boolean
   [key: string]: unknown
 }

@@ -46,11 +46,6 @@
           :on-change="(value) => onSelectChange('hideScrollbar', value)"
         />
         <bool
-          :description="t('preferences.general.window.openFilesInNewWindow')"
-          :bool="openFilesInNewWindow"
-          :on-change="(value) => onSelectChange('openFilesInNewWindow', value)"
-        />
-        <bool
           :description="t('preferences.general.window.openFoldersInNewWindow')"
           :bool="openFolderInNewWindow"
           :on-change="(value) => onSelectChange('openFolderInNewWindow', value)"
@@ -114,10 +109,7 @@
       <template #children>
         <h6>{{ t('preferences.general.startup.layoutOptions') }}</h6>
         <section>
-          <el-radio-group
-            v-model="restoreLayoutState"
-            class="startup-action-ctrl"
-          >
+          <el-radio-group v-model="restoreLayoutState" class="startup-action-ctrl">
             <el-radio :label="true">
               {{ t('preferences.general.startup.restorePreviousState') }}
             </el-radio>
@@ -128,10 +120,7 @@
         </section>
         <h6>{{ t('preferences.general.startup.startupFilesFolders') }}</h6>
         <section>
-          <el-radio-group
-            v-model="startUpAction"
-            class="startup-action-ctrl"
-          >
+          <el-radio-group v-model="startUpAction" class="startup-action-ctrl">
             <!--
               Hide "lastState" for now (#2064).
             <el-radio class="ag-underdevelop" label="lastState">Restore last editor session</el-radio>
@@ -147,10 +136,7 @@
                 {{ t('preferences.general.startup.openDefaultDirectory')
                 }}<span>: {{ defaultDirectoryToOpen }}</span>
               </el-radio>
-              <el-button
-                size="small"
-                @click="selectDefaultDirectoryToOpen"
-              >
+              <el-button size="small" @click="selectDefaultDirectoryToOpen">
                 {{ t('preferences.general.startup.selectFolder') }}
               </el-button>
             </div>
@@ -211,7 +197,6 @@ const {
   autoSaveDelay,
   titleBarStyle,
   defaultDirectoryToOpen,
-  openFilesInNewWindow,
   openFolderInNewWindow,
   treePathExcludePatterns: projectPaths,
   zoom,

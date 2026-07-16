@@ -143,7 +143,6 @@
     "view": {
       "view": "View",
       "toggleSidebar": "Toggle Sidebar",
-      "toggleTabbar": "Toggle Tabbar",
       "commandPalette": "Command Palette",
       "sourceCodeMode": "Source Code Mode",
       "typewriterMode": "Typewriter Mode",
@@ -397,7 +396,6 @@
         "autoSave": "Automatically save the content being edited",
         "autoSaveDelay": "The time in ms after a change that the file is saved",
         "titleBarStyle": "The title bar style (Windows and Linux system only)",
-        "openFilesInNewWindow": "Open files in a new window",
         "openFolderInNewWindow": "Open folder via menu in a new window",
         "zoom": "The zoom level. Between 0.5 and 2.0 inclusive",
         "hideScrollbar": "Whether to hide scrollbars",
@@ -481,7 +479,6 @@
         },
         "requiresRestart": "Requires restart",
         "hideScrollbars": "Hide scrollbars",
-        "openFilesInNewWindow": "Open files in new window",
         "openFoldersInNewWindow": "Open folders in new window",
         "zoom": "Zoom"
       },
@@ -871,7 +868,6 @@
       "toggleFocusMode": "Toggle Focus Mode",
       "toggleSidebar": "Toggle Sidebar",
       "toggleToc": "Toggle Table of Contents",
-      "toggleTabbar": "Toggle Tab Bar",
       "toggleDevTools": "Toggle Developer Tools",
       "devReload": "Developer Reload",
       "reloadImages": "Reload Images",

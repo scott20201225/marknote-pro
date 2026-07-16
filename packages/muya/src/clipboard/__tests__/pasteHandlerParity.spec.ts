@@ -346,4 +346,42 @@ describe('pasteHandler — table-cell paste guards (sub-item 4)', () => {
 
         expect(anchor.text).toBe('keep');
     });
+
+    it('pastes a markdown table into the current table from the current cell', async () => {
+        installLoadBlockSpy([]);
+        const wrapper = makeWrapper('table');
+        const anchor = makeAnchorBlock('table.cell.content', 'old', wrapper, 0);
+        const cursorContent = {
+            text: 'y2',
+            setCursor: vi.fn(),
+        };
+        const fakeTable = {
+            pasteTableStateAt: vi.fn(() => cursorContent),
+        };
+        const fakeCell = {
+            rowOffset: 1,
+            columnOffset: 1,
+            table: fakeTable,
+        };
+        anchor.closestBlock = vi.fn((name: string) => {
+            if (name === 'table.cell')
+                return fakeCell;
+            if (name === 'table')
+                return fakeTable;
+            return null;
+        });
+        const clipboard = makeClipboard(anchor);
+
+        await clipboard.pasteHandler(makePasteEvent({
+            'text/plain': '| x | y |\n| - | - |\n| 1 | 2 |',
+        }));
+
+        expect(fakeTable.pasteTableStateAt).toHaveBeenCalledWith(
+            1,
+            1,
+            expect.objectContaining({ name: 'table' }),
+        );
+        expect(anchor.text).toBe('old');
+        expect(cursorContent.setCursor).toHaveBeenCalledWith(2, 2, true);
+    });
 });

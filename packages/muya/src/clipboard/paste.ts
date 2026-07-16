@@ -1,8 +1,10 @@
 import type Content from '../block/base/content';
 import type Parent from '../block/base/parent';
 import type TreeNode from '../block/base/treeNode';
+import type Table from '../block/gfm/table';
+import type TableBodyCell from '../block/gfm/table/cell';
 import type { Muya } from '../muya';
-import type { TState } from '../state/types';
+import type { ITableState, TState } from '../state/types';
 import type { Nullable } from '../types';
 import type Clipboard from './index';
 import CodeBlockContent from '../block/content/codeBlockContent';
@@ -445,6 +447,83 @@ function applyParsedPaste(
         pasteNewline(muya, ctx, states, head, tail);
 }
 
+function parseSingleTableState(muya: Muya, markdown: string): Nullable<ITableState> {
+    if (markdown.trim().length === 0)
+        return null;
+
+    const {
+        footnote,
+        math,
+        isGitlabCompatibilityEnabled,
+        trimUnnecessaryCodeBlockEmptyLines,
+        frontMatter,
+    } = muya.options;
+
+    const states = new MarkdownToState({
+        footnote,
+        math,
+        isGitlabCompatibilityEnabled,
+        trimUnnecessaryCodeBlockEmptyLines,
+        frontMatter,
+    }).generate(markdown);
+
+    return (states.find(state => state.name === 'table') as ITableState | undefined) ?? null;
+}
+
+function tryPasteTableIntoExistingTable(
+    clipboard: Clipboard,
+    anchorBlock: Content,
+    markdown: string,
+): boolean {
+    if (anchorBlock.blockName !== 'table.cell.content')
+        return false;
+
+    const tableState = parseSingleTableState(clipboard.muya, markdown);
+    if (tableState == null)
+        return false;
+
+    const anchorCell
+        = (anchorBlock.closestBlock('table.cell') as TableBodyCell | null)
+            ?? clipboard.selection.table.anchorCell;
+    const table = (anchorBlock.closestBlock('table') as Table | null)
+        ?? anchorCell?.table
+        ?? null;
+    if (anchorCell == null || table == null)
+        return false;
+
+    const cursorContent = table.pasteTableStateAt(
+        anchorCell.rowOffset,
+        anchorCell.columnOffset,
+        tableState,
+    );
+    clipboard.selection.table.clear();
+
+    if (cursorContent) {
+        const offset = cursorContent.text.length;
+        cursorContent.setCursor(offset, offset, true);
+    }
+
+    return true;
+}
+
+function buildPasteContext(anchorBlock: Content): Nullable<IPasteContext> {
+    const cursor = anchorBlock.getCursor();
+    if (cursor == null)
+        return null;
+
+    const { start, end } = cursor;
+    const wrapperBlock = anchorBlock.getAnchor();
+
+    return {
+        anchorBlock,
+        wrapperBlock,
+        originWrapperBlock: wrapperBlock,
+        start,
+        end,
+        content: anchorBlock.text,
+    };
+}
+
 // `language-input`, `table.cell.content` and `codeblock.content` never parse a
 // paste into blocks — they take the text literally.
 function applyLiteralPaste(
@@ -596,11 +675,9 @@ async function applyPaste(clipboard: Clipboard, data: IPasteData): Promise<void>
         return;
 
     const selection = clipboard.selection.getSelection();
-    if (!selection)
-        return;
-
-    const { isSelectionInSameBlock, anchor } = selection;
-    const anchorBlock = anchor.block;
+    const tableAnchorContent = clipboard.selection.table.anchorCell?.firstChild as Content | undefined;
+    const anchorBlock = selection?.anchor.block ?? tableAnchorContent;
+    const isSelectionInSameBlock = selection?.isSelectionInSameBlock ?? tableAnchorContent != null;
 
     if (!anchorBlock)
         return;
@@ -651,23 +728,18 @@ async function applyPaste(clipboard: Clipboard, data: IPasteData): Promise<void>
     });
     const copyType = getCopyTextType(html, text, pasteType);
 
-    const { start, end } = anchorBlock.getCursor()!;
-    const { text: content } = anchorBlock;
-    const wrapperBlock = anchorBlock.getAnchor();
-    const ctx: IPasteContext = {
-        anchorBlock,
-        wrapperBlock,
-        originWrapperBlock: wrapperBlock,
-        start,
-        end,
-        content,
-    };
-
     if (/html|text/.test(copyType)) {
         const markdown
             = copyType === 'html' && anchorBlock.blockName !== 'codeblock.content'
                 ? new HtmlToMarkdown({ bulletListMarker }).generate(html)
                 : text;
+
+        if (tryPasteTableIntoExistingTable(clipboard, anchorBlock, markdown))
+            return;
+
+        const ctx = buildPasteContext(anchorBlock);
+        if (ctx == null)
+            return;
 
         // Every non-literal anchor always parses through `MarkdownToState`,
         // regardless of line count, so a single line of `# heading` / `- list`
@@ -685,11 +757,19 @@ async function applyPaste(clipboard: Clipboard, data: IPasteData): Promise<void>
             applyParsedPaste(clipboard, ctx, markdown);
     }
     else if (pasteType === PasteType.PASTE_AS_PLAIN_TEXT) {
+        const ctx = buildPasteContext(anchorBlock);
+        if (ctx == null)
+            return;
+
         // Paste as Plain Text inserts block-level HTML as literal text, not a
         // live html-block (muyajs `pasteAsPlainText` copyAsHtml branch).
         applyPlainTextBlockHtml(clipboard, ctx, text);
     }
     else {
+        const ctx = buildPasteContext(anchorBlock);
+        if (ctx == null)
+            return;
+
         applyHtmlBlockPaste(clipboard, ctx, text);
     }
 }

@@ -143,7 +143,6 @@
     "view": {
       "view": "檢視",
       "toggleSidebar": "切換側邊欄",
-      "toggleTabbar": "切換標籤欄",
       "commandPalette": "命令面板",
       "sourceCodeMode": "原始碼模式",
       "typewriterMode": "打字機模式",
@@ -398,7 +397,6 @@
         "autoSaveDelay": "檔案儲存前的延遲時間（毫秒）",
         "autoNormalizeLineEndings": "開啟檔案時自動將行尾標準化。停用時，檔案會以原樣開啟",
         "titleBarStyle": "標題欄樣式（僅限 Windows 和 Linux 系統）",
-        "openFilesInNewWindow": "在新視窗中開啟檔案",
         "openFolderInNewWindow": "透過選單在新視窗中開啟資料夾",
         "zoom": "縮放層級。介於 0.5 和 2.0 之間",
         "hideScrollbar": "是否隱藏捲軸",
@@ -481,7 +479,6 @@
         },
         "requiresRestart": "需要重新啟動",
         "hideScrollbars": "隱藏捲軸",
-        "openFilesInNewWindow": "在新視窗中開啟檔案",
         "openFoldersInNewWindow": "在新視窗中開啟資料夾",
         "zoom": "縮放"
       },
@@ -871,7 +868,6 @@
       "toggleFocusMode": "切換專注模式",
       "toggleSidebar": "切換側邊欄",
       "toggleToc": "切換目錄",
-      "toggleTabbar": "切換標籤欄",
       "toggleDevTools": "切換開發者工具",
       "devReload": "開發者重新載入",
       "reloadImages": "重新載入圖片",

@@ -182,6 +182,38 @@ class Table extends Parent {
         return firstCellInNewColumn!.firstChild as TableCellContent;
     }
 
+    pasteTableStateAt(rowOffset: number, columnOffset: number, state: ITableState): Nullable<TableCellContent> {
+        const rowCount = state.children.length;
+        const columnCount = Math.max(0, ...state.children.map(row => row.children.length));
+        if (rowCount === 0 || columnCount === 0)
+            return this.cellAt(rowOffset, columnOffset)?.firstChild as TableCellContent | null;
+
+        const requiredRows = rowOffset + rowCount;
+        const requiredColumns = columnOffset + columnCount;
+
+        while (this.rowCount < requiredRows)
+            this.insertRow(this.rowCount);
+
+        while (this.columnCount < requiredColumns)
+            this.insertColumn(this.columnCount);
+
+        let cursorContent: Nullable<TableCellContent> = null;
+        state.children.forEach((rowState, rowIndex) => {
+            rowState.children.forEach((cellState, columnIndex) => {
+                const cell = this.cellAt(rowOffset + rowIndex, columnOffset + columnIndex);
+                const content = cell?.firstChild as TableCellContent | undefined;
+                if (!content)
+                    return;
+
+                content.text = cellState.text ?? '';
+                content.update();
+                cursorContent = content;
+            });
+        });
+
+        return cursorContent;
+    }
+
     private _replaceForReorder(nextState: ITableState): Table {
         const newTable = ScrollPage.loadBlock('table').create(this.muya, nextState) as Table;
         this.replaceWith(newTable);

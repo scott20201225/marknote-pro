@@ -106,6 +106,20 @@ class TableRectSelection {
         this._renderHighlight();
     }
 
+    get anchorCell(): Nullable<TableBodyCell> {
+        return this._anchor?.cell ?? null;
+    }
+
+    get anchorPosition(): Nullable<{ row: number; column: number }> {
+        if (this._anchor == null)
+            return null;
+
+        return {
+            row: this._anchor.row,
+            column: this._anchor.column,
+        };
+    }
+
     private _attach(): void {
         const { eventCenter, domNode } = this._muya;
         eventCenter.attachDOMEvent(domNode, 'mousedown', this._onMouseDown);
