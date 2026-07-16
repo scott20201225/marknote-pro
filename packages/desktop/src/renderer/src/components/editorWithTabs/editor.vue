@@ -198,6 +198,14 @@ interface MuyaChange {
   [key: string]: unknown
 }
 
+interface EditorContextState {
+  hasTableSelection: boolean
+}
+
+interface MarkTextProWindow extends Window {
+  __MARKTEXTPRO_GET_EDITOR_CONTEXT_STATE__?: () => EditorContextState
+}
+
 const props = defineProps<{
   markdown?: string
   cursor?: unknown
@@ -282,6 +290,10 @@ const tableChecker = reactive({
 const editorRef = ref<HTMLDivElement | null>(null)
 const imageViewerRef = ref<HTMLDivElement | null>(null)
 const rowInput = ref<InputNumberInstance | null>(null)
+
+const getEditorContextState = (): EditorContextState => ({
+  hasTableSelection: !!editor.value?.editor?.selection?.table?.hasSelection
+})
 
 // Non-reactive variables
 let printer: Printer | null = null
@@ -1726,6 +1738,8 @@ const handleLanguageChanged = (newLocale?: unknown) => {
 const resizeObserverForEditor = new ResizeObserver(handleResetPaddingBottom)
 
 onMounted(() => {
+  ;(window as MarkTextProWindow).__MARKTEXTPRO_GET_EDITOR_CONTEXT_STATE__ = getEditorContextState
+
   printer = new Printer()
   const ele = editorRef.value
   if (!ele) return
@@ -2011,6 +2025,11 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  const appWindow = window as MarkTextProWindow
+  if (appWindow.__MARKTEXTPRO_GET_EDITOR_CONTEXT_STATE__ === getEditorContextState) {
+    delete appWindow.__MARKTEXTPRO_GET_EDITOR_CONTEXT_STATE__
+  }
+
   bus.off('file-loaded', setMarkdownToEditor)
   bus.off('invalidate-image-cache', handleInvalidateImageCache)
   bus.off('undo', handleUndo)

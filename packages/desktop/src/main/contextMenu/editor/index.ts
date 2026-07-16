@@ -18,6 +18,7 @@ import {
   getOutdentList
 } from './menuItems'
 import spellcheckMenuBuilder from './spellcheck'
+import { getCopyMenuAvailability, type EditorContextState } from './state'
 import { t } from '../../i18n'
 
 // Electron's ContextMenuParams shape we rely on. Kept narrow — the renderer
@@ -58,15 +59,22 @@ interface ParagraphContextState {
   inBulletList: boolean
 }
 
-const COPY_RELATED_MENU_IDS = new Set([
-  'cutMenuItem',
-  'copyMenuItem',
-  'copyAsRichMenuItem',
-  'copyAsHtmlMenuItem'
-])
+const COPY_RELATED_MENU_IDS = new Set(['copyMenuItem', 'copyAsRichMenuItem', 'copyAsHtmlMenuItem'])
+const CUT_RELATED_MENU_IDS = new Set(['cutMenuItem'])
 
 const hasSelectedText = (selectionText: string): boolean => selectionText.trim().length > 0
 const hasLineBreak = (selectionText: string): boolean => /[\r\n]/.test(selectionText)
+
+const getEditorContextState = async (win: BrowserWindow): Promise<EditorContextState | null> => {
+  try {
+    return (await win.webContents.executeJavaScript(
+      'window.__MARKTEXTPRO_GET_EDITOR_CONTEXT_STATE__?.() ?? null',
+      true
+    )) as EditorContextState | null
+  } catch {
+    return null
+  }
+}
 
 const getParagraphContextState = (): ParagraphContextState => {
   const appMenu = Menu.getApplicationMenu()
@@ -158,12 +166,12 @@ const isInsideEditor = (params: ContextMenuParams): boolean => {
   return isEditable && !inputFieldType && !!editFlags.canEditRichly
 }
 
-export const showEditorContextMenu = (
+const popupEditorContextMenu = async (
   win: BrowserWindow,
   event: ContextMenuEvent,
   params: ContextMenuParams,
   isSpellcheckerEnabled: boolean
-): void => {
+): Promise<void> => {
   const {
     isEditable,
     hasImageContents,
@@ -178,9 +186,14 @@ export const showEditorContextMenu = (
 
   // Make sure that the request comes from a contenteditable inside the editor container.
   if (isInsideEditor(params) && !hasImageContents) {
-    const hasText = selectionText.trim().length > 0
-    const canCopy = hasText && editFlags.canCut && editFlags.canCopy
-    // const canPaste = hasText && editFlags.canPaste
+    const editorContextState = await getEditorContextState(win)
+    const copyMenuAvailability = getCopyMenuAvailability(
+      {
+        selectionText,
+        editFlags
+      },
+      editorContextState
+    )
     const isMisspelled = isEditable && !!selectionText && !!misspelledWord
 
     const menu = new Menu()
@@ -201,8 +214,14 @@ export const showEditorContextMenu = (
 
     const contextItems = getContextItems(selectionText)
     contextItems.forEach((item) => {
-      if (item.id && COPY_RELATED_MENU_IDS.has(item.id)) {
-        item.enabled = canCopy
+      if (!item.id) {
+        return
+      }
+
+      if (CUT_RELATED_MENU_IDS.has(item.id)) {
+        item.enabled = copyMenuAvailability.canCut
+      } else if (COPY_RELATED_MENU_IDS.has(item.id)) {
+        item.enabled = copyMenuAvailability.canCopy
       }
     })
     contextItems.forEach((item) => {
@@ -219,4 +238,13 @@ export const showEditorContextMenu = (
     event
     menu.popup({ window: win, x: params.x, y: params.y })
   }
+}
+
+export const showEditorContextMenu = (
+  win: BrowserWindow,
+  event: ContextMenuEvent,
+  params: ContextMenuParams,
+  isSpellcheckerEnabled: boolean
+): void => {
+  void popupEditorContextMenu(win, event, params, isSpellcheckerEnabled)
 }

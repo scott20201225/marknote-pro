@@ -550,7 +550,11 @@ class Format extends Content {
         if (!isSelectionInSameBlock)
             return;
 
-        const { anchor, focus } = this.getCursor()!;
+        const cursor = this.getCursor();
+        if (cursor == null)
+            return;
+
+        const { anchor, focus } = cursor;
 
         if (
             anchor.offset !== oldAnchor?.offset

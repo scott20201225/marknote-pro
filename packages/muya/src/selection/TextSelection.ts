@@ -274,6 +274,14 @@ class TextSelection {
         };
 
         const handleMouseupOrLeave = () => {
+            if (this._selection.table.isSelectingRectangle) {
+                this._selectInfo = {
+                    isSelect: false,
+                    selection: null,
+                };
+                return;
+            }
+
             if (this._selectInfo.selection)
                 this.setSelection(this._selectInfo.selection.anchor, this._selectInfo.selection.focus);
 

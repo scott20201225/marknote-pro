@@ -6,6 +6,7 @@ import type { Nullable } from '../types';
 import { CLASS_NAMES } from '../config';
 import { isMouseEvent } from '../utils';
 import { getBlock } from '../utils/dom';
+import { SelectionType } from './types';
 
 const SELECTED_CLASS = CLASS_NAMES.MU_TABLE_CELL_SELECTED;
 const BORDER_TOP_CLASS = CLASS_NAMES.MU_TABLE_CELL_BORDER_TOP;
@@ -25,6 +26,9 @@ class TableRectSelection {
     private _focus: Nullable<ICellPosition> = null;
     private _isSelecting = false;
     private _dragEventIds: string[] = [];
+    private _selectionSuppressed = false;
+    private _previousUserSelect = '';
+    private _previousWebkitUserSelect = '';
 
     static create(muya: Muya): TableRectSelection {
         const instance = new TableRectSelection(muya);
@@ -37,6 +41,10 @@ class TableRectSelection {
 
     get hasSelection(): boolean {
         return this._table != null && this._anchor != null && this._focus != null;
+    }
+
+    get isSelectingRectangle(): boolean {
+        return this._isSelecting && this._anchor != null && this._focus != null;
     }
 
     isSingleCellSelected(): boolean {
@@ -81,6 +89,7 @@ class TableRectSelection {
         };
         this._isSelecting = true;
         this._freezeNativeSelection();
+        this._activateTableSelection();
         this._renderHighlight();
     }
 
@@ -103,6 +112,7 @@ class TableRectSelection {
         this._focus = position;
         this._isSelecting = true;
         this._freezeNativeSelection();
+        this._activateTableSelection();
         this._renderHighlight();
     }
 
@@ -165,13 +175,16 @@ class TableRectSelection {
             && position.cell !== this._anchor.cell
             && !this._isSelecting
         ) {
+            event.preventDefault();
             this._isSelecting = true;
             this._freezeNativeSelection();
+            this._activateTableSelection();
         }
 
         if (!this._isSelecting)
             return;
 
+        event.preventDefault();
         this._suppressNativeRange();
 
         // Off-table moves null the focus, so releasing outside the table
@@ -182,6 +195,7 @@ class TableRectSelection {
 
     private _onMouseUp = (): void => {
         this._detachDragEvents();
+        this._restoreNativeTextSelection();
 
         // Nothing to freeze when the drag never started (a plain click) or the
         // pointer was released outside the table (focus is null).
@@ -190,14 +204,46 @@ class TableRectSelection {
     };
 
     private _freezeNativeSelection(): void {
+        this._disableNativeTextSelection();
         document.getSelection()?.removeAllRanges();
         this._muya.domNode.focus();
         this._muya.editor.activeContentBlock = null;
         this._muya.ui.hideAllFloatTools();
     }
 
+    private _activateTableSelection(): void {
+        this._muya.editor.selection.activate(SelectionType.TABLE);
+    }
+
     private _suppressNativeRange(): void {
         document.getSelection()?.removeAllRanges();
+    }
+
+    private _disableNativeTextSelection(): void {
+        if (this._selectionSuppressed)
+            return;
+
+        const { style } = this._muya.domNode;
+        this._previousUserSelect = style.userSelect;
+        this._previousWebkitUserSelect = style.getPropertyValue('-webkit-user-select');
+        style.userSelect = 'none';
+        style.setProperty('-webkit-user-select', 'none');
+        this._selectionSuppressed = true;
+    }
+
+    private _restoreNativeTextSelection(): void {
+        if (!this._selectionSuppressed)
+            return;
+
+        const { style } = this._muya.domNode;
+        style.userSelect = this._previousUserSelect;
+        if (this._previousWebkitUserSelect)
+            style.setProperty('-webkit-user-select', this._previousWebkitUserSelect);
+        else
+            style.removeProperty('-webkit-user-select');
+        this._selectionSuppressed = false;
+        this._previousUserSelect = '';
+        this._previousWebkitUserSelect = '';
     }
 
     private _detachDragEvents(): void {
@@ -338,6 +384,7 @@ class TableRectSelection {
     /** Discard the frozen selection and remove every highlight class. */
     clear(): void {
         this._clearHighlight();
+        this._restoreNativeTextSelection();
         this._table = null;
         this._anchor = null;
         this._focus = null;

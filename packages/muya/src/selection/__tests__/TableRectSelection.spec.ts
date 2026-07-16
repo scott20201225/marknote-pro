@@ -23,6 +23,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+    vi.restoreAllMocks();
     while (bootedHosts.length) {
         const host = bootedHosts.pop()!;
         host.remove();
@@ -115,8 +116,38 @@ describe('cross-cell table selection — highlight', () => {
         // The rectangle is the only selection: no model-level text caret and
         // no native range survive alongside it.
         expect(muya.editor.selection.table.hasSelection).toBe(true);
+        expect(muya.editor.selection.anchorBlock).toBe(null);
+        expect(muya.editor.selection.focusBlock).toBe(null);
         expect(muya.editor.activeContentBlock).toBe(null);
         expect(document.getSelection()?.rangeCount).toBe(0);
+    });
+
+    it('suppresses native text selection once the drag escalates to a cell rectangle', () => {
+        const muya = bootMuya(TABLE_MD);
+        const table = firstTable(muya);
+        const anchor = cellDom(table, 0, 0);
+        const fakeRange = {
+            cloneRange: () => fakeRange,
+            getClientRects: () => [] as unknown as DOMRectList,
+            getBoundingClientRect: () => new DOMRect(0, 0, 0, 0),
+        };
+        const removeAllRanges = vi.fn();
+        vi.spyOn(document, 'getSelection').mockReturnValue({
+            addRange: vi.fn(),
+            getRangeAt: vi.fn(() => fakeRange),
+            removeAllRanges,
+            rangeCount: 1,
+        } as unknown as Selection);
+
+        fireMouse(anchor, 'mousedown');
+        expect(muya.domNode.style.userSelect).toBe('');
+        fireMouse(cellDom(table, 1, 1), 'mousemove');
+        expect(muya.domNode.style.userSelect).toBe('none');
+        fireMouse(cellDom(table, 1, 1), 'mouseup');
+
+        expect(removeAllRanges).toHaveBeenCalled();
+        expect(muya.domNode.style.userSelect).toBe('');
+        expect(selectedCount(table)).toBe(4);
     });
 
     it('does not start a selection when the pointer stays in one cell', () => {
