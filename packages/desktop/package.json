@@ -1,6 +1,6 @@
 {
   "name": "marktextpro",
-  "version": "0.20.0-scott.28",
+  "version": "0.20.0-scott.29",
   "description": "MarkTextPro",
   "main": "./out/main/index.js",
   "author": {

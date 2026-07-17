@@ -3,8 +3,7 @@ import { expect, test } from '../fixtures/muya';
 import { editor, floats } from '../helpers/selectors';
 
 /**
- * TableRowColumMenu (the `.mu-table-bar-tools` row/column operations popup)
- * end-to-end coverage.
+ * TableDragBar hover affordance coverage.
  *
  * Trigger contract (source of truth:
  * `packages/core/src/ui/tableDragBar/index.ts`):
@@ -13,15 +12,8 @@ import { editor, floats } from '../helpers/selectors';
  *     `barType` is 'bottom' when a cell is 20px above (cursor below the
  *     table) and 'right' when a cell is 20px to the left (cursor right of
  *     the table).
- *   - A QUICK click on the bar (mousedown + mouseup inside the 300ms drag
- *     arming window) clears the drag timer. ONLY when `barType === 'right'`
- *     does `mouseup` emit `muya-table-bar`, which shows the
- *     `TableRowColumMenu`. A quick click on the BOTTOM bar emits nothing —
- *     no menu opens (the column equivalent is wired through
- *     `TableColumnToolbar`, not this popup).
- *
- * The 'right' menu renders Insert Row Above / Insert Row Below / Remove Row
- * (`packages/core/src/ui/tableRowColumMenu/config.ts::toolList.right`).
+ *   - Pressing the bar enters drag mode immediately. The legacy
+ *     `muya-table-bar` popup route is no longer exposed from this affordance.
  */
 
 const TWO_BY_TWO = '| h1 | h2 |\n| --- | --- |\n| a | b |\n';
@@ -48,11 +40,6 @@ async function wrapperOpacity(page: Page, selector: string): Promise<number> {
             return 0;
         return Number.parseFloat(wrapper.style.opacity || '0');
     });
-}
-
-/** The TableRowColumMenu content container (avoids the wrapper double-match). */
-function menuContainer(page: Page) {
-    return page.locator(`.mu-float-container${floats.tableRowColumMenu}`);
 }
 
 async function expectShown(page: Page, selector: string) {
@@ -104,11 +91,7 @@ async function revealBottomBar(page: Page, table: ReturnType<Page['locator']>) {
     return page.locator(floats.tableDragBar);
 }
 
-/**
- * Quick-click (mousedown immediately followed by mouseup, well inside the
- * 300ms drag-arming window) on the bar's centre.
- */
-async function quickClickBar(page: Page, bar: ReturnType<Page['locator']>) {
+async function pressAndReleaseBar(page: Page, bar: ReturnType<Page['locator']>) {
     const box = await bar.boundingBox();
     if (!box)
         throw new Error('drag bar has no bounding box');
@@ -119,7 +102,7 @@ async function quickClickBar(page: Page, bar: ReturnType<Page['locator']>) {
     await page.mouse.up();
 }
 
-test.describe('TableRowColumMenu (row/column bar popup)', () => {
+test.describe('TableDragBar hover affordance', () => {
     test('the drag bar appears with right-orientation when hovering to the right of the table', async ({ page }) => {
         const table = await makeTwoByTwo(page);
         const bar = await revealRightBar(page, table);
@@ -131,27 +114,18 @@ test.describe('TableRowColumMenu (row/column bar popup)', () => {
         }).toBe('right');
     });
 
-    test('a quick-click on the RIGHT bar opens the row-operations menu', async ({ page }) => {
+    test('pressing and releasing the RIGHT bar does not open the legacy row/column popup', async ({ page }) => {
         const table = await makeTwoByTwo(page);
         const bar = await revealRightBar(page, table);
         await expect.poll(async () => bar.getAttribute('data-drag')).toBe('right');
 
-        await quickClickBar(page, bar);
-
-        const menu = menuContainer(page);
-        await expectShown(page, floats.tableRowColumMenu);
-
-        // The 'right' toolList renders exactly three row operations.
-        const items = menu.locator('li.item');
-        await expect(items).toHaveCount(3);
-        await expect(menu).toContainText('Insert Row Above');
-        await expect(menu).toContainText('Insert Row Below');
-        await expect(menu).toContainText('Remove Row');
-        // It is the ROW menu, not the column menu.
-        await expect(menu).not.toContainText('Column');
+        expect(await wrapperOpacity(page, floats.tableRowColumMenu)).toBe(0);
+        await pressAndReleaseBar(page, bar);
+        await page.waitForTimeout(400);
+        expect(await wrapperOpacity(page, floats.tableRowColumMenu)).toBe(0);
     });
 
-    test('a quick-click on the BOTTOM bar does NOT open the row/column menu', async ({ page }) => {
+    test('pressing and releasing the BOTTOM bar also leaves the legacy popup hidden', async ({ page }) => {
         const table = await makeTwoByTwo(page);
         const bar = await revealBottomBar(page, table);
         await expect.poll(async () => bar.getAttribute('data-drag'), {
@@ -162,35 +136,8 @@ test.describe('TableRowColumMenu (row/column bar popup)', () => {
         // Sanity: the popup is parked (hidden) before we click.
         expect(await wrapperOpacity(page, floats.tableRowColumMenu)).toBe(0);
 
-        await quickClickBar(page, bar);
-
-        // `mouseup` emits `muya-table-bar` only for the 'right' bar, so the
-        // bottom bar must leave the popup parked. Give the (absent) emit a
-        // window to land, then assert it never showed.
+        await pressAndReleaseBar(page, bar);
         await page.waitForTimeout(400);
         expect(await wrapperOpacity(page, floats.tableRowColumMenu)).toBe(0);
-    });
-
-    test('Insert Row Below adds a body row to the table', async ({ page }) => {
-        const table = await makeTwoByTwo(page);
-        const bar = await revealRightBar(page, table);
-        await expect.poll(async () => bar.getAttribute('data-drag')).toBe('right');
-
-        await quickClickBar(page, bar);
-
-        const menu = menuContainer(page);
-        await expectShown(page, floats.tableRowColumMenu);
-
-        // `data-label` on each item is the action verb ('insert' / 'remove'),
-        // shared across the two insert rows; disambiguate by visible text.
-        await menu.locator('li.item', { hasText: 'Insert Row Below' }).click();
-
-        // Adding a row grows the table from 2 rows (header + 1 body) to 3.
-        await expect(table.locator('tr')).toHaveCount(3);
-        // The popup closes after selecting an item.
-        await expect.poll(async () => wrapperOpacity(page, floats.tableRowColumMenu), {
-            timeout: 5_000,
-            intervals: [50, 100, 250, 500],
-        }).toBe(0);
     });
 });

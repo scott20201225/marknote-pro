@@ -174,7 +174,6 @@ export class TableDragBar extends BaseFloat {
     private static readonly HIGHLIGHT_OWNER = 'table-drag-bar';
     static pluginName = 'tableDragBar';
     private _block: TableBodyCell | null = null;
-    private _mouseTimer: ReturnType<typeof setTimeout> | null = null;
     private _showTimer: ReturnType<typeof setTimeout> | null = null;
     private _pendingCell: HTMLElement | null = null;
     private _pendingBlock: TableBodyCell | null = null;
@@ -247,7 +246,6 @@ export class TableDragBar extends BaseFloat {
 
         eventCenter.attachDOMEvent(document.body, 'mousemove', handler);
         eventCenter.attachDOMEvent(container!, 'mousedown', this._mousedown);
-        eventCenter.attachDOMEvent(container!, 'mouseup', this._mouseup);
         eventCenter.attachDOMEvent(container!, 'mouseenter', () => {
             if (this._block && this._barType) {
                 const context = resolveTableCellContext(this._block);
@@ -265,33 +263,7 @@ export class TableDragBar extends BaseFloat {
     private _mousedown = (event: Event) => {
         event.preventDefault();
         event.stopPropagation();
-        this._mouseTimer = setTimeout(() => {
-            this._startDrag(event);
-            this._mouseTimer = null;
-        }, 300);
-    };
-
-    private _mouseup = (event: Event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        const { container, _barType: barType } = this;
-        const { eventCenter } = this.muya;
-
-        if (this._mouseTimer) {
-            clearTimeout(this._mouseTimer);
-            this._mouseTimer = null;
-            if (barType === 'bottom') {
-                eventCenter.emit('muya-table-bar', {
-                    reference: {
-                        getBoundingClientRect: () => container!.getBoundingClientRect(),
-                    },
-                    tableInfo: {
-                        barType,
-                    },
-                    block: this._block,
-                });
-            }
-        }
+        this._startDrag(event);
     };
 
     private _startDrag(event: Event) {
@@ -356,15 +328,13 @@ export class TableDragBar extends BaseFloat {
 
     private _docMouseup = (event: Event) => {
         event.preventDefault();
-
-        const { eventCenter } = this.muya;
-
-        for (const id of this._dragEventIds)
-            eventCenter.detachDOMEvent(id);
-
-        this._dragEventIds = [];
-        if (!this._isDragTableBar)
+        this._detachDragEvents();
+        if (!this._dragInfo)
             return;
+        if (!this._isDragTableBar) {
+            this._resetDragTableBar();
+            return;
+        }
 
         this._setDropTargetStyle();
 
@@ -564,6 +534,7 @@ export class TableDragBar extends BaseFloat {
     };
 
     private _resetDragTableBar = () => {
+        this._clearDragStyles();
         this._dragInfo = null;
         this._isDragTableBar = false;
     };
@@ -577,6 +548,8 @@ export class TableDragBar extends BaseFloat {
 
     override hide() {
         this._clearShowTimer();
+        this._detachDragEvents();
+        this._resetDragTableBar();
         this._block = null;
         this._barType = null;
         clearTableHighlight(TableDragBar.HIGHLIGHT_OWNER);
@@ -637,6 +610,25 @@ export class TableDragBar extends BaseFloat {
         this._pendingCell = null;
         this._pendingBlock = null;
         this._pendingBarType = null;
+    }
+
+    private _detachDragEvents() {
+        const { eventCenter } = this.muya;
+        for (const id of this._dragEventIds)
+            eventCenter.detachDOMEvent(id);
+        this._dragEventIds = [];
+    }
+
+    private _clearDragStyles() {
+        if (!this._dragInfo)
+            return;
+
+        for (const row of this._dragInfo.cells) {
+            for (const cell of row) {
+                cell.classList.remove('mu-cell-transform', 'mu-drag-cell', 'mu-drag-bottom', 'mu-drag-right');
+                cell.style.transform = '';
+            }
+        }
     }
 
     private _highlightTarget(table: Table, barType: BarType, index: number) {
