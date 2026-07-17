@@ -95,7 +95,7 @@ export class TableDeleteButton extends BaseFloat {
             else {
                 this.hide();
             }
-        }, 300);
+        });
 
         eventCenter.attachDOMEvent(document.body, 'mousemove', handler);
     }

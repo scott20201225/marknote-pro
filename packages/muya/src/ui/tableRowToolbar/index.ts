@@ -13,6 +13,7 @@ import actions from './config';
 import './index.css';
 
 const OFFSET = 27;
+const SHOW_DELAY = 500;
 
 const defaultOptions = {
     placement: 'left-start' as const,
@@ -28,6 +29,9 @@ export class TableRowToolbar extends BaseFloat {
     private static readonly HIGHLIGHT_OWNER = 'table-row-toolbar';
     private _oldVNode: VNode | null = null;
     private _block: TableBodyCell | null = null;
+    private _showTimer: ReturnType<typeof setTimeout> | null = null;
+    private _pendingCell: HTMLElement | null = null;
+    private _pendingBlock: TableBodyCell | null = null;
     private _actions: TableRowToolAction[] = [...actions];
     private _toolsContainer: HTMLDivElement = document.createElement('div');
 
@@ -73,15 +77,13 @@ export class TableRowToolbar extends BaseFloat {
                         && element[BLOCK_DOM_PROPERTY].blockName === 'table.cell',
                 );
                 const cellBlock = tableCellEle![BLOCK_DOM_PROPERTY] as TableBodyCell;
-                this._block = cellBlock;
-                this._highlightCurrentRow(cellBlock);
-                this.show(tableCellEle!);
-                this.render();
+                this._scheduleShow(tableCellEle as HTMLElement, cellBlock);
             }
             else {
+                this._clearShowTimer();
                 this.hide();
             }
-        }, 300);
+        });
 
         eventCenter.attachDOMEvent(document.body, 'mousemove', handler);
         eventCenter.attachDOMEvent(this.container!, 'mouseenter', () => {
@@ -188,9 +190,45 @@ export class TableRowToolbar extends BaseFloat {
     }
 
     override hide() {
+        this._clearShowTimer();
         this._block = null;
         clearTableHighlight(TableRowToolbar.HIGHLIGHT_OWNER);
         super.hide();
+    }
+
+    private _scheduleShow(cellElement: HTMLElement, block: TableBodyCell) {
+        if (this.status && this._block === block)
+            return;
+        if (this._pendingCell === cellElement && this._pendingBlock === block)
+            return;
+
+        this._clearShowTimer();
+        if (this.status)
+            this.hide();
+
+        this._pendingCell = cellElement;
+        this._pendingBlock = block;
+        this._showTimer = setTimeout(() => {
+            if (this._pendingCell !== cellElement || this._pendingBlock !== block || !cellElement.isConnected)
+                return;
+
+            this._showTimer = null;
+            this._pendingCell = null;
+            this._pendingBlock = null;
+            this._block = block;
+            this._highlightCurrentRow(block);
+            this.show(cellElement);
+            this.render();
+        }, SHOW_DELAY);
+    }
+
+    private _clearShowTimer() {
+        if (this._showTimer) {
+            clearTimeout(this._showTimer);
+            this._showTimer = null;
+        }
+        this._pendingCell = null;
+        this._pendingBlock = null;
     }
 
     private _highlightCurrentRow(block: TableBodyCell) {

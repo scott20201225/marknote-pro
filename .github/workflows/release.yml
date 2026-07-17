@@ -234,6 +234,8 @@ jobs:
           IS_PRERELEASE: ${{ contains(needs.resolve.outputs.release_tag, '-') }}
         run: |
           {
+            cat .github/release-notes/intro-bilingual.md
+            echo
             if [[ "$IS_PRERELEASE" == "true" ]]; then
               echo "## ❗ This is a pre-release"
               echo "- May contain bugs and unfinished features."

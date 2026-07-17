@@ -90,6 +90,10 @@
 
 <br />
 
+> MarkTextPro is built on top of MarkText and is an open-source project that is still being carefully refined. We value every bug report, suggestion, and real-world experience. If you notice rough edges or have ideas while using it, we'd be glad to hear from you and keep improving MarkTextPro together.
+>
+> MarkTextPro 基于 MarkText 开发，是一个持续打磨中的开源项目。我们珍惜每一条问题反馈、使用建议和体验感受，欢迎你在使用过程中把遇到的问题与想法告诉我们，一起让 MarkTextPro 变得更稳定、更顺手。
+
 ## Screenshot
 
 The logo is retired from the screenshot area. Below are real product shots taken from the current MarkTextPro build.
@@ -202,6 +206,18 @@ If you have any questions regarding MarkTextPro, you are welcome to write an iss
 ## Contribution
 
 MarkTextPro is in development, please make sure to read the [Contributing Guide](.github/CONTRIBUTING.md) before making a pull request. Want to add some features to MarkTextPro? Please open an issue first and describe the use case.
+
+## Community
+
+MarkTextPro is built on top of MarkText and is an open-source project under active refinement. Feedback, issues, and suggestions are always welcome to help us improve the experience.
+
+MarkTextPro 基于 MarkText 开发，是一个持续打磨中的开源项目。欢迎反馈问题与建议，帮助我们把体验做得更好。
+
+QQ Group: `871505001`
+
+<p align="center">
+  <img src="docs/assets/community/qq-group-qrcode.jpg" alt="MarktextPro QQ group QR code" width="360">
+</p>
 
 ## Contributors
 

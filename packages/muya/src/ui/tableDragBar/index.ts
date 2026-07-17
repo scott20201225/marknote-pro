@@ -92,6 +92,7 @@ function getDragCells(tableBlock: Table, barType: BarType, index: number) {
 }
 
 const OFFSET = 20;
+const SHOW_DELAY = 500;
 
 const rightOptions = {
     placement: 'right' as const,
@@ -174,6 +175,10 @@ export class TableDragBar extends BaseFloat {
     static pluginName = 'tableDragBar';
     private _block: TableBodyCell | null = null;
     private _mouseTimer: ReturnType<typeof setTimeout> | null = null;
+    private _showTimer: ReturnType<typeof setTimeout> | null = null;
+    private _pendingCell: HTMLElement | null = null;
+    private _pendingBlock: TableBodyCell | null = null;
+    private _pendingBarType: BarType | null = null;
     private _dragEventIds: string[] = [];
     private _isDragTableBar: boolean = false;
     private _barType: 'bottom' | 'right' | null = null;
@@ -228,17 +233,14 @@ export class TableDragBar extends BaseFloat {
                     {},
                     barType === 'right' ? rightOptions : bottomOptions,
                 );
-                this._barType = barType;
-                this._block = cellBlock;
                 const context = resolveTableCellContext(cellBlock);
                 const index = getIndex(barType, cellBlock);
                 if (!context || index === null)
                     return this.hide();
-                this._highlightTarget(context.table, barType, index);
-                this.show(tableCellEl!);
-                this._render(barType);
+                this._scheduleShow(tableCellEl as HTMLElement, cellBlock, barType, context.table, index);
             }
             else {
+                this._clearShowTimer();
                 this.hide();
             }
         });
@@ -574,10 +576,67 @@ export class TableDragBar extends BaseFloat {
     }
 
     override hide() {
+        this._clearShowTimer();
         this._block = null;
         this._barType = null;
         clearTableHighlight(TableDragBar.HIGHLIGHT_OWNER);
         super.hide();
+    }
+
+    private _scheduleShow(
+        cellElement: HTMLElement,
+        block: TableBodyCell,
+        barType: BarType,
+        table: Table,
+        index: number,
+    ) {
+        if (this.status && this._block === block && this._barType === barType)
+            return;
+        if (
+            this._pendingCell === cellElement
+            && this._pendingBlock === block
+            && this._pendingBarType === barType
+        ) {
+            return;
+        }
+
+        this._clearShowTimer();
+        if (this.status)
+            this.hide();
+
+        this._pendingCell = cellElement;
+        this._pendingBlock = block;
+        this._pendingBarType = barType;
+        this._showTimer = setTimeout(() => {
+            if (
+                this._pendingCell !== cellElement
+                || this._pendingBlock !== block
+                || this._pendingBarType !== barType
+                || !cellElement.isConnected
+            ) {
+                return;
+            }
+
+            this._showTimer = null;
+            this._pendingCell = null;
+            this._pendingBlock = null;
+            this._pendingBarType = null;
+            this._barType = barType;
+            this._block = block;
+            this._highlightTarget(table, barType, index);
+            this.show(cellElement);
+            this._render(barType);
+        }, SHOW_DELAY);
+    }
+
+    private _clearShowTimer() {
+        if (this._showTimer) {
+            clearTimeout(this._showTimer);
+            this._showTimer = null;
+        }
+        this._pendingCell = null;
+        this._pendingBlock = null;
+        this._pendingBarType = null;
     }
 
     private _highlightTarget(table: Table, barType: BarType, index: number) {
