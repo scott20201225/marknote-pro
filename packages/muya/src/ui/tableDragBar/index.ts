@@ -200,6 +200,8 @@ export class TableDragBar extends BaseFloat {
         const handler = throttle((event: Event) => {
             if (!isMouseEvent(event))
                 return;
+            if (this._dragInfo)
+                return;
 
             const { x, y } = event;
             const els = [...document.elementsFromPoint(x, y)];
@@ -310,20 +312,10 @@ export class TableDragBar extends BaseFloat {
     }
 
     private _docMousemove = (event: Event) => {
-        if (!this._dragInfo || !isMouseEvent(event))
+        if (!isMouseEvent(event))
             return;
 
-        const { barType } = this._dragInfo;
-        const attrName = barType === 'bottom' ? 'clientX' : 'clientY';
-        const offset = (this._dragInfo.offset
-            = event[attrName] - this._dragInfo[attrName]);
-        if (Math.abs(offset) < 5)
-            return;
-
-        this._isDragTableBar = true;
-        this._calculateCurIndex();
-        this._setDragTargetStyle();
-        this._setSwitchStyle();
+        this._updateDragState(event);
     };
 
     private _docMouseup = (event: Event) => {
@@ -331,18 +323,15 @@ export class TableDragBar extends BaseFloat {
         this._detachDragEvents();
         if (!this._dragInfo)
             return;
+        if (isMouseEvent(event))
+            this._updateDragState(event);
         if (!this._isDragTableBar) {
             this._resetDragTableBar();
             return;
         }
 
-        this._setDropTargetStyle();
-
-        // The drop animation need 300ms.
-        setTimeout(() => {
-            this._switchTableData();
-            this._resetDragTableBar();
-        }, 300);
+        this._switchTableData();
+        this._resetDragTableBar();
     };
 
     private _calculateCurIndex = () => {
@@ -629,6 +618,23 @@ export class TableDragBar extends BaseFloat {
                 cell.style.transform = '';
             }
         }
+    }
+
+    private _updateDragState(event: MouseEvent) {
+        if (!this._dragInfo)
+            return;
+
+        const { barType } = this._dragInfo;
+        const attrName = barType === 'bottom' ? 'clientX' : 'clientY';
+        const offset = (this._dragInfo.offset
+            = event[attrName] - this._dragInfo[attrName]);
+        if (Math.abs(offset) < 5)
+            return;
+
+        this._isDragTableBar = true;
+        this._calculateCurIndex();
+        this._setDragTargetStyle();
+        this._setSwitchStyle();
     }
 
     private _highlightTarget(table: Table, barType: BarType, index: number) {

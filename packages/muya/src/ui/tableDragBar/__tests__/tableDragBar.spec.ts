@@ -2,6 +2,7 @@
 
 import type Table from '../../../block/gfm/table';
 import type TableBodyCell from '../../../block/gfm/table/cell';
+import type { ITableState } from '../../../state/types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Muya } from '../../../muya';
 import { TableDragBar } from '../index';
@@ -50,6 +51,10 @@ function firstTable(muya: Muya): Table {
     return muya.editor.scrollPage!.firstContentInDescendant()!.closestBlock('table') as Table;
 }
 
+function firstTableState(muya: Muya): ITableState {
+    return muya.getState()[0] as ITableState;
+}
+
 function mouse(type: string, clientX = 0, clientY = 0): MouseEvent {
     const event = new MouseEvent(type, {
         bubbles: true,
@@ -74,6 +79,20 @@ function armDragBar(plugin: TableDragBar, table: Table, row: number, column: num
     anyPlugin._block = cell;
     anyPlugin._barType = barType;
     return cell;
+}
+
+function mockTableGeometry(table: Table, width = 80, height = 24) {
+    const cellElements = Array.from(table.domNode!.querySelectorAll('th, td'));
+    for (const cell of cellElements) {
+        Object.defineProperty(cell, 'clientWidth', {
+            value: width,
+            configurable: true,
+        });
+        Object.defineProperty(cell, 'clientHeight', {
+            value: height,
+            configurable: true,
+        });
+    }
 }
 
 describe('tableDragBar', () => {
@@ -135,5 +154,73 @@ describe('tableDragBar', () => {
             'muya-table-bar',
             expect.anything(),
         );
+    });
+
+    it('uses the final mouseup position to reorder even when no mousemove fired', async () => {
+        const muya = bootMuya(TABLE_MD);
+        const table = firstTable(muya);
+        mockTableGeometry(table);
+        const plugin = new TableDragBar(muya);
+        armDragBar(plugin, table, 0, 0, 'bottom');
+
+        (plugin as TableDragBar & { _mousedown: (event: Event) => void })._mousedown(mouse('mousedown', 10, 10));
+        (plugin as TableDragBar & { _docMouseup: (event: Event) => void })._docMouseup(mouse('mouseup', 200, 10));
+
+        await vi.waitFor(() => {
+            expect(firstTableState(muya).children[0].children.map(cell => cell.text)).toEqual([
+                'b1',
+                'c1',
+                'a1',
+            ]);
+        });
+    });
+
+    it('commits the reorder before the global click hide can clear drag state', async () => {
+        const muya = bootMuya(TABLE_MD);
+        const table = firstTable(muya);
+        mockTableGeometry(table);
+        const plugin = new TableDragBar(muya);
+        armDragBar(plugin, table, 0, 0, 'bottom');
+        plugin.status = true;
+
+        (plugin as TableDragBar & { _mousedown: (event: Event) => void })._mousedown(mouse('mousedown', 10, 10));
+        (plugin as TableDragBar & { _docMouseup: (event: Event) => void })._docMouseup(mouse('mouseup', 200, 10));
+        document.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+        await vi.waitFor(() => {
+            expect(firstTableState(muya).children[0].children.map(cell => cell.text)).toEqual([
+                'b1',
+                'c1',
+                'a1',
+            ]);
+        });
+    });
+
+    it('ignores hover hide logic while a drag session is active', () => {
+        const muya = bootMuya(TABLE_MD);
+        const table = firstTable(muya);
+        const plugin = new TableDragBar(muya);
+        armDragBar(plugin, table, 0, 0, 'bottom');
+
+        const removeAllRanges = vi.fn();
+        Object.defineProperty(document, 'elementsFromPoint', {
+            value: vi.fn(() => []),
+            configurable: true,
+        });
+        vi.spyOn(document, 'getSelection').mockReturnValue({
+            removeAllRanges,
+            rangeCount: 0,
+        } as unknown as Selection);
+
+        (plugin as TableDragBar & { _mousedown: (event: Event) => void })._mousedown(mouse('mousedown', 10, 10));
+        document.body.dispatchEvent(mouse('mousemove', 400, 400));
+
+        const anyPlugin = plugin as TableDragBar & {
+            _dragInfo: unknown;
+            status: boolean;
+        };
+
+        expect(anyPlugin._dragInfo).not.toBe(null);
+        expect(anyPlugin.status).toBe(false);
     });
 });
