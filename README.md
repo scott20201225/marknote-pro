@@ -135,6 +135,18 @@ The logo is retired from the screenshot area. Below are real product shots taken
       <sub>Table editing toolkit overview</sub>
     </td>
   </tr>
+  <tr>
+    <td align="center">
+      <img src="docs/assets/screenshots/table-copy-paste.gif" alt="Copy and paste between MarkTextPro tables" width="100%">
+      <br>
+      <sub>Copy and paste between MarkTextPro tables</sub>
+    </td>
+    <td align="center">
+      <img src="docs/assets/screenshots/excel-table-interoperability.gif" alt="Copy and paste between Excel and MarkTextPro tables" width="100%">
+      <br>
+      <sub>Excel and MarkTextPro table interoperability</sub>
+    </td>
+  </tr>
 </table>
 
 ## Features
