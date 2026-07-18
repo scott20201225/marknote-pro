@@ -21,6 +21,6 @@ runs:
 
     - name: Install Dependencies
       shell: bash
-      run: pnpm install --frozen-lockfile --ignore-scripts
+      run: pnpm install --no-frozen-lockfile --ignore-scripts
       env:
         GITHUB_TOKEN: ${{ github.token }}
