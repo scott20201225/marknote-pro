@@ -10,14 +10,7 @@ const keybindings: Map<string, string> = new Map([
   ['mt.hide-others', ''],
 
   // File menu
-  ['file.new-window', 'Ctrl+N'],
-  ['file.new-tab', 'Ctrl+T'],
-  ['file.open-file', 'Ctrl+O'],
-  ['file.open-folder', 'Ctrl+Shift+O'],
   ['file.save', 'Ctrl+S'],
-  ['file.save-as', 'Ctrl+Shift+S'],
-  ['file.move-file', ''],
-  ['file.rename-file', ''],
   ['file.print', 'Ctrl+P'],
   ['file.preferences', 'Ctrl+,'],
   ['file.close-tab', 'Ctrl+W'],
@@ -99,7 +92,6 @@ const keybindings: Map<string, string> = new Map([
   ['view.source-code-mode', 'Ctrl+E'],
   ['view.typewriter-mode', 'Ctrl+Shift+G'],
   ['view.focus-mode', 'Ctrl+Shift+J'],
-  ['view.toggle-sidebar', 'Ctrl+J'],
   ['view.toggle-toc', 'Ctrl+K'],
   ['view.toggle-dev-tools', 'Ctrl+Alt+I'],
   ['view.dev-reload', 'Ctrl+F5'],

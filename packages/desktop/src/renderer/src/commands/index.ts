@@ -8,6 +8,17 @@ import { t } from '../i18n'
 const REPO_DOCS_BASE_URL =
   'https://github.com/scott20201225/marknote-pro/blob/main/packages/website/content/docs/end-user'
 
+const HIDDEN_COMMAND_IDS = new Set([
+  'file.new-tab',
+  'file.new-window',
+  'file.open-file',
+  'file.open-folder',
+  'file.save-as',
+  'file.move-file',
+  'file.rename-file',
+  'file.import-file'
+])
+
 export { default as FileEncodingCommand } from './fileEncoding'
 export { default as LineEndingCommand } from './lineEnding'
 export { default as QuickOpenCommand } from './quickOpen'
@@ -149,6 +160,14 @@ const commands: CommandDescriptor[] = [
   {
     id: 'file.export-file',
     subcommands: [
+      {
+        id: 'file.export-file.md',
+        description: 'Export as Markdown',
+        execute: async () => {
+          await delay(50)
+          bus.emit('showExportDialog', 'md')
+        }
+      },
       {
         id: 'file.export-file-html',
         description: 'Export as HTML',
@@ -625,13 +644,6 @@ const commands: CommandDescriptor[] = [
     }
   },
   {
-    id: 'view.toggle-sidebar',
-    execute: async () => {
-      bus.emit('view:toggle-layout-entry', 'showSideBar')
-    }
-  },
-
-  {
     id: 'view.text-direction',
     subcommands: [
       {
@@ -719,6 +731,7 @@ if (isOsx) {
 
 // Function to get commands with updated descriptions
 export const getCommandsWithDescriptions = async (): Promise<CommandDescriptor[]> => {
+  const visibleCommands = commands.filter((command) => !HIDDEN_COMMAND_IDS.has(command.id))
   // Update descriptions for all commands
   const updateDescriptions = (commandList: Array<CommandDescriptor | CommandSubcommand>): void => {
     for (const item of commandList) {
@@ -756,16 +769,18 @@ export const getCommandsWithDescriptions = async (): Promise<CommandDescriptor[]
     }
   }
 
-  updateDescriptions(commands)
-  return commands
+  updateDescriptions(visibleCommands)
+  return visibleCommands
 }
 
 // Complete all command descriptions for initial load.
-for (const item of commands) {
+const visibleCommands = commands.filter((command) => !HIDDEN_COMMAND_IDS.has(command.id))
+
+for (const item of visibleCommands) {
   const { id, description } = item
   if (id && !description) {
     item.description = getCommandDescriptionById(id)
   }
 }
 
-export default commands
+export default visibleCommands

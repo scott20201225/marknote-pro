@@ -45,7 +45,14 @@ interface PageOptions {
 // E.g. "mt::save-tabs" --> "mt::window-save-tabs$wid:<windowId>"
 
 const getExportExtensionFilter = (type: ExportType): Electron.FileFilter[] | undefined => {
-  if (type === 'pdf') {
+  if (type === 'md') {
+    return [
+      {
+        name: 'Markdown',
+        extensions: ['md']
+      }
+    ]
+  } else if (type === 'pdf') {
     return [
       {
         name: 'Portable Document Format',
@@ -385,6 +392,11 @@ const handleResponseForExport = async (e: IpcMainEvent, payload: ExportPayload):
         const data = await win.webContents.printToPDF(options)
         removePrintServiceFromWindow(win)
         await writeFile(filePath, data, extension!, 'binary')
+      } else if (type === 'md') {
+        if (typeof markdown !== 'string') {
+          throw new Error('No Markdown content found.')
+        }
+        await writeFile(filePath, markdown, extension!, 'utf8')
       } else {
         if (!content) {
           throw new Error('No HTML content found.')
@@ -796,6 +808,16 @@ ipcMain.on('mt::rename', async (e, { id, pathname, newPathname }: RenamePayload)
       doRename()
     }
   }
+})
+
+ipcMain.on('mt::sidebar-path-renamed', (e, payload: { src?: string; dest?: string }) => {
+  const win = BrowserWindow.fromWebContents(e.sender)
+  const { src, dest } = payload ?? {}
+  if (!win || !src || !dest || src === dest) {
+    return
+  }
+
+  ipcMain.emit('window-change-opened-paths', win.id, dest, src)
 })
 
 ipcMain.on(

@@ -407,6 +407,12 @@ const updateTranslations = () => {
 
 const showDialog = (type: unknown) => {
   const exportTypeValue = String(type ?? '')
+  if (exportTypeValue === 'md') {
+    bus.emit('editor-blur')
+    bus.emit('export', { type: 'md' })
+    return
+  }
+
   exportType.value = exportTypeValue
   isPrintable.value = !['styledHtml', 'docx', 'png', 'jpeg'].includes(exportTypeValue)
   if (!isPrintable.value && (activeName.value === 'header' || activeName.value === 'page')) {

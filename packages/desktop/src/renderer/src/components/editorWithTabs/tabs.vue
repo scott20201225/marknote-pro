@@ -12,18 +12,13 @@
           @click.middle="closeTab(file.id)"
           @contextmenu.prevent="handleContextMenu($event, file)"
         >
-          <span>{{ file.filename }}</span>
+          <span>{{ getDisplayFilename(file.filename) }}</span>
           <span class="unsaved-dot" />
           <el-icon class="close-icon" :size="12" @click.stop="removeFileInTab(file)">
             <Close />
           </el-icon>
         </li>
       </ul>
-    </div>
-    <div class="new-file" :title="t('menu.file.newTab')" @click.stop="newFile()">
-      <el-icon :size="16">
-        <Plus />
-      </el-icon>
     </div>
   </div>
 </template>
@@ -35,15 +30,13 @@ import { useLayoutStore } from '@/store/layout'
 import { storeToRefs } from 'pinia'
 import autoScroll from 'dom-autoscroller'
 import dragula from 'dragula'
-import { Plus, Close } from '@element-plus/icons-vue'
-import { useI18n } from 'vue-i18n'
+import { Close } from '@element-plus/icons-vue'
 import { showContextMenu } from '../../contextMenu/tabs'
 import bus from '../../bus'
 import type { IFileState } from '@shared/types/files'
 
 const editorStore = useEditorStore()
 const layoutStore = useLayoutStore()
-const { t } = useI18n()
 
 const { currentFile, tabs } = storeToRefs(editorStore)
 
@@ -57,7 +50,7 @@ const tabDropContainer = ref<HTMLElement | null>(null)
 let autoScroller: AutoScroller | null = null
 let drake: dragula.Drake | null = null
 
-// Computed properties
+const getDisplayFilename = (filename: string) => filename.replace(/\.md$/i, '')
 
 // Methods incorporated from tabsMixins
 const selectFile = (file: IFileState) => {
@@ -73,11 +66,6 @@ const removeFileInTab = (file: IFileState) => {
   } else {
     editorStore.CLOSE_UNSAVED_TAB(file)
   }
-}
-
-// Original methods
-const newFile = () => {
-  editorStore.NEW_UNTITLED_TAB({})
 }
 
 // Keep the active tab visible when the selection changes by something other

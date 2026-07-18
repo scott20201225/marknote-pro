@@ -19,6 +19,7 @@
       "moveTo": "移动到",
       "rename": "重命名",
       "export": "导出",
+      "exportMd": "导出为 MD",
       "exportHtml": "导出为 HTML",
       "exportWord": "导出为 Word",
       "exportPng": "导出为 PNG",
@@ -49,7 +50,7 @@
       "replace": "替换",
       "findNext": "查找下一个",
       "findPrevious": "查找上一个",
-      "findInFolder": "在文件夹中查找",
+      "findInFolder": "在全部笔记中查找",
       "screenshot": "截图",
       "lineEnding": "行结束符",
       "lineEndingCrlf": "CRLF (Windows)",
@@ -142,7 +143,6 @@
     },
     "view": {
       "view": "视图",
-      "toggleSidebar": "切换侧边栏",
       "commandPalette": "命令面板",
       "sourceCodeMode": "源码模式",
       "typewriterMode": "打字机模式",
@@ -222,17 +222,19 @@
     "addToDictionary": "添加到词典",
     "editDictionary": "编辑词典…",
     "sideBar": {
-      "newFile": "新建文件",
-      "newDirectory": "新建目录",
+      "newFile": "新建笔记",
+      "newDirectory": "新建分区组/分区",
       "newGroup": "新建分区组",
       "newArea": "新建分区",
-      "newDocument": "新建文档",
+      "newDocument": "新建笔记",
+      "expandAll": "全部展开",
+      "collapseAll": "全部折叠",
       "copy": "复制",
       "cut": "剪切",
       "paste": "粘贴",
       "rename": "重命名",
       "moveToTrash": "移动到废纸篓",
-      "showInFolder": "在文件夹中显示"
+      "showInFolder": "在系统文件夹中显示"
     },
     "tabs": {
       "close": "关闭",
@@ -241,7 +243,7 @@
       "closeAllTabs": "关闭所有标签页",
       "rename": "重命名",
       "copyPath": "复制路径",
-      "showInFolder": "在文件夹中显示"
+      "showInFolder": "在系统文件夹中显示"
     },
     "copyAsExcel": "复制为 Excel"
   },
@@ -255,33 +257,33 @@
     "replaceSingle": "单个替换",
     "invalidRegex": "无效的正则表达式 \"{pattern}\"",
     "regexMatchEmpty": "正则表达式 \"{pattern}\" 匹配到了空字符串",
-    "searchResultInfo": "在 {fileCount} 个文件中找到 {matchCount} 个匹配项",
+    "searchResultInfo": "在 {fileCount} 条笔记中找到 {matchCount} 个匹配项",
     "searchLimited": "仅搜索前 {count} 个结果"
   },
   "sideBar": {
     "search": {
-      "searchInFolder": "在文件夹中搜索…",
-      "noFolderOpen": "没有打开的文件夹",
+      "searchInFolder": "在全部笔记中查找…",
+      "noFolderOpen": "尚未选择工作区",
       "noResultsFound": "未找到结果。",
       "cancel": "取消",
-      "openFolder": "打开文件夹",
+      "openFolder": "选择工作区",
       "showMoreMatches": "显示更多匹配"
     },
     "tree": {
-      "openedFiles": "已打开的文件",
+      "openedFiles": "已打开的笔记",
       "saveAll": "保存全部",
       "closeAll": "关闭全部",
       "emptyProject": "空项目",
       "emptyWorkspace": "当前笔记工作区还没有内容",
-      "createFile": "创建文件",
+      "createFile": "创建笔记",
       "createGroup": "创建分区组",
-      "openFolder": "打开文件夹",
+      "openFolder": "选择工作区",
       "openWorkspace": "选择工作区",
       "workspaceActions": "工作区菜单",
       "nodeActions": "更多操作",
       "groupNamePlaceholder": "输入分区组名称",
       "areaNamePlaceholder": "输入分区名称",
-      "documentNamePlaceholder": "输入文档名称"
+      "documentNamePlaceholder": "输入笔记名称"
     },
     "toc": {
       "title": "目录"
@@ -297,7 +299,7 @@
     "placeholder": "输入要执行的命令",
     "placeholders": {
       "selectOption": "选择一个选项",
-      "searchFileToOpen": "搜索要打开的文件",
+      "searchFileToOpen": "搜索要打开的笔记",
       "selectLanguage": "选择要切换的语言"
     }
   },
@@ -382,7 +384,7 @@
   },
   "recent": {
     "noTabsOpen": "您没有打开的标签页。",
-    "newFile": "新建文件",
+    "newFile": "新建笔记",
     "workspaceRequired": "使用 MarkNotePro 前请先选择默认目录。",
     "chooseWorkspace": "选择默认目录"
   },
@@ -465,7 +467,7 @@
         "imageRelativeDirectoryBase": "相对图片的复制位置",
         "imageRelativeDirectoryName": "相对图片文件夹名称",
         "fileSortOrder": "打开文件夹中文件的排序顺序：升序或降序",
-        "openedFilesInSidebar": "是否在侧边栏中显示已打开文件"
+        "openedFilesInSidebar": "是否在侧边栏中显示已打开笔记"
       }
     },
     "categories": {
@@ -504,7 +506,7 @@
         "openBlankState": "打开空白状态",
         "openDefaultDirectory": "打开默认工作区",
         "openLastFolder": "恢复打开的工作区",
-        "restoreAll": "恢复所有已打开的文件和文件夹",
+        "restoreAll": "恢复所有已打开的笔记和工作区",
         "workspaceNotSelected": "当前还没有选择默认目录。",
         "selectFolder": "选择工作区",
         "openBlankPage": "打开空白页"
@@ -512,7 +514,7 @@
       "sidebar": {
         "title": "侧边栏",
         "wrapTextInToc": "在目录中换行文本",
-        "showOpenedFiles": "显示已打开文件",
+        "showOpenedFiles": "显示已打开笔记",
         "excludePatterns": "排除模式",
         "excludePatternsNotes": "排除模式（注释）",
         "fileSortBy": {
@@ -613,7 +615,7 @@
         "title": "文件夹设置",
         "globalFolder": "全局图片文件夹",
         "open": "打开",
-        "showInFolder": "在文件夹中显示",
+        "showInFolder": "在系统文件夹中显示",
         "preferRelative": "首选相对目录",
         "relativeCopyLocation": "图片相对复制到",
         "copyRelativeToFile": "相对于文件",
@@ -787,8 +789,8 @@
       "openFolder": "打开文件夹",
       "save": "保存",
       "saveAs": "另存为",
-      "moveFile": "移动文件",
-      "renameFile": "重命名文件",
+      "moveFile": "移动笔记",
+      "renameFile": "重命名笔记",
       "quickOpen": "快速打开",
       "changeEncoding": "更改编码",
       "trailingNewline": "尾随换行",
@@ -799,7 +801,8 @@
       "quit": "退出",
       "toggleAutoSave": "切换自动保存",
       "importFile": "导入文件",
-      "exportFile": "导出文件",
+      "exportFile": "导出笔记",
+      "exportFileMd": "导出为 MD",
       "exportFilePdf": "导出为 PDF",
       "zoom": "缩放",
       "checkUpdate": "检查更新",
@@ -822,7 +825,7 @@
       "findNext": "查找下一个",
       "findPrevious": "查找上一个",
       "replace": "替换",
-      "findInFolder": "在文件夹中查找",
+      "findInFolder": "在全部笔记中查找",
       "screenshot": "截图"
     },
     "paragraph": {
@@ -881,7 +884,6 @@
       "toggleSourceCodeMode": "切换源码模式",
       "toggleTypewriterMode": "切换打字机模式",
       "toggleFocusMode": "切换专注模式",
-      "toggleSidebar": "切换侧边栏",
       "toggleToc": "切换目录",
       "toggleDevTools": "切换开发者工具",
       "actualSize": "实际大小",

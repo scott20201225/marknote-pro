@@ -22,6 +22,7 @@ const COMMAND_KEY_MAP: Record<string, string> = {
   'file.save': 'commands.file.save',
   'file.save-as': 'commands.file.saveAs',
   'file.export-file': 'commands.file.exportFile',
+  'file.export-file.md': 'commands.file.exportFileMd',
   'file.export-file.pdf': 'commands.file.exportFilePdf',
 
   // File management
@@ -160,7 +161,6 @@ const COMMAND_KEY_MAP: Record<string, string> = {
   // # View Controls
   // ============================================
   // UI toggles
-  'view.toggle-sidebar': 'commands.view.toggleSidebar',
   'view.toggle-toc': 'commands.view.toggleToc',
 
   // Edit modes

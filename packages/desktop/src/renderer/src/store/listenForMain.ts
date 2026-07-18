@@ -17,8 +17,7 @@ export const useListenForMainStore = defineStore('listenForMain', () => {
     const layoutStore = useLayoutStore()
     if (type === 'findInFolder') {
       layoutStore.SET_LAYOUT({
-        rightColumn: 'search',
-        showSideBar: true
+        rightColumn: 'search'
       })
     }
     bus.emit(type, type)

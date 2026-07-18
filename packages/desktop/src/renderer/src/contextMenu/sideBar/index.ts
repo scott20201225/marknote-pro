@@ -10,7 +10,9 @@ import {
   getPASTE,
   getRENAME,
   getDELETE,
-  getShowInFolder
+  getShowInFolder,
+  getExpandAll,
+  getCollapseAll
 } from './menuItems'
 import { popupContextMenu, type ContextMenuItem } from '../popupMenu'
 import { getNoteNodeKind } from '../../util/noteWorkspace'
@@ -45,11 +47,22 @@ export const showContextMenu = (
   let contextItems: ContextMenuItem[]
 
   if (kind === 'root') {
-    contextItems = [getNewGroup(), SEPARATOR, getPASTE(), SEPARATOR, getShowInFolder()]
+    contextItems = [
+      getNewGroup(),
+      getRENAME(),
+      SEPARATOR,
+      getExpandAll(),
+      getCollapseAll(),
+      SEPARATOR,
+      getShowInFolder()
+    ]
   } else if (kind === 'group') {
     contextItems = [
       getNewGroup(),
       getNewArea(),
+      SEPARATOR,
+      getExpandAll(),
+      getCollapseAll(),
       SEPARATOR,
       getCOPY(),
       getCUT(),
@@ -63,6 +76,9 @@ export const showContextMenu = (
   } else if (kind === 'area') {
     contextItems = [
       getNewDocument(),
+      SEPARATOR,
+      getExpandAll(),
+      getCollapseAll(),
       SEPARATOR,
       getCOPY(),
       getCUT(),

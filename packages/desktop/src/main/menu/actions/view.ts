@@ -51,10 +51,6 @@ export const toggleSourceCodeMode = (win: Win): void => {
   toggleTypeMode(win, 'sourceCode')
 }
 
-export const toggleSidebar = (win: Win): void => {
-  toggleLayout(win, 'showSideBar')
-}
-
 export const showTableOfContents = (win: Win): void => {
   setLayout(win, 'rightColumn', 'toc')
 }
@@ -76,7 +72,6 @@ export const loadViewCommands = (commandManager: CommandManager): void => {
   commandManager.add(COMMANDS.VIEW_FOCUS_MODE, toggleFocusMode)
   commandManager.add(COMMANDS.VIEW_FORCE_RELOAD_IMAGES, reloadImageCache)
   commandManager.add(COMMANDS.VIEW_SOURCE_CODE_MODE, toggleSourceCodeMode)
-  commandManager.add(COMMANDS.VIEW_TOGGLE_SIDEBAR, toggleSidebar)
   commandManager.add(COMMANDS.VIEW_TOGGLE_TOC, showTableOfContents)
   commandManager.add(COMMANDS.VIEW_TYPEWRITER_MODE, toggleTypewriterMode)
 
@@ -91,7 +86,7 @@ export const loadViewCommands = (commandManager: CommandManager): void => {
 
 /**
  * @param applicationMenu The application menu instance.
- * @param changes Array of changed view settings (e.g. [ {showSideBar: true} ]).
+ * @param changes Array of changed view settings.
  */
 export const viewLayoutChanged = (
   applicationMenu: Menu,
@@ -109,9 +104,6 @@ export const viewLayoutChanged = (
   for (const key in changes) {
     const value = changes[key]
     switch (key) {
-      case 'showSideBar':
-        changeMenuByName('sideBarMenuItem', value)
-        break
       case 'sourceCode':
         changeMenuByName('sourceCodeModeMenuItem', !!value)
         disableMenuByName(focusModeMenuItemId, !value)
