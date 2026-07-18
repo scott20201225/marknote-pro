@@ -1,5 +1,6 @@
 export const NOTE_GROUP_PREFIX = 'GROUP_'
 export const NOTE_AREA_PREFIX = 'AREA_'
+export const NOTE_ATTACHMENTS_DIRECTORY = 'Attachments'
 
 export type NoteNodeKind =
   | 'root'
@@ -17,6 +18,10 @@ interface NoteNodeLike {
   isMarkdown?: boolean
   folders?: NoteNodeLike[]
   files?: NoteNodeLike[]
+}
+
+const isHiddenNoteFolder = (node: NoteNodeLike | null | undefined): boolean => {
+  return !!node?.isDirectory && node.name === NOTE_ATTACHMENTS_DIRECTORY
 }
 
 const stripNotePrefix = (name: string): string => {
@@ -113,7 +118,7 @@ export const getVisibleNoteFolders = (
   const kind = getNoteNodeKind(node, rootPath)
   if (kind === 'area') return []
 
-  return node.folders.filter((child) => child.isDirectory)
+  return node.folders.filter((child) => child.isDirectory && !isHiddenNoteFolder(child))
 }
 
 export const getVisibleNoteFiles = (

@@ -1,6 +1,7 @@
 import pathe from 'pathe'
 
 const STANDALONE_USER_DATA_PATH = '/tmp/marknotepro-standalone'
+const STANDALONE_VERSIONS = process.versions as unknown as Record<string, string>
 
 type Listener = (event: unknown, ...args: unknown[]) => void
 
@@ -139,6 +140,8 @@ const createFileUtilsStub = (): FileUtilsAPI => ({
     }) as unknown as FileUtilsAPI['stat'] extends (...args: never[]) => Promise<infer T> ? T : never,
   writeFile: async() => {},
   readFile: async() => '',
+  md5File: async() => 'stub-md5',
+  md5Data: async() => 'stub-md5',
   pathExists: async() => false,
   unlink: async() => {},
   readdir: async() => [],
@@ -191,7 +194,7 @@ export const installStandaloneBridge = (): void => {
     process: {
       platform: 'darwin',
       arch: 'arm64',
-      versions: {},
+      versions: STANDALONE_VERSIONS,
       env: {
         NODE_ENV: 'development',
         MARKNOTEPRO_STANDALONE: '1',
@@ -250,30 +253,13 @@ export const installStandaloneBridge = (): void => {
   window.process = {
     platform: 'darwin',
     arch: 'arm64',
-    versions: {
-      node: '20.0.0',
-      chrome: '0',
-      electron: '0',
-      v8: '0',
-      uv: '0',
-      zlib: '0',
-      brotli: '0',
-      ares: '0',
-      modules: '0',
-      nghttp2: '0',
-      napi: '0',
-      llhttp: '0',
-      openssl: '0',
-      cldr: '0',
-      icu: '0',
-      tz: '0',
-      unicode: '0'
-    },
+    versions: STANDALONE_VERSIONS,
     env: window.electron.process.env,
     resourcesPath: '',
     cwd: () => '/',
-    nextTick: (fn, ...args) => window.setTimeout(() => fn(...args), 0)
-  }
+    nextTick: (fn: (...args: unknown[]) => void, ...args: unknown[]) =>
+      window.setTimeout(() => fn(...args), 0)
+  } as unknown as Window['process'] & NodeJS.Process
 }
 
 export const isStandaloneRenderer = (): boolean =>

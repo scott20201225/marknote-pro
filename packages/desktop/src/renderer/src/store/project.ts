@@ -17,7 +17,11 @@ import { getFileStateFromData } from './help'
 import { useLayoutStore } from './layout'
 import { useEditorStore } from './editor'
 import { debouncedSendBufferedState } from './bufferedState'
-import { getNoteNodeKind, toStoredNoteName } from '../util/noteWorkspace'
+import {
+  NOTE_ATTACHMENTS_DIRECTORY,
+  getNoteNodeKind,
+  toStoredNoteName
+} from '../util/noteWorkspace'
 import type { TreeNode } from '../components/sideBar/types'
 import type { FileChangeDetail } from '@shared/types/files'
 
@@ -133,6 +137,9 @@ export const useProjectStore = defineStore('project', () => {
     if (!tree) return
 
     projectTree.value = tree
+    void window.fileUtils.ensureDir(
+      window.path.join(tree.pathname, NOTE_ATTACHMENTS_DIRECTORY)
+    )
 
     const layout = {
       rightColumn: 'files'
