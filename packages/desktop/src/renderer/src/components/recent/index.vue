@@ -1,26 +1,52 @@
 <template>
   <div class="recent-files-projects">
     <div class="centered-group">
-      {{ t('recent.noTabsOpen') }}
+      {{ message }}
       <el-button
         text
         bg
         type="primary"
-        @click="newFile"
+        @click="primaryAction"
       >
-        {{ t('recent.newFile') }}
+        {{ actionLabel }}
       </el-button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useEditorStore } from '@/store/editor'
+import { usePreferencesStore } from '@/store/preferences'
+import { useProjectStore } from '@/store/project'
 import { t } from '../../i18n'
 
 const editorStore = useEditorStore()
+const preferencesStore = usePreferencesStore()
+const projectStore = useProjectStore()
 
-const newFile = () => {
+const workspaceSelectionRequired = computed(() => {
+  return (
+    preferencesStore.preferenceLoaded &&
+    !preferencesStore.defaultDirectoryToOpen &&
+    !projectStore.projectTree
+  )
+})
+
+const message = computed(() => {
+  return workspaceSelectionRequired.value ? t('recent.workspaceRequired') : t('recent.noTabsOpen')
+})
+
+const actionLabel = computed(() => {
+  return workspaceSelectionRequired.value ? t('recent.chooseWorkspace') : t('recent.newFile')
+})
+
+const primaryAction = () => {
+  if (workspaceSelectionRequired.value) {
+    projectStore.ASK_FOR_OPEN_PROJECT()
+    return
+  }
+
   editorStore.NEW_UNTITLED_TAB({})
 }
 </script>

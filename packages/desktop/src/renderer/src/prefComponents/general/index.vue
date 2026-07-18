@@ -107,45 +107,18 @@
         </h6>
       </template>
       <template #children>
-        <h6>{{ t('preferences.general.startup.layoutOptions') }}</h6>
         <section>
-          <el-radio-group v-model="restoreLayoutState" class="startup-action-ctrl">
-            <el-radio :label="true">
-              {{ t('preferences.general.startup.restorePreviousState') }}
-            </el-radio>
-            <el-radio :label="false">
-              {{ t('preferences.general.startup.openBlankState') }}
-            </el-radio>
-          </el-radio-group>
-        </section>
-        <h6>{{ t('preferences.general.startup.startupFilesFolders') }}</h6>
-        <section>
-          <el-radio-group v-model="startUpAction" class="startup-action-ctrl">
-            <!--
-              Hide "lastState" for now (#2064).
-            <el-radio class="ag-underdevelop" label="lastState">Restore last editor session</el-radio>
-            -->
-            <el-radio label="restoreAll">
-              {{ t('preferences.general.startup.restoreAll') }}
-            </el-radio>
-            <el-radio label="openLastFolder">
-              {{ t('preferences.general.startup.openLastFolder') }}
-            </el-radio>
-            <div>
-              <el-radio label="folder">
-                {{ t('preferences.general.startup.openDefaultDirectory')
-                }}<span>: {{ defaultDirectoryToOpen }}</span>
-              </el-radio>
-              <el-button size="small" @click="selectDefaultDirectoryToOpen">
-                {{ t('preferences.general.startup.selectFolder') }}
-              </el-button>
+          <div class="workspace-setting">
+            <div class="workspace-title">
+              {{ t('preferences.general.startup.openDefaultDirectory') }}
             </div>
-            <div>
-              <el-radio label="blank">
-                {{ t('preferences.general.startup.openBlankPage') }}
-              </el-radio>
+            <div class="workspace-path">
+              {{ defaultDirectoryToOpen || t('preferences.general.startup.workspaceNotSelected') }}
             </div>
-          </el-radio-group>
+            <el-button size="small" @click="selectDefaultDirectoryToOpen">
+              {{ t('preferences.general.startup.selectFolder') }}
+            </el-button>
+          </div>
         </section>
       </template>
     </compound>
@@ -169,7 +142,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
 import { usePreferencesStore } from '@/store/preferences'
@@ -208,50 +180,32 @@ const {
   openedFilesInSidebar
 } = storeToRefs(preferenceStore)
 
-const startUpAction = computed<string>({
-  get: () => preferenceStore.startUpAction,
-  set: (value: string) => {
-    const type = 'startUpAction'
-    preferenceStore.SET_SINGLE_PREFERENCE({ type, value })
-  }
-})
-
-const restoreLayoutState = computed<boolean>({
-  get: () => preferenceStore.restoreLayoutState,
-  set: (value: boolean) => {
-    const type = 'restoreLayoutState'
-    preferenceStore.SET_SINGLE_PREFERENCE({ type, value })
-  }
-})
-
 const onSelectChange = (type: keyof PreferencesState, value: unknown): void => {
   preferenceStore.SET_SINGLE_PREFERENCE({ type, value })
 }
 
 const selectDefaultDirectoryToOpen = (): void => {
+  preferenceStore.SET_SINGLE_PREFERENCE({ type: 'startUpAction', value: 'folder' })
   preferenceStore.SELECT_DEFAULT_DIRECTORY_TO_OPEN()
 }
 </script>
 
 <style scoped>
-.pref-general .startup-action-ctrl div {
-  display: flex;
-  align-items: center;
-}
-.pref-general .startup-action-ctrl {
-  font-size: 14px;
-  user-select: none;
-  color: var(--editorColor);
+.workspace-setting {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  gap: 8px;
+  color: var(--editorColor);
 }
 
-.pref-general .startup-action-ctrl .el-button--small {
-  margin-left: 10px;
+.workspace-title {
+  font-size: 14px;
+  font-weight: 500;
 }
 
-.pref-general .startup-action-ctrl label {
-  margin: 5px 0;
+.workspace-path {
+  font-size: 13px;
+  line-height: 1.5;
+  word-break: break-all;
 }
 </style>

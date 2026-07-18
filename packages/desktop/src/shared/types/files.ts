@@ -142,6 +142,7 @@ export interface UnsavedFile {
 export interface BootstrapEditorConfig {
   isNewWindow?: boolean
   addBlankTab?: boolean
+  requireWorkspaceSelection?: boolean
   /**
    * Raw markdown contents used to seed new untitled tabs. Main fills this
    * from `_markdownToOpen` (e.g. stdin-piped launches and

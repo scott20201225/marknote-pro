@@ -17,6 +17,7 @@ import { getFileStateFromData } from './help'
 import { useLayoutStore } from './layout'
 import { useEditorStore } from './editor'
 import { debouncedSendBufferedState } from './bufferedState'
+import { getNoteNodeKind, toStoredNoteName } from '../util/noteWorkspace'
 import type { TreeNode } from '../components/sideBar/types'
 import type { FileChangeDetail } from '@shared/types/files'
 
@@ -221,10 +222,17 @@ export const useProjectStore = defineStore('project', () => {
   }
 
   function ASK_FOR_OPEN_PROJECT(): void {
-    window.electron.ipcRenderer.send('mt::ask-for-open-project-in-sidebar')
+    const defaultPath =
+      preferencesStore.defaultDirectoryToOpen ||
+      preferencesStore.lastOpenedFolder ||
+      projectTree.value?.pathname ||
+      ''
+    window.electron.ipcRenderer.send('mt::ask-for-open-project-in-sidebar', { defaultPath })
   }
 
   function LISTEN_FOR_SIDEBAR_CONTEXT_MENU(): void {
+    const editorStore = useEditorStore()
+
     bus.on('SIDEBAR::show-in-folder', () => {
       const { pathname } = activeItem.value
       window.electron.shell.showItemInFolder(pathname)
@@ -237,13 +245,18 @@ export const useProjectStore = defineStore('project', () => {
     })
     bus.on('SIDEBAR::remove', () => {
       const { pathname } = activeItem.value
-      window.electron.ipcRenderer.invoke('mt::fs-trash-item', pathname).catch((err) => {
-        notice.notify({
-          title: 'Error while deleting',
-          type: 'error',
-          message: err instanceof Error ? err.message : String(err)
+      const isDirectory = !!activeItem.value?.isDirectory
+      window.electron.ipcRenderer.invoke('mt::fs-trash-item', pathname)
+        .then(() => {
+          editorStore.CLOSE_TABS_BY_PATH(pathname, { includeDescendants: isDirectory })
         })
-      })
+        .catch((err) => {
+          notice.notify({
+            title: 'Error while deleting',
+            type: 'error',
+            message: err instanceof Error ? err.message : String(err)
+          })
+        })
     })
     bus.on('SIDEBAR::copy-cut', (type: unknown) => {
       const { pathname: src } = activeItem.value
@@ -288,12 +301,32 @@ export const useProjectStore = defineStore('project', () => {
   async function CREATE_FILE_DIRECTORY(name: string): Promise<void> {
     const cache = createCache.value as CreateCacheEntry
     const { dirname, type } = cache
+    let fileType: FileCreateType = 'directory'
+    let storedName = name.trim()
 
-    if (type === 'file' && !window.fileUtils.hasMarkdownExtension(name)) {
-      name += '.md'
+    if (type === 'group') {
+      storedName = toStoredNoteName(name, 'group')
+    } else if (type === 'area') {
+      storedName = toStoredNoteName(name, 'area')
+    } else if (type === 'document') {
+      storedName = toStoredNoteName(name, 'document')
+      fileType = 'file'
+    } else if (type === 'file') {
+      fileType = 'file'
+      storedName = name.trim()
+      if (!window.fileUtils.hasMarkdownExtension(storedName)) {
+        storedName += '.md'
+      }
+    } else {
+      fileType = 'directory'
     }
 
-    const fullName = `${dirname}/${name}`
+    if (!storedName) {
+      createCache.value = {}
+      return
+    }
+
+    const fullName = window.path.join(dirname, storedName)
 
     // Creating over an existing path would silently overwrite it (outputFile
     // truncates). Refuse instead of destroying the existing file (#1946).
@@ -302,15 +335,15 @@ export const useProjectStore = defineStore('project', () => {
       notice.notify({
         title: 'Error in Side Bar',
         type: 'error',
-        message: `A ${type} named "${name}" already exists in this folder.`
+        message: `A ${type} named "${storedName}" already exists in this folder.`
       })
       return
     }
 
-    create(fullName, type as FileCreateType)
+    create(fullName, fileType)
       .then(() => {
         createCache.value = {}
-        if (type === 'file') {
+        if (fileType === 'file') {
           newFileNameCache.value = fullName
         }
       })
@@ -328,7 +361,14 @@ export const useProjectStore = defineStore('project', () => {
     const src = renameCache.value
     if (!src) return
     const dirname = window.path.dirname(src)
-    const dest = dirname + PATH_SEPARATOR + name
+    const rootPath = projectTree.value?.pathname ?? null
+    const kind = getNoteNodeKind(activeItem.value, rootPath)
+    let storedName = name.trim()
+    if (kind === 'group' || kind === 'area' || kind === 'document') {
+      storedName = toStoredNoteName(name, kind)
+    }
+    if (!storedName) return
+    const dest = dirname + PATH_SEPARATOR + storedName
     rename(src, dest).then(() => {
       editorStore.RENAME_IF_NEEDED({ src, dest })
     })

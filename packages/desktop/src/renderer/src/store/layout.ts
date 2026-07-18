@@ -44,7 +44,7 @@ const initialSideBarWidth = normalizeSideBarWidth(initialWidth)
 
 export const useLayoutStore = defineStore('layout', () => {
   const rightColumn = ref<string>('files')
-  const showSideBar = ref(false)
+  const showSideBar = ref(true)
   const sideBarWidth = ref<number>(initialSideBarWidth)
 
   // Actual rendered sidebar width. `sideBarWidth` is the right-column width

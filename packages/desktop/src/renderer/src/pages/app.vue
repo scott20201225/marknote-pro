@@ -71,6 +71,7 @@ const commandCenterStore = useCommandCenterStore()
 const notificationStore = useNotificationStore()
 
 const timer = ref<ReturnType<typeof setTimeout> | null>(null)
+const workspacePrompted = ref(false)
 
 const { windowActive, platform, init } = storeToRefs(mainStore)
 const { sourceCode, theme, customCss, textDirection, zoom } = storeToRefs(preferencesStore)
@@ -97,6 +98,15 @@ const hasCurrentFile = computed<boolean>(() => {
   return currentFile.value?.markdown !== undefined
 })
 
+const workspaceSelectionRequired = computed<boolean>(() => {
+  return (
+    init.value &&
+    preferencesStore.preferenceLoaded &&
+    !preferencesStore.defaultDirectoryToOpen &&
+    !projectTree.value
+  )
+})
+
 // Watchers
 watch(theme, (value, oldValue) => {
   if (value !== oldValue) {
@@ -115,6 +125,23 @@ watch(customCss, (value, oldValue) => {
 watch(zoom, (zoomValue) => {
   bus.emit('mt::window-zoom', zoomValue)
 })
+
+watch(
+  workspaceSelectionRequired,
+  (required) => {
+    if (!required) {
+      workspacePrompted.value = false
+      return
+    }
+
+    if (workspacePrompted.value) return
+    workspacePrompted.value = true
+    nextTick(() => {
+      projectStore.ASK_FOR_OPEN_PROJECT()
+    })
+  },
+  { immediate: true }
+)
 
 const setupDragDropHandler = (): void => {
   window.addEventListener(

@@ -869,8 +869,14 @@ export const useEditorStore = defineStore('editor', {
       const projectStore = useProjectStore()
       const mainStore = useMainStore()
       const applyBootstrapConfig = (config: BootstrapEditorConfig): void => {
-        const { addBlankTab, markdownList, lineEnding, sideBarVisibility, sourceCodeModeEnabled } =
-          config
+        const {
+          addBlankTab,
+          requireWorkspaceSelection,
+          markdownList,
+          lineEnding,
+          sideBarVisibility,
+          sourceCodeModeEnabled
+        } = config
 
         window.electron.ipcRenderer.send('mt::window-initialized')
         mainStore.SET_INITIALIZED()
@@ -884,6 +890,10 @@ export const useEditorStore = defineStore('editor', {
           type: 'sourceCode',
           checked: !!sourceCodeModeEnabled
         })
+
+        if (requireWorkspaceSelection) {
+          return
+        }
 
         if (addBlankTab) {
           this.NEW_UNTITLED_TAB({ selected: true })
@@ -1141,6 +1151,23 @@ export const useEditorStore = defineStore('editor', {
         this.toc = []
       }
       debouncedSendBufferedState()
+    },
+
+    CLOSE_TABS_BY_PATH(pathname: string, options: { includeDescendants?: boolean } = {}): void {
+      if (!pathname) return
+
+      const { includeDescendants = false } = options
+      const targetPath = window.path.normalize(pathname)
+      const tabIdList = this.tabs
+        .filter((tab) => {
+          if (!tab.pathname) return false
+          const tabPath = window.path.normalize(tab.pathname)
+          if (window.fileUtils.isSamePathSync(tabPath, targetPath)) return true
+          return includeDescendants && isPathDescendantOf(tabPath, targetPath)
+        })
+        .map((tab) => tab.id)
+
+      this.CLOSE_TABS(tabIdList)
     },
 
     EXCHANGE_TABS_BY_ID(tabIDs: { fromId: string; toId: string | null }): void {
@@ -1719,7 +1746,7 @@ export const useEditorStore = defineStore('editor', {
             default:
               console.error(`LISTEN_FOR_FILE_CHANGE: Invalid type "${type}"`)
           }
-        } else {
+        } else if (type !== 'unlink') {
           console.error(`LISTEN_FOR_FILE_CHANGE: Cannot find tab for path "${pathname}".`)
         }
       })
@@ -1802,6 +1829,13 @@ const getRootFolderFromState = (projectStore: ProjectStoreLike): string => {
     return openedFolder.pathname ?? ''
   }
   return ''
+}
+
+const isPathDescendantOf = (pathname: string, parentPath: string): boolean => {
+  const relative = window.path.relative(parentPath, pathname)
+  if (!relative || relative === '.') return false
+  if (window.path.isAbsolute(relative)) return false
+  return !relative.startsWith(`..${window.path.sep}`) && relative !== '..'
 }
 
 /**

@@ -2,6 +2,9 @@ import {
   SEPARATOR,
   getNewFile,
   getNewDirectory,
+  getNewGroup,
+  getNewArea,
+  getNewDocument,
   getCOPY,
   getCUT,
   getPASTE,
@@ -10,29 +13,19 @@ import {
   getShowInFolder
 } from './menuItems'
 import { popupContextMenu, type ContextMenuItem } from '../popupMenu'
+import { getNoteNodeKind } from '../../util/noteWorkspace'
 
-export const showContextMenu = (
-  event: { clientX: number; clientY: number },
+const normalizeContextItems = (
+  contextItems: ContextMenuItem[],
   hasPathCache: boolean
-): void => {
-  const contextItems: ContextMenuItem[] = [
-    getNewFile(),
-    getNewDirectory(),
-    SEPARATOR,
-    getCOPY(),
-    getCUT(),
-    getPASTE(),
-    SEPARATOR,
-    getRENAME(),
-    getDELETE(),
-    SEPARATOR,
-    getShowInFolder()
-  ]
+): ContextMenuItem[] => {
+  for (const item of contextItems) {
+    if (item?.id === 'pasteMenuItem') {
+      item.enabled = hasPathCache
+    }
+  }
 
-  // PASTE entry (index 5) toggles based on the cached source path.
-  contextItems[5].enabled = hasPathCache
-
-  const items: ContextMenuItem[] = contextItems.map((item) => {
+  return contextItems.map((item) => {
     if (!item || item.type === 'separator') return item
     const click = item.click
     return {
@@ -40,6 +33,76 @@ export const showContextMenu = (
       click: click ? () => click(null, null) : undefined
     }
   })
+}
+
+export const showContextMenu = (
+  event: { clientX: number; clientY: number },
+  activeItem: { pathname: string; name: string; isDirectory?: boolean; isFile?: boolean; isMarkdown?: boolean } | null,
+  rootPath: string | null,
+  hasPathCache: boolean
+): void => {
+  const kind = getNoteNodeKind(activeItem, rootPath)
+  let contextItems: ContextMenuItem[]
+
+  if (kind === 'root') {
+    contextItems = [getNewGroup(), SEPARATOR, getPASTE(), SEPARATOR, getShowInFolder()]
+  } else if (kind === 'group') {
+    contextItems = [
+      getNewGroup(),
+      getNewArea(),
+      SEPARATOR,
+      getCOPY(),
+      getCUT(),
+      getPASTE(),
+      SEPARATOR,
+      getRENAME(),
+      getDELETE(),
+      SEPARATOR,
+      getShowInFolder()
+    ]
+  } else if (kind === 'area') {
+    contextItems = [
+      getNewDocument(),
+      SEPARATOR,
+      getCOPY(),
+      getCUT(),
+      getPASTE(),
+      SEPARATOR,
+      getRENAME(),
+      getDELETE(),
+      SEPARATOR,
+      getShowInFolder()
+    ]
+  } else if (kind === 'document') {
+    contextItems = [
+      getNewDocument(),
+      SEPARATOR,
+      getCOPY(),
+      getCUT(),
+      getPASTE(),
+      SEPARATOR,
+      getRENAME(),
+      getDELETE(),
+      SEPARATOR,
+      getShowInFolder()
+    ]
+  } else {
+    contextItems = [
+      getNewFile(),
+      getNewDirectory(),
+      SEPARATOR,
+      getCOPY(),
+      getCUT(),
+      getPASTE(),
+      SEPARATOR,
+      getRENAME(),
+      getDELETE(),
+      SEPARATOR,
+      getShowInFolder()
+    ]
+  }
+
+  const items = normalizeContextItems(contextItems, hasPathCache)
 
   popupContextMenu(items, { x: event.clientX, y: event.clientY })
 }

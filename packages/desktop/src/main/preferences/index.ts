@@ -102,6 +102,11 @@ class Preference extends TypedEmitter<PreferenceEvents> {
       const normalizedLightTheme = normalizeAppTheme(userSetting.lightModeTheme, 'light')
       const normalizedDarkTheme = normalizeAppTheme(userSetting.darkModeTheme, 'dark')
 
+      if (userSetting.startUpAction !== 'folder') {
+        userSetting.startUpAction = 'folder'
+        normalizedExistingValues = true
+      }
+
       if (userSetting.language !== normalizedLanguage) {
         userSetting.language = normalizedLanguage
         normalizedExistingValues = true

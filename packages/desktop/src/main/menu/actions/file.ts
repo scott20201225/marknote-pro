@@ -829,17 +829,22 @@ ipcMain.on(
   }
 )
 
-ipcMain.on('mt::ask-for-open-project-in-sidebar', async (e) => {
+ipcMain.on('mt::ask-for-open-project-in-sidebar', async (e, payload?: { defaultPath?: string }) => {
   const win = BrowserWindow.fromWebContents(e.sender)
   if (!win) {
     return
   }
   const { filePaths } = await dialog.showOpenDialog(win, {
+    defaultPath: payload?.defaultPath || undefined,
     properties: ['openDirectory', 'createDirectory']
   })
 
   if (filePaths && filePaths[0]) {
     const resolvedPath = normalizeAndResolvePath(filePaths[0])
+    ipcMain.emit('set-user-preference', {
+      defaultDirectoryToOpen: resolvedPath,
+      startUpAction: 'folder'
+    })
     ipcMain.emit('app-open-directory-by-id', win.id, resolvedPath, true)
   }
 })

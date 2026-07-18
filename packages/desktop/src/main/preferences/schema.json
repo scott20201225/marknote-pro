@@ -53,9 +53,9 @@
     "type": "string"
   },
   "startUpAction": {
-    "description": "General--The action after MarkNotePro startup, open the last opened folder, open the specified folder or blank page",
-    "enum": ["folder", "openLastFolder", "blank", "restoreAll"],
-    "default": "restoreAll"
+    "description": "General--The default directory that should be opened on startup.",
+    "enum": ["folder", "openLastFolder", "blank", "restoreAll", "lastState", "lastSession"],
+    "default": "folder"
   },
   "defaultDirectoryToOpen": {
     "description": "General--The default directory that should be opened on startup when startUp=folder.",

@@ -224,6 +224,9 @@
     "sideBar": {
       "newFile": "新建文件",
       "newDirectory": "新建目录",
+      "newGroup": "新建分区组",
+      "newArea": "新建分区",
+      "newDocument": "新建文档",
       "copy": "复制",
       "cut": "剪切",
       "paste": "粘贴",
@@ -269,14 +272,22 @@
       "saveAll": "保存全部",
       "closeAll": "关闭全部",
       "emptyProject": "空项目",
+      "emptyWorkspace": "当前笔记工作区还没有内容",
       "createFile": "创建文件",
-      "openFolder": "打开文件夹"
+      "createGroup": "创建分区组",
+      "openFolder": "打开文件夹",
+      "openWorkspace": "选择工作区",
+      "workspaceActions": "工作区菜单",
+      "nodeActions": "更多操作",
+      "groupNamePlaceholder": "输入分区组名称",
+      "areaNamePlaceholder": "输入分区名称",
+      "documentNamePlaceholder": "输入文档名称"
     },
     "toc": {
       "title": "目录"
     },
     "icons": {
-      "files": "文件",
+      "files": "笔记",
       "search": "搜索",
       "toc": "目录",
       "settings": "设置"
@@ -371,7 +382,9 @@
   },
   "recent": {
     "noTabsOpen": "您没有打开的标签页。",
-    "newFile": "新建文件"
+    "newFile": "新建文件",
+    "workspaceRequired": "使用 MarkNotePro 前请先选择默认目录。",
+    "chooseWorkspace": "选择默认目录"
   },
   "import": {
     "title": "导入或打开",
@@ -403,9 +416,9 @@
         "hideScrollbar": "是否隐藏滚动条",
         "wordWrapInToc": "是否在目录中启用自动换行",
         "fileSortBy": "按创建时间、修改时间和标题对打开文件夹中的文件进行排序",
-        "startUpAction": "MarkNotePro 启动后的操作，打开最后编辑的内容、打开指定文件夹或空白页",
+        "startUpAction": "MarkNotePro 启动后的操作，打开最后编辑的内容、打开指定工作区或空白页",
         "restoreLayoutState": "启动时恢复上次编辑器状态",
-        "defaultDirectoryToOpen": "当 startUp=folder 时启动时应打开的默认目录",
+        "defaultDirectoryToOpen": "当 startUp=folder 时启动时应打开的默认工作区目录",
         "language": "MarkNotePro 使用的语言",
         "editorFontFamily": "编辑器字体系列",
         "fontSize": "字体大小（像素）",
@@ -489,10 +502,11 @@
         "startupFilesFolders": "启动文件/文件夹",
         "restorePreviousState": "恢复上次编辑器状态",
         "openBlankState": "打开空白状态",
-        "openDefaultDirectory": "打开默认目录",
-        "openLastFolder": "恢复打开的文件夹",
+        "openDefaultDirectory": "打开默认工作区",
+        "openLastFolder": "恢复打开的工作区",
         "restoreAll": "恢复所有已打开的文件和文件夹",
-        "selectFolder": "选择文件夹",
+        "workspaceNotSelected": "当前还没有选择默认目录。",
+        "selectFolder": "选择工作区",
         "openBlankPage": "打开空白页"
       },
       "sidebar": {

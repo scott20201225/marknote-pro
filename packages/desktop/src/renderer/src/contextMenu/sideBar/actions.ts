@@ -11,6 +11,18 @@ export const newDirectory = (_menuItem?: MenuItemArg, _browserWindow?: BrowserWi
   bus.emit('SIDEBAR::new', 'directory')
 }
 
+export const newGroup = (_menuItem?: MenuItemArg, _browserWindow?: BrowserWindowArg): void => {
+  bus.emit('SIDEBAR::new', 'group')
+}
+
+export const newArea = (_menuItem?: MenuItemArg, _browserWindow?: BrowserWindowArg): void => {
+  bus.emit('SIDEBAR::new', 'area')
+}
+
+export const newDocument = (_menuItem?: MenuItemArg, _browserWindow?: BrowserWindowArg): void => {
+  bus.emit('SIDEBAR::new', 'document')
+}
+
 export const copy = (_menuItem?: MenuItemArg, _browserWindow?: BrowserWindowArg): void => {
   bus.emit('SIDEBAR::copy-cut', 'copy')
 }

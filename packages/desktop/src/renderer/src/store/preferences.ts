@@ -9,7 +9,7 @@ import { isWindows } from '../util'
 // narrow casts on consumers that read raw values from disk.
 export type EndOfLine = 'default' | 'lf' | 'crlf'
 export type TitleBarStyle = 'custom' | 'native'
-export type StartUpAction = 'restoreAll' | 'lastSession' | 'blank'
+export type StartUpAction = 'folder'
 export type TextDirection = 'ltr' | 'rtl'
 export type BulletListMarker = '*' | '+' | '-'
 export type OrderListDelimiter = '.' | ')'
@@ -36,6 +36,7 @@ export interface PreferencesState {
   restoreLayoutState: boolean
   defaultDirectoryToOpen: string
   lastOpenedFolder: string
+  preferenceLoaded: boolean
   treePathExcludePatterns: string[]
   language: string
 
@@ -148,10 +149,11 @@ export const usePreferencesStore = defineStore('preferences', {
     wordWrapInToc: false,
     fileSortBy: 'created',
     fileSortOrder: 'asc',
-    startUpAction: 'restoreAll',
+    startUpAction: 'folder',
     restoreLayoutState: true,
     defaultDirectoryToOpen: '',
     lastOpenedFolder: '',
+    preferenceLoaded: false,
     treePathExcludePatterns: [],
     language: DEFAULT_LANGUAGE,
 
@@ -208,7 +210,7 @@ export const usePreferencesStore = defineStore('preferences', {
     spellcheckerLanguage: 'en-US',
 
     // Default values that are overwritten with the entries below.
-    sideBarVisibility: false,
+    sideBarVisibility: true,
     sourceCodeModeEnabled: false,
     openedFilesInSidebar: true,
 
@@ -258,6 +260,8 @@ export const usePreferencesStore = defineStore('preferences', {
       if (lang && lang !== oldLanguage) {
         setLanguage(lang)
       }
+
+      this.preferenceLoaded = true
     },
 
     SET_MODE({ type, checked }: ModeTogglePayload): void {
