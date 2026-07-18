@@ -1,4 +1,4 @@
-// Fonts MarkTextPro bundles via @font-face (packages/muya/src/assets/styles/index.css).
+// Fonts MarkNotePro bundles via @font-face (packages/muya/src/assets/styles/index.css).
 // They are the editor/code defaults but are NOT installed system fonts, so the
 // OS font-list IPC never returns them and the picker couldn't reselect them (#3021).
 export const BUNDLED_PROPORTIONAL_FONTS = ['Open Sans']

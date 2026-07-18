@@ -9,9 +9,9 @@ const ENV_ALLOWLIST = [
   'NODE_ENV',
   'PERF_TESTING',
   'APPIMAGE',
-  'MARKTEXTPRO_VERSION',
-  'MARKTEXTPRO_VERSION_STRING',
-  'MARKTEXTPRO_RIPGREP_PATH',
+  'MARKNOTEPRO_VERSION',
+  'MARKNOTEPRO_VERSION_STRING',
+  'MARKNOTEPRO_RIPGREP_PATH',
   'PATH',
   'HOME'
 ]
@@ -26,8 +26,8 @@ const pickEnv = (): Record<string, string> => {
 }
 
 const resolveRipgrepBinary = (): string => {
-  if (process.env.MARKTEXTPRO_RIPGREP_PATH) {
-    return process.env.MARKTEXTPRO_RIPGREP_PATH
+  if (process.env.MARKNOTEPRO_RIPGREP_PATH) {
+    return process.env.MARKNOTEPRO_RIPGREP_PATH
   }
   return rgPath.replace(/\bapp\.asar\b/, 'app.asar.unpacked')
 }

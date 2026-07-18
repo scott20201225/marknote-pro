@@ -1,4 +1,4 @@
-# MarkTextPro Website
+# MarkNotePro Website
 
 
 
@@ -6,7 +6,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-blue?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/Vite-purple?logo=vite&logoColor=white)](https://vitejs.dev/)
 
-This package contains the documentation and promotional site sources for [MarkTextPro](https://github.com/scott20201225/marktext-pro).
+This package contains the documentation and promotional site sources for [MarkNotePro](https://github.com/scott20201225/marknote-pro).
 
 ## ✨ Features
 
@@ -38,8 +38,8 @@ npm install -g pnpm
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/scott20201225/marktext-pro.git
-cd marktext-pro/packages/website
+git clone https://github.com/scott20201225/marknote-pro.git
+cd marknote-pro/packages/website
 ```
 
 2. Install dependencies:
@@ -96,9 +96,9 @@ pnpm lint
 
 This package can be deployed independently if needed, but the canonical public home for the project is the GitHub repository:
 
-- **Main Project**: [MarkTextPro Editor](https://github.com/scott20201225/marktext-pro)
-- **Documentation**: [MarkTextPro Docs](https://github.com/scott20201225/marktext-pro/tree/main/docs)
-- **Releases**: [GitHub Releases](https://github.com/scott20201225/marktext-pro/releases)
+- **Main Project**: [MarkNotePro Editor](https://github.com/scott20201225/marknote-pro)
+- **Documentation**: [MarkNotePro Docs](https://github.com/scott20201225/marknote-pro/tree/main/docs)
+- **Releases**: [GitHub Releases](https://github.com/scott20201225/marknote-pro/releases)
 
 ## 📁 Project Structure
 
@@ -215,14 +215,14 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🔗 Links
 
-- **Main Project**: [MarkTextPro Editor](https://github.com/scott20201225/marktext-pro)
-- **Repository**: [https://github.com/scott20201225/marktext-pro](https://github.com/scott20201225/marktext-pro)
-- **Documentation**: [MarkTextPro Docs](https://github.com/scott20201225/marktext-pro/tree/main/docs)
+- **Main Project**: [MarkNotePro Editor](https://github.com/scott20201225/marknote-pro)
+- **Repository**: [https://github.com/scott20201225/marknote-pro](https://github.com/scott20201225/marknote-pro)
+- **Documentation**: [MarkNotePro Docs](https://github.com/scott20201225/marknote-pro/tree/main/docs)
 
 ## 💖 Sponsors
 
-Special thanks to all our sponsors for supporting the MarkTextPro project!
+Special thanks to all our sponsors for supporting the MarkNotePro project!
 
 ---
 
-Made with ❤️ by the MarkTextPro Team
+Made with ❤️ by the MarkNotePro Team

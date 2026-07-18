@@ -84,7 +84,7 @@ describe('parity PG8: exported headings carry slug ids (live TOC anchors)', () =
     );
 
     it(
-        'PG8: the heading id matches the marktextpro slug of the heading text',
+        'PG8: the heading id matches the marknotepro slug of the heading text',
         async () => {
             const out = await generateExport(SAMPLE);
 

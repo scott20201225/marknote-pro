@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop">
-  <id>com.scott20201225.marktextpro</id>
+  <id>com.scott20201225.marknotepro</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>MIT</project_license>
-  <name>MarkTextPro</name>
+  <name>MarkNotePro</name>
   <summary>Next generation markdown editor</summary>
   <description>
     <p>
-      MarkTextPro is a free and open-source realtime preview markdown editor which support both CommonMark Spec and GitHub Flavored Markdown Spec. It is a concise text editor, dedicated to improving your writing efficiency.
+      MarkNotePro is a free and open-source realtime preview markdown editor which support both CommonMark Spec and GitHub Flavored Markdown Spec. It is a concise text editor, dedicated to improving your writing efficiency.
     </p>
     <p>Features:</p>
     <ul>
@@ -19,32 +19,32 @@
       <li>Various edit modes and themes: source code mode, typewriter mode, focus mode</li>
     </ul>
   </description>
-  <url type="homepage">https://github.com/scott20201225/marktext-pro</url>
-  <url type="bugtracker">https://github.com/scott20201225/marktext-pro/issues</url>
+  <url type="homepage">https://github.com/scott20201225/marknote-pro</url>
+  <url type="bugtracker">https://github.com/scott20201225/marknote-pro/issues</url>
   <screenshots>
     <screenshot type="default">
       <caption>Light theme</caption>
-      <image>https://raw.githubusercontent.com/scott20201225/marktext-pro/main/resources/linux/img/img1.png</image>
+      <image>https://raw.githubusercontent.com/scott20201225/marknote-pro/main/resources/linux/img/img1.png</image>
     </screenshot>
     <screenshot>
       <caption>Sidebar</caption>
-      <image>https://raw.githubusercontent.com/scott20201225/marktext-pro/main/resources/linux/img/img2.png</image>
+      <image>https://raw.githubusercontent.com/scott20201225/marknote-pro/main/resources/linux/img/img2.png</image>
     </screenshot>
     <screenshot>
       <caption>Image and math equations</caption>
-      <image>https://raw.githubusercontent.com/scott20201225/marktext-pro/main/resources/linux/img/img3.png</image>
+      <image>https://raw.githubusercontent.com/scott20201225/marknote-pro/main/resources/linux/img/img3.png</image>
     </screenshot>
     <screenshot>
       <caption>Dark theme</caption>
-      <image>https://raw.githubusercontent.com/scott20201225/marktext-pro/main/resources/linux/img/img4.png</image>
+      <image>https://raw.githubusercontent.com/scott20201225/marknote-pro/main/resources/linux/img/img4.png</image>
     </screenshot>
     <screenshot>
       <caption>Sidebar and tabs</caption>
-      <image>https://raw.githubusercontent.com/scott20201225/marktext-pro/main/resources/linux/img/img5.png</image>
+      <image>https://raw.githubusercontent.com/scott20201225/marknote-pro/main/resources/linux/img/img5.png</image>
     </screenshot>
     <screenshot>
       <caption>Source code mode</caption>
-      <image>https://raw.githubusercontent.com/scott20201225/marktext-pro/main/resources/linux/img/img6.png</image>
+      <image>https://raw.githubusercontent.com/scott20201225/marknote-pro/main/resources/linux/img/img6.png</image>
     </screenshot>
   </screenshots>
   <categories>

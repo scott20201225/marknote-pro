@@ -1,10 +1,10 @@
-<p align="center"><img src="../assets/logo-small.png" alt="MarkTextPro" width="100" height="100"></p>
+<p align="center"><img src="../assets/logo-small.png" alt="MarkNotePro" width="100" height="100"></p>
 
-<h1 align="center">MarkTextPro</h1>
+<h1 align="center">MarkNotePro</h1>
 
 <div align="center">
-  <a href="https://twitter.com/intent/tweet?via=scott20201225&url=https://github.com/scott20201225/marktext-pro/&text=What%20do%20you%20want%20to%20say%20to%20app?&hashtags=happyMarkTextPro">
-    <img src="https://img.shields.io/twitter/url/https/github.com/scott20201225/marktext-pro.svg?style=for-the-badge" alt="twitter">
+  <a href="https://twitter.com/intent/tweet?via=scott20201225&url=https://github.com/scott20201225/marknote-pro/&text=What%20do%20you%20want%20to%20say%20to%20app?&hashtags=happyMarkNotePro">
+    <img src="https://img.shields.io/twitter/url/https/github.com/scott20201225/marknote-pro.svg?style=for-the-badge" alt="twitter">
   </a>
 </div>
 <div align="center">
@@ -18,41 +18,41 @@
 <div align="center">
   <!-- License -->
   <a href="../../LICENSE">
-    <img src="https://img.shields.io/github/license/scott20201225/marktext-pro.svg" alt="LICENSE">
+    <img src="https://img.shields.io/github/license/scott20201225/marknote-pro.svg" alt="LICENSE">
   </a>
   <!-- Downloads total -->
-  <a href="https://github.com/scott20201225/marktext-pro/releases">
-    <img src="https://img.shields.io/github/downloads/scott20201225/marktext-pro/total.svg" alt="total download">
+  <a href="https://github.com/scott20201225/marknote-pro/releases">
+    <img src="https://img.shields.io/github/downloads/scott20201225/marknote-pro/total.svg" alt="total download">
   </a>
   <!-- Downloads latest release -->
-  <a href="https://github.com/scott20201225/marktext-pro/releases/latest">
-    <img src="https://img.shields.io/github/downloads/scott20201225/marktext-pro/v0.17.1/total.svg" alt="latest download">
+  <a href="https://github.com/scott20201225/marknote-pro/releases/latest">
+    <img src="https://img.shields.io/github/downloads/scott20201225/marknote-pro/v0.17.1/total.svg" alt="latest download">
   </a>
   <!-- sponsors -->
-  <a href="https://opencollective.com/marktextpro">
-    <img src="https://opencollective.com/marktextpro/tiers/silver-sponsors/badge.svg?label=SilverSponsors&color=brightgreen" alt="sponsors">
+  <a href="https://github.com/sponsors/scott20201225">
+    <img src="https://img.shields.io/badge/Sponsor-GitHub-pink?style=for-the-badge&logo=githubsponsors" alt="sponsors">
   </a>
 </div>
 
 <div align="center">
   <h3>
-    <a href="https://github.com/scott20201225/marktext-pro">
+    <a href="https://github.com/scott20201225/marknote-pro">
       Website
     </a>
     <span> | </span>
-    <a href="https://github.com/scott20201225/marktext-pro#features">
+    <a href="https://github.com/scott20201225/marknote-pro#features">
       功能
     </a>
     <span> | </span>
-    <a href="https://github.com/scott20201225/marktext-pro#download-and-installation">
+    <a href="https://github.com/scott20201225/marknote-pro#download-and-installation">
       下载与安装
     </a>
     <span> | </span>
-    <a href="https://github.com/scott20201225/marktext-pro#development">
+    <a href="https://github.com/scott20201225/marknote-pro#development">
       开发
     </a>
     <span> | </span>
-    <a href="https://github.com/scott20201225/marktext-pro#contribution">
+    <a href="https://github.com/scott20201225/marknote-pro#contribution">
       贡献
     </a>
   </h3>
@@ -98,7 +98,7 @@
 <div align="center">
   <sub>这款 Markdown 编辑器由
     <a href="https://github.com/Jocs">Jocs</a> 和
-    <a href="https://github.com/scott20201225/marktext-pro/graphs/contributors">
+    <a href="https://github.com/scott20201225/marknote-pro/graphs/contributors">
       贡献者们
     </a>
     用 ❤︎ 构建。</sub>
@@ -106,19 +106,19 @@
 
 <br />
 
-<h2 align="center">支持 MarkTextPro</h2>
+<h2 align="center">支持 MarkNotePro</h2>
 
-MarkTextPro 是一款由社区支持驱动的开源 Markdown 编辑器。如果 MarkTextPro 改善了您的工作流程，请考虑[赞助本项目](https://github.com/scott20201225)。感谢所有赞助者 ❤️
+MarkNotePro 是一款由社区支持驱动的开源 Markdown 编辑器。如果 MarkNotePro 改善了您的工作流程，请考虑[赞助本项目](https://github.com/scott20201225)。感谢所有赞助者 ❤️
 
 **特别赞助商**
 
-| [<img src="../assets/sponsors/serpapi.png" width="150">](https://serpapi.com/?utm_source=marktextpro) | [通过我们快速、便捷且完整的 API 抓取 Google 及其他搜索引擎的数据。](https://serpapi.com/?utm_source=marktextpro) |
+| [<img src="../assets/sponsors/serpapi.png" width="150">](https://serpapi.com/?utm_source=marknotepro) | [通过我们快速、便捷且完整的 API 抓取 Google 及其他搜索引擎的数据。](https://serpapi.com/?utm_source=marknotepro) |
 | ------------- |:-------------|
 | [<img src="../assets/sponsors/ukey.png" width="150">](https://www.ukey.com) | [Secure hardware wallet made simple.](https://www.ukey.com) |
 
 ## 截图
 
-![](../assets/marktextpro.png?raw=true)
+![](../assets/marknotepro.png?raw=true)
 
 ## 功能
 
@@ -137,32 +137,32 @@ MarkTextPro 是一款由社区支持驱动的开源 Markdown 编辑器。如果 
 
 | ![](https://raw.githubusercontent.com/wiki/ryanoasis/nerd-fonts/screenshots/v1.0.x/mac-pass-sm.png)                                                                                                  | ![](https://raw.githubusercontent.com/wiki/ryanoasis/nerd-fonts/screenshots/v1.0.x/windows-pass-sm.png)                                                                                                          | ![](https://raw.githubusercontent.com/wiki/ryanoasis/nerd-fonts/screenshots/v1.0.x/linux-pass-sm.png)                                                                                                                        |
 |:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
-| [![latest version](https://img.shields.io/github/downloads/scott20201225/marktext-pro/latest/marktextpro-x64.dmg.svg)](https://github.com/scott20201225/marktext-pro/releases/download/v0.17.1/marktextpro-x64.dmg) | [![latest version](https://img.shields.io/github/downloads/scott20201225/marktext-pro/latest/marktextpro-setup.exe.svg)](https://github.com/scott20201225/marktext-pro/releases/download/v0.17.1/marktextpro-setup.exe) | [![latest version](https://img.shields.io/github/downloads/scott20201225/marktext-pro/latest/marktextpro-x86_64.AppImage.svg)](https://github.com/scott20201225/marktext-pro/releases/download/v0.17.1/marktextpro-x86_64.AppImage) |
+| [![latest version](https://img.shields.io/github/downloads/scott20201225/marknote-pro/latest/marknotepro-x64.dmg.svg)](https://github.com/scott20201225/marknote-pro/releases/download/v0.17.1/marknotepro-x64.dmg) | [![latest version](https://img.shields.io/github/downloads/scott20201225/marknote-pro/latest/marknotepro-setup.exe.svg)](https://github.com/scott20201225/marknote-pro/releases/download/v0.17.1/marknotepro-setup.exe) | [![latest version](https://img.shields.io/github/downloads/scott20201225/marknote-pro/latest/marknotepro-x86_64.AppImage.svg)](https://github.com/scott20201225/marknote-pro/releases/download/v0.17.1/marknotepro-x86_64.AppImage) |
 
 想了解最新版本的新功能？请参阅 [CHANGELOG](../CHANGELOG.md)。
 
 #### macOS
 
-你可以从[发布页](https://github.com/scott20201225/marktext-pro/releases/latest)下载最新的 `marktextpro-%version%.dmg`，或通过 [**homebrew cask**](https://github.com/caskroom/homebrew-cask) 安装 MarkTextPro。使用 Homebrew-Cask 只需先安装 [Homebrew](https://brew.sh/)。
+你可以从[发布页](https://github.com/scott20201225/marknote-pro/releases/latest)下载最新的 `marknotepro-%version%.dmg`，或通过 [**homebrew cask**](https://github.com/caskroom/homebrew-cask) 安装 MarkNotePro。使用 Homebrew-Cask 只需先安装 [Homebrew](https://brew.sh/)。
 
 ```bash
-brew install --cask marktextpro
+brew install --cask marknotepro
 ```
 
 #### Windows
 
-只需下载并通过安装向导（`marktextpro-setup-%version%.exe`）安装 MarkTextPro，并选择用户级或系统级安装。或者，使用包管理器 [Chocolatey](https://chocolatey.org/) 或 [Winget](https://docs.microsoft.com/en-us/windows/package-manager/winget/) 安装 MarkTextPro。
+只需下载并通过安装向导（`marknotepro-setup-%version%.exe`）安装 MarkNotePro，并选择用户级或系统级安装。或者，使用包管理器 [Chocolatey](https://chocolatey.org/) 或 [Winget](https://docs.microsoft.com/en-us/windows/package-manager/winget/) 安装 MarkNotePro。
 
 使用 Chocolatey，需先安装 [Chocolatey](https://chocolatey.org/install)：
 
 ```bash
-choco install marktextpro
+choco install marknotepro
 ```
 
 使用 Winget，需先安装 [Winget](https://docs.microsoft.com/en-us/windows/package-manager/winget/#install-winget)：
 
 ```bash
-winget install marktextpro
+winget install marknotepro
 ```
 
 #### Linux
@@ -171,27 +171,27 @@ winget install marktextpro
 
 #### 其他
 
-所有 Linux、macOS 和 Windows 的二进制文件均可从[发布页](https://github.com/scott20201225/marktext-pro/releases/latest)下载。如果你的系统没有对应版本，请提交 [issue](https://github.com/scott20201225/marktext-pro/issues)。
+所有 Linux、macOS 和 Windows 的二进制文件均可从[发布页](https://github.com/scott20201225/marknote-pro/releases/latest)下载。如果你的系统没有对应版本，请提交 [issue](https://github.com/scott20201225/marknote-pro/issues)。
 
 ## 开发
 
-如果你希望自行构建 MarkTextPro，请参阅我们的[构建说明](../dev/BUILD.md)。
+如果你希望自行构建 MarkNotePro，请参阅我们的[构建说明](../dev/BUILD.md)。
 
 - [用户文档](../README.md)
 - [开发者文档](../dev/README.md)
 
-如果你对 MarkTextPro 有任何疑问，欢迎提交 issue。提交时请使用打开 issue 时的默认格式。当然，如果你直接提交 PR，将不胜感激。
+如果你对 MarkNotePro 有任何疑问，欢迎提交 issue。提交时请使用打开 issue 时的默认格式。当然，如果你直接提交 PR，将不胜感激。
 
 ## 贡献
 
-MarkTextPro 正在开发中，请在提交 pull request 之前确保阅读[贡献指南](../../.github/CONTRIBUTING.md)。想为 MarkTextPro 添加新功能？请参阅我们的[路线图](https://github.com/scott20201225/marktext-pro/projects)和开放 issue。
+MarkNotePro 正在开发中，请在提交 pull request 之前确保阅读[贡献指南](../../.github/CONTRIBUTING.md)。想为 MarkNotePro 添加新功能？请参阅我们的[路线图](https://github.com/scott20201225/marknote-pro/projects)和开放 issue。
 
 
 ## 贡献者
 
-感谢所有已经为 MarkTextPro 做出贡献的人[[贡献者](https://github.com/scott20201225/marktext-pro/graphs/contributors)]。
+感谢所有已经为 MarkNotePro 做出贡献的人[[贡献者](https://github.com/scott20201225/marknote-pro/graphs/contributors)]。
 
-<a href="https://github.com/scott20201225/marktext-pro/graphs/contributors"><img src="https://opencollective.com/marktextpro/contributors.svg?width=890" /></a>
+<a href="https://github.com/scott20201225/marknote-pro/graphs/contributors"><img src="https://github.com/sponsors/scott20201225/contributors.svg?width=890" /></a>
 
 ## 许可证
 

@@ -1,10 +1,10 @@
-<p align="center"><img src="../assets/logo-small.png" alt="MarkTextPro" width="100" height="100"></p>
+<p align="center"><img src="../assets/logo-small.png" alt="MarkNotePro" width="100" height="100"></p>
 
-<h1 align="center">MarkTextPro</h1>
+<h1 align="center">MarkNotePro</h1>
 
 <div align="center">
-  <a href="https://twitter.com/intent/tweet?via=scott20201225&url=https://github.com/scott20201225/marktext-pro/&text=What%20do%20you%20want%20to%20say%20to%20app?&hashtags=happyMarkTextPro">
-    <img src="https://img.shields.io/twitter/url/https/github.com/scott20201225/marktext-pro.svg?style=for-the-badge" alt="twitter">
+  <a href="https://twitter.com/intent/tweet?via=scott20201225&url=https://github.com/scott20201225/marknote-pro/&text=What%20do%20you%20want%20to%20say%20to%20app?&hashtags=happyMarkNotePro">
+    <img src="https://img.shields.io/twitter/url/https/github.com/scott20201225/marknote-pro.svg?style=for-the-badge" alt="twitter">
   </a>
 </div>
 <div align="center">
@@ -18,41 +18,41 @@
 <div align="center">
   <!-- License -->
   <a href="../../LICENSE">
-    <img src="https://img.shields.io/github/license/scott20201225/marktext-pro.svg" alt="LICENSE">
+    <img src="https://img.shields.io/github/license/scott20201225/marknote-pro.svg" alt="LICENSE">
   </a>
   <!-- Downloads total -->
-  <a href="https://github.com/scott20201225/marktext-pro/releases">
-    <img src="https://img.shields.io/github/downloads/scott20201225/marktext-pro/total.svg" alt="total download">
+  <a href="https://github.com/scott20201225/marknote-pro/releases">
+    <img src="https://img.shields.io/github/downloads/scott20201225/marknote-pro/total.svg" alt="total download">
   </a>
   <!-- Downloads latest release -->
-  <a href="https://github.com/scott20201225/marktext-pro/releases/latest">
-    <img src="https://img.shields.io/github/downloads/scott20201225/marktext-pro/v0.17.1/total.svg" alt="latest download">
+  <a href="https://github.com/scott20201225/marknote-pro/releases/latest">
+    <img src="https://img.shields.io/github/downloads/scott20201225/marknote-pro/v0.17.1/total.svg" alt="latest download">
   </a>
   <!-- sponsors -->
-  <a href="https://opencollective.com/marktextpro">
-    <img src="https://opencollective.com/marktextpro/tiers/silver-sponsors/badge.svg?label=SilverSponsors&color=brightgreen" alt="sponsors">
+  <a href="https://github.com/sponsors/scott20201225">
+    <img src="https://img.shields.io/badge/Sponsor-GitHub-pink?style=for-the-badge&logo=githubsponsors" alt="sponsors">
   </a>
 </div>
 
 <div align="center">
   <h3>
-    <a href="https://github.com/scott20201225/marktext-pro">
+    <a href="https://github.com/scott20201225/marknote-pro">
       Website
     </a>
     <span> | </span>
-    <a href="https://github.com/scott20201225/marktext-pro#features">
+    <a href="https://github.com/scott20201225/marknote-pro#features">
       機能
     </a>
     <span> | </span>
-    <a href="https://github.com/scott20201225/marktext-pro#download-and-installation">
+    <a href="https://github.com/scott20201225/marknote-pro#download-and-installation">
       ダウンロードとインストール
     </a>
     <span> | </span>
-    <a href="https://github.com/scott20201225/marktext-pro#development">
+    <a href="https://github.com/scott20201225/marknote-pro#development">
       開発
     </a>
     <span> | </span>
-    <a href="https://github.com/scott20201225/marktext-pro#contribution">
+    <a href="https://github.com/scott20201225/marknote-pro#contribution">
       コントリビューション
     </a>
   </h3>
@@ -98,7 +98,7 @@
 <div align="center">
   <sub>この Markdown エディタは
     <a href="https://github.com/Jocs">Jocs</a> と
-    <a href="https://github.com/scott20201225/marktext-pro/graphs/contributors">
+    <a href="https://github.com/scott20201225/marknote-pro/graphs/contributors">
       コントリビューター
     </a>
     によって ❤︎ を込めて作られました。</sub>
@@ -106,19 +106,19 @@
 
 <br />
 
-<h2 align="center">MarkTextPro を支援する</h2>
+<h2 align="center">MarkNotePro を支援する</h2>
 
-MarkTextPro はコミュニティの支援によって成り立つオープンソースの Markdown エディターです。MarkTextPro があなたのワークフローを改善するなら、[プロジェクトへのスポンサー](https://github.com/scott20201225)をご検討ください。すべてのスポンサーに感謝します ❤️
+MarkNotePro はコミュニティの支援によって成り立つオープンソースの Markdown エディターです。MarkNotePro があなたのワークフローを改善するなら、[プロジェクトへのスポンサー](https://github.com/scott20201225)をご検討ください。すべてのスポンサーに感謝します ❤️
 
 **スペシャルスポンサー**
 
-| [<img src="../assets/sponsors/serpapi.png" width="150">](https://serpapi.com/?utm_source=marktextpro) | [高速で使いやすく完全な API で Google や他の検索エンジンからデータを取得できます。](https://serpapi.com/?utm_source=marktextpro) |
+| [<img src="../assets/sponsors/serpapi.png" width="150">](https://serpapi.com/?utm_source=marknotepro) | [高速で使いやすく完全な API で Google や他の検索エンジンからデータを取得できます。](https://serpapi.com/?utm_source=marknotepro) |
 | ------------- |:-------------|
 | [<img src="../assets/sponsors/ukey.png" width="150">](https://www.ukey.com) | [Secure hardware wallet made simple.](https://www.ukey.com) |
 
 ## スクリーンショット
 
-![](../assets/marktextpro.png?raw=true)
+![](../assets/marknotepro.png?raw=true)
 
 ## 機能
 
@@ -137,32 +137,32 @@ MarkTextPro はコミュニティの支援によって成り立つオープン�
 
 | ![](https://raw.githubusercontent.com/wiki/ryanoasis/nerd-fonts/screenshots/v1.0.x/mac-pass-sm.png)                                                                                                  | ![](https://raw.githubusercontent.com/wiki/ryanoasis/nerd-fonts/screenshots/v1.0.x/windows-pass-sm.png)                                                                                                          | ![](https://raw.githubusercontent.com/wiki/ryanoasis/nerd-fonts/screenshots/v1.0.x/linux-pass-sm.png)                                                                                                                        |
 |:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
-| [![latest version](https://img.shields.io/github/downloads/scott20201225/marktext-pro/latest/marktextpro-x64.dmg.svg)](https://github.com/scott20201225/marktext-pro/releases/download/v0.17.1/marktextpro-x64.dmg) | [![latest version](https://img.shields.io/github/downloads/scott20201225/marktext-pro/latest/marktextpro-setup.exe.svg)](https://github.com/scott20201225/marktext-pro/releases/download/v0.17.1/marktextpro-setup.exe) | [![latest version](https://img.shields.io/github/downloads/scott20201225/marktext-pro/latest/marktextpro-x86_64.AppImage.svg)](https://github.com/scott20201225/marktext-pro/releases/download/v0.17.1/marktextpro-x86_64.AppImage) |
+| [![latest version](https://img.shields.io/github/downloads/scott20201225/marknote-pro/latest/marknotepro-x64.dmg.svg)](https://github.com/scott20201225/marknote-pro/releases/download/v0.17.1/marknotepro-x64.dmg) | [![latest version](https://img.shields.io/github/downloads/scott20201225/marknote-pro/latest/marknotepro-setup.exe.svg)](https://github.com/scott20201225/marknote-pro/releases/download/v0.17.1/marknotepro-setup.exe) | [![latest version](https://img.shields.io/github/downloads/scott20201225/marknote-pro/latest/marknotepro-x86_64.AppImage.svg)](https://github.com/scott20201225/marknote-pro/releases/download/v0.17.1/marknotepro-x86_64.AppImage) |
 
 最新バージョンの新機能を確認しますか？[CHANGELOG](../CHANGELOG.md) をご覧ください。
 
 #### macOS
 
-[リリースページ](https://github.com/scott20201225/marktext-pro/releases/latest)から最新の `marktextpro-%version%.dmg` をダウンロードするか、[**homebrew cask**](https://github.com/caskroom/homebrew-cask) を使って MarkTextPro をインストールできます。Homebrew-Cask を使用するには [Homebrew](https://brew.sh/) がインストールされている必要があります。
+[リリースページ](https://github.com/scott20201225/marknote-pro/releases/latest)から最新の `marknotepro-%version%.dmg` をダウンロードするか、[**homebrew cask**](https://github.com/caskroom/homebrew-cask) を使って MarkNotePro をインストールできます。Homebrew-Cask を使用するには [Homebrew](https://brew.sh/) がインストールされている必要があります。
 
 ```bash
-brew install --cask marktextpro
+brew install --cask marknotepro
 ```
 
 #### Windows
 
-セットアップウィザード（`marktextpro-setup-%version%.exe`）をダウンロードして MarkTextPro をインストールし、ユーザーごとまたはシステム全体へのインストールを選択します。または、[Chocolatey](https://chocolatey.org/) や [Winget](https://docs.microsoft.com/en-us/windows/package-manager/winget/) などのパッケージマネージャーを使ってインストールすることもできます。
+セットアップウィザード（`marknotepro-setup-%version%.exe`）をダウンロードして MarkNotePro をインストールし、ユーザーごとまたはシステム全体へのインストールを選択します。または、[Chocolatey](https://chocolatey.org/) や [Winget](https://docs.microsoft.com/en-us/windows/package-manager/winget/) などのパッケージマネージャーを使ってインストールすることもできます。
 
 Chocolatey を使用するには、[Chocolatey](https://chocolatey.org/install) がインストールされている必要があります：
 
 ```bash
-choco install marktextpro
+choco install marknotepro
 ```
 
 Winget を使用するには、[Winget](https://docs.microsoft.com/en-us/windows/package-manager/winget/#install-winget) がインストールされている必要があります：
 
 ```bash
-winget install marktextpro
+winget install marknotepro
 ```
 
 #### Linux
@@ -171,27 +171,27 @@ winget install marktextpro
 
 #### その他
 
-Linux、macOS、Windows 用のすべてのバイナリは[リリースページ](https://github.com/scott20201225/marktext-pro/releases/latest)からダウンロードできます。お使いのシステム用のバージョンがない場合は、[issue](https://github.com/scott20201225/marktext-pro/issues) を開いてください。
+Linux、macOS、Windows 用のすべてのバイナリは[リリースページ](https://github.com/scott20201225/marknote-pro/releases/latest)からダウンロードできます。お使いのシステム用のバージョンがない場合は、[issue](https://github.com/scott20201225/marknote-pro/issues) を開いてください。
 
 ## 開発
 
-MarkTextPro を自分でビルドしたい場合は、[ビルド手順](../dev/BUILD.md)をご確認ください。
+MarkNotePro を自分でビルドしたい場合は、[ビルド手順](../dev/BUILD.md)をご確認ください。
 
 - [ユーザードキュメント](../README.md)
 - [開発者ドキュメント](../dev/README.md)
 
-MarkTextPro に関してご質問がある場合は、issue を作成していただければ幸いです。その際はデフォルトのフォーマットをご使用ください。もちろん、直接 PR を提出していただけると大変ありがたいです。
+MarkNotePro に関してご質問がある場合は、issue を作成していただければ幸いです。その際はデフォルトのフォーマットをご使用ください。もちろん、直接 PR を提出していただけると大変ありがたいです。
 
 ## コントリビューション
 
-MarkTextPro は開発中です。プルリクエストを作成する前に必ず[コントリビューションガイド](../../.github/CONTRIBUTING.md)をお読みください。MarkTextPro に機能を追加したい場合は、[ロードマップ](https://github.com/scott20201225/marktext-pro/projects)とオープン issue をご確認ください。
+MarkNotePro は開発中です。プルリクエストを作成する前に必ず[コントリビューションガイド](../../.github/CONTRIBUTING.md)をお読みください。MarkNotePro に機能を追加したい場合は、[ロードマップ](https://github.com/scott20201225/marknote-pro/projects)とオープン issue をご確認ください。
 
 
 ## コントリビューター
 
-MarkTextPro にすでに貢献してくださったすべての方々に感謝します[[コントリビューター](https://github.com/scott20201225/marktext-pro/graphs/contributors)]。
+MarkNotePro にすでに貢献してくださったすべての方々に感謝します[[コントリビューター](https://github.com/scott20201225/marknote-pro/graphs/contributors)]。
 
-<a href="https://github.com/scott20201225/marktext-pro/graphs/contributors"><img src="https://opencollective.com/marktextpro/contributors.svg?width=890" /></a>
+<a href="https://github.com/scott20201225/marknote-pro/graphs/contributors"><img src="https://github.com/sponsors/scott20201225/contributors.svg?width=890" /></a>
 
 ## ライセンス
 

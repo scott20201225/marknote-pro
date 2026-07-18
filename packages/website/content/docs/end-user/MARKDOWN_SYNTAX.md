@@ -235,18 +235,18 @@ Note that placement of achors is arbitrary, you can put them anywhere you want, 
 Images have a similar syntax to links but include a preceding exclamation point.
 
 ```markdown
-![MarkTextPro](https://raw.githubusercontent.com/scott20201225/marktext-pro/main/packages/website/public/docs/assets/marktextpro.png)
+![MarkNotePro](https://raw.githubusercontent.com/scott20201225/marknote-pro/main/packages/website/public/docs/assets/marknotepro.png)
 ```
 
-![MarkTextPro](https://raw.githubusercontent.com/scott20201225/marktext-pro/main/packages/website/public/docs/assets/marktextpro.png)
+![MarkNotePro](https://raw.githubusercontent.com/scott20201225/marknote-pro/main/packages/website/public/docs/assets/marknotepro.png)
 
 or
 
 ```markdown
-![Alt text](https://raw.githubusercontent.com/scott20201225/marktext-pro/main/packages/website/public/docs/assets/marktextpro.png "MarkTextPro logo")
+![Alt text](https://raw.githubusercontent.com/scott20201225/marknote-pro/main/packages/website/public/docs/assets/marknotepro.png "MarkNotePro logo")
 ```
 
-![Alt text](https://raw.githubusercontent.com/scott20201225/marktext-pro/main/packages/website/public/docs/assets/marktextpro.png "MarkTextPro logo")
+![Alt text](https://raw.githubusercontent.com/scott20201225/marknote-pro/main/packages/website/public/docs/assets/marknotepro.png "MarkNotePro logo")
 
 Like links, Images also have a footnote style syntax
 
@@ -258,10 +258,10 @@ Like links, Images also have a footnote style syntax
 
 With a reference later in the document defining the URL location:
 
-[id]: https://raw.githubusercontent.com/scott20201225/marktext-pro/main/packages/website/public/docs/assets/marktextpro.png  "MarkTextPro logo"
+[id]: https://raw.githubusercontent.com/scott20201225/marknote-pro/main/packages/website/public/docs/assets/marknotepro.png  "MarkNotePro logo"
 
 ```markdown
-[id]: https://raw.githubusercontent.com/scott20201225/marktext-pro/main/packages/website/public/docs/assets/marktextpro.png  "MarkTextPro logo"
+[id]: https://raw.githubusercontent.com/scott20201225/marknote-pro/main/packages/website/public/docs/assets/marknotepro.png  "MarkNotePro logo"
 ```
 
 <br>
@@ -639,7 +639,7 @@ Which renders to:
 
 :heart: :zap: :cow: :dollar: :star: :tada:
 
-**NOTE:** MarkTextPro provides an emoji picker with search functionality.
+**NOTE:** MarkNotePro provides an emoji picker with search functionality.
 
 <br>
 
@@ -728,7 +728,7 @@ $$
 
 ## Diagrams
 
-MarkTextPro support class, flow chart, gantt and sequence diagrams powered by flowchart.js, mermaid and Vega-Lite. [Code](#code) blocks with special language identifiers are used for diagrams.
+MarkNotePro support class, flow chart, gantt and sequence diagrams powered by flowchart.js, mermaid and Vega-Lite. [Code](#code) blocks with special language identifiers are used for diagrams.
 
 For example, this:
 

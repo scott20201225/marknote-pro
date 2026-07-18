@@ -8,7 +8,7 @@ import { DOWNLOAD } from '@/lib/downloads'
 import { GitHubIcon } from '@/components/Icons'
 import { useSidebar } from './sidebar-context'
 
-const STORAGE_KEY = 'marktextpro-doc-groups'
+const STORAGE_KEY = 'marknotepro-doc-groups'
 
 type Props = {
   activeTab: DocTabId

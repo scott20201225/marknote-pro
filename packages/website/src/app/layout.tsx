@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
   display: 'swap'
 })
 
-const SITE_URL = 'https://github.com/scott20201225/marktext-pro'
-const TITLE = 'MarkTextPro — The Markdown editor that gets out of your way'
+const SITE_URL = 'https://github.com/scott20201225/marknote-pro'
+const TITLE = 'MarkNotePro — The Markdown editor that gets out of your way'
 const DESCRIPTION =
   'A free, open-source, real-time preview Markdown editor for macOS, Windows and Linux. Beautiful typography, 33 built-in themes, math, diagrams, footnotes — all rendered live.'
 
@@ -24,10 +24,10 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
     default: TITLE,
-    template: '%s | MarkTextPro'
+    template: '%s | MarkNotePro'
   },
   description: DESCRIPTION,
-  applicationName: 'MarkTextPro',
+  applicationName: 'MarkNotePro',
   keywords: [
     'markdown editor',
     'WYSIWYG markdown',
@@ -50,14 +50,14 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_US',
     url: SITE_URL,
-    siteName: 'MarkTextPro',
+    siteName: 'MarkNotePro',
     title: TITLE,
     description: DESCRIPTION,
-    images: [{ url: '/favicon.png', width: 512, height: 512, alt: 'MarkTextPro logo' }]
+    images: [{ url: '/favicon.png', width: 512, height: 512, alt: 'MarkNotePro logo' }]
   },
   twitter: {
     card: 'summary_large_image',
-    site: '@marktextproapp',
+    site: '@marknoteproapp',
     title: TITLE,
     description: DESCRIPTION,
     images: ['/favicon.png']
@@ -73,15 +73,15 @@ export const viewport: Viewport = {
 const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
-  name: 'MarkTextPro',
+  name: 'MarkNotePro',
   applicationCategory: 'DeveloperApplication',
   operatingSystem: 'macOS, Windows, Linux',
   description: DESCRIPTION,
   url: SITE_URL,
-  license: 'https://github.com/scott20201225/marktext-pro/blob/main/LICENSE',
+  license: 'https://github.com/scott20201225/marknote-pro/blob/main/LICENSE',
   author: { '@type': 'Person', name: 'ScottCheng', url: 'https://github.com/scott20201225' },
   offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
-  downloadUrl: 'https://github.com/scott20201225/marktext-pro/releases/latest',
+  downloadUrl: 'https://github.com/scott20201225/marknote-pro/releases/latest',
   softwareVersion: 'latest'
 }
 

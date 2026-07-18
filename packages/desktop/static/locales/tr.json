@@ -124,21 +124,21 @@
       "reportBug": "Hata Bildir",
       "viewSource": "Kaynağı Görüntüle",
       "followUs": "Bizi Takip Edin",
-      "support": "MarkTextPro'e Destek Ol",
+      "support": "MarkNotePro'e Destek Ol",
       "license": "Lisans",
       "about": "Hakkında",
       "checkUpdates": "Güncellemeleri Denetle"
     },
-    "marktextpro": {
-      "title": "MarkTextPro",
-      "about": "MarkTextPro Hakkında",
+    "marknotepro": {
+      "title": "MarkNotePro",
+      "about": "MarkNotePro Hakkında",
       "checkUpdates": "Güncellemeleri Denetle...",
       "preferences": "Tercihler",
       "services": "Hizmetler",
-      "hide": "MarkTextPro'i Gizle",
+      "hide": "MarkNotePro'i Gizle",
       "hideOthers": "Diğerlerini Gizle",
       "showAll": "Tümünü Göster",
-      "quit": "MarkTextPro'ten Çık"
+      "quit": "MarkNotePro'ten Çık"
     },
     "view": {
       "view": "Görünüm",
@@ -375,7 +375,7 @@
   },
   "import": {
     "title": "İçe Aktar veya Aç",
-    "description": "İçeriklerinizi MarkTextPro'e almak için buraya bırakın"
+    "description": "İçeriklerinizi MarkNotePro'e almak için buraya bırakın"
   },
   "preferences": {
     "title": "Tercihler",
@@ -402,10 +402,10 @@
         "hideScrollbar": "Kaydırma çubuklarının gizlenip gizlenmeyeceği",
         "wordWrapInToc": "İçindekilerde sözcük kaydırmanın etkinleştirilip etkinleştirilmeyeceği",
         "fileSortBy": "Açık klasördeki dosyaları oluşturulma zamanı, değiştirilme zamanı ve başlığa göre sırala",
-        "startUpAction": "MarkTextPro başladıktan sonraki eylem: son düzenlenen içeriği aç, belirtilen klasörü aç veya boş sayfa",
+        "startUpAction": "MarkNotePro başladıktan sonraki eylem: son düzenlenen içeriği aç, belirtilen klasörü aç veya boş sayfa",
         "restoreLayoutState": "Başlangıçta önceki düzenleyici durumunu geri yükle",
         "defaultDirectoryToOpen": "startUp=folder olduğunda başlangıçta açılması gereken varsayılan klasör",
-        "language": "MarkTextPro'in kullandığı dil",
+        "language": "MarkNotePro'in kullandığı dil",
         "editorFontFamily": "Düzenleyici yazı tipi ailesi",
         "fontSize": "Piksel cinsinden yazı tipi boyutu",
         "lineHeight": "Satır Yüksekliği",
@@ -429,7 +429,7 @@
         "preferLooseListItem": "Tercih edilen liste türü",
         "bulletListMarker": "Sırasız listede kullanılan işaret",
         "orderListDelimiter": "Sıralı listede kullanılan ayraç",
-        "preferHeadingStyle": "MarkTextPro'te tercih edilen başlık stili",
+        "preferHeadingStyle": "MarkNotePro'te tercih edilen başlık stili",
         "tabSize": "Sekmeyi x boşlukla değiştir",
         "listIndentation": "Liste girintisini seçin",
         "frontmatterType": "Ön bilgi türü",
@@ -438,7 +438,7 @@
         "isHtmlEnabled": "HTML işlemeyi etkinleştir",
         "isGitlabCompatibilityEnabled": "GitLab uyumluluk modunu etkinleştir",
         "sequenceTheme": "Dizi diyagramı teması",
-        "theme": "MarkTextPro'te kullanılan temayı seçin",
+        "theme": "MarkNotePro'te kullanılan temayı seçin",
         "followSystemTheme": "Sistem Temasını Takip Et",
         "lightModeTheme": "Sistem açık moddayken kullanılacak tema",
         "darkModeTheme": "Sistem koyu moddayken kullanılacak tema",
@@ -646,7 +646,7 @@
         "pleaseInstall": "Lütfen yükleyin",
         "scriptPath": "Betik yolu"
       },
-      "defaultBehavior": "Görseli MarkTextPro'e yapıştırdıktan veya sürükledikten sonraki varsayılan davranış"
+      "defaultBehavior": "Görseli MarkNotePro'e yapıştırdıktan veya sürükledikten sonraki varsayılan davranış"
     },
     "markdown": {
       "title": "Markdown",
@@ -763,7 +763,7 @@
   },
   "commands": {
     "mt": {
-      "hide": "MarkTextPro'i Gizle",
+      "hide": "MarkNotePro'i Gizle",
       "hideOthers": "Diğerlerini Gizle"
     },
     "file": {
@@ -928,7 +928,7 @@
     "configSchemaViolation": "Yapılandırma şeması ihlali",
     "copyError": "Kopyalama hatası",
     "initializationFailed": "Başlatma başarısız {hint}",
-    "otherInstanceDetected": "Başka bir MarkTextPro penceresi zaten açık",
+    "otherInstanceDetected": "Başka bir MarkNotePro penceresi zaten açık",
     "report": "Bildir",
     "startupError": "Başlangıç hatası",
     "terminatedDueToError": "Hata nedeniyle sonlandırıldı",

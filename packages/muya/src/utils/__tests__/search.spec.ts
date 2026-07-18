@@ -2,9 +2,9 @@ import type { IMatch } from '../../search/types';
 import { describe, expect, it } from 'vitest';
 import { buildRegexValue, matchString } from '../search';
 
-// Defensive coverage for the search helpers migrated from marktextpro.
+// Defensive coverage for the search helpers migrated from marknotepro.
 //
-// `buildRegexValue` already lines up with marktextpro 4c517b16 ("fix: search
+// `buildRegexValue` already lines up with marknotepro 4c517b16 ("fix: search
 // group"): it skips literal `\$N`, honours `$0` as the full match and
 // `$N` (N≥1) as the captured subgroups. Pin the contract here so the
 // next refactor in `utils/search.ts` doesn't silently regress group
@@ -21,7 +21,7 @@ function makeMatch(matchText: string, subMatches: string[]): IMatch {
     };
 }
 
-describe('buildRegexValue — marktextpro 4c517b16 group expansion', () => {
+describe('buildRegexValue — marknotepro 4c517b16 group expansion', () => {
     it('expands $0 to the full match', () => {
         const value = buildRegexValue(makeMatch('hello', []), '<<$0>>');
         expect(value).toBe('<<hello>>');

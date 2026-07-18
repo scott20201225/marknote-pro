@@ -159,7 +159,7 @@ onMounted(() => {
 
   // Show keyboard debugging tools which has been moved from CLI because we
   // need an active window on Windows.
-  showDebugTools.value = Boolean(window.marktextpro?.env?.debug)
+  showDebugTools.value = Boolean(window.marknotepro?.env?.debug)
 })
 
 onUnmounted(() => {
@@ -169,7 +169,7 @@ onUnmounted(() => {
 
 const openKeybindingDocs = (): void => {
   window.electron.shell.openExternal(
-    'https://github.com/scott20201225/marktext-pro/tree/main/packages/website/content/docs/end-user'
+    'https://github.com/scott20201225/marknote-pro/tree/main/packages/website/content/docs/end-user'
   )
 }
 

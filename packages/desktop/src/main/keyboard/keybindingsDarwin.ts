@@ -4,10 +4,10 @@
 //       Our current key manager will forbid the usage of these key combinations too.
 
 const keybindings: Map<string, string> = new Map([
-  // MarkTextPro menu
+  // MarkNotePro menu
   ['mt.hide', 'Command+H'],
   ['mt.hide-others', 'Command+Option+H'],
-  ['file.preferences', 'Command+,'], // located under MarkTextPro menu in macOS only
+  ['file.preferences', 'Command+,'], // located under MarkNotePro menu in macOS only
 
   // File menu
   ['file.new-window', 'Command+N'],

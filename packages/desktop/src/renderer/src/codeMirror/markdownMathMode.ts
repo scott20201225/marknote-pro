@@ -3,7 +3,7 @@
 // stex (LaTeX) mode. Without this wrapper the standard markdown mode highlights
 // `_` as emphasis delimiters even inside math, producing spurious italics for
 // subscript expressions like `$\text{F}_\text{A} = \text{F}_\text{B}$` in the
-// source view. See https://github.com/scott20201225/marktext-pro/issues/4121.
+// source view. See https://github.com/scott20201225/marknote-pro/issues/4121.
 //
 // The outer mode is `gfm` to preserve the tables / autolinks / task lists
 // styling the previous `setMode(cm, 'markdown')` call resolved to via

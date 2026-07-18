@@ -25,7 +25,7 @@ function table(rows: ITableRowState[]): ITableState {
     };
 }
 
-// Regression for marktextpro commit 9884342f (#4222 / #4190).
+// Regression for marknotepro commit 9884342f (#4222 / #4190).
 // `normalizeTable` previously crashed with
 //   TypeError: Cannot read properties of undefined (reading 'width')
 // when a body row had more cells than the header, or
@@ -179,7 +179,7 @@ describe('serializeTable — column alignment', () => {
     });
 });
 
-// Regression for marktextpro #3563. Typing a literal `|` into a table cell stores
+// Regression for marknotepro #3563. Typing a literal `|` into a table cell stores
 // a bare pipe in the cell's text. `escapeText` used `/([^\\])\|/g`, which
 // requires a non-backslash character *before* the pipe, so a pipe at the start
 // of a cell — or the second of two consecutive pipes (`||`) — was never escaped.

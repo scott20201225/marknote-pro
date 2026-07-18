@@ -28,7 +28,7 @@
       <template #head>
         <bool
           :description="t('preferences.image.folderSetting.preferRelative')"
-          more="https://github.com/scott20201225/marktext-pro/blob/main/packages/website/content/docs/end-user/IMAGES.md"
+          more="https://github.com/scott20201225/marknote-pro/blob/main/packages/website/content/docs/end-user/IMAGES.md"
           :bool="imagePreferRelativeDirectory"
           :on-change="(value) => onSelectChange('imagePreferRelativeDirectory', value)"
         />

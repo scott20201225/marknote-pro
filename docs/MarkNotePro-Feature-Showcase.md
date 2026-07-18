@@ -1,10 +1,10 @@
-# MarkTextPro Feature Showcase
+# MarkNotePro Feature Showcase
 
 > 一份适合截图、录屏和 README 展示替换的综合文档。
 
 ## 特色能力速览
 
-MarkTextPro 当前最值得优先展示的能力，不是基础 Markdown，而是这些已经明显拉开体验差异的部分：
+MarkNotePro 当前最值得优先展示的能力，不是基础 Markdown，而是这些已经明显拉开体验差异的部分：
 
 - 警示框：五种类型、不同图标语义、适合文档说明截图。
 - Mermaid：流程图、时序图、脑图三类都能直接展示。
@@ -62,7 +62,7 @@ sequenceDiagram
 
 ```mermaid
 mindmap
-  root((MarkTextPro))
+  root((MarkNotePro))
     写作体验
       富文本编辑
       结构化排版
@@ -102,9 +102,9 @@ mindmap
 
 ## 脚注与引用链接
 
-这里是一段正文示例，适合展示脚注能力[^note]，也适合展示引用链接能力[MarkTextPro 仓库][repo] 与 [Release 页面][release]。
+这里是一段正文示例，适合展示脚注能力[^note]，也适合展示引用链接能力[MarkNotePro 仓库][repo] 与 [Release 页面][release]。
 
-你也可以在同一段里重复引用同一个链接定义，例如再次提到 [MarkTextPro 仓库][repo]，看看整体排版是否稳定。
+你也可以在同一段里重复引用同一个链接定义，例如再次提到 [MarkNotePro 仓库][repo]，看看整体排版是否稳定。
 
 ## 任务与列表
 
@@ -137,7 +137,7 @@ mindmap
 
 ## 沉浸式写作
 
-MarkTextPro 的目标不是只把 Markdown 写出来，而是把「写作体验、结构表达、可视化能力、导出能力」放在同一个工作流里。
+MarkNotePro 的目标不是只把 Markdown 写出来，而是把「写作体验、结构表达、可视化能力、导出能力」放在同一个工作流里。
 
 - 默认以中文内容排版，适合日常笔记、文档说明、知识沉淀。
 - Rich Editor 下可以直接操作列表、表格、警示框、脚注、引用链接等结构化内容。
@@ -157,7 +157,7 @@ interface ShowcaseItem {
 }
 
 const feature: ShowcaseItem = {
-  title: 'MarkTextPro',
+  title: 'MarkNotePro',
   enabled: true,
   kind: ['html', 'pdf', 'word', 'image']
 }
@@ -165,7 +165,7 @@ const feature: ShowcaseItem = {
 
 ```json
 {
-  "product": "MarkTextPro",
+  "product": "MarkNotePro",
   "defaultLanguage": "zh-CN",
   "focus": [
     "writing",
@@ -199,4 +199,4 @@ const feature: ShowcaseItem = {
 4. 脚注与引用链接
 5. 任务列表 + 多级列表
 
-[^note]: 脚注适合展示可编辑标签、结构化注释和贴近写作场景的交互。 [repo]: https://github.com/scott20201225/marktext-pro [release]: https://github.com/scott20201225/marktext-pro/releases
+[^note]: 脚注适合展示可编辑标签、结构化注释和贴近写作场景的交互。 [repo]: https://github.com/scott20201225/marknote-pro [release]: https://github.com/scott20201225/marknote-pro/releases

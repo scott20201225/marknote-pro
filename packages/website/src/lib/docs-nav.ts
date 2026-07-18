@@ -36,7 +36,7 @@ export const DOC_TABS: DocTab[] = [
           { slug: ['basics'], title: 'Basics', file: 'end-user/BASICS.md', hint: 'The interface, files & tabs' },
           { slug: ['editing'], title: 'Editing in depth', file: 'end-user/EDITING.md', hint: 'Shortcuts, format bar & find/replace' },
           { slug: ['spelling'], title: 'Spelling', file: 'end-user/SPELLING.md', hint: 'Spell checker & dictionaries' },
-          { slug: ['markdown-syntax'], title: 'Markdown syntax', file: 'end-user/MARKDOWN_SYNTAX.md', hint: 'Every element MarkTextPro renders' }
+          { slug: ['markdown-syntax'], title: 'Markdown syntax', file: 'end-user/MARKDOWN_SYNTAX.md', hint: 'Every element MarkNotePro renders' }
         ]
       },
       {
@@ -47,7 +47,7 @@ export const DOC_TABS: DocTab[] = [
           { slug: ['key-bindings-macos'], title: 'Key bindings (macOS)', file: 'end-user/KEYBINDINGS_OSX.md', hint: 'Default shortcuts on macOS' },
           { slug: ['key-bindings-linux'], title: 'Key bindings (Linux)', file: 'end-user/KEYBINDINGS_LINUX.md', hint: 'Default shortcuts on Linux' },
           { slug: ['key-bindings-windows'], title: 'Key bindings (Windows)', file: 'end-user/KEYBINDINGS_WINDOWS.md', hint: 'Default shortcuts on Windows' },
-          { slug: ['application-data-directory'], title: 'Application data directory', file: 'end-user/APPLICATION_DATA_DIRECTORY.md', hint: 'Where MarkTextPro stores user data' },
+          { slug: ['application-data-directory'], title: 'Application data directory', file: 'end-user/APPLICATION_DATA_DIRECTORY.md', hint: 'Where MarkNotePro stores user data' },
           { slug: ['environment-variables'], title: 'Environment variables', file: 'end-user/ENVIRONMENT.md', hint: 'Runtime environment overrides' },
           { slug: ['cli'], title: 'Command line interface', file: 'end-user/CLI.md', hint: 'Flags, switches, exit codes' }
         ]
@@ -65,7 +65,7 @@ export const DOC_TABS: DocTab[] = [
       {
         label: 'More',
         pages: [
-          { slug: ['portable'], title: 'Portable mode', file: 'end-user/PORTABLE.md', hint: 'Run MarkTextPro from a USB stick' },
+          { slug: ['portable'], title: 'Portable mode', file: 'end-user/PORTABLE.md', hint: 'Run MarkNotePro from a USB stick' },
           { slug: ['faq'], title: 'FAQ', file: 'end-user/FAQ.md', hint: 'Frequently asked questions' }
         ]
       }
@@ -79,7 +79,7 @@ export const DOC_TABS: DocTab[] = [
         label: 'Get started',
         pages: [
           { slug: ['dev', 'overview'], title: 'Developer overview', file: 'dev/README.md', hint: 'Where to start contributing' },
-          { slug: ['dev', 'build'], title: 'Build instructions', file: 'dev/BUILD.md', hint: 'Build MarkTextPro from source' },
+          { slug: ['dev', 'build'], title: 'Build instructions', file: 'dev/BUILD.md', hint: 'Build MarkNotePro from source' },
           { slug: ['dev', 'linux-dev'], title: 'Linux dev environment', file: 'dev/LINUX_DEV.md', hint: 'Distro-specific tooling notes' },
           { slug: ['dev', 'debugging'], title: 'Debugging', file: 'dev/DEBUGGING.md', hint: 'Attach to main / renderer' }
         ]

@@ -1,19 +1,19 @@
 # Build Instructions
 
-**Please see [this issue](https://github.com/jacobwhall/marktextpro/issues/2) for updates on our efforts to modernize this process!**
+**Please see our [issue tracker](https://github.com/scott20201225/marknote-pro/issues) for updates on our efforts to modernize this process.**
 
 Clone the repository:
 
 ```
-git clone https://github.com/scott20201225/marktext-pro.git
+git clone https://github.com/scott20201225/marknote-pro.git
 ```
 
 ## Container Setup
 
-The easiest way to build MarktextPro on Linux is from inside a container.
+The easiest way to build MarkNotePro on Linux is from inside a container.
 Here are the steps for doing so:
 ```sh
-# cd to marktextpro repository
+# cd to marknotepro repository
 
 # run container (you can use docker instead of podman if you like)
 podman run -it -v ./:/mnt:Z node:22-bookworm /bin/bash
@@ -69,10 +69,10 @@ On Arch Linux: `sudo pacman -S libx11 libxkbfile libsecret fontconfig`
 
 ### Let's build
 
-1. Go to `marktextpro` folder
+1. Go to `marknotepro` folder
 2. Install dependencies: `pnpm install`
-3. Build MarkTextPro binaries and packages: `pnpm run build`
-4. MarkTextPro binary is located under `dist` folder (electron-builder output)
+3. Build MarkNotePro binaries and packages: `pnpm run build`
+4. MarkNotePro binary is located under `dist` folder (electron-builder output)
 
 Copy the build app to applications folder, or if on Windows run the executable installer.
 
@@ -84,8 +84,8 @@ $ pnpm run <script>
 
 | Script  | Description                                      |
 | ------- | ------------------------------------------------ |
-| `build` | Build MarkTextPro binaries and packages for your OS |
-| `dev`   | Build and run MarkTextPro in developer mode         |
+| `build` | Build MarkNotePro binaries and packages for your OS |
+| `dev`   | Build and run MarkNotePro in developer mode         |
 | `lint`  | Lint code style                                  |
 | `test`  | Run unit tests                                   |
 

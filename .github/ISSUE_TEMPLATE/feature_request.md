@@ -1,6 +1,6 @@
 ---
 name: Feature Request
-about: Suggest an idea or improvement for MarkTextPro
+about: Suggest an idea or improvement for MarkNotePro
 title: "[Feature] "
 labels: ["enhancement"]
 ---

@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { MarkdownToState } from '../markdownToState';
 import StateToMarkdown from '../stateToMarkdown';
 
-// Regression coverage ported from marktextpro#4341 (legacy desktop spec
+// Regression coverage ported from marknotepro#4341 (legacy desktop spec
 // `test/unit/specs/markdown-nested-mixed-lists.spec.ts`). A list whose type
 // differs from its enclosing list item (a `ul` inside an `ol`, or an `ol`
 // inside a `ul`) was being rewritten into a paragraph by the legacy muyajs

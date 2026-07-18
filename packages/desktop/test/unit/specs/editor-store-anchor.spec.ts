@@ -67,7 +67,7 @@ describe('useEditorStore FORMAT_LINK_CLICK (anchor links)', () => {
     getByIdSpy.mockRestore()
   })
 
-  // marktextpro #3609: `[text](#id)` where `#id` is a custom `<a id="id">` (not a
+  // marknotepro #3609: `[text](#id)` where `#id` is a custom `<a id="id">` (not a
   // heading) was silently swallowed — it isn't in the TOC. Fall back to the DOM.
   it('emits scroll-to-anchor-element for a non-heading anchor id found in the DOM', () => {
     const store = useEditorStore()

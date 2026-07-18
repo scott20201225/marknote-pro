@@ -297,7 +297,7 @@ class Watcher {
       .on('unlinkDir', (pathname: string) => unlinkDir(win, pathname, type))
       .on('raw', (event: string, subpath: string, details: unknown) => {
         if (
-          globalThis.MARKTEXTPRO_DEBUG_VERBOSE >= 3
+          globalThis.MARKNOTEPRO_DEBUG_VERBOSE >= 3
         ) {
           console.log('watcher: ', event, subpath, details)
         }
@@ -410,7 +410,7 @@ class Watcher {
 
   /**
    * Check whether we should ignore the current event because the file may be
-   * changed from MarkTextPro itself.
+   * changed from MarkNotePro itself.
    */
   async _shouldIgnoreEvent(
     winId: number,
@@ -439,7 +439,7 @@ class Watcher {
               const fileInfo = await fsPromises.stat(pathname)
               if (fileInfo.mtime.getTime() - start.getTime() < duration) {
                 if (
-                  globalThis.MARKTEXTPRO_DEBUG_VERBOSE >= 3
+                  globalThis.MARKNOTEPRO_DEBUG_VERBOSE >= 3
                 ) {
                   console.log(
                     `Ignoring file event after "stat": current="${currentTime.toISOString()}", start="${start.toISOString()}", file="${fileInfo.mtime.toISOString()}".`

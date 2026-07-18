@@ -74,7 +74,7 @@ declare module 'muya/lib/config' {
   export const MUYA_DEFAULT_OPTION: any
 }
 
-declare module 'muya/lib/marktextpro/spellchecker.js' {
+declare module 'muya/lib/marknotepro/spellchecker.js' {
   export function extractWord(...args: any[]): any
 }
 

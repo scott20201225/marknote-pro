@@ -8,7 +8,7 @@ const checker = require('license-checker')
 // license-checker keys packages as "<name>@<version>", and excludePackages
 // matches that string exactly — name-only entries don't match. Build the
 // workspace exclusions at runtime from each package's own package.json so
-// version bumps stay in sync automatically. @marktextpro/file-icons stays
+// version bumps stay in sync automatically. @marknotepro/file-icons stays
 // pinned because it's a published third-party dep that license-checker
 // fails to detect (MIT).
 const repoRoot = path.resolve(__dirname, '..')
@@ -17,7 +17,7 @@ const workspaceExclusions = ['packages/desktop', 'packages/muyajs', 'packages/mu
     const { name, version } = require(path.join(repoRoot, rel, 'package.json'))
     return `${name}@${version}`
   })
-  .concat('@marktextpro/file-icons')
+  .concat('@marknotepro/file-icons')
   .join(';')
 
 const getLicenses = (rootDir, callback) => {

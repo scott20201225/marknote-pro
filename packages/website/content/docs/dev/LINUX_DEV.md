@@ -61,7 +61,7 @@ pnpm install
 **Error message:**
 
 ```bash
-~/marktextpro/node_modules/electron/dist/electron: error while loading shared libraries:
+~/marknotepro/node_modules/electron/dist/electron: error while loading shared libraries:
 libglib-2.0.so.0: cannot open shared object file: No such file or directory
 ```
 

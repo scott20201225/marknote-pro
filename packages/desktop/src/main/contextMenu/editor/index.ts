@@ -74,7 +74,7 @@ const hasLineBreak = (selectionText: string): boolean => /[\r\n]/.test(selection
 const getEditorContextState = async (win: BrowserWindow): Promise<EditorContextState | null> => {
   try {
     return (await win.webContents.executeJavaScript(
-      'window.__MARKTEXTPRO_GET_EDITOR_CONTEXT_STATE__?.() ?? null',
+      'window.__MARKNOTEPRO_GET_EDITOR_CONTEXT_STATE__?.() ?? null',
       true
     )) as EditorContextState | null
   } catch {

@@ -124,21 +124,21 @@
       "reportBug": "バグを報告",
       "viewSource": "ソースコードを表示",
       "followUs": "フォローする",
-      "support": "MarkTextProを支援",
+      "support": "MarkNoteProを支援",
       "license": "ライセンス",
       "about": "について",
       "checkUpdates": "アップデートを確認"
     },
-    "marktextpro": {
-      "title": "MarkTextPro",
-      "about": "MarkTextProについて",
+    "marknotepro": {
+      "title": "MarkNotePro",
+      "about": "MarkNoteProについて",
       "checkUpdates": "アップデートを確認...",
       "preferences": "環境設定",
       "services": "サービス",
-      "hide": "MarkTextProを隠す",
+      "hide": "MarkNoteProを隠す",
       "hideOthers": "他を隠す",
       "showAll": "すべて表示",
-      "quit": "MarkTextProを終了"
+      "quit": "MarkNoteProを終了"
     },
     "view": {
       "view": "表示",
@@ -375,7 +375,7 @@
   },
   "import": {
     "title": "インポートまたは開く",
-    "description": "ここにドラッグしてMarkTextProにコンテンツをインポート"
+    "description": "ここにドラッグしてMarkNoteProにコンテンツをインポート"
   },
   "preferences": {
     "title": "環境設定",
@@ -403,10 +403,10 @@
         "hideScrollbar": "スクロールバーを非表示にするかどうか",
         "wordWrapInToc": "目次で自動改行を有効にするかどうか",
         "fileSortBy": "開いたフォルダ内のファイルを作成時刻、変更時刻、タイトルで並べ替え",
-        "startUpAction": "MarkTextPro起動後のアクション、最後に編集したコンテンツを開く、指定されたフォルダを開く、または空白ページ",
+        "startUpAction": "MarkNotePro起動後のアクション、最後に編集したコンテンツを開く、指定されたフォルダを開く、または空白ページ",
         "restoreLayoutState": "起動時に前回のエディター状態を復元",
         "defaultDirectoryToOpen": "startUp=folderの場合に起動時に開かれるデフォルトディレクトリ",
-        "language": "MarkTextProが使用する言語",
+        "language": "MarkNoteProが使用する言語",
         "editorFontFamily": "エディターのフォントファミリー",
         "fontSize": "フォントサイズ（ピクセル）",
         "lineHeight": "行の高さ",
@@ -430,7 +430,7 @@
         "preferLooseListItem": "優先されるリストタイプ",
         "bulletListMarker": "箇条書きリストで使用されるマーカー",
         "orderListDelimiter": "順序付きリストで使用される区切り文字",
-        "preferHeadingStyle": "MarkTextProで優先される見出しスタイル",
+        "preferHeadingStyle": "MarkNoteProで優先される見出しスタイル",
         "tabSize": "タブをx個のスペースに置き換える",
         "listIndentation": "リストのインデントを選択",
         "frontmatterType": "フロントマターのタイプ",
@@ -440,7 +440,7 @@
         "isGitlabCompatibilityEnabled": "GitLab互換モードを有効にする",
         "sequenceTheme": "シーケンス図のテーマ",
         "plantumlServer": "PlantUMLサーバーのURL",
-        "theme": "MarkTextProで使用するテーマを選択",
+        "theme": "MarkNoteProで使用するテーマを選択",
         "followSystemTheme": "システムのテーマに従う",
         "lightModeTheme": "システムがライトモードの時に使用するテーマ",
         "darkModeTheme": "システムがダークモードの時に使用するテーマ",
@@ -646,7 +646,7 @@
         "neverDetected": "検出されたことがない",
         "neverSuccessful": "成功したことがない"
       },
-      "defaultBehavior": "MarkTextProに画像を貼り付けまたはドラッグした後のデフォルト動作"
+      "defaultBehavior": "MarkNoteProに画像を貼り付けまたはドラッグした後のデフォルト動作"
     },
     "markdown": {
       "title": "Markdown",
@@ -763,7 +763,7 @@
   },
   "commands": {
     "mt": {
-      "hide": "MarkTextProを隠す",
+      "hide": "MarkNoteProを隠す",
       "hideOthers": "他を隠す"
     },
     "file": {
@@ -928,7 +928,7 @@
     "configSchemaViolation": "設定スキーマ違反",
     "copyError": "コピーエラー",
     "initializationFailed": "初期化に失敗",
-    "otherInstanceDetected": "MarkTextProの別のインスタンスが既に実行中です",
+    "otherInstanceDetected": "MarkNoteProの別のインスタンスが既に実行中です",
     "report": "報告",
     "startupError": "起動エラー",
     "terminatedDueToError": "エラーにより終了",

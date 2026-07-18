@@ -5,9 +5,9 @@
 
 ### Bug Fixes
 
-* backport marktextpro muya editor/cursor/IME fixes (PR-3) ([#211](https://github.com/marktext/muya/issues/211)) ([0f4e45b](https://github.com/marktext/muya/commit/0f4e45be8964d32a2ed9173d3622aa58831e0450)), closes [#2960](https://github.com/marktext/muya/issues/2960) [#2331](https://github.com/marktext/muya/issues/2331) [#2816](https://github.com/marktext/muya/issues/2816) [#2842](https://github.com/marktext/muya/issues/2842) [#2330](https://github.com/marktext/muya/issues/2330) [#2331](https://github.com/marktext/muya/issues/2331) [#2331](https://github.com/marktext/muya/issues/2331) [#2330](https://github.com/marktext/muya/issues/2330)
-* backport marktextpro muya P0 crashes (PR-1a) ([#208](https://github.com/marktext/muya/issues/208)) ([b6a62dd](https://github.com/marktext/muya/commit/b6a62dd2845444a241394d14f8d1d67b6cb31352)), closes [#4222](https://github.com/marktext/muya/issues/4222) [#4190](https://github.com/marktext/muya/issues/4190) [#3001](https://github.com/marktext/muya/issues/3001) [#3010](https://github.com/marktext/muya/issues/3010)
-* backport marktextpro muya XSS protections (PR-1b) ([#209](https://github.com/marktext/muya/issues/209)) ([883f8be](https://github.com/marktext/muya/commit/883f8be2d864ee4a65a46b211e2c2cb1a30be459))
+* backport marknotepro muya editor/cursor/IME fixes (PR-3) ([#211](https://github.com/marktext/muya/issues/211)) ([0f4e45b](https://github.com/marktext/muya/commit/0f4e45be8964d32a2ed9173d3622aa58831e0450)), closes [#2960](https://github.com/marktext/muya/issues/2960) [#2331](https://github.com/marktext/muya/issues/2331) [#2816](https://github.com/marktext/muya/issues/2816) [#2842](https://github.com/marktext/muya/issues/2842) [#2330](https://github.com/marktext/muya/issues/2330) [#2331](https://github.com/marktext/muya/issues/2331) [#2331](https://github.com/marktext/muya/issues/2331) [#2330](https://github.com/marktext/muya/issues/2330)
+* backport marknotepro muya P0 crashes (PR-1a) ([#208](https://github.com/marktext/muya/issues/208)) ([b6a62dd](https://github.com/marktext/muya/commit/b6a62dd2845444a241394d14f8d1d67b6cb31352)), closes [#4222](https://github.com/marktext/muya/issues/4222) [#4190](https://github.com/marktext/muya/issues/4190) [#3001](https://github.com/marktext/muya/issues/3001) [#3010](https://github.com/marktext/muya/issues/3010)
+* backport marknotepro muya XSS protections (PR-1b) ([#209](https://github.com/marktext/muya/issues/209)) ([883f8be](https://github.com/marktext/muya/commit/883f8be2d864ee4a65a46b211e2c2cb1a30be459))
 * cleanup PR-7a — list/paragraph/clipboard 4-pack (verified-not-applicable + defensive tests) ([#215](https://github.com/marktext/muya/issues/215)) ([6163dfb](https://github.com/marktext/muya/commit/6163dfb0857d40f4ca337cc01cc7d9cee39de26a)), closes [#908](https://github.com/marktext/muya/issues/908) [#1025](https://github.com/marktext/muya/issues/1025) [#2375](https://github.com/marktext/muya/issues/2375)
 * cleanup PR-7b — nested block boundaries 4-pack (1 fix + 3 verified-not-applicable) ([#216](https://github.com/marktext/muya/issues/216)) ([03109fe](https://github.com/marktext/muya/commit/03109fee082f0856b82eee4acc8e68a800a2b01f)), closes [#908](https://github.com/marktext/muya/issues/908) [#1025](https://github.com/marktext/muya/issues/1025) [#2375](https://github.com/marktext/muya/issues/2375) [#1153](https://github.com/marktext/muya/issues/1153) [#812](https://github.com/marktext/muya/issues/812) [#572](https://github.com/marktext/muya/issues/572)
 * **clipboard:** keep heading intact when pasting multi-line text into it ([68dc9e9](https://github.com/marktext/muya/commit/68dc9e9e734708ffe70867ad39faf1649f806afa)), closes [#671](https://github.com/marktext/muya/issues/671)
@@ -32,7 +32,7 @@
 
 # [0.2.0] (2026-05-21)
 
-The marktextpro-muya backport batch. 22 PRs (#208–#230) brought the upstream marktextpro muya tree onto `@muyajs/core` end-to-end, with full test coverage on every change.
+The marknotepro-muya backport batch. 22 PRs (#208–#230) brought the upstream marknotepro muya tree onto `@muyajs/core` end-to-end, with full test coverage on every change.
 
 ### Features
 
@@ -44,7 +44,7 @@ The marktextpro-muya backport batch. 22 PRs (#208–#230) brought the upstream m
 * code block line numbers (`codeBlockLineNumbers` editor option) ([#219](https://github.com/marktext/muya/pull/219))
 * image small-image class + inline resize-bar suppression ([#224](https://github.com/marktext/muya/pull/224))
 * CommonMark 0.31 + GFM 0.29-gfm spec conformance infrastructure ([#218](https://github.com/marktext/muya/pull/218))
-* backport marktextpro muya parser test suites ([#220](https://github.com/marktext/muya/pull/220))
+* backport marknotepro muya parser test suites ([#220](https://github.com/marktext/muya/pull/220))
 
 ### Bug Fixes
 
@@ -53,7 +53,7 @@ The marktextpro-muya backport batch. 22 PRs (#208–#230) brought the upstream m
 * parser CommonMark/GFM correctness + regression baseline ([#212](https://github.com/marktext/muya/pull/212))
 * `stateToMarkdown` serialization baseline ([#213](https://github.com/marktext/muya/pull/213))
 * defensive inline regressions for bold+code, parens-in-dest ([#214](https://github.com/marktext/muya/pull/214))
-* backport marktextpro muya editor/cursor/IME/autopair/table fixes ([#211](https://github.com/marktext/muya/pull/211))
+* backport marknotepro muya editor/cursor/IME/autopair/table fixes ([#211](https://github.com/marktext/muya/pull/211))
 * clipboard / paste / copy correctness ([#210](https://github.com/marktext/muya/pull/210), [#215](https://github.com/marktext/muya/pull/215), [#216](https://github.com/marktext/muya/pull/216), [#217](https://github.com/marktext/muya/pull/217))
 * `EventCenter` listener leak + once-listener iteration mutation ([#230](https://github.com/marktext/muya/pull/230))
 

@@ -1,6 +1,6 @@
 # Cloud Packaging
 
-MarkTextPro ships a GitHub Actions build/release matrix for all desktop targets we currently package in CI:
+MarkNotePro ships a GitHub Actions build/release matrix for all desktop targets we currently package in CI:
 
 - macOS Intel (`macos-15-intel`)
 - macOS Apple Silicon (`macos-15`)
@@ -30,10 +30,10 @@ The workflow uploads per-platform artifacts to the workflow run.
 
 ## Publish a GitHub Release
 
-Use the `Release MarkTextPro` workflow in one of two ways:
+Use the `Release MarkNotePro` workflow in one of two ways:
 
 1. Push a semver tag like `v0.20.0-beta.1`.
-2. Or run `Release MarkTextPro` manually and provide an existing semver tag.
+2. Or run `Release MarkNotePro` manually and provide an existing semver tag.
 
 The release workflow:
 

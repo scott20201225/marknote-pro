@@ -15,22 +15,22 @@ function findByType<TType extends Token['type']>(
 }
 
 // Defensive regression tests for the CommonMark 0.29 spec examples that the
-// legacy marktextpro inline lexer used to fail before commit 57cd04c5 (Apr 2019,
-// marktextpro PR #957). The new muya's inline lexer (`validateEmphasize` +
+// legacy marknotepro inline lexer used to fail before commit 57cd04c5 (Apr 2019,
+// marknotepro PR #957). The new muya's inline lexer (`validateEmphasize` +
 // `lowerPriority`) implements the CommonMark left/right-flanking rules and
 // the §6.4 rule that "inline code spans, links, images, and HTML tags group
 // more tightly than emphasis", so these inputs are already correct. We lock
 // the behaviour in so future inline-lexer refactors can't regress it.
 //
 // We assert on the *shape* of the resulting token stream rather than running
-// the full markdown→HTML pipeline, because the inline lexer is what marktextpro
+// the full markdown→HTML pipeline, because the inline lexer is what marknotepro
 // patched and what the new muya forked from.
 
 function topTypes(src: string): string[] {
     return tokenizer(src).map(t => t.type);
 }
 
-describe('inline lexer — CommonMark 0.29 spec examples (marktextpro 57cd04c5)', () => {
+describe('inline lexer — CommonMark 0.29 spec examples (marknotepro 57cd04c5)', () => {
     // §6.4 example 475 — `**<a href="**">`
     // Stars are inside an HTML attribute value, so neither pair may open or
     // close a strong-emphasis span. Output should be `<p>**<a href="**"></p>`.
@@ -79,11 +79,11 @@ describe('inline lexer — CommonMark 0.29 spec examples (marktextpro 57cd04c5)'
     });
 });
 
-// Defensive regression for marktextpro commit d9f64bab (issue #921, PR #947):
+// Defensive regression for marknotepro commit d9f64bab (issue #921, PR #947):
 // reference_link `[text][label]` requires the label to be defined in the
 // `labels` map. Without the definition, the input must stay as text — the
 // new muya's lexer enforces this via `labels.has(...)` (lexer.ts:357).
-describe('inline lexer — reference link (marktextpro d9f64bab)', () => {
+describe('inline lexer — reference link (marknotepro d9f64bab)', () => {
     it('does not emit reference_link when label is undefined', () => {
         const types = topTypes('[text][undefined-label]');
         expect(types, `tokens: ${JSON.stringify(types)}`).not.toContain('reference_link');
@@ -99,10 +99,10 @@ describe('inline lexer — reference link (marktextpro d9f64bab)', () => {
     });
 });
 
-// Defensive regression for marktextpro commit 8e32838b (PR #1531) — sup/sub
+// Defensive regression for marknotepro commit 8e32838b (PR #1531) — sup/sub
 // inline syntax `^foo^` (superscript) and `~bar~` (subscript). Already
 // present in the new muya's inline lexer rules + renderer.
-describe('inline lexer — superscript/subscript (marktextpro 8e32838b)', () => {
+describe('inline lexer — superscript/subscript (marknotepro 8e32838b)', () => {
     it('parses ^foo^ as a super_sub_script token with `^` marker', () => {
         const tokens = tokenizer('text^sup^');
         const sup = findByType(tokens, 'super_sub_script') as SuperSubScriptToken;
@@ -126,12 +126,12 @@ describe('inline lexer — superscript/subscript (marktextpro 8e32838b)', () => 
     });
 });
 
-// Defensive regression for marktextpro commit c0853f64 (PR #1421):
+// Defensive regression for marknotepro commit c0853f64 (PR #1421):
 // auto_link (`<https://x.com>`) and the GFM auto_link_extension
 // (`https://x.com` and `www.x.com` without angle brackets) are both wired
 // up in the new muya inline lexer, with the same boundary guard the
-// marktextpro fix introduced (`top && (pos === 0 || /[* _~(]{1}/...))`).
-describe('inline lexer — auto link (marktextpro c0853f64)', () => {
+// marknotepro fix introduced (`top && (pos === 0 || /[* _~(]{1}/...))`).
+describe('inline lexer — auto link (marknotepro c0853f64)', () => {
     it('parses angle-bracket autolink as auto_link', () => {
         const types = topTypes('<https://example.com>');
         expect(types, `tokens: ${JSON.stringify(types)}`).toContain('auto_link');
@@ -155,11 +155,11 @@ describe('inline lexer — auto link (marktextpro c0853f64)', () => {
     });
 });
 
-// Defensive regression for marktextpro commit ad5ddbf9 (GFM example 558, PR #917):
+// Defensive regression for marknotepro commit ad5ddbf9 (GFM example 558, PR #917):
 // the legacy muya parser used to drop the `"title"` portion of a link or image
 // destination. The new muya's `parseSrcAndTitle` in inlineRenderer/utils.ts
 // already splits these, so this test locks the behaviour in.
-describe('inline lexer — GFM link/image title (marktextpro ad5ddbf9)', () => {
+describe('inline lexer — GFM link/image title (marknotepro ad5ddbf9)', () => {
     it('extracts title from a link with double-quoted title', () => {
         const tokens = tokenizer('[text](http://example.com "Example title")');
         const link = findByType(tokens, 'link') as LinkToken;
@@ -193,7 +193,7 @@ describe('inline lexer — GFM link/image title (marktextpro ad5ddbf9)', () => {
     });
 });
 
-// Defensive regression for marktextpro commit d937fac0 (issue #1071, PR #1072):
+// Defensive regression for marknotepro commit d937fac0 (issue #1071, PR #1072):
 // a sequence like `**\`word 1\`**, **\`word 2\`**` used to only bold the LAST
 // instance — every earlier `**` pair was emitted as literal text. The legacy
 // `lowerPriority` walked every position in the candidate span without
@@ -203,7 +203,7 @@ describe('inline lexer — GFM link/image title (marktextpro ad5ddbf9)', () => {
 // consumed positions in an `ignoreIndex` array. The new muya's lowerPriority
 // (`inlineRenderer/utils.ts`) already has the same `ignoreIndex`, so this
 // lock-in protects against a future regression.
-describe('inline lexer — repeated bold + inline_code (marktextpro d937fac0 / #1071)', () => {
+describe('inline lexer — repeated bold + inline_code (marknotepro d937fac0 / #1071)', () => {
     it('emits a strong token for EVERY `**`-wrapped code span in a sequence', () => {
         const tokens = tokenizer('**`word 1`**, **`word 2`**, **`word 3`**');
         const strongs = tokens.filter(t => t.type === 'strong');
@@ -222,13 +222,13 @@ describe('inline lexer — repeated bold + inline_code (marktextpro d937fac0 / #
     });
 });
 
-// Defensive regression for marktextpro commit 57af8304 (issue #1169, PR #1170):
+// Defensive regression for marknotepro commit 57af8304 (issue #1169, PR #1170):
 // link / image destinations containing parens used to consume too much,
 // eating past the real closing `)`. The fix calls `findClosingBracket` to
 // pick the matching `)` and rewrites the captured groups so `\` escapes
 // land in the right slot. The new muya's `correctUrl` (utils.ts) ports the
 // same algorithm.
-describe('inline lexer — link / image dest with parens (marktextpro 57af8304 / #1169)', () => {
+describe('inline lexer — link / image dest with parens (marknotepro 57af8304 / #1169)', () => {
     it('parses image dest containing balanced parens correctly', () => {
         const tokens = tokenizer('![alt](path/to/(file).png)');
         const image = findByType(tokens, 'image') as ImageToken;
@@ -244,7 +244,7 @@ describe('inline lexer — link / image dest with parens (marktextpro 57af8304 /
     });
 
     it('stops at the FIRST matching `)` when more `)` appear later on the line', () => {
-        // This is the real shape of the marktextpro regression: greedy `(.*)` in
+        // This is the real shape of the marknotepro regression: greedy `(.*)` in
         // the image regexp would gobble all the way to the LAST `)`, swallowing
         // both `first.png` and the `(parens)` text. `correctUrl` /
         // `findClosingBracket` walks the destination to the matching `)` so
@@ -263,7 +263,7 @@ describe('inline lexer — link / image dest with parens (marktextpro 57af8304 /
     });
 });
 
-// Regression for marktextpro #3778. `lowerPriority` scanned every position for a
+// Regression for marknotepro #3778. `lowerPriority` scanned every position for a
 // higher-priority construct (inline math/code/links) that would overlap the
 // emphasis, but treated an escaped `\$` as a real `$` math delimiter — so the
 // first `**bold**` on a line that also contained a later `\$` was suppressed.

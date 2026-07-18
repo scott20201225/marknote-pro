@@ -15,7 +15,7 @@ function asParentWithBlockName(blockName: string): Parent {
     return { blockName } as unknown as Parent;
 }
 
-// Regression for marktextpro commit 1c42555a (#671):
+// Regression for marknotepro commit 1c42555a (#671):
 // "allow pasting multi-line text into a heading".
 //
 // Old behaviour: pasting multi-paragraph markdown into a heading kept the

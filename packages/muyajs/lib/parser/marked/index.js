@@ -24,7 +24,7 @@ function marked(src, opt = {}) {
     opt = Object.assign({}, options, opt)
     return new Parser(opt).parse(new Lexer(opt).lex(src))
   } catch (e) {
-    e.message += '\nPlease report this to https://github.com/scott20201225/marktext-pro/issues.'
+    e.message += '\nPlease report this to https://github.com/scott20201225/marknote-pro/issues.'
     if (opt.silent) {
       return '<p>An error occurred:</p><pre>' + escape(e.message + '', true) + '</pre>'
     }

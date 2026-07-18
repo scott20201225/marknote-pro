@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { tokenizer } from '../../inlineRenderer/lexer';
 import { renderToStaticHTML } from '../renderToStaticHTML';
 
-// Regression coverage ported from marktextpro#4307 (legacy desktop spec
+// Regression coverage ported from marknotepro#4307 (legacy desktop spec
 // `test/unit/specs/markdown-strong-cjk.spec.ts`). Strong emphasis (`**…**`)
 // whose `**` delimiters sit directly against a CJK character should still be
 // recognised, even when the emphasised content begins/ends with a punctuation
@@ -22,7 +22,7 @@ import { renderToStaticHTML } from '../renderToStaticHTML';
 //   (punctuation) and the char before it is `子` (a CJK ideograph → "other"),
 //   so the run is not left-flanking and the `**` stays literal.
 //
-//   Legacy marktextpro (muyajs) shipped a custom inline tokenizer whose
+//   Legacy marknotepro (muyajs) shipped a custom inline tokenizer whose
 //   `canOpen/canCloseEmphasis` flanking helpers treat CJK as punctuation. We
 //   restore that, additively, in both of muya's paths:
 //     - Static / export path  — marked@16, via the `cjkEmStrong` tokenizer

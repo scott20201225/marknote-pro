@@ -1,17 +1,17 @@
 [Desktop Entry]
-Name=MarkTextPro
+Name=MarkNotePro
 Comment=Next generation markdown editor
-Exec=marktextpro %F
+Exec=marknotepro %F
 Terminal=false
 Type=Application
-Icon=marktextpro
+Icon=marknotepro
 Categories=Office;TextEditor;Utility;
 MimeType=text/markdown;
-Keywords=marktextpro;
-StartupWMClass=marktextpro
+Keywords=marknotepro;
+StartupWMClass=marknotepro
 Actions=NewWindow;
 
 [Desktop Action NewWindow]
 Name=New Window
-Exec=marktextpro --new-window %F
-Icon=marktextpro
+Exec=marknotepro --new-window %F
+Icon=marknotepro

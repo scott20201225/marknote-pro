@@ -281,7 +281,7 @@ const backspaceCtrl = (ContentState) => {
       let offset
       const startOffset = this.cursor.start.offset
       const endOffset = this.cursor.end.offset
-      // Fix: https://github.com/scott20201225/marktext-pro/issues/2013
+      // Fix: https://github.com/scott20201225/marknote-pro/issues/2013
       // Also fix the codeblock crashed when the code content is '\n' and press backspace.
       if (
         startOffset === endOffset &&

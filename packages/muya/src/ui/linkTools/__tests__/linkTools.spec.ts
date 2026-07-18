@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import EventCenter from '../../../event';
 import LinkTools from '../index';
 
-// P3 defensive lock for marktextpro `1ef0d016` (link tools — unlink / jump).
+// P3 defensive lock for marknotepro `1ef0d016` (link tools — unlink / jump).
 // The new linkTools subscriber + `selectItem` dispatcher is fully staged
 // in muya but there's no emitter for `muya-link-tools` yet, so neither
 // the unlink path nor the jump path is exercised end-to-end. Without a

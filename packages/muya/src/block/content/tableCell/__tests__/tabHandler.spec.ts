@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import TableCellContent from '../index';
 
-// Regression for marktextpro 5fb130d9 "enable shift+tab for table
+// Regression for marknotepro 5fb130d9 "enable shift+tab for table
 // navigation" (issue #2330, PR #2331). Previously
 // `TableCellContent.tabHandler` always advanced to the next cell,
 // regardless of the shift modifier — there was no way to back-navigate

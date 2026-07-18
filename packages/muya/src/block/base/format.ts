@@ -1313,7 +1313,7 @@ class Format extends Content {
 
         this.muya.editor.history.markInputBoundary('deleteContentBackward', null);
 
-        // fix: #897 in marktextpro repo
+        // fix: #897 in marknotepro repo
         const { text } = this;
         const { footnote, superSubScript } = this.muya.options;
         const { labels } = this.inlineRenderer;

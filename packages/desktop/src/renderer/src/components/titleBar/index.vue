@@ -7,7 +7,7 @@
       :class="[{ active: active }, { frameless: titleBarStyle === 'custom' }, { isOsx: isOsx }]"
     >
       <div class="title" @dblclick.stop="toggleMaxmizeOnMacOS">
-        <span v-if="!filename">MarkTextPro</span>
+        <span v-if="!filename">MarkNotePro</span>
         <span v-else>
           <span v-for="(path, index) of paths" :key="index">
             {{ path }}

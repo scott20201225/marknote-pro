@@ -1,4 +1,4 @@
-// __MARKTEXTPRO_ONLY__
+// __MARKNOTEPRO_ONLY__
 import { deepClone } from '../utils'
 
 // Source: https://github.com/Microsoft/vscode/blob/master/src/vs/editor/common/model/wordHelper.ts

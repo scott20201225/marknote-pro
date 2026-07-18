@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 
 // `@/util/pdf` (imported transitively for `getHtmlToc`) and the export wrapper
-// reach `window.path` / `window.fileUtils` / `window.marktextpro` via the preload
+// reach `window.path` / `window.fileUtils` / `window.marknotepro` via the preload
 // bridge. Stub the surfaces the modules touch before the hoisted imports run.
 vi.hoisted(() => {
   const w = globalThis as unknown as {
@@ -12,7 +12,7 @@ vi.hoisted(() => {
         resolve?: (...parts: string[]) => string
       }
       fileUtils?: unknown
-      marktextpro?: unknown
+      marknotepro?: unknown
       DIRNAME?: string
     }
   }

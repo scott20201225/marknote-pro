@@ -8,7 +8,7 @@ import {
     syncLineNumbersSpans,
 } from '../codeBlockLineNumbers';
 
-// Locks the row-count semantics from marktextpro a028a7c2 ("feat: add code block
+// Locks the row-count semantics from marknotepro a028a7c2 ("feat: add code block
 // line numbers"). The implementation switched to a charCode loop to avoid the
 // regex match-array allocation on every code-block update; the behaviour
 // (including the trailing-newline extra row) must stay identical.

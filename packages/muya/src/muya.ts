@@ -2072,7 +2072,7 @@ export class Muya {
             : text;
     }
 
-    /** Cycle the heading level (marktextpro upgrade/degrade semantics). */
+    /** Cycle the heading level (marknotepro upgrade/degrade semantics). */
     private _changeHeadingLevel(block: Parent, type: 'upgrade heading' | 'degrade heading') {
         const state = block.getState();
         const level = isAtxHeadingState(state) ? state.meta.level : 0;

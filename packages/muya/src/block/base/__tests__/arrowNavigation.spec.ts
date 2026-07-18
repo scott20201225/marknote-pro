@@ -389,7 +389,7 @@ describe('content arrowHandler — skips empty sibling containers (#4644)', () =
     });
 });
 
-// marktextpro #3568: in RTL mode the physical Left/Right arrows are visually
+// marknotepro #3568: in RTL mode the physical Left/Right arrows are visually
 // mirrored, so the cross-block boundary keys must swap. Offset 0 is the visual
 // RIGHT end of an RTL line (ArrowRight should go to the previous block); offset
 // === text.length is the visual LEFT end (ArrowLeft should go to the next).

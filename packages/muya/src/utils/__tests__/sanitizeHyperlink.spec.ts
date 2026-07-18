@@ -14,7 +14,7 @@ vi.mock('../dompurify', () => ({
     Config: undefined,
 }));
 
-// Lock in marktextpro fix 0dd09cc6 (#2548 / #2601): every renderer that
+// Lock in marknotepro fix 0dd09cc6 (#2548 / #2601): every renderer that
 // emits an <a href> (link, referenceLink, autoLink, autoLinkExtension)
 // must route the href through `sanitizeHyperlink`. This test exercises
 // the wrapper's contract: anything the DOMPurify policy rejects becomes

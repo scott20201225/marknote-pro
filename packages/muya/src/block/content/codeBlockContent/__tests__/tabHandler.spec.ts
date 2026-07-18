@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import CodeBlockContent from '../index';
 
-// Regression for marktextpro 04834032 "fix list indent by tab (#908)".
+// Regression for marknotepro 04834032 "fix list indent by tab (#908)".
 // Despite the misleading commit title, the fix is actually about the
 // Emmet-style HTML tag expansion that fires when Tab is pressed inside
 // a markup / html / xml / svg / mathml code block.

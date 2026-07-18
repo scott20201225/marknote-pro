@@ -1,7 +1,7 @@
 # Command Line Interface
 
 ```
-Usage: marktextpro [commands] [path ...]
+Usage: marknotepro [commands] [path ...]
 
   Available commands:
 
@@ -16,8 +16,8 @@ Usage: marktextpro [commands] [path ...]
     -h, --help                    Print this help message
 ```
 
-`marktextpro` should point to your installation of MarkTextPro. The exact location will vary from platform to platform. On macOS, you can create a convenient alias like:
+`marknotepro` should point to your installation of MarkNotePro. The exact location will vary from platform to platform. On macOS, you can create a convenient alias like:
 
 ```sh
-alias marktextpro="/Applications/Mark\ Text.app/Contents/MacOS/Mark\ Text"
+alias marknotepro="/Applications/Mark\ Text.app/Contents/MacOS/Mark\ Text"
 ```

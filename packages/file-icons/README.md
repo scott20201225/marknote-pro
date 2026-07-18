@@ -7,14 +7,14 @@ File icons used in **MarkText** and inspired by [file-icons/atom](https://github
 #### Installation
 
 ```shell
-yarn add @marktextpro/file-icons
+yarn add @marknotepro/file-icons
 ```
 
 #### Usage
 
 ```javascript
-import fileIcons from '@marktextpro/file-icons'
-import '@marktextpro/file-icons/build/index.css'
+import fileIcons from '@marknotepro/file-icons'
+import '@marknotepro/file-icons/build/index.css'
 
 const icon = fileIcons.matchLanguage('javascript')
 // iconEle.classList.add(icon.icon)

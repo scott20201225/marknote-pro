@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { escapeLangInputInnerHtml } from '../escape';
 
-// Regression for marktextpro commit 0dd09cc6 (#2548 / #2601 — "fix XSS on
+// Regression for marknotepro commit 0dd09cc6 (#2548 / #2601 — "fix XSS on
 // language input and hyperlinks"). The previous implementation of
 // `LangInputContent.update()` assigned `getHighlightHtml(this.text, highlights)`
 // directly to `domNode.innerHTML`, allowing a code-block language

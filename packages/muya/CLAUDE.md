@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code when working inside `packages/muya`.
 
-> **Location.** `packages/muya` is the TypeScript rewrite of muya (upstream: <https://github.com/marktext/muya>), migrated into this marktextpro monorepo and published as `@muyajs/core`. The desktop renderer now consumes `@muyajs/core` as its editor engine; the legacy JS engine `packages/muyajs` (`@marktextpro/muyajs`, the `muya/` alias) is being retired and only a handful of call sites still reference it. `packages/muya` keeps its own toolchain (ESLint/antfu, stylelint, madge, vitest), and the marktextpro-root ESLint ignores `packages/muya/**` — treat it as a self-contained package with its own conventions.
+> **Location.** `packages/muya` is the TypeScript rewrite of muya (upstream: <https://github.com/marktext/muya>), migrated into this marknotepro monorepo and published as `@muyajs/core`. The desktop renderer now consumes `@muyajs/core` as its editor engine; the legacy JS engine `packages/muyajs` (`@marknotepro/muyajs`, the `muya/` alias) is being retired and only a handful of call sites still reference it. `packages/muya` keeps its own toolchain (ESLint/antfu, stylelint, madge, vitest), and the marknotepro-root ESLint ignores `packages/muya/**` — treat it as a self-contained package with its own conventions.
 
 ## Layout inside `packages/muya`
 
@@ -10,13 +10,13 @@ This file provides guidance to Claude Code when working inside `packages/muya`.
 - `test/spec/` — CommonMark / GFM conformance suites (run via `test:spec`, separate vitest config).
 - `examples/` — `muya-examples`, a Vite vanilla-TS demo that consumes `@muyajs/core` via `workspace:*`. Listed as its own workspace in the repo-root `pnpm-workspace.yaml`.
 - `e2e/` — `muya-e2e`, Playwright real-browser E2E suite. Self-contained host page under `e2e/host/`. See `e2e/README.md` and `e2e/BACKLOG.md`.
-- `eslint.config.mjs`, `.stylelintrc`, `.madgerc` — package-local tooling. The marktextpro-root ESLint explicitly ignores `packages/muya/**`, so muya self-lints with its own antfu-based config.
+- `eslint.config.mjs`, `.stylelintrc`, `.madgerc` — package-local tooling. The marknotepro-root ESLint explicitly ignores `packages/muya/**`, so muya self-lints with its own antfu-based config.
 
 Stub packages (`packages/facade`, `packages/findReplace`) from the upstream muya monorepo were not migrated — they had no source.
 
 ## Commands
 
-Run from the marktextpro repo root.
+Run from the marknotepro repo root.
 
 - `pnpm -C packages/muya/examples dev:demo` — start the examples Vite dev server. (Upstream `pnpm dev` / Turbo `dev:demo` is not wired here — run vite directly.)
 - `pnpm -C packages/muya build` — `tsc && vite build`, emits `lib/{es,umd,cjs}` and `lib/types`.
@@ -28,7 +28,7 @@ Run from the marktextpro repo root.
 - `pnpm -C packages/muya check-circular` — `madge --circular src/index.ts`. CI enforces this.
 - `pnpm -C packages/muya/e2e e2e` — Playwright E2E (chromium/firefox/webkit). `e2e:install` is a one-time browser install. CI (`muya-e2e.yml`) runs Chromium only; Firefox + WebKit are configured in `playwright.config.ts` and runnable locally, but excluded from the CI matrix until the engine-independent rewrites in BACKLOG Phase 3 land (triple-click selection, search-replace mutation timing).
 
-Engines: Node ≥20.19 (matches marktextpro root). Build target is `chrome70`.
+Engines: Node ≥20.19 (matches marknotepro root). Build target is `chrome70`.
 
 ## Architecture
 
@@ -58,7 +58,7 @@ Concrete blocks live under `src/block/{commonMark,gfm,extra,content}` and **must
 - `markdownToState.ts` parses Markdown (via `marked`) into the state tree; `stateToMarkdown.ts` serializes back; `markdownToHtml.ts` and `htmlToMarkdown.ts` (using `turndown` + `joplin-turndown-plugin-gfm`) bridge HTML. `MarkdownToHtml` is re-exported from the public API.
 - Inline text edits are encoded as `ot-text-unicode` ops nested inside the json1 ops (see the `d.es` branch in `Editor.updateContents`).
 - **Reference link/image definitions** (`[ref]: url "title"`) are NOT a first-class block type in state. `markdownToState`'s `case 'def'` re-emits the raw definition line back into a `paragraph` state node so it round-trips losslessly through the markdown serializer. `InlineRenderer.collectReferenceDefinitions()` runs over the live block tree on every render pass to populate a labels Map that the lexer consults when expanding `[text][ref]` and `![alt][ref]`. `ILinkReferenceDefinitionState` exists as a deprecated stub for compatibility — do not introduce new code paths that produce it.
-- **TOC** is derived on-demand via `getTOC(muya)` (`state/getTOC.ts`); the public method is `muya.getTOC()` (`src/muya.ts`). Slugs follow the marktextpro-compatible regex carried over in commit `9cb2cbe8`.
+- **TOC** is derived on-demand via `getTOC(muya)` (`state/getTOC.ts`); the public method is `muya.getTOC()` (`src/muya.ts`). Slugs follow the marknotepro-compatible regex carried over in commit `9cb2cbe8`.
 
 ### Inline rendering and DOM
 
@@ -106,7 +106,7 @@ through `muya.setOptions({...})`.
 - **Madge** circular-dep check (`pnpm -C packages/muya check-circular`) runs in CI — adding a circular import will fail the build.
 - Test files (`*.test.ts`, `*.spec.ts`) and `vite.config.ts` are excluded from the strict TS lint rules above.
 
-Upstream muya had Conventional Commits + husky + lint-staged + release-it wired up. Those are **not** migrated into marktextpro — marktextpro does not use husky/commitlint, and `@muyajs/core` is not published from this repo. Commit style follows marktextpro's root contributing guide.
+Upstream muya had Conventional Commits + husky + lint-staged + release-it wired up. Those are **not** migrated into marknotepro — marknotepro does not use husky/commitlint, and `@muyajs/core` is not published from this repo. Commit style follows marknotepro's root contributing guide.
 
 ## Build pipeline notes
 

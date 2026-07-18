@@ -5,7 +5,7 @@ import log from 'electron-log'
 import { rgPath as bundledRgPath } from '@vscode/ripgrep'
 
 const resolveRgPath = (): string => {
-  if (process.env.MARKTEXTPRO_RIPGREP_PATH) return process.env.MARKTEXTPRO_RIPGREP_PATH
+  if (process.env.MARKNOTEPRO_RIPGREP_PATH) return process.env.MARKNOTEPRO_RIPGREP_PATH
   return bundledRgPath.replace(/\bapp\.asar\b/, 'app.asar.unpacked')
 }
 

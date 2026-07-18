@@ -2,15 +2,15 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-# MarkTextPro
+# MarkNotePro
 
 ## Project Overview
 
-MarkTextPro is a WYSIWYG markdown editor built on Electron + Vue 3. It supports CommonMark, GitHub Flavored Markdown, math (KaTeX), Mermaid diagrams, PlantUML, and multiple editing modes (focus, typewriter, source-code).
+MarkNotePro is a WYSIWYG markdown editor built on Electron + Vue 3. It supports CommonMark, GitHub Flavored Markdown, math (KaTeX), Mermaid diagrams, PlantUML, and multiple editing modes (focus, typewriter, source-code).
 
 - **Version**: see `package.json`
 - **License**: MIT
-- **Repository**: https://github.com/scott20201225/marktext-pro
+- **Repository**: https://github.com/scott20201225/marknote-pro
 
 ## Tech Stack
 
@@ -39,7 +39,7 @@ root holds only shared tooling and CI-facing scripts.
 <repo-root>/
   package.json              Workspace orchestrator — every CI-facing script
                             proxies to packages/desktop via `pnpm --filter
-                            marktextpro ...`. CI invocations are unchanged.
+                            marknotepro ...`. CI invocations are unchanged.
   pnpm-workspace.yaml       `packages: ['packages/*']` plus allowBuilds.
   pnpm-lock.yaml            Single lockfile, shared across all packages.
   eslint.config.js          Root ESLint v9 flat config (covers desktop +
@@ -55,10 +55,10 @@ root holds only shared tooling and CI-facing scripts.
                             `directories.output: ../../dist` so CI artifact
                             globs `dist/*` still apply).
   packages/
-    desktop/                The Electron app (name: "marktextpro").
+    desktop/                The Electron app (name: "marknotepro").
       package.json          Holds all Electron / Vue / build-time deps and
                             the dev/build/test/typecheck scripts. Depends on
-                            @marktextpro/muyajs via workspace:*.
+                            @marknotepro/muyajs via workspace:*.
       electron.vite.config.ts
       electron-builder.yml  directories.output points at ../../dist.
       tsconfig.json / tsconfig.base.json
@@ -95,7 +95,7 @@ root holds only shared tooling and CI-facing scripts.
                             IPC contract (`shared/types/ipc.ts`).
         types/              Ambient .d.ts declarations.
     muyajs/                 Legacy markdown editor engine
-                            (name: "@marktextpro/muyajs"). Primarily JS + DOM,
+                            (name: "@marknotepro/muyajs"). Primarily JS + DOM,
                             avoids Electron APIs. Exception:
                             packages/muyajs/lib/parser/render/plantuml.js
                             imports Node's `zlib`. Being retired: the
@@ -130,7 +130,7 @@ root holds only shared tooling and CI-facing scripts.
                             wired in playwright.config.ts but deferred
                             until BACKLOG Phase 3 lands engine-independent
                             specs.
-    website/                marktextpro-website (Vite + React 18). Standalone
+    website/                marknotepro-website (Vite + React 18). Standalone
                             toolchain; depends on @muyajs/core from npm,
                             not on the local muyajs package. Not part of
                             desktop CI today.
@@ -142,7 +142,7 @@ The root has no `src/`, `test/`, `static/`, or `build/` of its own anymore — t
 ## Development Workflow
 
 All commands run from the repo root. The root `package.json` proxies every
-desktop-specific script to `packages/desktop` via `pnpm --filter marktextpro`,
+desktop-specific script to `packages/desktop` via `pnpm --filter marknotepro`,
 so the names and behavior are unchanged from the pre-monorepo layout.
 
 ```bash
@@ -173,8 +173,8 @@ pnpm run perf:inspect       # attach when ready
 pnpm run perf:inspect-brk   # break on first line
 
 # Website (not yet wired into CI)
-pnpm --filter marktextpro-website dev      # Vite dev server
-pnpm --filter marktextpro-website build    # static build → packages/website/build/
+pnpm --filter marknotepro-website dev      # Vite dev server
+pnpm --filter marknotepro-website build    # static build → packages/website/build/
 ```
 
 If you need to invoke a script directly inside a package, use
@@ -229,7 +229,7 @@ Follow `.github/COMMENTING-GUIDELINES.md` for every comment you write. The core 
 
 All Electron processes live in `packages/desktop/`. Muya is a separate
 workspace package that the renderer (and tests) consume via the `muya`
-alias / `@marktextpro/muyajs` workspace dep.
+alias / `@marknotepro/muyajs` workspace dep.
 
 ```
 main process  (packages/desktop/src/main/)
@@ -250,7 +250,7 @@ renderer  (packages/desktop/src/renderer/)
   ├── Hosts both Muya (WYSIWYG) and CodeMirror (source-code mode)
   └── Compiled to ES Modules only
 
-Muya  (packages/muyajs/)            ← workspace package @marktextpro/muyajs
+Muya  (packages/muyajs/)            ← workspace package @marknotepro/muyajs
   ├── Self-contained editor backend
   ├── Primarily avoids Electron APIs; uses Node's zlib for PlantUML encoding
   ├── Handles markdown parsing, block data structure, document export, rendering
@@ -267,7 +267,7 @@ See `packages/website/content/docs/dev/IPC.md` for conventions and examples.
 
 ## Further Reading
 
-`packages/website/content/docs/dev/` contains the deeper developer documentation referenced by this guide. Same files are published as the developer docs section on https://github.com/scott20201225/marktext-pro/tree/main/docs
+`packages/website/content/docs/dev/` contains the deeper developer documentation referenced by this guide. Same files are published as the developer docs section on https://github.com/scott20201225/marknote-pro/tree/main/docs
 
 - `ARCHITECTURE.md` — process/module layering beyond the summary above
 - `BUILD.md` — full platform build prerequisites (including the Arch Linux deps added recently)
@@ -289,7 +289,7 @@ See `packages/website/content/docs/dev/IPC.md` for conventions and examples.
   - `@` → `packages/desktop/src/renderer/src`
   - `common` → `packages/desktop/src/common`
   - `@shared` → `packages/desktop/src/shared`
-  - `muya` → `../muyajs` (i.e. `packages/muyajs`). Renderer-side imports therefore look like `muya/lib/...` (the alias) — the workspace dep `@marktextpro/muyajs` is declared in `packages/desktop/package.json` so module resolution stays inside the workspace.
+  - `muya` → `../muyajs` (i.e. `packages/muyajs`). Renderer-side imports therefore look like `muya/lib/...` (the alias) — the workspace dep `@marknotepro/muyajs` is declared in `packages/desktop/package.json` so module resolution stays inside the workspace.
 - **Workspace deps**: muya's own npm runtime deps (`github-markdown-css`, `katex`, `dompurify`, `snabbdom`, …) are declared in `packages/muyajs/package.json` so Node module resolution from `packages/muyajs/lib/*.js` finds them inside the workspace rather than walking out to a parent directory.
 - **Patches**: `patch-package` patches live at `packages/desktop/patches/`. The root `postinstall` calls patch-package with `cwd=packages/desktop` so the path resolves correctly.
 

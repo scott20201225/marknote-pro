@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import escapeCharactersMap from '../escapeCharacter';
 
-// marktextpro #3840: the `&nbsp;` entries in the character table stored U+0020
+// marknotepro #3840: the `&nbsp;` entries in the character table stored U+0020
 // (a regular space) instead of U+00A0 (the non-breaking space), so a `&nbsp;`
 // in the document was treated as an ordinary space (wrong width / a wrap could
 // occur across it). The other space entities were already correct.

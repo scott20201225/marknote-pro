@@ -124,21 +124,21 @@
       "reportBug": "报告错误",
       "viewSource": "查看源码",
       "followUs": "关注我们",
-      "support": "支持 MarkTextPro",
+      "support": "支持 MarkNotePro",
       "license": "许可证",
       "about": "关于",
       "checkUpdates": "检查更新"
     },
-    "marktextpro": {
-      "title": "MarkTextPro",
-      "about": "关于 MarkTextPro",
+    "marknotepro": {
+      "title": "MarkNotePro",
+      "about": "关于 MarkNotePro",
       "checkUpdates": "检查更新…",
       "preferences": "偏好设置",
       "services": "服务",
-      "hide": "隐藏 MarkTextPro",
+      "hide": "隐藏 MarkNotePro",
       "hideOthers": "隐藏其他",
       "showAll": "显示全部",
-      "quit": "退出 MarkTextPro"
+      "quit": "退出 MarkNotePro"
     },
     "view": {
       "view": "视图",
@@ -375,7 +375,7 @@
   },
   "import": {
     "title": "导入或打开",
-    "description": "拖放到这里将您的内容导入 MarkTextPro"
+    "description": "拖放到这里将您的内容导入 MarkNotePro"
   },
   "preferences": {
     "title": "偏好设置",
@@ -403,10 +403,10 @@
         "hideScrollbar": "是否隐藏滚动条",
         "wordWrapInToc": "是否在目录中启用自动换行",
         "fileSortBy": "按创建时间、修改时间和标题对打开文件夹中的文件进行排序",
-        "startUpAction": "MarkTextPro 启动后的操作，打开最后编辑的内容、打开指定文件夹或空白页",
+        "startUpAction": "MarkNotePro 启动后的操作，打开最后编辑的内容、打开指定文件夹或空白页",
         "restoreLayoutState": "启动时恢复上次编辑器状态",
         "defaultDirectoryToOpen": "当 startUp=folder 时启动时应打开的默认目录",
-        "language": "MarkTextPro 使用的语言",
+        "language": "MarkNotePro 使用的语言",
         "editorFontFamily": "编辑器字体系列",
         "fontSize": "字体大小（像素）",
         "lineHeight": "行高",
@@ -430,7 +430,7 @@
         "preferLooseListItem": "首选列表类型",
         "bulletListMarker": "项目符号列表中使用的标记",
         "orderListDelimiter": "有序列表中使用的分隔符",
-        "preferHeadingStyle": "MarkTextPro 中的首选标题样式",
+        "preferHeadingStyle": "MarkNotePro 中的首选标题样式",
         "tabSize": "用 x 个空格替换制表符",
         "listIndentation": "选择列表的缩进",
         "frontmatterType": "前言类型",
@@ -440,7 +440,7 @@
         "isGitlabCompatibilityEnabled": "启用 GitLab 兼容模式",
         "sequenceTheme": "序列图主题",
         "plantumlServer": "PlantUML 服务器 URL",
-        "theme": "选择 MarkTextPro 中使用的主题",
+        "theme": "选择 MarkNotePro 中使用的主题",
         "followSystemTheme": "跟随系统主题",
         "lightModeTheme": "系统处于浅色模式时使用的主题",
         "darkModeTheme": "系统处于深色模式时使用的主题",
@@ -646,7 +646,7 @@
         "pleaseInstall": "请安装",
         "scriptPath": "脚本路径"
       },
-      "defaultBehavior": "粘贴或拖拽图片到 MarkTextPro 后的默认行为"
+      "defaultBehavior": "粘贴或拖拽图片到 MarkNotePro 后的默认行为"
     },
     "markdown": {
       "title": "Markdown",
@@ -763,7 +763,7 @@
   },
   "commands": {
     "mt": {
-      "hide": "隐藏 MarkTextPro",
+      "hide": "隐藏 MarkNotePro",
       "hideOthers": "隐藏其他"
     },
     "file": {
@@ -928,7 +928,7 @@
     "configSchemaViolation": "配置架构违规",
     "copyError": "复制错误",
     "initializationFailed": "初始化失败",
-    "otherInstanceDetected": "检测到 MarkTextPro 的另一个实例正在运行",
+    "otherInstanceDetected": "检测到 MarkNotePro 的另一个实例正在运行",
     "report": "报告",
     "startupError": "启动错误",
     "terminatedDueToError": "由于错误而终止",

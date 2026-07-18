@@ -163,7 +163,7 @@
           </div>
           <cur-select
             :description="t('exportSettings.theme.theme')"
-            more="https://github.com/scott20201225/marktext-pro/blob/main/packages/website/content/docs/end-user/EXPORT_THEMES.md"
+            more="https://github.com/scott20201225/marknote-pro/blob/main/packages/website/content/docs/end-user/EXPORT_THEMES.md"
             :value="theme"
             :options="themeList"
             :on-change="(value: unknown) => onSelectChange('theme', value)"
@@ -517,11 +517,11 @@ const onSelectChange = (key: string, value: unknown) => {
 }
 
 const loadThemesFromDisk = async () => {
-  // marktextpro.paths is attached to `window` at runtime by bootstrap.ts but
+  // marknotepro.paths is attached to `window` at runtime by bootstrap.ts but
   // isn't part of the typed contextBridge surface. Cast through `unknown`.
-  const marktextpro = (window as unknown as { marktextpro?: { paths?: { userDataPath?: string } } })
-    .marktextpro
-  const userDataPath = marktextpro?.paths?.userDataPath
+  const marknotepro = (window as unknown as { marknotepro?: { paths?: { userDataPath?: string } } })
+    .marknotepro
+  const userDataPath = marknotepro?.paths?.userDataPath
   if (!userDataPath) return
   const themeDir = window.path.join(userDataPath, 'themes/export')
 

@@ -13,7 +13,7 @@ const getDateAsFilename = (): string => {
 
 const getTempPath = (suffix = ''): string => {
   const name =
-    'marktextpro-e2etest-' +
+    'marknotepro-e2etest-' +
     getDateAsFilename() +
     '-' +
     Math.random().toString(36).slice(2, 8) +
@@ -53,7 +53,7 @@ export interface LaunchResult {
 }
 
 export interface LaunchOptions {
-  // When true, sets MARKTEXTPRO_ERROR_INTERACTION=1 in the launch env so
+  // When true, sets MARKNOTEPRO_ERROR_INTERACTION=1 in the launch env so
   // src/main/exceptionHandler.ts suppresses the modal "Unexpected error"
   // dialog. Only crash-guard specs that explicitly call expectNoRendererErrors
   // should opt in — otherwise existing specs would silently ignore renderer
@@ -74,7 +74,7 @@ export const launchElectron = async(
   const env: Record<string, string> = {}
   for (const [k, v] of Object.entries(process.env)) if (v !== undefined) env[k] = v
   env.PERF_TESTING = 'true'
-  if (options.suppressErrorDialog) env.MARKTEXTPRO_ERROR_INTERACTION = '1'
+  if (options.suppressErrorDialog) env.MARKNOTEPRO_ERROR_INTERACTION = '1'
   const app = await _electron.launch({
     executablePath,
     args,

@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import EventCenter from '../../event';
 import { attachLinkMouseHandlers } from '../linkMouseEvents';
 
-// Regression tests for marktextpro commit cb25b3d4 (#1415).
+// Regression tests for marknotepro commit cb25b3d4 (#1415).
 // The renderer side of the port already emits dataset.{start,end,raw}
 // + the right wrapper classes for all three link variants (markdown
 // `[]()`, reference link, html_tag `<a>`). PR-11b builds the missing

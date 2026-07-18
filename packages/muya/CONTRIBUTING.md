@@ -2,7 +2,7 @@
 
 Thanks for your interest in improving Muya! This document covers everything you need to file a useful issue or land a pull request against `@muyajs/core`.
 
-Muya is a web-based Markdown editor engine extracted from [MarkTextPro](https://github.com/scott20201225/marktext-pro). The bulk of the source today lives in `packages/core/`.
+Muya is a web-based Markdown editor engine extracted from [MarkNotePro](https://github.com/scott20201225/marknote-pro). The bulk of the source today lives in `packages/core/`.
 
 ## Table of contents
 

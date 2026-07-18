@@ -124,21 +124,21 @@
       "reportBug": "Fehler melden",
       "viewSource": "Quellcode anzeigen",
       "followUs": "Folgen Sie uns",
-      "support": "MarkTextPro unterstützen",
+      "support": "MarkNotePro unterstützen",
       "license": "Lizenz",
       "about": "Über",
       "checkUpdates": "Updates prüfen"
     },
-    "marktextpro": {
-      "title": "MarkTextPro",
-      "about": "Über MarkTextPro",
+    "marknotepro": {
+      "title": "MarkNotePro",
+      "about": "Über MarkNotePro",
       "checkUpdates": "Nach Updates suchen...",
       "preferences": "Einstellungen",
       "services": "Dienste",
-      "hide": "MarkTextPro ausblenden",
+      "hide": "MarkNotePro ausblenden",
       "hideOthers": "Andere ausblenden",
       "showAll": "Alle anzeigen",
-      "quit": "MarkTextPro beenden"
+      "quit": "MarkNotePro beenden"
     },
     "view": {
       "view": "Ansicht",
@@ -375,7 +375,7 @@
   },
   "import": {
     "title": "Importieren oder öffnen",
-    "description": "Hier hineinziehen, um Ihren Inhalt in MarkTextPro zu importieren"
+    "description": "Hier hineinziehen, um Ihren Inhalt in MarkNotePro zu importieren"
   },
   "preferences": {
     "title": "Einstellungen",
@@ -403,10 +403,10 @@
         "hideScrollbar": "Ob Scrollbalken ausgeblendet werden sollen",
         "wordWrapInToc": "Ob Zeilenumbruch im Inhaltsverzeichnis aktiviert werden soll",
         "fileSortBy": "Dateien im geöffneten Ordner nach Erstellungszeit, Änderungszeit und Titel sortieren",
-        "startUpAction": "Die Aktion nach MarkTextPro-Start, letzten bearbeiteten Inhalt öffnen, angegebenen Ordner öffnen oder leere Seite",
+        "startUpAction": "Die Aktion nach MarkNotePro-Start, letzten bearbeiteten Inhalt öffnen, angegebenen Ordner öffnen oder leere Seite",
         "restoreLayoutState": "Vorherigen Editorzustand beim Start wiederherstellen",
         "defaultDirectoryToOpen": "Das Standard-Verzeichnis, das beim Start geöffnet werden soll, wenn startUp=folder",
-        "language": "Die Sprache, die MarkTextPro verwendet",
+        "language": "Die Sprache, die MarkNotePro verwendet",
         "editorFontFamily": "Editor-Schriftfamilie",
         "fontSize": "Schriftgröße in Pixeln",
         "lineHeight": "Zeilenhöhe",
@@ -430,7 +430,7 @@
         "preferLooseListItem": "Der bevorzugte Listentyp",
         "bulletListMarker": "Die Markierung in Aufzählungslisten",
         "orderListDelimiter": "Das Trennzeichen in geordneten Listen",
-        "preferHeadingStyle": "Der bevorzugte Überschriften-Stil in MarkTextPro",
+        "preferHeadingStyle": "Der bevorzugte Überschriften-Stil in MarkNotePro",
         "tabSize": "Tab durch x Leerzeichen ersetzen",
         "listIndentation": "Einrückung der Liste auswählen",
         "frontmatterType": "Der Frontmatter-Typ",
@@ -440,7 +440,7 @@
         "isGitlabCompatibilityEnabled": "GitLab-Kompatibilitätsmodus aktivieren",
         "sequenceTheme": "Sequenzdiagramm-Theme",
         "plantumlServer": "PlantUML-Server-URL",
-        "theme": "Das in MarkTextPro verwendete Theme auswählen",
+        "theme": "Das in MarkNotePro verwendete Theme auswählen",
         "followSystemTheme": "Systemdesign folgen",
         "lightModeTheme": "Design, das verwendet werden soll, wenn sich das System im hellen Modus befindet",
         "darkModeTheme": "Design, das verwendet werden soll, wenn sich das System im dunklen Modus befindet",
@@ -646,7 +646,7 @@
         "neverDetected": "Nie erkannt",
         "neverSuccessful": "Nie erfolgreich"
       },
-      "defaultBehavior": "Standardverhalten nach dem Einfügen oder Ziehen eines Bildes in MarkTextPro"
+      "defaultBehavior": "Standardverhalten nach dem Einfügen oder Ziehen eines Bildes in MarkNotePro"
     },
     "markdown": {
       "title": "Markdown",
@@ -763,7 +763,7 @@
   },
   "commands": {
     "mt": {
-      "hide": "MarkTextPro ausblenden",
+      "hide": "MarkNotePro ausblenden",
       "hideOthers": "Andere ausblenden"
     },
     "file": {
@@ -928,7 +928,7 @@
     "configSchemaViolation": "Konfigurationsschema-Verletzung",
     "copyError": "Kopierfehler",
     "initializationFailed": "Initialisierung fehlgeschlagen {hint}",
-    "otherInstanceDetected": "Eine andere Instanz von MarkTextPro läuft bereits",
+    "otherInstanceDetected": "Eine andere Instanz von MarkNotePro läuft bereits",
     "report": "Melden",
     "startupError": "Startfehler",
     "terminatedDueToError": "Aufgrund eines Fehlers beendet",

@@ -10,9 +10,9 @@ import sanitize, { isValidAttribute } from '../dompurify';
 // at runtime.
 const EXPORT_CONFIG: Config = EXPORT_DOMPURIFY_CONFIG;
 
-// Regression for marktextpro 0baf2e9e / 7de33f11 — "Fix #1390 prevent XSS attack".
+// Regression for marknotepro 0baf2e9e / 7de33f11 — "Fix #1390 prevent XSS attack".
 //
-// marktextpro's old inline html renderer used the raw tag name as the
+// marknotepro's old inline html renderer used the raw tag name as the
 // snabbdom selector, so `<embed src="javascript:…">` typed inline produced
 // a real `<embed>` node in the DOM. The fix added a downgrade gate:
 //
@@ -31,7 +31,7 @@ const EXPORT_CONFIG: Config = EXPORT_DOMPURIFY_CONFIG;
 // `ALLOW_DATA_ATTR: false` because the live-editor preview re-derives
 // `data-align` from block state, not from DOM attributes.
 
-describe('marktextpro 0baf2e9e/7de33f11 — inline html tag XSS defenses', () => {
+describe('marknotepro 0baf2e9e/7de33f11 — inline html tag XSS defenses', () => {
     describe('sanitize() downgrades dangerous tags to empty (drives the htmlTag span fallback)', () => {
         // These tables intentionally use BARE opening tags (no attrs / no close
         // tag) — that's the exact call shape `htmlTag.ts` uses:
@@ -81,7 +81,7 @@ describe('marktextpro 0baf2e9e/7de33f11 — inline html tag XSS defenses', () =>
 
     describe('data-align attribute whitelist (config side of the fix)', () => {
         it('exposes data-align via ADD_ATTR on EXPORT_DOMPURIFY_CONFIG', () => {
-            // marktextpro added `data-align` to WHITELIST_ATTRIBUTES in the
+            // marknotepro added `data-align` to WHITELIST_ATTRIBUTES in the
             // same commit pair; the new repo carries that intent via
             // ADD_ATTR on EXPORT_DOMPURIFY_CONFIG so saved/exported markdown
             // image alignment metadata survives sanitization.
@@ -96,7 +96,7 @@ describe('marktextpro 0baf2e9e/7de33f11 — inline html tag XSS defenses', () =>
     });
 });
 
-// marktextpro #3594 / #3697: the editor's live HTML-block preview forbade the
+// marknotepro #3594 / #3697: the editor's live HTML-block preview forbade the
 // `style` attribute while export allowed it, so inline-styled HTML rendered
 // unstyled in the editor. The preview config now matches export — `style`
 // survives, but DOMPurify still strips dangerous attributes.

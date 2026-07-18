@@ -1,6 +1,6 @@
 import { expect, test } from '../fixtures/muya';
 
-// marktextpro #4339: a long inline-math formula rendered a wide KaTeX popup that
+// marknotepro #4339: a long inline-math formula rendered a wide KaTeX popup that
 // overflowed the editor horizontally. The popup must cap its width and scroll
 // instead.
 test('long inline math popup scrolls horizontally instead of overflowing (#4339)', async ({ page }) => {

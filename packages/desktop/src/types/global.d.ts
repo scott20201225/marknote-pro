@@ -15,8 +15,8 @@ import type { SerializedStat } from '@shared/types/files'
 
 declare global {
   // ---- Build-time defines (electron-vite `define`) ----
-  const MARKTEXTPRO_VERSION: string
-  const MARKTEXTPRO_VERSION_STRING: string
+  const MARKNOTEPRO_VERSION: string
+  const MARKNOTEPRO_VERSION_STRING: string
   const __static: string
 
   // ---- contextBridge surface ----
@@ -188,7 +188,7 @@ declare global {
     rgPath: string
     // Set by the legacy editor store at runtime; consumed by muya internals.
     DIRNAME: string
-    marktextpro?: {
+    marknotepro?: {
       env?: { windowId: number; [key: string]: unknown }
       initialState?: {
         codeFontFamily?: string | null

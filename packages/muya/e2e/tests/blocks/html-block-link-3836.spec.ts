@@ -1,7 +1,7 @@
 import process from 'node:process';
 import { expect, test } from '../fixtures/muya';
 
-// marktextpro #3836: a link inside a *multi-line* raw HTML block renders into
+// marknotepro #3836: a link inside a *multi-line* raw HTML block renders into
 // `.mu-html-preview` as a plain `<a>` (no `mu-raw-html` wrapper class), so the
 // link click handler never matched it and Cmd/Ctrl-click did nothing. Inline
 // `<a href>text</a>` (rendered as `a.mu-raw-html`) already worked.
@@ -10,7 +10,7 @@ const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
 
 test('Cmd/Ctrl-click a link inside a multi-line HTML block emits format-click', async ({ page }) => {
     await page.evaluate(() => {
-        window.muya!.setContent('<a href="https://www.example.com/">\nMarkTextPro\n</a>\n');
+        window.muya!.setContent('<a href="https://www.example.com/">\nMarkNotePro\n</a>\n');
         (window as unknown as { __fc: string[] }).__fc = [];
         window.muya!.eventCenter.subscribe('format-click', (payload: { data?: { href?: string } }) => {
             (window as unknown as { __fc: string[] }).__fc.push(payload?.data?.href ?? '');

@@ -139,7 +139,7 @@ test.describe('PDF export to a real file (item 231)', () => {
   })
 
   test('writes a non-empty file beginning with the %PDF- magic bytes', async() => {
-    const out = '/tmp/marktextpro-e2e-export-' + Date.now() + '-a.pdf'
+    const out = '/tmp/marknotepro-e2e-export-' + Date.now() + '-a.pdf'
     if (fs.existsSync(out)) fs.rmSync(out)
     await clearExportSuccesses(page)
     await stubSaveDialog(app, out)
@@ -154,7 +154,7 @@ test.describe('PDF export to a real file (item 231)', () => {
   })
 
   test('fires mt::export-success with type "pdf" and the written file path', async() => {
-    const out = '/tmp/marktextpro-e2e-export-' + Date.now() + '-b.pdf'
+    const out = '/tmp/marknotepro-e2e-export-' + Date.now() + '-b.pdf'
     if (fs.existsSync(out)) fs.rmSync(out)
     await clearExportSuccesses(page)
     await stubSaveDialog(app, out)
@@ -176,7 +176,7 @@ test.describe('PDF export to a real file (item 231)', () => {
   })
 
   test('canceling the save dialog writes no file and fires no export-success', async() => {
-    const out = '/tmp/marktextpro-e2e-export-' + Date.now() + '-c.pdf'
+    const out = '/tmp/marknotepro-e2e-export-' + Date.now() + '-c.pdf'
     if (fs.existsSync(out)) fs.rmSync(out)
     await clearExportSuccesses(page)
     // Stub the save dialog to report cancellation — main must skip printToPDF.
@@ -200,7 +200,7 @@ test.describe('PDF export to a real file (item 231)', () => {
   test('the renderer EXPORT path round-trips a second export to a fresh path', async() => {
     // Re-export to a different path to prove the print service is re-armed and
     // the wiring is not single-shot.
-    const out = '/tmp/marktextpro-e2e-export-' + Date.now() + '-d.pdf'
+    const out = '/tmp/marknotepro-e2e-export-' + Date.now() + '-d.pdf'
     if (fs.existsSync(out)) fs.rmSync(out)
     await clearExportSuccesses(page)
     await stubSaveDialog(app, out)

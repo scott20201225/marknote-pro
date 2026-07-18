@@ -1,6 +1,6 @@
 # Key Bindings for Linux
 
-MarkTextPro key bindings for Linux. Please see [general key bindings](KEYBINDINGS.md) for information how to use custom key bindings.
+MarkNotePro key bindings for Linux. Please see [general key bindings](KEYBINDINGS.md) for information how to use custom key bindings.
 
 ## Available menu key bindings
 
@@ -21,7 +21,7 @@ MarkTextPro key bindings for Linux. Please see [general key bindings](KEYBINDING
 | `file.preferences`     | <kbd>Ctrl</kbd>+<kbd>,</kbd>                  | Open settings window                  |
 | `file.close-tab`       | <kbd>Ctrl</kbd>+<kbd>W</kbd>                  | Close tab                             |
 | `file.close-window`    | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>W</kbd> | Close window                          |
-| `file.quit`            | <kbd>Ctrl</kbd>+<kbd>Q</kbd>                  | Quit MarkTextPro                         |
+| `file.quit`            | <kbd>Ctrl</kbd>+<kbd>Q</kbd>                  | Quit MarkNotePro                         |
 
 #### Edit menu
 

@@ -1,4 +1,4 @@
-// Visible line count for a code block, matching marktextpro `a028a7c2`:
+// Visible line count for a code block, matching marknotepro `a028a7c2`:
 //   - each `\n` adds a row
 //   - a trailing `\n` still counts as the next visible (empty) row in
 //     contenteditable, which falls out naturally from "count + 1"

@@ -28,8 +28,8 @@ export default defineConfig({
       }
     },
     define: {
-      MARKTEXTPRO_VERSION: JSON.stringify(packageJson.version),
-      MARKTEXTPRO_VERSION_STRING: JSON.stringify(`v${packageJson.version}`)
+      MARKNOTEPRO_VERSION: JSON.stringify(packageJson.version),
+      MARKNOTEPRO_VERSION_STRING: JSON.stringify(`v${packageJson.version}`)
     },
     resolve: {
       alias: {

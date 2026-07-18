@@ -88,7 +88,7 @@ export const registerKeyboardListeners = (): void => {
     return getKeyboardInfo()
   })
   ipcMain.on('mt::keybinding-debug-dump-keyboard-info', async() => {
-    const dumpPath = path.join(os.tmpdir(), 'marktextpro_keyboard_info.json')
+    const dumpPath = path.join(os.tmpdir(), 'marknotepro_keyboard_info.json')
     const content = JSON.stringify(getKeyboardInfo(), null, 2)
     fsPromises
       .writeFile(dumpPath, content, 'utf8')

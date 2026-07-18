@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { BLOCK_DOM_PROPERTY } from '../../config';
 import EventCenter from '../../event';
 
-// Regression tests for marktextpro #4406 parity gap PG4: drag-and-drop image
+// Regression tests for marknotepro #4406 parity gap PG4: drag-and-drop image
 // insertion (local image FILE + web-link image) was entirely absent in the
 // @muyajs/core rewrite. `attachDragDropImageHandlers` restores it by binding
 // dragover/drop on the editor container and inserting a dropped image as a new

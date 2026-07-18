@@ -73,7 +73,7 @@ const CARDS: Card[] = [
         Drafted in 2024.
         <sup style={{ color: 'var(--accent)' }}>[1]</sup>
         <br />
-        <span style={{ color: 'var(--muted)' }}>[1]: The year MarkTextPro turned ten.</span>
+        <span style={{ color: 'var(--muted)' }}>[1]: The year MarkNotePro turned ten.</span>
       </>
     )
   },

@@ -1,6 +1,6 @@
-<p align="center"><img src="docs/assets/logo-small.png" alt="MarkTextPro" width="100" height="100"></p>
+<p align="center"><img src="docs/assets/logo-small.png" alt="MarkNotePro" width="100" height="100"></p>
 
-<h1 align="center">MarkTextPro</h1>
+<h1 align="center">MarkNotePro</h1>
 
 <div align="center">
   <strong>:high_brightness: Next generation markdown editor :crescent_moon:</strong><br>
@@ -13,37 +13,37 @@
 <div align="center">
   <!-- License -->
   <a href="LICENSE">
-    <img src="https://img.shields.io/github/license/scott20201225/marktext-pro.svg" alt="LICENSE">
+    <img src="https://img.shields.io/github/license/scott20201225/marknote-pro.svg" alt="LICENSE">
   </a>
   <!-- Downloads total -->
-  <a href="https://github.com/scott20201225/marktext-pro/releases">
-    <img src="https://img.shields.io/github/downloads/scott20201225/marktext-pro/total.svg" alt="total download">
+  <a href="https://github.com/scott20201225/marknote-pro/releases">
+    <img src="https://img.shields.io/github/downloads/scott20201225/marknote-pro/total.svg" alt="total download">
   </a>
   <!-- Downloads latest release -->
-  <a href="https://github.com/scott20201225/marktext-pro/releases/latest">
-    <img src="https://img.shields.io/github/downloads/scott20201225/marktext-pro/latest/total.svg" alt="latest download">
+  <a href="https://github.com/scott20201225/marknote-pro/releases/latest">
+    <img src="https://img.shields.io/github/downloads/scott20201225/marknote-pro/latest/total.svg" alt="latest download">
   </a>
 </div>
 
 <div align="center">
   <h3>
-    <a href="https://github.com/scott20201225/marktext-pro">
+    <a href="https://github.com/scott20201225/marknote-pro">
       Repository
     </a>
     <span> | </span>
-    <a href="https://github.com/scott20201225/marktext-pro#features">
+    <a href="https://github.com/scott20201225/marknote-pro#features">
       Features
     </a>
     <span> | </span>
-    <a href="https://github.com/scott20201225/marktext-pro#download-and-installation">
+    <a href="https://github.com/scott20201225/marknote-pro#download-and-installation">
       Downloads
     </a>
     <span> | </span>
-    <a href="https://github.com/scott20201225/marktext-pro#development">
+    <a href="https://github.com/scott20201225/marknote-pro#development">
       Development
     </a>
     <span> | </span>
-    <a href="https://github.com/scott20201225/marktext-pro#contribution">
+    <a href="https://github.com/scott20201225/marknote-pro#contribution">
       Contribution
     </a>
   </h3>
@@ -82,7 +82,7 @@
 
 <div align="center">
   <sub>
-    Based on MarkText and further developed as MarkTextPro. See the
+    Based on MarkText and further developed as MarkNotePro. See the
     <a href="LICENSE">license</a>
     and repository history for attribution details.
   </sub>
@@ -90,13 +90,13 @@
 
 <br />
 
-> MarkTextPro is built on top of MarkText and is an open-source project that is still being carefully refined. We value every bug report, suggestion, and real-world experience. If you notice rough edges or have ideas while using it, we'd be glad to hear from you and keep improving MarkTextPro together.
+> MarkNotePro is built on top of MarkText and is an open-source project that is still being carefully refined. We value every bug report, suggestion, and real-world experience. If you notice rough edges or have ideas while using it, we'd be glad to hear from you and keep improving MarkNotePro together.
 >
-> MarkTextPro 基于 MarkText 开发，是一个持续打磨中的开源项目。我们珍惜每一条问题反馈、使用建议和体验感受，欢迎你在使用过程中把遇到的问题与想法告诉我们，一起让 MarkTextPro 变得更稳定、更顺手。
+> MarkNotePro 基于 MarkText 开发，是一个持续打磨中的开源项目。我们珍惜每一条问题反馈、使用建议和体验感受，欢迎你在使用过程中把遇到的问题与想法告诉我们，一起让 MarkNotePro 变得更稳定、更顺手。
 
 ## Screenshot
 
-The logo is retired from the screenshot area. Below are real product shots taken from the current MarkTextPro build.
+The logo is retired from the screenshot area. Below are real product shots taken from the current MarkNotePro build.
 
 [Open the full feature showcase image](docs/assets/screenshots/showcase-overview.png)
 
@@ -141,14 +141,14 @@ The logo is retired from the screenshot area. Below are real product shots taken
   </tr>
   <tr>
     <td align="center">
-      <img src="docs/assets/screenshots/table-copy-paste.gif" alt="Copy and paste between MarkTextPro tables" width="100%">
+      <img src="docs/assets/screenshots/table-copy-paste.gif" alt="Copy and paste between MarkNotePro tables" width="100%">
       <br>
-      <sub>Copy and paste between MarkTextPro tables</sub>
+      <sub>Copy and paste between MarkNotePro tables</sub>
     </td>
     <td align="center">
-      <img src="docs/assets/screenshots/excel-table-interoperability.gif" alt="Copy and paste between Excel and MarkTextPro tables" width="100%">
+      <img src="docs/assets/screenshots/excel-table-interoperability.gif" alt="Copy and paste between Excel and MarkNotePro tables" width="100%">
       <br>
-      <sub>Excel and MarkTextPro table interoperability</sub>
+      <sub>Excel and MarkNotePro table interoperability</sub>
     </td>
   </tr>
 </table>
@@ -160,7 +160,7 @@ The logo is retired from the screenshot area. Below are real product shots taken
 - Markdown extensions such as math expressions (KaTeX), front matter and emojis.
 - Support paragraphs and inline style shortcuts to improve your writing efficiency.
 - Output **HTML** and **PDF** files.
-- Various [themes](https://github.com/scott20201225/marktext-pro/tree/main/docs): **Cadmium Light**, **Material Dark** etc.
+- Various [themes](https://github.com/scott20201225/marknote-pro/tree/main/docs): **Cadmium Light**, **Material Dark** etc.
 - Various editing modes: **Source Code mode**, **Typewriter mode**, **Focus mode**.
 - Paste images directly from clipboard.
 
@@ -170,58 +170,58 @@ The logo is retired from the screenshot area. Below are real product shots taken
 
 | ![](https://raw.githubusercontent.com/wiki/ryanoasis/nerd-fonts/screenshots/v1.0.x/mac-pass-sm.png)                                                                                         | ![](https://raw.githubusercontent.com/wiki/ryanoasis/nerd-fonts/screenshots/v1.0.x/windows-pass-sm.png)                                                                                         | ![](https://raw.githubusercontent.com/wiki/ryanoasis/nerd-fonts/screenshots/v1.0.x/linux-pass-sm.png)                                                                                                       |
 |:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
-| [![Download for macOS](https://img.shields.io/badge/macOS-Download-blue)](https://github.com/scott20201225/marktext-pro/releases/latest) | [![Download for Windows](https://img.shields.io/badge/Windows-Download-blue)](https://github.com/scott20201225/marktext-pro/releases/latest) | [![Download for Linux](https://img.shields.io/badge/Linux-Download-blue)](https://github.com/scott20201225/marktext-pro/releases/latest) |
+| [![Download for macOS](https://img.shields.io/badge/macOS-Download-blue)](https://github.com/scott20201225/marknote-pro/releases/latest) | [![Download for Windows](https://img.shields.io/badge/Windows-Download-blue)](https://github.com/scott20201225/marknote-pro/releases/latest) | [![Download for Linux](https://img.shields.io/badge/Linux-Download-blue)](https://github.com/scott20201225/marknote-pro/releases/latest) |
 
-Want to see new features of the latest version? Please refer to [CHANGELOG](https://github.com/scott20201225/marktext-pro/tree/main/docs).
+Want to see new features of the latest version? Please refer to [CHANGELOG](https://github.com/scott20201225/marknote-pro/tree/main/docs).
 
 #### macOS
 
 Requires macOS 11 (Big Sur) or later. Universal builds aren't published — pick the matching `arm64` or `x64` installer.
 
-You can download the latest `marktextpro-mac-(arm64|x64)-%version%.dmg` from the [release page](https://github.com/scott20201225/marktext-pro/releases/latest).
+You can download the latest `marknotepro-mac-(arm64|x64)-%version%.dmg` from the [release page](https://github.com/scott20201225/marknote-pro/releases/latest).
 
 #### Windows
 
 Requires Windows 10 or 11. Both x64 and arm64 installers are published — pick the architecture that matches your machine.
 
-Simply download and install MarkTextPro via the setup wizard (`marktextpro-win-(x64|arm64)-%version%-setup.exe`) and choose whether to install per-user or machine wide.
+Simply download and install MarkNotePro via the setup wizard (`marknotepro-win-(x64|arm64)-%version%-setup.exe`) and choose whether to install per-user or machine wide.
 
 #### Linux
 
-Please follow the [Linux installation instructions](https://github.com/scott20201225/marktext-pro/tree/main/docs).
+Please follow the [Linux installation instructions](https://github.com/scott20201225/marknote-pro/tree/main/docs).
 
 #### Other
 
-All binaries for Linux, macOS and Windows can be downloaded from the [release page](https://github.com/scott20201225/marktext-pro/releases/latest). If a version is unavailable for your system, then please open an [issue](https://github.com/scott20201225/marktext-pro/issues).
+All binaries for Linux, macOS and Windows can be downloaded from the [release page](https://github.com/scott20201225/marknote-pro/releases/latest). If a version is unavailable for your system, then please open an [issue](https://github.com/scott20201225/marknote-pro/issues).
 
 ## Development
 
-If you wish to build MarkTextPro yourself, please check out our [build instructions](https://github.com/scott20201225/marktext-pro/tree/main/docs).
+If you wish to build MarkNotePro yourself, please check out our [build instructions](https://github.com/scott20201225/marknote-pro/tree/main/docs).
 
-- [User documentation](https://github.com/scott20201225/marktext-pro/tree/main/docs)
-- [Developer documentation](https://github.com/scott20201225/marktext-pro/tree/main/docs)
+- [User documentation](https://github.com/scott20201225/marknote-pro/tree/main/docs)
+- [Developer documentation](https://github.com/scott20201225/marknote-pro/tree/main/docs)
 
-If you have any questions regarding MarkTextPro, you are welcome to write an issue. When doing so please use the default format found when opening an issue. Of course, if you submit a PR directly, it will be greatly appreciated.
+If you have any questions regarding MarkNotePro, you are welcome to write an issue. When doing so please use the default format found when opening an issue. Of course, if you submit a PR directly, it will be greatly appreciated.
 
 ## Contribution
 
-MarkTextPro is in development, please make sure to read the [Contributing Guide](.github/CONTRIBUTING.md) before making a pull request. Want to add some features to MarkTextPro? Please open an issue first and describe the use case.
+MarkNotePro is in development, please make sure to read the [Contributing Guide](.github/CONTRIBUTING.md) before making a pull request. Want to add some features to MarkNotePro? Please open an issue first and describe the use case.
 
 ## Community
 
-MarkTextPro is built on top of MarkText and is an open-source project under active refinement. Feedback, issues, and suggestions are always welcome to help us improve the experience.
+MarkNotePro is built on top of MarkText and is an open-source project under active refinement. Feedback, issues, and suggestions are always welcome to help us improve the experience.
 
-MarkTextPro 基于 MarkText 开发，是一个持续打磨中的开源项目。欢迎反馈问题与建议，帮助我们把体验做得更好。
+MarkNotePro 基于 MarkText 开发，是一个持续打磨中的开源项目。欢迎反馈问题与建议，帮助我们把体验做得更好。
 
 QQ Group: `871505001`
 
 <p align="center">
-  <img src="docs/assets/community/qq-group-qrcode.jpg" alt="MarktextPro QQ group QR code" width="360">
+  <img src="docs/assets/community/qq-group-qrcode.jpg" alt="MarkNotePro QQ group QR code" width="360">
 </p>
 
 ## Contributors
 
-Thank you to all the people who have already contributed to MarkTextPro [[contributors](https://github.com/scott20201225/marktext-pro/graphs/contributors)].
+Thank you to all the people who have already contributed to MarkNotePro [[contributors](https://github.com/scott20201225/marknote-pro/graphs/contributors)].
 
 ## License
 

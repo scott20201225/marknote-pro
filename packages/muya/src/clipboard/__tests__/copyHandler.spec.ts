@@ -16,7 +16,7 @@ vi.mock('../../utils/prism/index', () => ({
 const ClipboardModule = await import('../index');
 const Clipboard = ClipboardModule.default;
 
-// Regression for marktextpro commit c841facd (#3130).
+// Regression for marknotepro commit c841facd (#3130).
 // `Clipboard.copyHandler` previously wrote the clipboard even when the
 // selection produced an empty string, clobbering whatever the user had
 // stashed there from another source. The fix mirrors native behavior:

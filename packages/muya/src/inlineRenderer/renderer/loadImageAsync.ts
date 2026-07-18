@@ -23,7 +23,7 @@ export default function loadImageAsync(
 
     const cached = this.loadImageMap.get(src);
     // Retry when the previous load failed: a transient failure should not
-    // permanently poison the cache (marktextpro#3001 / #3010, commit bca2ed62).
+    // permanently poison the cache (marknotepro#3001 / #3010, commit bca2ed62).
     if (!cached || !cached.isSuccess) {
         id = getUniqueId();
         // Cache-bust local files so a fresh load reads the file off disk
@@ -119,7 +119,7 @@ export default function loadImageAsync(
         h = cached.height;
     }
 
-    // marktextpro's loadImageAsync returns `domsrc` (the resolved URL — for
+    // marknotepro's loadImageAsync returns `domsrc` (the resolved URL — for
     // remote sources it's just the src, for local files it carries a cache-
     // busting query). Reference images need this so the rendered <img> uses
     // the resolved URL rather than the raw label-derived href.

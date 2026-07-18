@@ -9,7 +9,7 @@ export default function Support() {
       <div className="wrap">
         <div className="sec-head center reveal">
           <span className="kicker">Support</span>
-          <h2 className="sec-title">Keep MarkTextPro free.</h2>
+          <h2 className="sec-title">Keep MarkNotePro free.</h2>
           <p className="sec-desc">
             Built by volunteers. If it earns a place in your workflow, sponsorship keeps development
             going.

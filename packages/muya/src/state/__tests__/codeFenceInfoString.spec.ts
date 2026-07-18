@@ -1,5 +1,5 @@
 // Regression for #4770: a fenced code block's info string must survive a
-// markdown -> state -> markdown round-trip. MarkTextPro used only the first word
+// markdown -> state -> markdown round-trip. MarkNotePro used only the first word
 // of the info string as the language (for highlighting) and serialized just
 // that word back, so `` ```{example, listing1-name} `` was rewritten to
 // `` ```{example, `` on save — dropping everything after the first space.

@@ -2,12 +2,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import Table from '../index';
 
-// Regression for marktextpro commit 6293d408 "fix: #572 — cursor placement
-// after row/column delete". In marktextpro's `tableBlockCtrl`, when the user
+// Regression for marknotepro commit 6293d408 "fix: #572 — cursor placement
+// after row/column delete". In marknotepro's `tableBlockCtrl`, when the user
 // removed a cell that contained the caret, the code set
 // `cursorBlock = getNextSibling(block)`. If the deleted cell sat on the
 // edge of the table, getNextSibling returned a now-detached node and the
-// caret evaporated. marktextpro's fix routed through `findNextBlockInLocation`,
+// caret evaporated. marknotepro's fix routed through `findNextBlockInLocation`,
 // which walks up to the parent row and across to the next valid descendant.
 //
 // In new muya, `Table.removeRow` and `Table.removeColumn` previously did
@@ -16,7 +16,7 @@ import Table from '../index';
 // row/column delete the caret was left in an detached cell. PR-7b adds a
 // cell-content return value so callers can place the caret on a surviving
 // neighbour, restoring the same "click somewhere reasonable after a
-// destructive table edit" contract marktextpro had.
+// destructive table edit" contract marknotepro had.
 //
 // These tests drive `removeRow` / `removeColumn` off the prototype with a
 // structurally typed `this`, the same pattern as
@@ -114,7 +114,7 @@ function makeFakeTable(rowCount: number, cellCount: number) {
         firstChild: inner,
         columnCount: cellCount,
         remove: vi.fn(),
-        // The whole-table-removed branch (marktextpro 6293d408 cover-the-edge
+        // The whole-table-removed branch (marknotepro 6293d408 cover-the-edge
         // case) calls `nextContentInContext()` / `previousContentInContext()`
         // on `this` before `this.remove()`. Stub both to return null in the
         // base fixture; specific tests override to assert the outside-
@@ -125,7 +125,7 @@ function makeFakeTable(rowCount: number, cellCount: number) {
     };
 }
 
-describe('table.removeRow — returns surviving cell content for cursor placement (marktextpro 6293d408)', () => {
+describe('table.removeRow — returns surviving cell content for cursor placement (marknotepro 6293d408)', () => {
     it('removes the targeted row and returns the next row\'s first cell content', () => {
         const fake = makeFakeTable(3, 2);
 
@@ -213,7 +213,7 @@ describe('table.removeRow — returns surviving cell content for cursor placemen
     });
 });
 
-describe('table.removeColumn — returns surviving cell content for cursor placement (marktextpro 6293d408)', () => {
+describe('table.removeColumn — returns surviving cell content for cursor placement (marknotepro 6293d408)', () => {
     it('removes column at offset and returns the first row\'s neighbour cell content', () => {
         const fake = makeFakeTable(2, 3);
         // Capture the cells in column 1 (the column we're going to remove).

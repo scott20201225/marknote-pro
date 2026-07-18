@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import type { ElectronApplication, Page } from 'playwright'
 import { launchWithMarkdown, waitForEditor, enterSourceMode, clickMenuById } from './helpers'
 
-// marktextpro #3580: clicking a TOC entry in SOURCE CODE mode must scroll the
+// marknotepro #3580: clicking a TOC entry in SOURCE CODE mode must scroll the
 // editor to that heading and place it near the TOP of the viewport. The editor
 // runs CodeMirror with viewportMargin: Infinity, so the OUTER `.source-code`
 // container is the scrollable element — neither cm.scrollTo nor cm.scrollIntoView

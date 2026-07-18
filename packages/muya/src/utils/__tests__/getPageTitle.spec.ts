@@ -2,7 +2,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Regression for marktextpro commit 141d25d8 (#1344).
+// Regression for marknotepro commit 141d25d8 (#1344).
 // `getPageTitle` is meant to fetch a URL, parse the `<title>` out of the
 // HTML body, and return it so a pasted bare URL renders as a link with
 // the page's real title. The current impl pipes the HTML body through

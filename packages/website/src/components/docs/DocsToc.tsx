@@ -72,7 +72,7 @@ export default function DocsToc({ entries }: Props) {
       <div className="toc-aside">
         <b>Try it yourself</b>
         <p>
-          The fastest way to learn MarkTextPro is to write in it. It&apos;s free and open source,
+          The fastest way to learn MarkNotePro is to write in it. It&apos;s free and open source,
           forever.
         </p>
         <Link className="mini-btn" href="/#download">

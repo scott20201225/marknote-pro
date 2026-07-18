@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { getLinkInfo } from '../getLinkInfo';
 
-// Regression tests for marktextpro commit cb25b3d4 (#1415):
+// Regression tests for marknotepro commit cb25b3d4 (#1415):
 // "Feat: link tool support html tag:a and reference link".
 // The renderer side of the port is already in place — `link.ts`,
 // `referenceLink.ts`, and `htmlTag.ts` all emit dataset.{start,end,raw}

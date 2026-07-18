@@ -1,7 +1,7 @@
 import { expect, test } from '../fixtures/muya';
 import { editor } from '../helpers/selectors';
 
-// marktextpro #3560: a wide rendered sequence-diagram <svg> overflowed the block
+// marknotepro #3560: a wide rendered sequence-diagram <svg> overflowed the block
 // and was clipped. The fix gives the fixed-size (no-viewBox) <svg> a viewBox
 // derived from its width/height so `max-width: 100%` SCALES it to fit (rather
 // than just clipping the box). A wide diagram must end up no wider than its

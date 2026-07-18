@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Ask a Question
-    url: https://github.com/scott20201225/marktext-pro/discussions
-    about: Use GitHub Discussions for questions, help, and general conversation about MarkTextPro.
+    url: https://github.com/scott20201225/marknote-pro/discussions
+    about: Use GitHub Discussions for questions, help, and general conversation about MarkNotePro.
   - name: Documentation
-    url: https://github.com/scott20201225/marktext-pro/tree/main/docs
+    url: https://github.com/scott20201225/marknote-pro/tree/main/docs
     about: Check the docs before asking — your answer may already be there.
