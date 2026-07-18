@@ -1,6 +1,6 @@
 import pathe from 'pathe'
 
-const STANDALONE_USER_DATA_PATH = '/tmp/marktextpro-standalone'
+const STANDALONE_USER_DATA_PATH = '/tmp/marknotepro-standalone'
 
 type Listener = (event: unknown, ...args: unknown[]) => void
 
@@ -36,10 +36,10 @@ const createIpcRendererStub = (): ElectronIpcRenderer => {
           versions: {},
           env: {
             NODE_ENV: 'development',
-            MARKTEXTPRO_STANDALONE: '1',
-            MARKTEXTPRO_VERSION_STRING:
-              typeof MARKTEXTPRO_VERSION_STRING === 'string'
-                ? MARKTEXTPRO_VERSION_STRING
+            MARKNOTEPRO_STANDALONE: '1',
+            MARKNOTEPRO_VERSION_STRING:
+              typeof MARKNOTEPRO_VERSION_STRING === 'string'
+                ? MARKNOTEPRO_VERSION_STRING
                 : 'dev'
           },
           paths: {
@@ -194,9 +194,9 @@ export const installStandaloneBridge = (): void => {
       versions: {},
       env: {
         NODE_ENV: 'development',
-        MARKTEXTPRO_STANDALONE: '1',
-        MARKTEXTPRO_VERSION_STRING:
-          typeof MARKTEXTPRO_VERSION_STRING === 'string' ? MARKTEXTPRO_VERSION_STRING : 'dev'
+        MARKNOTEPRO_STANDALONE: '1',
+        MARKNOTEPRO_VERSION_STRING:
+          typeof MARKNOTEPRO_VERSION_STRING === 'string' ? MARKNOTEPRO_VERSION_STRING : 'dev'
       },
       resourcesPath: '',
       cwd: '/'
@@ -277,6 +277,6 @@ export const installStandaloneBridge = (): void => {
 }
 
 export const isStandaloneRenderer = (): boolean =>
-  typeof window !== 'undefined' && Boolean(window.marktextpro?.env?.standalone)
+  typeof window !== 'undefined' && Boolean(window.marknotepro?.env?.standalone)
 
 installStandaloneBridge()

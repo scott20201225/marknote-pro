@@ -156,7 +156,7 @@ export async function normalizePastedHTML(
 // followed by a parse + `childElementCount === 1` check, so a payload whose
 // greedy regex spans two sibling
 // tables falls through to the normal HTML→Markdown path. Some clipboard sources
-// (notably Apple Numbers, marktextpro #1271) put raw HTML into `text/plain` with
+// (notably Apple Numbers, marknotepro #1271) put raw HTML into `text/plain` with
 // no `text/html` flavour; the paste handler promotes such text into the html
 // slot so it goes through `HtmlToMarkdown` instead of being inserted verbatim.
 const STANDALONE_TABLE_REG = /^<table\b[\s\S]*<\/table>$/i;

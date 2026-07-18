@@ -5,7 +5,7 @@ const exposedPaths = (window.electron && window.electron.paths) || {}
 
 // Allow a local override (e.g. an optimized ripgrep build). Otherwise use the
 // asar-unpacked path resolved by the main process and forwarded via boot info.
-const ripgrepBinaryPath: string = env.MARKTEXTPRO_RIPGREP_PATH || exposedPaths.ripgrepBinary || ''
+const ripgrepBinaryPath: string = env.MARKNOTEPRO_RIPGREP_PATH || exposedPaths.ripgrepBinary || ''
 
 class RendererPaths extends EnvPaths {
   private readonly _ripgrepBinaryPath: string

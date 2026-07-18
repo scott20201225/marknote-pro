@@ -73,7 +73,7 @@ const setupEnvironment = (args: Record<string, unknown>): AppEnvironment => {
 
   const isDevMode = process.env.NODE_ENV !== 'production'
   const debug =
-    !!args['--debug'] || !!process.env.MARKTEXTPRO_DEBUG || process.env.NODE_ENV !== 'production'
+    !!args['--debug'] || !!process.env.MARKNOTEPRO_DEBUG || process.env.NODE_ENV !== 'production'
   const verbose = (args['--verbose'] as number | undefined) || 0
   const safeMode = !!args['--safe']
   const userDataPath = args['--user-data-dir'] as string | undefined // or undefined (= default user data path)
@@ -92,13 +92,13 @@ const setupEnvironment = (args: Record<string, unknown>): AppEnvironment => {
 
   // Keep this for easier access.
   const mutableGlobal = global as unknown as {
-    MARKTEXTPRO_DEBUG: boolean
-    MARKTEXTPRO_DEBUG_VERBOSE: number
-    MARKTEXTPRO_SAFE_MODE: boolean
+    MARKNOTEPRO_DEBUG: boolean
+    MARKNOTEPRO_DEBUG_VERBOSE: number
+    MARKNOTEPRO_SAFE_MODE: boolean
   }
-  mutableGlobal.MARKTEXTPRO_DEBUG = debug
-  mutableGlobal.MARKTEXTPRO_DEBUG_VERBOSE = verbose
-  mutableGlobal.MARKTEXTPRO_SAFE_MODE = safeMode
+  mutableGlobal.MARKNOTEPRO_DEBUG = debug
+  mutableGlobal.MARKNOTEPRO_DEBUG_VERBOSE = verbose
+  mutableGlobal.MARKNOTEPRO_SAFE_MODE = safeMode
 
   return appEnvironment
 }

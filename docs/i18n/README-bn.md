@@ -1,10 +1,10 @@
-<p align="center"><img src="../assets/logo-small.png" alt="MarkTextPro" width="100" height="100"></p>
+<p align="center"><img src="../assets/logo-small.png" alt="MarkNotePro" width="100" height="100"></p>
 
-<h1 align="center">MarkTextPro</h1>
+<h1 align="center">MarkNotePro</h1>
 
 <div align="center">
-  <a href="https://twitter.com/intent/tweet?via=scott20201225&url=https://github.com/scott20201225/marktext-pro/&text=What%20do%20you%20want%20to%20say%20to%20app?&hashtags=happyMarkTextPro">
-    <img src="https://img.shields.io/twitter/url/https/github.com/scott20201225/marktext-pro.svg?style=for-the-badge" alt="twitter">
+  <a href="https://twitter.com/intent/tweet?via=scott20201225&url=https://github.com/scott20201225/marknote-pro/&text=What%20do%20you%20want%20to%20say%20to%20app?&hashtags=happyMarkNotePro">
+    <img src="https://img.shields.io/twitter/url/https/github.com/scott20201225/marknote-pro.svg?style=for-the-badge" alt="twitter">
   </a>
 </div>
 <div align="center">
@@ -18,41 +18,41 @@
 <div align="center">
   <!-- License -->
   <a href="../../LICENSE">
-    <img src="https://img.shields.io/github/license/scott20201225/marktext-pro.svg" alt="LICENSE">
+    <img src="https://img.shields.io/github/license/scott20201225/marknote-pro.svg" alt="LICENSE">
   </a>
   <!-- Downloads total -->
-  <a href="https://github.com/scott20201225/marktext-pro/releases">
-    <img src="https://img.shields.io/github/downloads/scott20201225/marktext-pro/total.svg" alt="total download">
+  <a href="https://github.com/scott20201225/marknote-pro/releases">
+    <img src="https://img.shields.io/github/downloads/scott20201225/marknote-pro/total.svg" alt="total download">
   </a>
   <!-- Downloads latest release -->
-  <a href="https://github.com/scott20201225/marktext-pro/releases/latest">
-    <img src="https://img.shields.io/github/downloads/scott20201225/marktext-pro/latest/total.svg" alt="latest download">
+  <a href="https://github.com/scott20201225/marknote-pro/releases/latest">
+    <img src="https://img.shields.io/github/downloads/scott20201225/marknote-pro/latest/total.svg" alt="latest download">
   </a>
   <!-- sponsors -->
-  <a href="https://opencollective.com/marktextpro">
-    <img src="https://opencollective.com/marktextpro/tiers/silver-sponsors/badge.svg?label=SilverSponsors&color=brightgreen" alt="sponsors">
+  <a href="https://github.com/sponsors/scott20201225">
+    <img src="https://img.shields.io/badge/Sponsor-GitHub-pink?style=for-the-badge&logo=githubsponsors" alt="sponsors">
   </a>
 </div>
 
 <div align="center">
   <h3>
-    <a href="https://github.com/scott20201225/marktext-pro">
+    <a href="https://github.com/scott20201225/marknote-pro">
       Website
     </a>
     <span> | </span>
-    <a href="https://github.com/scott20201225/marktext-pro#features">
+    <a href="https://github.com/scott20201225/marknote-pro#features">
       বৈশিষ্ট্য
     </a>
     <span> | </span>
-    <a href="https://github.com/scott20201225/marktext-pro#download-and-installation">
+    <a href="https://github.com/scott20201225/marknote-pro#download-and-installation">
       ডাউনলোড
     </a>
     <span> | </span>
-    <a href="https://github.com/scott20201225/marktext-pro#development">
+    <a href="https://github.com/scott20201225/marknote-pro#development">
       ডেভেলপমেন্ট
     </a>
     <span> | </span>
-    <a href="https://github.com/scott20201225/marktext-pro#contribution">
+    <a href="https://github.com/scott20201225/marknote-pro#contribution">
       অবদান
     </a>
   </h3>
@@ -98,7 +98,7 @@
 <div align="center">
   <sub>এই Markdown এডিটরটি ❤︎ দিয়ে তৈরি করেছেন
     <a href="https://github.com/Jocs">Jocs</a> এবং
-    <a href="https://github.com/scott20201225/marktext-pro/graphs/contributors">
+    <a href="https://github.com/scott20201225/marknote-pro/graphs/contributors">
       অবদানকারীরা
     </a>
     ।
@@ -109,16 +109,16 @@
 
 <h2 align="center">স্পনসর</h2>
 
-MarkTextPro একটি ওপেন-সোর্স Markdown এডিটর, যা এর কমিউনিটির সহায়তায় এগিয়ে চলছে। MarkTextPro যদি আপনার কাজের ধারা উন্নত করে থাকে, তাহলে অনুগ্রহ করে [প্রজেক্টটিকে স্পনসর করার](https://github.com/scott20201225) কথা বিবেচনা করুন। সব স্পনসরকে ধন্যবাদ ❤️
+MarkNotePro একটি ওপেন-সোর্স Markdown এডিটর, যা এর কমিউনিটির সহায়তায় এগিয়ে চলছে। MarkNotePro যদি আপনার কাজের ধারা উন্নত করে থাকে, তাহলে অনুগ্রহ করে [প্রজেক্টটিকে স্পনসর করার](https://github.com/scott20201225) কথা বিবেচনা করুন। সব স্পনসরকে ধন্যবাদ ❤️
 
 **বিশেষ স্পনসর**
 
-| [<img src="../assets/sponsors/serpapi.png" width="150">](https://serpapi.com/?utm_source=marktextpro) | [আমাদের দ্রুত, সহজ এবং পূর্ণাঙ্গ API দিয়ে Google ও অন্যান্য সার্চ ইঞ্জিন থেকে ফলাফল সংগ্রহ করুন।](https://serpapi.com/?utm_source=marktextpro) |
+| [<img src="../assets/sponsors/serpapi.png" width="150">](https://serpapi.com/?utm_source=marknotepro) | [আমাদের দ্রুত, সহজ এবং পূর্ণাঙ্গ API দিয়ে Google ও অন্যান্য সার্চ ইঞ্জিন থেকে ফলাফল সংগ্রহ করুন।](https://serpapi.com/?utm_source=marknotepro) |
 | ------------- |:-------------|
 
 ## স্ক্রিনশট
 
-![](../assets/marktextpro.png?raw=true)
+![](../assets/marknotepro.png?raw=true)
 
 ## বৈশিষ্ট্য
 
@@ -127,7 +127,7 @@ MarkTextPro একটি ওপেন-সোর্স Markdown এডিটর, 
 - Markdown এক্সটেনশন যেমন গণিতের অভিব্যক্তি (KaTeX), front matter এবং emoji সমর্থন করে।
 - দ্রুত লেখার জন্য paragraph ও inline style shortcut সমর্থন করে।
 - **HTML** এবং **PDF** ফাইলে এক্সপোর্ট করা যায়।
-- বিভিন্ন [theme](https://github.com/scott20201225/marktext-pro/tree/main/docs): **Cadmium Light**, **Material Dark** ইত্যাদি।
+- বিভিন্ন [theme](https://github.com/scott20201225/marknote-pro/tree/main/docs): **Cadmium Light**, **Material Dark** ইত্যাদি।
 - বিভিন্ন এডিটিং মোড: **Source Code mode**, **Typewriter mode**, **Focus mode**।
 - ক্লিপবোর্ড থেকে সরাসরি ছবি পেস্ট করা যায়।
 
@@ -137,64 +137,64 @@ MarkTextPro একটি ওপেন-সোর্স Markdown এডিটর, 
 
 | ![](https://raw.githubusercontent.com/wiki/ryanoasis/nerd-fonts/screenshots/v1.0.x/mac-pass-sm.png)                                                                                         | ![](https://raw.githubusercontent.com/wiki/ryanoasis/nerd-fonts/screenshots/v1.0.x/windows-pass-sm.png)                                                                                         | ![](https://raw.githubusercontent.com/wiki/ryanoasis/nerd-fonts/screenshots/v1.0.x/linux-pass-sm.png)                                                                                                       |
 |:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
-| [![Download for macOS](https://img.shields.io/badge/macOS-Download-blue)](https://github.com/scott20201225/marktext-pro/releases/latest) | [![Download for Windows](https://img.shields.io/badge/Windows-Download-blue)](https://github.com/scott20201225/marktext-pro/releases/latest) | [![Download for Linux](https://img.shields.io/badge/Linux-Download-blue)](https://github.com/scott20201225/marktext-pro/releases/latest) |
+| [![Download for macOS](https://img.shields.io/badge/macOS-Download-blue)](https://github.com/scott20201225/marknote-pro/releases/latest) | [![Download for Windows](https://img.shields.io/badge/Windows-Download-blue)](https://github.com/scott20201225/marknote-pro/releases/latest) | [![Download for Linux](https://img.shields.io/badge/Linux-Download-blue)](https://github.com/scott20201225/marknote-pro/releases/latest) |
 
-সর্বশেষ সংস্করণের নতুন ফিচারগুলো দেখতে [CHANGELOG](https://github.com/scott20201225/marktext-pro/tree/main/docs) দেখুন।
+সর্বশেষ সংস্করণের নতুন ফিচারগুলো দেখতে [CHANGELOG](https://github.com/scott20201225/marknote-pro/tree/main/docs) দেখুন।
 
 #### macOS
 
 macOS 11 (Big Sur) বা পরবর্তী সংস্করণ প্রয়োজন। Universal build প্রকাশ করা হয় না, তাই আপনার মেশিনের সঙ্গে মিল থাকা `arm64` বা `x64` installer বেছে নিন।
 
-আপনি [release page](https://github.com/scott20201225/marktext-pro/releases/latest) থেকে সর্বশেষ `marktextpro-mac-(arm64|x64)-%version%.dmg` ডাউনলোড করতে পারেন, অথবা [**homebrew cask**](https://github.com/caskroom/homebrew-cask) ব্যবহার করে MarkTextPro ইনস্টল করতে পারেন। Homebrew-Cask ব্যবহার করতে হলে আগে [Homebrew](https://brew.sh/) ইনস্টল করা থাকতে হবে।
+আপনি [release page](https://github.com/scott20201225/marknote-pro/releases/latest) থেকে সর্বশেষ `marknotepro-mac-(arm64|x64)-%version%.dmg` ডাউনলোড করতে পারেন, অথবা [**homebrew cask**](https://github.com/caskroom/homebrew-cask) ব্যবহার করে MarkNotePro ইনস্টল করতে পারেন। Homebrew-Cask ব্যবহার করতে হলে আগে [Homebrew](https://brew.sh/) ইনস্টল করা থাকতে হবে।
 
 ```bash
-brew install --cask marktextpro
+brew install --cask marknotepro
 ```
 
 #### Windows
 
 Windows 10 অথবা 11 প্রয়োজন। x64 এবং arm64 - উভয় installer প্রকাশ করা হয়, তাই আপনার মেশিনের architecture অনুযায়ীটি বেছে নিন।
 
-শুধু setup wizard (`marktextpro-win-(x64|arm64)-%version%-setup.exe`) ডাউনলোড করে ইনস্টল করুন এবং user-only নাকি machine-wide ইনস্টল করবেন তা বেছে নিন। বিকল্পভাবে, [Chocolatey](https://chocolatey.org/) বা [Winget](https://docs.microsoft.com/en-us/windows/package-manager/winget/) এর মতো package manager ব্যবহার করেও MarkTextPro ইনস্টল করতে পারেন।
+শুধু setup wizard (`marknotepro-win-(x64|arm64)-%version%-setup.exe`) ডাউনলোড করে ইনস্টল করুন এবং user-only নাকি machine-wide ইনস্টল করবেন তা বেছে নিন। বিকল্পভাবে, [Chocolatey](https://chocolatey.org/) বা [Winget](https://docs.microsoft.com/en-us/windows/package-manager/winget/) এর মতো package manager ব্যবহার করেও MarkNotePro ইনস্টল করতে পারেন।
 
 Chocolatey ব্যবহার করতে চাইলে আগে [Chocolatey](https://chocolatey.org/install) ইনস্টল করা থাকতে হবে:
 
 ```bash
-choco install marktextpro
+choco install marknotepro
 ```
 
 Winget ব্যবহার করতে চাইলে আগে [Winget](https://docs.microsoft.com/en-us/windows/package-manager/winget/#install-winget) ইনস্টল করা থাকতে হবে:
 
 ```bash
-winget install marktextpro
+winget install marknotepro
 ```
 
 #### Linux
 
-অনুগ্রহ করে [Linux installation instructions](https://github.com/scott20201225/marktext-pro/tree/main/docs) অনুসরণ করুন।
+অনুগ্রহ করে [Linux installation instructions](https://github.com/scott20201225/marknote-pro/tree/main/docs) অনুসরণ করুন।
 
 #### অন্যান্য
 
-Linux, macOS এবং Windows-এর সব binary [release page](https://github.com/scott20201225/marktext-pro/releases/latest) থেকে ডাউনলোড করা যাবে। আপনার সিস্টেমের জন্য কোনো সংস্করণ না থাকলে একটি [issue](https://github.com/scott20201225/marktext-pro/issues) খুলুন।
+Linux, macOS এবং Windows-এর সব binary [release page](https://github.com/scott20201225/marknote-pro/releases/latest) থেকে ডাউনলোড করা যাবে। আপনার সিস্টেমের জন্য কোনো সংস্করণ না থাকলে একটি [issue](https://github.com/scott20201225/marknote-pro/issues) খুলুন।
 
 ## ডেভেলপমেন্ট
 
-আপনি যদি নিজে MarkTextPro build করতে চান, তাহলে আমাদের [build instructions](https://github.com/scott20201225/marktext-pro/tree/main/docs) দেখুন।
+আপনি যদি নিজে MarkNotePro build করতে চান, তাহলে আমাদের [build instructions](https://github.com/scott20201225/marknote-pro/tree/main/docs) দেখুন।
 
-- [ব্যবহারকারী ডকুমেন্টেশন](https://github.com/scott20201225/marktext-pro/tree/main/docs)
-- [ডেভেলপার ডকুমেন্টেশন](https://github.com/scott20201225/marktext-pro/tree/main/docs)
+- [ব্যবহারকারী ডকুমেন্টেশন](https://github.com/scott20201225/marknote-pro/tree/main/docs)
+- [ডেভেলপার ডকুমেন্টেশন](https://github.com/scott20201225/marknote-pro/tree/main/docs)
 
-MarkTextPro সম্পর্কে আপনার কোনো প্রশ্ন থাকলে issue খুলতে পারেন। Issue খোলার সময় অনুগ্রহ করে ডিফল্ট ফরম্যাটটি ব্যবহার করুন। অবশ্যই, সরাসরি PR পাঠালে সেটিও অত্যন্ত প্রশংসিত হবে।
+MarkNotePro সম্পর্কে আপনার কোনো প্রশ্ন থাকলে issue খুলতে পারেন। Issue খোলার সময় অনুগ্রহ করে ডিফল্ট ফরম্যাটটি ব্যবহার করুন। অবশ্যই, সরাসরি PR পাঠালে সেটিও অত্যন্ত প্রশংসিত হবে।
 
 ## অবদান
 
-MarkTextPro এখনো উন্নয়নাধীন, তাই pull request করার আগে [Contributing Guide](../../.github/CONTRIBUTING.md) পড়ে নিন। MarkTextPro-এ নতুন ফিচার যোগ করতে চান? আমাদের [roadmap](https://github.com/scott20201225/marktext-pro/projects) এবং open issue দেখুন।
+MarkNotePro এখনো উন্নয়নাধীন, তাই pull request করার আগে [Contributing Guide](../../.github/CONTRIBUTING.md) পড়ে নিন। MarkNotePro-এ নতুন ফিচার যোগ করতে চান? আমাদের [roadmap](https://github.com/scott20201225/marknote-pro/projects) এবং open issue দেখুন।
 
 ## অবদানকারীরা
 
-যারা ইতিমধ্যেই MarkTextPro-এ অবদান রেখেছেন, তাদের সবাইকে ধন্যবাদ [[contributors](https://github.com/scott20201225/marktext-pro/graphs/contributors)]।
+যারা ইতিমধ্যেই MarkNotePro-এ অবদান রেখেছেন, তাদের সবাইকে ধন্যবাদ [[contributors](https://github.com/scott20201225/marknote-pro/graphs/contributors)]।
 
-<a href="https://github.com/scott20201225/marktext-pro/graphs/contributors"><img src="https://opencollective.com/marktextpro/contributors.svg?width=890" /></a>
+<a href="https://github.com/scott20201225/marknote-pro/graphs/contributors"><img src="https://github.com/sponsors/scott20201225/contributors.svg?width=890" /></a>
 
 ## লাইসেন্স
 

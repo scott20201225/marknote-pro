@@ -181,15 +181,15 @@ HTML anchor: <a href="https://github.com/marktext/muya">marktext/muya on GitHub<
 
 Reference link: [Wikipedia][wiki] and shorthand [example].
 
-Reference image: ![marktextpro logo small][img].
+Reference image: ![marknotepro logo small][img].
 
 Inline image:
 
-![marktextpro logo](https://raw.githubusercontent.com/scott20201225/marktext-pro/main/static/icon.png "marktextpro icon")
+![marknotepro logo](https://raw.githubusercontent.com/scott20201225/marknote-pro/main/static/icon.png "marknotepro icon")
 
 [wiki]: https://en.wikipedia.org "Wikipedia"
 [example]: https://example.com "Example"
-[img]: https://raw.githubusercontent.com/scott20201225/marktext-pro/main/static/logo-96px.png "marktextpro logo 96px"
+[img]: https://raw.githubusercontent.com/scott20201225/marknote-pro/main/static/logo-96px.png "marknotepro logo 96px"
 
 # 5. Inline HTML
 

@@ -427,7 +427,7 @@ export const MUYA_DEFAULT_OPTION = Object.freeze({
   autoCheck: false,
   // Whether we should set spellcheck attribute on our container to highlight misspelled words.
   // NOTE: The browser is not able to correct misspelled words words without a custom
-  // implementation like in MarkTextPro.
+  // implementation like in MarkNotePro.
   spellcheckEnabled: false,
   // transform the image to local folder, cloud or just return the local path
   imageAction: null,
@@ -449,7 +449,7 @@ export const MUYA_DEFAULT_OPTION = Object.freeze({
 })
 
 // export const DIAGRAM_TEMPLATE = Object.freeze({
-//   'mermaid': `graph LR;\nYou-->|MarkTextPro|Me;`
+//   'mermaid': `graph LR;\nYou-->|MarkNotePro|Me;`
 // })
 
 export const isOsx = window && window.navigator && /Mac/.test(window.navigator.platform)

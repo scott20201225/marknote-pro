@@ -164,7 +164,7 @@ describe('paste — NEWLINE into an emptied non-paragraph wrapper (muyajs remove
     });
 });
 
-// marktextpro #3848: pasting a URL (which the clipboard delivers as a smart-link
+// marknotepro #3848: pasting a URL (which the clipboard delivers as a smart-link
 // `[Title](url)`) inside an existing link's parentheses `[text](|)` produced a
 // nested `[text]([Title](url))`. When the caret is in a link destination, a
 // pasted whole markdown link should contribute only its URL.

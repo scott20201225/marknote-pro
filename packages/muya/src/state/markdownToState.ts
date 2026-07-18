@@ -418,7 +418,7 @@ export class MarkdownToState {
                 // `InlineRenderer.collectReferenceDefinitions` (regex scan
                 // over paragraph text) and round-trip serialization —
                 // keeps working without a dedicated state node.
-                // Aligns with marktextpro's "definition is paragraph text"
+                // Aligns with marknotepro's "definition is paragraph text"
                 // model. See plan section 13 (PR-16).
                 state = {
                     name: 'paragraph' as const,

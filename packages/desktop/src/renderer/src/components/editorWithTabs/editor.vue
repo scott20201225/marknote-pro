@@ -202,8 +202,8 @@ interface EditorContextState {
   hasTableSelection: boolean
 }
 
-interface MarkTextProWindow extends Window {
-  __MARKTEXTPRO_GET_EDITOR_CONTEXT_STATE__?: () => EditorContextState
+interface MarkNoteProWindow extends Window {
+  __MARKNOTEPRO_GET_EDITOR_CONTEXT_STATE__?: () => EditorContextState
 }
 
 const props = defineProps<{
@@ -568,7 +568,7 @@ watch(focus, (value) => {
 // state for the CURRENT cursor context (a code block/table still disables some
 // items) rather than blanket-enabling everything (#3531).
 watch(sourceCode, (isSource) => {
-  const windowId = window.marktextpro?.env?.windowId ?? -1
+  const windowId = window.marknotepro?.env?.windowId ?? -1
   if (isSource) {
     window.electron.ipcRenderer.send('mt::set-editor-format-menus-enabled', windowId, false)
     return
@@ -1739,7 +1739,7 @@ const handleLanguageChanged = (newLocale?: unknown) => {
 const resizeObserverForEditor = new ResizeObserver(handleResetPaddingBottom)
 
 onMounted(() => {
-  ;(window as MarkTextProWindow).__MARKTEXTPRO_GET_EDITOR_CONTEXT_STATE__ = getEditorContextState
+  ;(window as MarkNoteProWindow).__MARKNOTEPRO_GET_EDITOR_CONTEXT_STATE__ = getEditorContextState
 
   printer = new Printer()
   const ele = editorRef.value
@@ -2027,9 +2027,9 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  const appWindow = window as MarkTextProWindow
-  if (appWindow.__MARKTEXTPRO_GET_EDITOR_CONTEXT_STATE__ === getEditorContextState) {
-    delete appWindow.__MARKTEXTPRO_GET_EDITOR_CONTEXT_STATE__
+  const appWindow = window as MarkNoteProWindow
+  if (appWindow.__MARKNOTEPRO_GET_EDITOR_CONTEXT_STATE__ === getEditorContextState) {
+    delete appWindow.__MARKNOTEPRO_GET_EDITOR_CONTEXT_STATE__
   }
 
   bus.off('file-loaded', setMarkdownToEditor)

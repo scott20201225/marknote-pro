@@ -1,8 +1,8 @@
 # User Documentation
 
-Welcome to the end-user documentation of MarkTextPro.
+Welcome to the end-user documentation of MarkNotePro.
 
-![](assets/marktextpro-interface-2.png)
+![](assets/marknotepro-interface-2.png)
 
 **Quick start:**
 

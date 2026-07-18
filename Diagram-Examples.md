@@ -1,12 +1,12 @@
 # Diagram Examples
 
-这是一份用于 `MarkTextPro` 图表能力测试的示例文档。
+这是一份用于 `MarkNotePro` 图表能力测试的示例文档。
 
 ## 1. Mermaid Flowchart
 
 ```mermaid
 flowchart TD
-    A[开始] --> B[打开 MarkTextPro]
+    A[开始] --> B[打开 MarkNotePro]
     B --> C[新建或打开 Markdown]
     C --> D{是否包含 Mermaid?}
     D -->|是| E[渲染图表]
@@ -19,7 +19,7 @@ flowchart TD
 ```mermaid
 sequenceDiagram
     participant U as 用户
-    participant M as MarkTextPro
+    participant M as MarkNotePro
     participant E as Editor
 
     U->>M: 打开 Diagram-Examples.md
@@ -65,17 +65,17 @@ cond(no)->op
 下面这个也不是 Mermaid，而是老的 `js-sequence-diagrams` 语法：
 
 ```sequence
-用户->MarkTextPro: 打开文档
-MarkTextPro->Editor: 加载内容
-Editor-->MarkTextPro: 返回渲染结果
-MarkTextPro-->用户: 展示图表
+用户->MarkNotePro: 打开文档
+MarkNotePro->Editor: 加载内容
+Editor-->MarkNotePro: 返回渲染结果
+MarkNotePro-->用户: 展示图表
 ```
 
 ## 6. Mermaid Mindmap
 
 ```mermaid
 mindmap
-  root((MarkTextPro))
+  root((MarkNotePro))
     Mermaid
       Flowchart
       Sequence Diagram

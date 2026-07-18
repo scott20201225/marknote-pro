@@ -1,7 +1,7 @@
 {
-  "name": "@marktextpro/file-icons",
+  "name": "@marknotepro/file-icons",
   "version": "1.0.6",
-  "description": "MarkTextPro file icons",
+  "description": "MarkNotePro file icons",
   "main": "./build/index.js",
   "module": "./build/index.mjs",
   "exports": {
@@ -25,7 +25,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/scott20201225/marktext-pro.git",
+    "url": "git+https://github.com/scott20201225/marknote-pro.git",
     "directory": "packages/file-icons"
   },
   "keywords": [
@@ -38,9 +38,9 @@
   "author": "ScottCheng",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/scott20201225/marktext-pro/issues"
+    "url": "https://github.com/scott20201225/marknote-pro/issues"
   },
-  "homepage": "https://github.com/scott20201225/marktext-pro#readme",
+  "homepage": "https://github.com/scott20201225/marknote-pro#readme",
   "devDependencies": {
     "@babel/core": "^7.16.5",
     "@babel/preset-env": "^7.16.5",

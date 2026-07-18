@@ -3,7 +3,7 @@
 - Create a hotfix branch: `git checkout -b hotfix-vX.Y.Z`
 - Make changes to the code and/or `cherry-pick` changes from another branch and commit changes.
 - Test the hotfix and binaries.
-- [Release](RELEASE.md) a new MarkTextPro version.
+- [Release](RELEASE.md) a new MarkNotePro version.
 
 **How to cherry pick?**
 

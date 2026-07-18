@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CLASS_NAMES } from '../../../config';
 import { Muya } from '../../../muya';
 
-// P3 defensive lock for marktextpro `81af43be` ("hide quick-insert hint on
+// P3 defensive lock for marknotepro `81af43be` ("hide quick-insert hint on
 // empty paragraph"). The hint is the `Type / to insert blocks` ghost text
 // that the CSS rule `.mu-show-quick-insert-hint .mu-paragraph.mu-active >
 // .mu-paragraph-content:first-of-type::after` paints into empty active

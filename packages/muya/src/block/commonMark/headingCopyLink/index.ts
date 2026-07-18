@@ -8,7 +8,7 @@ import TreeNode from '../../base/treeNode';
 
 const debug = logger('headingCopyLink:');
 
-// marktextpro rendered an `i.icon.ag-copy-header-link` hover affordance on every
+// marknotepro rendered an `i.icon.ag-copy-header-link` hover affordance on every
 // heading; clicking it dispatched `heading-copy-link` { key } and the desktop
 // renderer copied the heading's GitHub slug/anchor to the clipboard. The new
 // engine has no equivalent affordance — this attachment block restores it.

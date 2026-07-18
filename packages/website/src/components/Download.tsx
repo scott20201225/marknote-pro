@@ -36,7 +36,7 @@ export default function Download() {
           </div>
           <div className="hero-note hero-note--cta">
             <span>
-              Or install via Homebrew: <code className="inline">brew install --cask marktextpro</code>
+              Or install via Homebrew: <code className="inline">brew install --cask marknotepro</code>
             </span>
           </div>
         </div>

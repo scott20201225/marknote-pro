@@ -1,5 +1,5 @@
-appId: com.scott20201225.marktextpro
-productName: MarkTextPro
+appId: com.scott20201225.marknotepro
+productName: MarkNotePro
 directories:
   buildResources: build
   output: ../../dist
@@ -91,14 +91,14 @@ fileAssociations:
     role: Editor
     icon: icons/md.ico
 win:
-  executableName: marktextpro
-  artifactName: 'marktextpro-win-${arch}-${version}.${ext}'
+  executableName: marknotepro
+  artifactName: 'marknotepro-win-${arch}-${version}.${ext}'
   target:
     - target: 'nsis'
     - target: 'zip'
   icon: static/icon.ico
 nsis:
-  artifactName: 'marktextpro-win-${arch}-${version}-setup.${ext}'
+  artifactName: 'marknotepro-win-${arch}-${version}-setup.${ext}'
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: true
@@ -108,7 +108,7 @@ nsis:
   perMachine: false
   include: windows/installer.nsh
 mac:
-  artifactName: 'marktextpro-mac-${arch}-${version}.${ext}'
+  artifactName: 'marknotepro-mac-${arch}-${version}.${ext}'
   entitlementsInherit: build/mac/entitlements.mac.plist
   extendInfo:
     - NSCameraUsageDescription: Application requests access to the device's camera.
@@ -120,7 +120,7 @@ mac:
     - dmg
     - zip
 dmg:
-  artifactName: 'marktextpro-mac-${arch}-${version}.${ext}'
+  artifactName: 'marknotepro-mac-${arch}-${version}.${ext}'
   contents:
     - x: 410
       y: 240
@@ -130,9 +130,9 @@ dmg:
       y: 240
       type: 'file'
 linux:
-  artifactName: 'marktextpro-linux-${arch}-${version}.${ext}'
-  executableName: 'marktextpro'
-  description: 'MarkTextPro is a fast, open-source Markdown editor focused on speed and usability.'
+  artifactName: 'marknotepro-linux-${arch}-${version}.${ext}'
+  executableName: 'marknotepro'
+  description: 'MarkNotePro is a fast, open-source Markdown editor focused on speed and usability.'
   maintainer: 'ScottCheng'
   category: 'Office;TextEditor;Utility'
   mimeTypes:
@@ -140,8 +140,8 @@ linux:
   icon: 'static/icon.png'
   desktop:
     entry:
-      StartupWMClass: 'marktextpro'
-      Keywords: 'marktextpro;'
+      StartupWMClass: 'marknotepro'
+      Keywords: 'marknotepro;'
   target:
     - AppImage
     - snap

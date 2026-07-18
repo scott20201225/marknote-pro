@@ -1,12 +1,12 @@
 name: Bug Report
-description: Create a bug report to help us improve MarkTextPro
+description: Create a bug report to help us improve MarkNotePro
 title: '[Bug] '
 labels: ['bug', 'triage']
 body:
   - type: markdown
     attributes:
       value: |
-        **Before reporting:** Search [existing issues](https://github.com/marktextpro/marktextpro/issues) to avoid duplicates. If you find a match, use 👍 instead of opening a new issue.
+        **Before reporting:** Search [existing issues](https://github.com/scott20201225/marknote-pro/issues) to avoid duplicates. If you find a match, use 👍 instead of opening a new issue.
 
   - type: textarea
     id: description
@@ -65,9 +65,9 @@ body:
       required: true
 
   - type: input
-    id: marktextpro-version
+    id: marknotepro-version
     attributes:
-      label: MarkTextPro Version
+      label: MarkNotePro Version
       placeholder: 'e.g. 0.17.1'
     validations:
       required: true

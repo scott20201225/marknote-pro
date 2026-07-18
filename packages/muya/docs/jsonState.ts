@@ -173,7 +173,7 @@ const doc = [
     // Front Matter
     {
         name: 'frontmatter',
-        text: 'title: marktextpro\nname: ransixi',
+        text: 'title: marknotepro\nname: ransixi',
         meta: {
             lang: 'yaml', // yaml | toml | json
             style: '-', // `-` for yaml | `+` for toml | `;;;` and `{}` for json

@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { lexBlock } from '../../lexBlock';
 
-// Tests adapted from marktextpro commit 1ecc3601 (Fix markdown footnote parser, #2840).
+// Tests adapted from marknotepro commit 1ecc3601 (Fix markdown footnote parser, #2840).
 // Source: test/unit/specs/markdown-footnotes.spec.js, 510 lines, 23 specs.
 //
-// The marktextpro suite emits a flat token stream (`footnote_start` / `footnote_end`).
+// The marknotepro suite emits a flat token stream (`footnote_start` / `footnote_end`).
 // marked v16 uses a hierarchical model: a single `footnote` block token whose
 // nested content lives under `tokens`. We assert the equivalent semantics here.
 //
@@ -85,7 +85,7 @@ describe('marked footnote extension — block-level definitions', () => {
     });
 
     it('footnote without space between footnote tag and text', () => {
-        // marktextpro fix `\s+` → `\s*` in lexer.js handles this case.
+        // marknotepro fix `\s+` → `\s*` in lexer.js handles this case.
         const tokens = parse(`Lorem [^foo1] ipsum.
 
 [^foo1]:At vero eos et accusam.`);
@@ -136,7 +136,7 @@ At vero eos [^foo1]: et accusam.`);
     // The next three negative cases assert that our footnote extension does
     // NOT fire when the input doesn't look like a footnote definition. marked
     // v16's own `def` (reference definition) rule then matches each input —
-    // that is closer to CommonMark §4.7 than marktextpro's old paragraph
+    // that is closer to CommonMark §4.7 than marknotepro's old paragraph
     // fallback, so we keep marked's behaviour. The key assertion is that we
     // do NOT emit a `footnote` token.
     it('front-escaped bracket is not a footnote', () => {
@@ -147,11 +147,11 @@ At vero eos [^foo1]: et accusam.`);
         expect(types).not.toContain('footnote');
     });
 
-    it('backslash-escaped closing bracket is not a footnote (marktextpro 1ecc3601 fix)', () => {
+    it('backslash-escaped closing bracket is not a footnote (marknotepro 1ecc3601 fix)', () => {
         // The `(?<!\\)` lookbehind in BLOCK_RULE is what stops `[^1\]: foo`
         // from being parsed as a footnote definition. Without the lookbehind
         // the identifier would become `1\` and the definition would consume
-        // the rest of the line — exactly the regression marktextpro fixed.
+        // the rest of the line — exactly the regression marknotepro fixed.
         const tokens = parse(`foo[^1]
 
 [^1\\]: foo`);
@@ -190,7 +190,7 @@ At vero eos [^foo1]: et accusam.`);
     });
 
     it('always reports footnote even if referenced identifier differs', () => {
-        // Per pandoc spec an unreferenced footnote could be ignored, but marktextpro
+        // Per pandoc spec an unreferenced footnote could be ignored, but marknotepro
         // kept reporting them so users can edit incomplete drafts. We keep that.
         const tokens = parse(`Lorem [^1] ipsum.
 
@@ -239,7 +239,7 @@ At vero eos [^foo1]: et accusam.`);
     });
 });
 
-// The cases below cover the multi-line footnote-body forms from marktextpro's
+// The cases below cover the multi-line footnote-body forms from marknotepro's
 // markdown-footnotes.spec.js. They exercise the BLOCK_RULE's lazy `:[\s\S]*?`
 // capture plus the "strip leading whitespace / strip leading newlines /
 // de-indent 4-space continuation" cleanup the tokenizer performs.

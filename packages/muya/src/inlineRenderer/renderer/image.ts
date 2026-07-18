@@ -181,7 +181,7 @@ export default function image(
             // consumes `.mu-small-image` — it is kept as a theming hook so
             // downstream stylesheets can shrink/hide the in-wrapper hover icons
             // (`.mu-image-icon-success/fail/close`, each 20×20) that visually
-            // clobber a small image. The marktextpro original wired this class to
+            // clobber a small image. The marknotepro original wired this class to
             // an in-wrapper `.ag-image-buttons` group that this repo doesn't
             // have (our toolbar is a floating-ui overlay), so the rule lives
             // here as data only; downstream consumers / future PRs own the

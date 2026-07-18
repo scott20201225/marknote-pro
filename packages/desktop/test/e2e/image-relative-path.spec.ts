@@ -23,7 +23,7 @@ const ONE_BY_ONE_PNG_BASE64 =
 const createdDirs: string[] = []
 
 const writeDocWithRelativeImage = (): { docPath: string; docDir: string } => {
-  const docDir = fs.mkdtempSync(path.join(os.tmpdir(), 'marktextpro-e2e-relimg-'))
+  const docDir = fs.mkdtempSync(path.join(os.tmpdir(), 'marknotepro-e2e-relimg-'))
   createdDirs.push(docDir)
   const assetsDir = path.join(docDir, 'assets')
   fs.mkdirSync(assetsDir, { recursive: true })

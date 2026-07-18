@@ -1,6 +1,6 @@
 import { app, type BrowserWindow, type MenuItemConstructorOptions } from 'electron'
 import * as actions from '../actions/file'
-import { userSetting } from '../actions/marktextpro'
+import { userSetting } from '../actions/marknotepro'
 import { isOsx } from '../../config'
 import { t } from '../../i18n'
 import type Keybindings from '../../keyboard/shortcutHandler'

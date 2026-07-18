@@ -118,7 +118,7 @@ describe('renderToStaticHTML', () => {
             expect(off).not.toMatch(/<sup>/);
         });
 
-        // marktextpro b8e2cd82 "Fix inline html renderer" added a
+        // marknotepro b8e2cd82 "Fix inline html renderer" added a
         // `textRenderer.script` method so sup/sub markdown survives the
         // *HTML output* path (not just the editor render path). The new
         // muya repo's `superSubscript.ts` extension wires the renderer
@@ -141,7 +141,7 @@ describe('renderToStaticHTML', () => {
         it('emits <sup>/<sub> wrappers inside list items and headings (b8e2cd82 defensive)', () => {
             const html = renderToStaticHTML('# title H~2~O text\n\n- exp 2^n^ items');
             // sup/sub must survive nesting in block contexts, mirroring
-            // marktextpro b8e2cd82's intent (any inline context, not just
+            // marknotepro b8e2cd82's intent (any inline context, not just
             // bare paragraphs).
             expect(html).toMatch(/<h1>[^<]*H<sub>2<\/sub>O[^<]*<\/h1>/);
             expect(html).toMatch(/<li>[^<]*2<sup>n<\/sup>[^<]*<\/li>/);

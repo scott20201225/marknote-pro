@@ -1,7 +1,7 @@
 {
-  "name": "@marktextpro/muyajs",
+  "name": "@marknotepro/muyajs",
   "version": "0.1.2",
-  "description": "A browser based markdown editor that powers MarkTextPro (v1, legacy; muya-v2 will live in packages/muya)",
+  "description": "A browser based markdown editor that powers MarkNotePro (v1, legacy; muya-v2 will live in packages/muya)",
   "private": true,
   "type": "module",
   "main": "lib/index.js",
@@ -17,7 +17,7 @@
     "themes"
   ],
   "dependencies": {
-    "@marktextpro/file-icons": "workspace:*",
+    "@marknotepro/file-icons": "workspace:*",
     "dompurify": "^3.4.11",
     "element-resize-detector": "^1.2.4",
     "execall": "^3.0.0",
@@ -43,8 +43,8 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/scott20201225/marktext-pro.git",
+    "url": "git+https://github.com/scott20201225/marknote-pro.git",
     "directory": "packages/muyajs"
   },
-  "homepage": "https://github.com/scott20201225/marktext-pro#readme"
+  "homepage": "https://github.com/scott20201225/marknote-pro#readme"
 }

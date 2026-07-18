@@ -5,7 +5,7 @@ export const isOsx: boolean = process.platform === 'darwin'
 export const isWindows: boolean = process.platform === 'win32'
 export const isLinux: boolean = process.platform === 'linux'
 // Keep in sync with packages/desktop/electron-builder.yml -> appId.
-export const WINDOWS_APP_USER_MODEL_ID = 'com.scott20201225.marktextpro'
+export const WINDOWS_APP_USER_MODEL_ID = 'com.scott20201225.marknotepro'
 
 export const editorWinOptions: Readonly<BrowserWindowConstructorOptions> = Object.freeze({
   minWidth: 550,
@@ -90,7 +90,7 @@ export const LINE_ENDING_REG = /(?:\r\n|\n)/g
 export const LF_LINE_ENDING_REG = /(?:[^\r]\n)|(?:^\n$)/
 export const CRLF_LINE_ENDING_REG = /\r\n/
 
-export const GITHUB_REPO_URL = 'https://github.com/scott20201225/marktext-pro'
+export const GITHUB_REPO_URL = 'https://github.com/scott20201225/marknote-pro'
 // copy from muya
 export const URL_REG =
   /^http(s)?:\/\/([a-z0-9\-._~]+\.[a-z]{2,}|[0-9.]+|localhost|\[[a-f0-9.:]+\])(:[0-9]{1,5})?(\/[\S]+)?/i

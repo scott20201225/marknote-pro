@@ -1,10 +1,10 @@
-name = "marktextpro-website"
+name = "marknotepro-website"
 main = ".open-next/worker.js"
 compatibility_date = "2025-05-01"
 compatibility_flags = ["nodejs_compat"]
 
 # Enables versioned preview URLs like
-# https://pr-NNN-marktextpro-website.<subdomain>.workers.dev which the CI workflow
+# https://pr-NNN-marknotepro-website.<subdomain>.workers.dev which the CI workflow
 # parses out of `wrangler versions upload` output and posts back to PRs.
 preview_urls = true
 

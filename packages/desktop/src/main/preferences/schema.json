@@ -49,11 +49,11 @@
     "default": "asc"
   },
   "lastOpenedFolder": {
-    "description": "General--The last folder that was opened in MarkTextPro.--internal",
+    "description": "General--The last folder that was opened in MarkNotePro.--internal",
     "type": "string"
   },
   "startUpAction": {
-    "description": "General--The action after MarkTextPro startup, open the last opened folder, open the specified folder or blank page",
+    "description": "General--The action after MarkNotePro startup, open the last opened folder, open the specified folder or blank page",
     "enum": ["folder", "openLastFolder", "blank", "restoreAll"],
     "default": "restoreAll"
   },
@@ -62,7 +62,7 @@
     "type": "string"
   },
   "language": {
-    "description": "General--The language MarkTextPro uses.",
+    "description": "General--The language MarkNotePro uses.",
     "type": "string",
     "default": "zh-CN"
   },
@@ -233,7 +233,7 @@
     "default": "."
   },
   "preferHeadingStyle": {
-    "description": "Markdown--The preferred heading style in MarkTextPro",
+    "description": "Markdown--The preferred heading style in MarkNotePro",
     "enum": ["atx", "setext"],
     "default": "atx"
   },
@@ -284,7 +284,7 @@
     "default": "https://www.plantuml.com/plantuml"
   },
   "theme": {
-    "description": "Theme--Select the theme used in MarkTextPro",
+    "description": "Theme--Select the theme used in MarkNotePro",
     "type": "string",
     "default": "light"
   },

@@ -13,9 +13,9 @@ class ClickEvent {
   contextClickBingding() {
     const { container, eventCenter, contentState } = this.muya
     const handler = (event) => {
-      // Allow native context menu in MarkTextPro.
-      if (!global || !global.marktextpro) {
-        // __MARKTEXTPRO_PATCH__
+      // Allow native context menu in MarkNotePro.
+      if (!global || !global.marknotepro) {
+        // __MARKNOTEPRO_PATCH__
         event.preventDefault()
         event.stopPropagation()
       }

@@ -1,17 +1,17 @@
 # Key Bindings for macOS
 
-MarkTextPro key bindings for macOS. Please see [general key bindings](KEYBINDINGS.md) for information how to use custom key bindings.
+MarkNotePro key bindings for macOS. Please see [general key bindings](KEYBINDINGS.md) for information how to use custom key bindings.
 
 ## Available menu key bindings
 
-#### MarkTextPro menu
+#### MarkNotePro menu
 
 | Id                 | Default                                           | Description                            |
 | ------------------ | ------------------------------------------------- | -------------------------------------- |
-| `mt.hide`          | <kbd>Command</kbd>+<kbd>H</kbd>                   | Hide MarkTextPro                          |
-| `mt.hide-others`   | <kbd>Command</kbd>+<kbd>Option</kbd>+<kbd>H</kbd> | Hide all other windows except MarkTextPro |
+| `mt.hide`          | <kbd>Command</kbd>+<kbd>H</kbd>                   | Hide MarkNotePro                          |
+| `mt.hide-others`   | <kbd>Command</kbd>+<kbd>Option</kbd>+<kbd>H</kbd> | Hide all other windows except MarkNotePro |
 | `file.preferences` | <kbd>Command</kbd>+<kbd>,</kbd>                   | Open settings window                   |
-| `file.quit`        | <kbd>Command</kbd>+<kbd>Q</kbd>                   | Quit MarkTextPro                          |
+| `file.quit`        | <kbd>Command</kbd>+<kbd>Q</kbd>                   | Quit MarkNotePro                          |
 
 #### File menu
 

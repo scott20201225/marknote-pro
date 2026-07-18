@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { escapeHTML, unescapeHTML } from '../index';
 
-// Lock in marktextpro fix dc54c7b6 (#2967, "escape html in code block"). The
+// Lock in marknotepro fix dc54c7b6 (#2967, "escape html in code block"). The
 // rewritten implementation escapes `&` first (so existing `&amp;` etc.
 // in the input survive a round-trip) and covers all five XML entities.
 describe('escapeHTML / unescapeHTML', () => {

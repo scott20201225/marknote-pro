@@ -1,4 +1,4 @@
-name: Release MarkTextPro
+name: Release MarkNotePro
 
 # Touch commit to force GitHub Actions to rescan workflows on the fork.
 
@@ -175,7 +175,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4.6.2
         with:
-          name: marktextpro-${{ matrix.name }}
+          name: marknotepro-${{ matrix.name }}
           retention-days: 7
           if-no-files-found: error
           path: |

@@ -16,14 +16,14 @@ import { useLayoutStore } from '@/store/layout'
 import bus from '@/bus'
 
 // `EDITOR_EDIT_ACTION('findInFolder')` routes through `layoutStore.SET_LAYOUT`,
-// which (because `showSideBar` is defined) reads `window.marktextpro.env`,
+// which (because `showSideBar` is defined) reads `window.marknotepro.env`,
 // fires `window.electron.ipcRenderer.send`, and persists the sidebar
 // visibility preference (another `ipcRenderer.send`). The renderer i18n module
 // (pulled in via the preferences store) also reads `window.electron.ipcRenderer`
 // at import time. Provide spies for all of it.
 const win = window as unknown as {
   electron?: { ipcRenderer: { on: Mock; send: Mock; invoke: Mock } }
-  marktextpro?: { env: { windowId: number } }
+  marknotepro?: { env: { windowId: number } }
 }
 
 describe('listenForMain store EDITOR_EDIT_ACTION', () => {
@@ -35,13 +35,13 @@ describe('listenForMain store EDITOR_EDIT_ACTION', () => {
         invoke: vi.fn(() => Promise.resolve(false))
       }
     }
-    win.marktextpro = { env: { windowId: 1 } }
+    win.marknotepro = { env: { windowId: 1 } }
     setActivePinia(createPinia())
   })
 
   afterEach(() => {
     delete win.electron
-    delete win.marktextpro
+    delete win.marknotepro
     vi.clearAllMocks()
   })
 
@@ -77,14 +77,14 @@ describe('listenForMain store LISTEN_FOR_PARAGRAPH_INLINE_STYLE', () => {
         invoke: vi.fn(() => Promise.resolve(false))
       }
     }
-    win.marktextpro = { env: { windowId: 1 } }
+    win.marknotepro = { env: { windowId: 1 } }
     setActivePinia(createPinia())
   })
 
   afterEach(() => {
     vi.useRealTimers()
     delete win.electron
-    delete win.marktextpro
+    delete win.marknotepro
     vi.clearAllMocks()
   })
 

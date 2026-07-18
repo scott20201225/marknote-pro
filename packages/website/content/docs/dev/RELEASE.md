@@ -1,12 +1,12 @@
-# Releasing MarkTextPro
+# Releasing MarkNotePro
 
-The release pipeline is triggered by pushing a `v*` tag. The `Release MarkTextPro` workflow (`.github/workflows/release.yml`) then runs **validate → build (5-platform matrix) → publish** and creates a GitHub Release with installers and `SHA256SUMS.txt`.
+The release pipeline is triggered by pushing a `v*` tag. The `Release MarkNotePro` workflow (`.github/workflows/release.yml`) then runs **validate → build (5-platform matrix) → publish** and creates a GitHub Release with installers and `SHA256SUMS.txt`.
 
 The flow below covers both release candidates and stable releases — same steps, only the version string differs.
 
 ## Prerequisites
 
-- Push access to `scott20201225/marktext-pro`
+- Push access to `scott20201225/marknote-pro`
 - `gh` CLI authenticated (`gh auth status`)
 - A clean checkout of the latest `develop`
 

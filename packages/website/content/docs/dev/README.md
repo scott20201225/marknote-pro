@@ -24,8 +24,8 @@
 ### 1.4 Clone and Install
 
 ```bash
-git clone https://github.com/scott20201225/marktext-pro.git
-cd marktextpro
+git clone https://github.com/scott20201225/marknote-pro.git
+cd marknotepro
 pnpm install
 ```
 
@@ -73,6 +73,6 @@ $ pnpm run build:linux
 - [Debugging](DEBUGGING.md)
 - [Inter-process communication (IPC)](IPC.md)
 - [Interface](INTERFACE.md)
-- [Steps to release MarkTextPro](RELEASE.md)
+- [Steps to release MarkNotePro](RELEASE.md)
 - [Prepare a hotfix](RELEASE_HOTFIX.md)
 - [TypeScript layout and conventions](TYPESCRIPT.md)

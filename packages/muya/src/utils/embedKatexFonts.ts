@@ -12,7 +12,7 @@
 // Faces are matched by their `font-family` + `font-weight` + `font-style`
 // descriptors, NOT by the `url(…)` file name: a production build appends a
 // content hash to the asset file name, so the name is unreliable while the
-// descriptors are stable. Only woff2 is embedded (every browser MarkTextPro
+// descriptors are stable. Only woff2 is embedded (every browser MarkNotePro
 // targets supports it); the `woff` / `ttf` fallbacks are dropped.
 
 import KaTeX_AMS_Regular from 'katex/dist/fonts/KaTeX_AMS-Regular.woff2?inline';

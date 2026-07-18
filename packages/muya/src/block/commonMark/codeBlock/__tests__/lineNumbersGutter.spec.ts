@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { Muya } from '../../../../muya';
 
 // Characterization coverage for the code-block line-numbers gutter
-// (option: codeBlockLineNumbers, marktextpro a028a7c2). The gutter lives in two
+// (option: codeBlockLineNumbers, marknotepro a028a7c2). The gutter lives in two
 // places that must stay in sync:
 //   - CodeBlock (the <pre>, class `mu-code-block`) adds the `mu-line-numbers`
 //     class purely from the option.

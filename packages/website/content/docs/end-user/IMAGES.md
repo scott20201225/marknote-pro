@@ -1,6 +1,6 @@
 # Image support
 
-MarkTextPro can automatically copy your images into a specified directory or handle images from clipboard.
+MarkNotePro can automatically copy your images into a specified directory or handle images from clipboard.
 
 ### Upload to cloud using selected uploader
 
@@ -14,7 +14,7 @@ All images are automatically copied into the specified local directory that may 
 
 When this option is enabled, all images are copied relative to the opened file. The root directory is used when a project is opened and no variables are used. You can specify the path via the *relative image folder name* text box and include variables like `${filename}` to add the file name to the relative directory. The local resource directory is used if the file is not saved.
 
-Note: The assets directory name must be a valid path name and MarkTextPro need write access to the directory.
+Note: The assets directory name must be a valid path name and MarkNotePro need write access to the directory.
 
 Examples for relative paths:
 
@@ -26,4 +26,4 @@ Examples for relative paths:
 
 ### Keep original location
 
-MarkTextPro only saves images from clipboard into the specified local directory.
+MarkNotePro only saves images from clipboard into the specified local directory.

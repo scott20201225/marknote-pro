@@ -1,14 +1,14 @@
-// __MARKTEXTPRO_ONLY__
+// __MARKNOTEPRO_ONLY__
 
-import { extractWord, offsetToWordCursor, validateLineCursor } from '../marktextpro/spellchecker'
+import { extractWord, offsetToWordCursor, validateLineCursor } from '../marknotepro/spellchecker'
 import selection from '../selection'
 
-const marktextproApi = ContentState => {
+const marknoteproApi = ContentState => {
   /**
    * Replace the current selected word with the given replacement.
    *
    * NOTE: Unsafe method because exacly one word have to be selected. This
-   * is currently used to replace a misspelled word in MarkTextPro that was selected
+   * is currently used to replace a misspelled word in MarkNotePro that was selected
    * by Chromium.
    *
    * @param {string} word The old word that should be replaced. The whole word must be selected.
@@ -46,4 +46,4 @@ const marktextproApi = ContentState => {
   }
 }
 
-export default marktextproApi
+export default marknoteproApi

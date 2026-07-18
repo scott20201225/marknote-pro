@@ -10,7 +10,7 @@
  * `Element.__MUYA_BLOCK__`) are absent — producing spurious errors. A `paths`
  * entry in tsconfig.base.json redirects `@muyajs/core` here, cutting the
  * dependency graph at the import boundary (the same shielding the legacy
- * `@marktextpro/muyajs` engine gets via `muya.d.ts`). Vite/electron-vite still
+ * `@marknotepro/muyajs` engine gets via `muya.d.ts`). Vite/electron-vite still
  * resolve the real runtime module via the package `exports` map at build time.
  *
  * Delete this file (and the `paths` entry) once `@muyajs/core` ships built

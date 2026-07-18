@@ -124,21 +124,21 @@
       "reportBug": "Report Bug",
       "viewSource": "View Source",
       "followUs": "Follow Us",
-      "support": "Support MarkTextPro",
+      "support": "Support MarkNotePro",
       "license": "License",
       "about": "About",
       "checkUpdates": "Check for Updates"
     },
-    "marktextpro": {
-      "title": "MarkTextPro",
-      "about": "About MarkTextPro",
+    "marknotepro": {
+      "title": "MarkNotePro",
+      "about": "About MarkNotePro",
       "checkUpdates": "Check for Updates...",
       "preferences": "Preferences",
       "services": "Services",
-      "hide": "Hide MarkTextPro",
+      "hide": "Hide MarkNotePro",
       "hideOthers": "Hide Others",
       "showAll": "Show All",
-      "quit": "Quit MarkTextPro"
+      "quit": "Quit MarkNotePro"
     },
     "view": {
       "view": "View",
@@ -375,7 +375,7 @@
   },
   "import": {
     "title": "Import or Open",
-    "description": "Drop here to get your stuff into MarkTextPro"
+    "description": "Drop here to get your stuff into MarkNotePro"
   },
   "preferences": {
     "title": "Preferences",
@@ -402,10 +402,10 @@
         "hideScrollbar": "Whether to hide scrollbars",
         "wordWrapInToc": "Whether to enable word wrap in TOC",
         "fileSortBy": "Sort files in opened folder by created time, modified time and title",
-        "startUpAction": "The action after MarkTextPro startup, open the last edited content, open the specified folder or blank page",
+        "startUpAction": "The action after MarkNotePro startup, open the last edited content, open the specified folder or blank page",
         "restoreLayoutState": "Restore previous editor state on startup",
         "defaultDirectoryToOpen": "The default directory that should be opened on startup when startUp=folder",
-        "language": "The language MarkTextPro uses",
+        "language": "The language MarkNotePro uses",
         "editorFontFamily": "Editor font family",
         "fontSize": "Font size in pixels",
         "lineHeight": "Line Height",
@@ -429,7 +429,7 @@
         "preferLooseListItem": "The preferred list type",
         "bulletListMarker": "The marker used in bullet list",
         "orderListDelimiter": "The delimiter used in order list",
-        "preferHeadingStyle": "The preferred heading style in MarkTextPro",
+        "preferHeadingStyle": "The preferred heading style in MarkNotePro",
         "tabSize": "Replace the tab with x spaces",
         "listIndentation": "Select the indent of list",
         "frontmatterType": "The frontmatter type",
@@ -439,7 +439,7 @@
         "isGitlabCompatibilityEnabled": "Enable GitLab compatibility mode",
         "sequenceTheme": "Sequence diagram theme",
         "plantumlServer": "PlantUML server URL",
-        "theme": "Select the theme used in MarkTextPro",
+        "theme": "Select the theme used in MarkNotePro",
         "followSystemTheme": "Follow System Theme",
         "lightModeTheme": "Theme to use when system is in light mode",
         "darkModeTheme": "Theme to use when system is in dark mode",
@@ -646,7 +646,7 @@
         "pleaseInstall": "Please install",
         "scriptPath": "Script path"
       },
-      "defaultBehavior": "The default behavior after pasting or dragging the image to MarkTextPro"
+      "defaultBehavior": "The default behavior after pasting or dragging the image to MarkNotePro"
     },
     "markdown": {
       "title": "Markdown",
@@ -763,7 +763,7 @@
   },
   "commands": {
     "mt": {
-      "hide": "Hide MarkTextPro",
+      "hide": "Hide MarkNotePro",
       "hideOthers": "Hide Others"
     },
     "file": {
@@ -928,7 +928,7 @@
     "configSchemaViolation": "Configuration schema violation",
     "copyError": "Copy error",
     "initializationFailed": "Initialization failed {hint}",
-    "otherInstanceDetected": "Another instance of MarkTextPro is already running",
+    "otherInstanceDetected": "Another instance of MarkNotePro is already running",
     "report": "Report",
     "startupError": "Startup error",
     "terminatedDueToError": "Terminated due to error",

@@ -18,5 +18,5 @@ export function revealClass(delay?: RevealDelay, extra?: string): string {
   return delay ? `${base} ${delay}` : base
 }
 
-export const THEME_STORAGE_KEY = 'marktextpro-theme'
+export const THEME_STORAGE_KEY = 'marknotepro-theme'
 export const DEFAULT_THEME = 'dark'

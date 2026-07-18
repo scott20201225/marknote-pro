@@ -47,7 +47,7 @@ export interface IHtmlBlockState {
 
 /**
  * @deprecated Reference definitions are stored as paragraph state nodes whose
- * `text` is the raw `[label]: url "title"` line (matches marktextpro's
+ * `text` is the raw `[label]: url "title"` line (matches marknotepro's
  * "definition is paragraph text" model). `InlineRenderer.collectReferenceDefinitions`
  * regex-scans paragraphs to build the labels Map. This interface is unused
  * across the codebase and exists only for legacy type compatibility; remove

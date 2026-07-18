@@ -43,7 +43,7 @@ class EditorBufferStore extends TypedEmitter<EditorBufferStoreEvents> {
     // for performance reasons — they are read from disk when needed and
     // written to disk when updated.
     this.bufferStores = null
-    this.serviceName = 'marktextpro'
+    this.serviceName = 'marknotepro'
     this.encryptKeys = []
 
     this.init()

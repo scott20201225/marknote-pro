@@ -51,8 +51,8 @@ export const hasSameKeys = (a: Record<string, unknown>, b: Record<string, unknow
 export type LogLevel = 'silly' | 'debug' | 'verbose' | 'info'
 
 export const getLogLevel = (): LogLevel => {
-  const verbose = (globalThis as typeof globalThis & { MARKTEXTPRO_DEBUG_VERBOSE?: number })
-    .MARKTEXTPRO_DEBUG_VERBOSE
+  const verbose = (globalThis as typeof globalThis & { MARKNOTEPRO_DEBUG_VERBOSE?: number })
+    .MARKNOTEPRO_DEBUG_VERBOSE
   if (!verbose || typeof verbose !== 'number' || verbose <= 0) {
     return process.env.NODE_ENV === 'development' ? 'debug' : 'info'
   } else if (verbose === 1) {

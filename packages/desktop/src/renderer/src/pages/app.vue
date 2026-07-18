@@ -153,8 +153,8 @@ const setupDragDropHandler = (): void => {
   )
 }
 onMounted(() => {
-  if (window.marktextpro?.initialState) {
-    preferencesStore.SET_USER_PREFERENCE(window.marktextpro.initialState)
+  if (window.marknotepro?.initialState) {
+    preferencesStore.SET_USER_PREFERENCE(window.marknotepro.initialState)
   }
 
   // Register critical window/editor IPC listeners first so the renderer can't
@@ -208,7 +208,7 @@ onMounted(() => {
     // `initialState` from bootstrap carries nullable URL params (string|null);
     // `addStyles` requires non-null `theme` / `codeFontFamily` strings.
     // Coalesce against DEFAULT_STYLE for every nullable field.
-    const init = window.marktextpro?.initialState
+    const init = window.marknotepro?.initialState
     const style: AddStylesOptions = {
       theme: init?.theme ?? DEFAULT_STYLE.theme,
       codeFontFamily: init?.codeFontFamily ?? DEFAULT_STYLE.codeFontFamily,

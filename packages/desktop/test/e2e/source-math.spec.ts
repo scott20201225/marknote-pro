@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import type { ElectronApplication, Page } from 'playwright'
 import { launchWithMarkdown, enterSourceMode } from './helpers'
 
-// Regression test for https://github.com/scott20201225/marktext-pro/issues/4121
+// Regression test for https://github.com/scott20201225/marknote-pro/issues/4121
 // Underscores inside inline math (`$...$`) and block math (`$$...$$`) must
 // not be highlighted as Markdown emphasis in the source view: in math mode
 // they are subscript operators, not italic delimiters.

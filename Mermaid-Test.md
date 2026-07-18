@@ -1,12 +1,12 @@
 # Mermaid Test
 
-这是一份用于测试 `MarkTextPro` Mermaid 渲染能力的文档。
+这是一份用于测试 `MarkNotePro` Mermaid 渲染能力的文档。
 
 ## Flowchart
 
 ```mermaid
 flowchart TD
-    A[Open MarkTextPro] --> B[Create or Open Markdown]
+    A[Open MarkNotePro] --> B[Create or Open Markdown]
     B --> C{Contains Mermaid?}
     C -->|Yes| D[Render Diagram]
     C -->|No| E[Show Plain Markdown]
@@ -18,7 +18,7 @@ flowchart TD
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant M as MarkTextPro
+    participant M as MarkNotePro
     participant E as Editor Engine
 
     U->>M: Open Mermaid-Test.md

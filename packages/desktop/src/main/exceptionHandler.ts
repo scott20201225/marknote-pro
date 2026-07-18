@@ -15,8 +15,8 @@ import { t } from './i18n'
 type ErrorType = 'main' | 'renderer'
 type Logger = (s: string) => void
 
-const EXIT_ON_ERROR = !!process.env.MARKTEXTPRO_EXIT_ON_ERROR
-const SHOW_ERROR_DIALOG = !process.env.MARKTEXTPRO_ERROR_INTERACTION
+const EXIT_ON_ERROR = !!process.env.MARKNOTEPRO_EXIT_ON_ERROR
+const SHOW_ERROR_DIALOG = !process.env.MARKNOTEPRO_ERROR_INTERACTION
 const ERROR_MSG_MAIN = (): string => t('error.unexpectedMainProcess')
 const ERROR_MSG_RENDERER = (): string => t('error.unexpectedRendererProcess')
 
@@ -29,7 +29,7 @@ const getOSInformation = (): string => {
 const exceptionToString = (error: Error, type: ErrorType): string => {
   const { message, stack } = error
   return (
-    `Version: ${MARKTEXTPRO_VERSION_STRING || app.getVersion()}\n` +
+    `Version: ${MARKNOTEPRO_VERSION_STRING || app.getVersion()}\n` +
     `OS: ${getOSInformation()}\n` +
     `Type: ${type}\n` +
     `Date: ${new Date().toUTCString()}\n` +
@@ -53,7 +53,7 @@ const handleError = async(title: string, error: Error, type: ErrorType): Promise
     return
   } else if (
     !SHOW_ERROR_DIALOG ||
-    ((global as unknown as { MARKTEXTPRO_IS_STABLE?: boolean }).MARKTEXTPRO_IS_STABLE &&
+    ((global as unknown as { MARKNOTEPRO_IS_STABLE?: boolean }).MARKNOTEPRO_IS_STABLE &&
       type === 'renderer')
   ) {
     return
@@ -94,7 +94,7 @@ ${title}.
 
 ### Version
 
-MarkTextPro: ${MARKTEXTPRO_VERSION_STRING}
+MarkNotePro: ${MARKNOTEPRO_VERSION_STRING}
 Operating system: ${getOSInformation()}`
         )
         break
@@ -128,7 +128,7 @@ const setupExceptionHandler = (): void => {
   // start crashReporter to save core dumps to temporary folder
   crashReporter.start({
     companyName: 'ScottCheng',
-    productName: 'MarkTextPro',
+    productName: 'MarkNotePro',
     submitURL: 'http://0.0.0.0/',
     uploadToServer: false,
     compress: true

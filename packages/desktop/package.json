@@ -1,7 +1,7 @@
 {
-  "name": "marktextpro",
+  "name": "marknotepro",
   "version": "0.20.0-scott.30",
-  "description": "MarkTextPro",
+  "description": "MarkNotePro",
   "main": "./out/main/index.js",
   "author": {
     "name": "ScottCheng",
@@ -13,10 +13,10 @@
       "url": "https://github.com/scott20201225"
     }
   ],
-  "homepage": "https://github.com/scott20201225/marktext-pro",
+  "homepage": "https://github.com/scott20201225/marknote-pro",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/scott20201225/marktext-pro.git"
+    "url": "git+https://github.com/scott20201225/marknote-pro.git"
   },
   "scripts": {
     "minify-locales": "tsx ../../scripts/minify-locales.ts",
@@ -48,8 +48,8 @@
     "@element-plus/icons-vue": "^2.3.2",
     "@hfelix/electron-localshortcut": "^4.0.1",
     "@intlify/core-base": "^11.4.6",
-    "@marktextpro/file-icons": "workspace:*",
-    "@marktextpro/muyajs": "workspace:*",
+    "@marknotepro/file-icons": "workspace:*",
+    "@marknotepro/muyajs": "workspace:*",
     "@muyajs/core": "workspace:*",
     "@popperjs/core": "^2.11.8",
     "@vscode/ripgrep": "^1.18.0",

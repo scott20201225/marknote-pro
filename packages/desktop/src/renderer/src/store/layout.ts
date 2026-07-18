@@ -62,7 +62,7 @@ export const useLayoutStore = defineStore('layout', () => {
     { scheduleBufferUpdate = true }: SetLayoutOptions = {}
   ): void {
     if (layout.showSideBar !== undefined) {
-      const { windowId } = window.marktextpro?.env ?? {}
+      const { windowId } = window.marknotepro?.env ?? {}
       window.electron.ipcRenderer.send(
         'mt::update-sidebar-menu',
         Number(windowId),
@@ -158,7 +158,7 @@ export const useLayoutStore = defineStore('layout', () => {
       const name = String(entryName)
       TOGGLE_LAYOUT_ENTRY(name)
       if (name !== 'showSideBar') return
-      const { windowId } = window.marktextpro?.env ?? {}
+      const { windowId } = window.marknotepro?.env ?? {}
       window.electron.ipcRenderer.send('mt::view-layout-changed', Number(windowId), {
         showSideBar: showSideBar.value
       })
@@ -166,7 +166,7 @@ export const useLayoutStore = defineStore('layout', () => {
   }
 
   function DISPATCH_LAYOUT_MENU_ITEMS(): void {
-    const { windowId } = window.marktextpro?.env ?? {}
+    const { windowId } = window.marknotepro?.env ?? {}
     window.electron.ipcRenderer.send('mt::view-layout-changed', Number(windowId), {
       showSideBar: showSideBar.value
     })

@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next'
 import { ALL_PAGES } from '@/lib/docs-nav'
 
-const SITE = 'https://github.com/scott20201225/marktext-pro'
+const SITE = 'https://github.com/scott20201225/marknote-pro'
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date()

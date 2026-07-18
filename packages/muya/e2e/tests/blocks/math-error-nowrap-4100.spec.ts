@@ -1,6 +1,6 @@
 import { expect, test } from '../fixtures/muya';
 
-// marktextpro #4100: an invalid inline-math formula renders a KaTeX parse-error
+// marknotepro #4100: an invalid inline-math formula renders a KaTeX parse-error
 // message inside the narrow inline-math popup; without `white-space: nowrap`
 // the message wrapped across several lines and overflowed.
 test('invalid inline math error message stays on one line (#4100)', async ({ page }) => {

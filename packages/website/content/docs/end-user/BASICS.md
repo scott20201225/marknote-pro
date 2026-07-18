@@ -2,9 +2,9 @@
 
 ## Getting started
 
-MarkTextPro is a realtime preview editor for markdown with various markdown extensions. You can simply write and edit text and MarkTextPro hides all unnecessary syntax elements. When you first start MarkTextPro an empty editor window is shown. You can see [key bindings](KEYBINDINGS.md) or command palette (<kbd>CmdOrCtrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>) for all available commands or just type `@` to get an overlay with available text elements. MarkTextPro provides a minimal and simple interface and in the next sections you can learn more about the interface and features.
+MarkNotePro is a realtime preview editor for markdown with various markdown extensions. You can simply write and edit text and MarkNotePro hides all unnecessary syntax elements. When you first start MarkNotePro an empty editor window is shown. You can see [key bindings](KEYBINDINGS.md) or command palette (<kbd>CmdOrCtrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>) for all available commands or just type `@` to get an overlay with available text elements. MarkNotePro provides a minimal and simple interface and in the next sections you can learn more about the interface and features.
 
-![](../assets/marktextpro-default.png)
+![](../assets/marknotepro-default.png)
 
 ### Interface
 
@@ -18,13 +18,13 @@ The sidebar consists of three panels and you can toggle the sidebar by pressing 
 
 #### Toggle tabs
 
-MarkTextPro can be used as a single editor but opens all files in a separate tab. Tabs can be toggled via <kbd>CmdOrCtrl</kbd>+<kbd>Alt</kbd>+<kbd>B</kbd> and reordered by drag and drop.
+MarkNotePro can be used as a single editor but opens all files in a separate tab. Tabs can be toggled via <kbd>CmdOrCtrl</kbd>+<kbd>Alt</kbd>+<kbd>B</kbd> and reordered by drag and drop.
 
 **Want to use tabs without showing them?**
 
 You can hide tabs and use key bindings such as <kbd>CmdOrCtrl</kbd>+<kbd>Tab</kbd> to cycle through tabs or the sidebar *opened files* panel.
 
-![](../assets/marktextpro-interface-1.png)
+![](../assets/marknotepro-interface-1.png)
 
 #### Switch between editor modes
 
@@ -44,7 +44,7 @@ Use <kbd>CmdOrCtrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd> to enter distraction free
 
 ### Open your first file
 
-You can use the menu `File -> Open File` or press <kbd>CmdOrCtrl</kbd>+<kbd>O</kbd> to open a file dialog to choose a markdown file. Another way to is to launch MarkTextPro with directories or files via command line.
+You can use the menu `File -> Open File` or press <kbd>CmdOrCtrl</kbd>+<kbd>O</kbd> to open a file dialog to choose a markdown file. Another way to is to launch MarkNotePro with directories or files via command line.
 
 ### Save your edited file
 
@@ -52,9 +52,9 @@ After some modifications you can save your file via <kbd>CmdOrCtrl</kbd>+<kbd>S<
 
 ### Open a directory
 
-MarkTextPro also has support to open a directory via <kbd>CmdOrCtrl</kbd>+<kbd>Shift</kbd>+<kbd>O</kbd> or the sidebar button *Open Folder*. After opening a directory all files and directories are shown in the sidebar tree view. The tree view allows you to open further files, browse and modify files or directories inside the opened root directory. Above the tree view are all opened files located. You can also use quick open (<kbd>CmdOrCtrl</kbd>+<kbd>P</kbd>) to quickly open a file from the opened root directory or editor and navigate via arrow keys or select a file via mouse. To view another sidebar panel like find in files click on the left sidebar icons.
+MarkNotePro also has support to open a directory via <kbd>CmdOrCtrl</kbd>+<kbd>Shift</kbd>+<kbd>O</kbd> or the sidebar button *Open Folder*. After opening a directory all files and directories are shown in the sidebar tree view. The tree view allows you to open further files, browse and modify files or directories inside the opened root directory. Above the tree view are all opened files located. You can also use quick open (<kbd>CmdOrCtrl</kbd>+<kbd>P</kbd>) to quickly open a file from the opened root directory or editor and navigate via arrow keys or select a file via mouse. To view another sidebar panel like find in files click on the left sidebar icons.
 
-![](../assets/marktextpro-interface-2.png)
+![](../assets/marknotepro-interface-2.png)
 
 ## Themes
 
@@ -70,4 +70,4 @@ You can control and modify all preferences in the settings window or edit `prefe
 - The application theme
 - Options how images are handled
 
-![](../assets/marktextpro-settings.png)
+![](../assets/marknotepro-settings.png)

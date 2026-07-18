@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import '@marktextpro/file-icons/build/index.css'
+import '@marknotepro/file-icons/build/index.css'
 
 const props = defineProps<{
   name: string
@@ -14,7 +14,7 @@ const fileIcons = ref<FileIconsLike | null>(null)
 
 // The legacy `muya/lib/ui/fileIcons` wrapper added a `getClassByName(name)`
 // helper around the raw package's `matchName(name)?.getClass(0, false)`.
-// Inline that here so we depend on `@marktextpro/file-icons` directly.
+// Inline that here so we depend on `@marknotepro/file-icons` directly.
 const getClassByName = (name: string): string | null => {
   const icon = fileIcons.value?.matchName(name)
   return icon ? icon.getClass(0, false) : null
@@ -33,12 +33,12 @@ const className = computed<string[]>(() => {
 })
 
 onMounted(async() => {
-  if (window.marktextpro?.env?.standalone) {
+  if (window.marknotepro?.env?.standalone) {
     return
   }
 
   try {
-    const mod = await import('@marktextpro/file-icons')
+    const mod = await import('@marknotepro/file-icons')
     fileIcons.value = (mod.default ?? mod) as FileIconsLike
   } catch (error) {
     console.error('Failed to load file icons package.', error)

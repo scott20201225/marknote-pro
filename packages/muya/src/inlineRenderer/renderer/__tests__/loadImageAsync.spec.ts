@@ -31,7 +31,7 @@ function makeRenderer(): IFakeRenderer {
     };
 }
 
-// Regression for marktextpro commit bca2ed62 (#3001 / #3010):
+// Regression for marknotepro commit bca2ed62 (#3001 / #3010):
 // "Internal image cache isn't reset if failed to load".
 // The previous cache-key check `!this.loadImageMap.has(src)` would skip
 // re-loading even after a transient failure, poisoning the entry forever.

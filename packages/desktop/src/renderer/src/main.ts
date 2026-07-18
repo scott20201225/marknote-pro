@@ -23,7 +23,7 @@ import './assets/styles/printService.css'
 
 // -----------------------------------------------
 
-window.marktextpro = {}
+window.marknotepro = {}
 bootstrapRenderer()
 
 // -----------------------------------------------
@@ -37,7 +37,7 @@ app.use(ElementPlus, {
   locale: en
 })
 
-const envType = window.marktextpro?.env?.type as string | undefined
+const envType = window.marknotepro?.env?.type as string | undefined
 
 const router = createRouter({
   history: createWebHashHistory(),

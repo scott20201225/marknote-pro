@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import Format from '../format';
 
-// Regression for marktextpro `cb25b3d4` (PR-11b unlink port). `Format.unlink`
+// Regression for marknotepro `cb25b3d4` (PR-11b unlink port). `Format.unlink`
 // rewrites the block's source text — it replaces the link's raw markdown
 // (`[Anthropic](https://www.anthropic.com)`) with just the visible anchor
 // text (`Anthropic`), and re-positions the caret to the end of the

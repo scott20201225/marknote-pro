@@ -3,12 +3,12 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { Muya } from '../muya';
 
-// Regression coverage for PR-15: re-introduces marktextpro's TOC API as a
-// public muya method (`muya.getTOC()`). Mirrors marktextpro's `tocCtrl.js`
+// Regression coverage for PR-15: re-introduces marknotepro's TOC API as a
+// public muya method (`muya.getTOC()`). Mirrors marknotepro's `tocCtrl.js`
 // behaviour and the 9cb2cbe8 regex fix (`/^\s*#{1,6}\s{1,}/` to handle
 // non-breaking spaces and tab-prefixed atx markers).
 //
-//  - Only top-level heading blocks are surfaced (matches marktextpro
+//  - Only top-level heading blocks are surfaced (matches marknotepro
 //    iterating `this.blocks`).
 //  - Heading text is the rendered plain text: inline markdown markers,
 //    link/image URLs and tags are stripped to what a reader sees (#4811),
@@ -16,9 +16,9 @@ import { Muya } from '../muya';
 //    the anchor id the HTML export injects from `heading.textContent`.
 //  - Slug is a stable per-block identifier (so `getTOC()` returns the
 //    same slug across multiple invocations on the same document); duplicate
-//    headings keep distinct slugs but share `githubSlug`. The marktextpro
+//    headings keep distinct slugs but share `githubSlug`. The marknotepro
 //    fix didn't dedupe and we don't either — that is the caller's call.
-//  - `generateGithubSlug` mirrors marktextpro url.js literally: ASCII `\w`
+//  - `generateGithubSlug` mirrors marknotepro url.js literally: ASCII `\w`
 //    only, so CJK / emoji collapse to hyphens. Future Unicode-aware
 //    slugging is a separate change.
 
@@ -119,7 +119,7 @@ describe('muya.getTOC()', () => {
     });
 
     it('strips the leading hash run robustly (9cb2cbe8 \\s regex fix)', () => {
-        // Pre-9cb2cbe8 marktextpro used `/^ *#{1,6} {1,}/` (plain ASCII
+        // Pre-9cb2cbe8 marknotepro used `/^ *#{1,6} {1,}/` (plain ASCII
         // space). After the fix it accepts any whitespace before the
         // markers and between markers and text, so headings authored with
         // tabs / NBSPs / other unicode whitespace strip cleanly.
@@ -135,10 +135,10 @@ describe('muya.getTOC()', () => {
     });
 
     it('githubSlug strips non-ASCII letters and emoji and collapses whitespace', () => {
-        // marktextpro url.js literal behavior: `[^\w\s-]/g` removes CJK and
+        // marknotepro url.js literal behavior: `[^\w\s-]/g` removes CJK and
         // emoji because JS `\w` is ASCII-only without the `/u` flag.
         // Future Unicode-aware slugging would be a separate change; this
-        // test locks the marktextpro-faithful output in place.
+        // test locks the marknotepro-faithful output in place.
         const md = `# 你好 World 🎉\n\n# API & Usage Examples!`;
         const muya = bootMuya(md);
         const toc = muya.getTOC();

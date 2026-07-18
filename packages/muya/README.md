@@ -1,6 +1,6 @@
 <p align="center"><img src="./docs/logo.jpg" alt="muya" height="150"></p>
 
-<p align="center"><b>Muya</b> — a standalone Markdown editor for the web, extracted from <a href="https://github.com/scott20201225/marktext-pro">MarkTextPro</a>.</p>
+<p align="center"><b>Muya</b> — a standalone Markdown editor for the web, extracted from <a href="https://github.com/scott20201225/marknote-pro">MarkNotePro</a>.</p>
 
 > Status: Muya is still under active development. APIs may change between minor versions and it is not yet recommended for production use.
 
@@ -257,7 +257,7 @@ gh release create "v$VERSION" --title "v$VERSION" --notes-file /tmp/release-note
 
 ## Recent updates
 
-**v0.2.0 (in flight)** — the marktextpro-muya backport batch. 22 PRs (#208–#230) ported the upstream marktextpro muya tree onto `@muyajs/core` end-to-end:
+**v0.2.0 (in flight)** — the marknotepro-muya backport batch. 22 PRs (#208–#230) ported the upstream marknotepro muya tree onto `@muyajs/core` end-to-end:
 
 - New surface: footnote block + tool, reference links/images, `LinkTools`, `getTOC()` public API, `focus` / `blur` events, code block line numbers, image small-image + inline resize-bar suppression.
 - Parser conformance: CommonMark 0.31 and GFM 0.29-gfm fixture runners (`pnpm --filter @muyajs/core test:spec`) with a locked baseline (87.7% / 86.3%) and a regression gate via `expected-failures.json`.
@@ -272,17 +272,17 @@ See [`docs/ROADMAP.md`](./docs/ROADMAP.md) for the long-running roadmap (TypeScr
 
 ## FAQ
 
-**What is the relationship between MarkTextPro and Muya?**
+**What is the relationship between MarkNotePro and Muya?**
 
-Muya is derived from MarkTextPro. The team's goal is for Muya to live outside the desktop app so it can power web editors as well; the Electron-specific assumptions have been progressively peeled away.
+Muya is derived from MarkNotePro. The team's goal is for Muya to live outside the desktop app so it can power web editors as well; the Electron-specific assumptions have been progressively peeled away.
 
-**Does the Muya version track MarkTextPro's version?**
+**Does the Muya version track MarkNotePro's version?**
 
 No, the two version numbers are independent.
 
 ## Built with Muya
 
-- [MarkTextPro](https://github.com/scott20201225/marktext-pro) — next-generation Markdown editor for macOS, Windows, and Linux.
+- [MarkNotePro](https://github.com/scott20201225/marknote-pro) — next-generation Markdown editor for macOS, Windows, and Linux.
 - [MindBox](https://www.mindbox.cc/) — note-taking app with first-class Markdown support.
 
 ## License

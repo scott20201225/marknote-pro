@@ -35,7 +35,7 @@ class Preference extends TypedEmitter<PreferenceEvents> {
    * NOTE: This throws an exception when validation fails.
    */
   constructor(paths: AppPaths) {
-    // TODO: Preferences should not loaded if global.MARKTEXTPRO_SAFE_MODE is set.
+    // TODO: Preferences should not loaded if global.MARKNOTEPRO_SAFE_MODE is set.
     super()
 
     const { preferencesPath } = paths

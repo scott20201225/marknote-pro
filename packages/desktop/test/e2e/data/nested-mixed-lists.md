@@ -1,6 +1,6 @@
 # Nested mixed lists fixture
 
-Regression coverage for marktextpro#4341.
+Regression coverage for marknotepro#4341.
 
 1. Eat a carrot.
 2. Find an application:

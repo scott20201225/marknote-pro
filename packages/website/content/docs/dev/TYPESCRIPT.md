@@ -1,6 +1,6 @@
 # TypeScript
 
-MarkTextPro is a TypeScript project. Every file under `src/` (except `src/muya/`),
+MarkNotePro is a TypeScript project. Every file under `src/` (except `src/muya/`),
 the build scripts under `scripts/`, the test specs under `test/`, the
 build config (`electron.vite.config.ts`), and the test configs
 (`vitest.config.ts`, `test/e2e/playwright.config.ts`) are TS.

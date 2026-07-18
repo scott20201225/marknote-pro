@@ -124,21 +124,21 @@
       "reportBug": "Signaler un bug",
       "viewSource": "Voir le code source",
       "followUs": "Suivez-nous",
-      "support": "Soutenir MarkTextPro",
+      "support": "Soutenir MarkNotePro",
       "license": "Licence",
       "about": "À propos",
       "checkUpdates": "Vérifier les mises à jour"
     },
-    "marktextpro": {
-      "title": "MarkTextPro",
-      "about": "À propos de MarkTextPro",
+    "marknotepro": {
+      "title": "MarkNotePro",
+      "about": "À propos de MarkNotePro",
       "checkUpdates": "Vérifier les mises à jour...",
       "preferences": "Préférences",
       "services": "Services",
-      "hide": "Masquer MarkTextPro",
+      "hide": "Masquer MarkNotePro",
       "hideOthers": "Masquer les autres",
       "showAll": "Tout afficher",
-      "quit": "Quitter MarkTextPro"
+      "quit": "Quitter MarkNotePro"
     },
     "view": {
       "view": "Affichage",
@@ -375,7 +375,7 @@
   },
   "import": {
     "title": "Importer ou ouvrir",
-    "description": "Glissez-déposez ici pour importer votre contenu dans MarkTextPro"
+    "description": "Glissez-déposez ici pour importer votre contenu dans MarkNotePro"
   },
   "preferences": {
     "title": "Préférences",
@@ -403,10 +403,10 @@
         "hideScrollbar": "Masquer les barres de défilement",
         "wordWrapInToc": "Activer le retour à la ligne dans la table des matières",
         "fileSortBy": "Trier les fichiers dans le dossier ouvert par heure de création, heure de modification et titre",
-        "startUpAction": "L'action après le démarrage de MarkTextPro, ouvrir le dernier contenu édité, ouvrir le dossier spécifié ou une page vierge",
+        "startUpAction": "L'action après le démarrage de MarkNotePro, ouvrir le dernier contenu édité, ouvrir le dossier spécifié ou une page vierge",
         "restoreLayoutState": "Restaurer l'état précédent de l'éditeur au démarrage",
         "defaultDirectoryToOpen": "Le répertoire par défaut qui devrait être ouvert au démarrage quand startUp=folder",
-        "language": "La langue utilisée par MarkTextPro",
+        "language": "La langue utilisée par MarkNotePro",
         "editorFontFamily": "Famille de police de l'éditeur",
         "fontSize": "Taille de police en pixels",
         "lineHeight": "Hauteur de ligne",
@@ -430,7 +430,7 @@
         "preferLooseListItem": "Le type de liste préféré",
         "bulletListMarker": "Le marqueur utilisé dans la liste à puces",
         "orderListDelimiter": "Le délimiteur utilisé dans la liste ordonnée",
-        "preferHeadingStyle": "Le style de titre préféré dans MarkTextPro",
+        "preferHeadingStyle": "Le style de titre préféré dans MarkNotePro",
         "tabSize": "Remplacer la tabulation par x espaces",
         "listIndentation": "Sélectionner l'indentation de liste",
         "frontmatterType": "Le type de frontmatter",
@@ -440,7 +440,7 @@
         "isGitlabCompatibilityEnabled": "Activer le mode de compatibilité GitLab",
         "sequenceTheme": "Thème du diagramme de séquence",
         "plantumlServer": "URL du serveur PlantUML",
-        "theme": "Sélectionner le thème utilisé dans MarkTextPro",
+        "theme": "Sélectionner le thème utilisé dans MarkNotePro",
         "followSystemTheme": "Suivre le thème du système",
         "lightModeTheme": "Thème à utiliser lorsque le système est en mode clair",
         "darkModeTheme": "Thème à utiliser lorsque le système est en mode sombre",
@@ -646,7 +646,7 @@
         "neverDetected": "Jamais détecté",
         "neverSuccessful": "Jamais réussi"
       },
-      "defaultBehavior": "Comportement par défaut après avoir collé ou glissé une image dans MarkTextPro"
+      "defaultBehavior": "Comportement par défaut après avoir collé ou glissé une image dans MarkNotePro"
     },
     "markdown": {
       "title": "Markdown",
@@ -763,7 +763,7 @@
   },
   "commands": {
     "mt": {
-      "hide": "Masquer MarkTextPro",
+      "hide": "Masquer MarkNotePro",
       "hideOthers": "Masquer les autres"
     },
     "file": {
@@ -928,7 +928,7 @@
     "configSchemaViolation": "Violation du schéma de configuration",
     "copyError": "Erreur de copie",
     "initializationFailed": "Échec de l'initialisation",
-    "otherInstanceDetected": "Une autre instance de MarkTextPro détectée en cours d'exécution",
+    "otherInstanceDetected": "Une autre instance de MarkNotePro détectée en cours d'exécution",
     "report": "Signaler",
     "startupError": "Erreur de démarrage",
     "terminatedDueToError": "Terminé en raison d'une erreur",

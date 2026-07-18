@@ -6,7 +6,7 @@ import getCommandDescriptionById from './descriptions'
 import { t } from '../i18n'
 
 const REPO_DOCS_BASE_URL =
-  'https://github.com/scott20201225/marktext-pro/blob/main/packages/website/content/docs/end-user'
+  'https://github.com/scott20201225/marknote-pro/blob/main/packages/website/content/docs/end-user'
 
 export { default as FileEncodingCommand } from './fileEncoding'
 export { default as LineEndingCommand } from './lineEnding'
@@ -651,7 +651,7 @@ const commands: CommandDescriptor[] = [
   },
 
   // --------------------------------------------------------------------------
-  // MarkTextPro
+  // MarkNotePro
 
   {
     id: 'file.preferences',

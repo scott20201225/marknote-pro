@@ -81,7 +81,7 @@ export default function (keybindings: Keybindings): MenuItemConstructorOptions {
     submenu
   }
 
-  if (global.MARKTEXTPRO_DEBUG) {
+  if (global.MARKNOTEPRO_DEBUG) {
     submenu.push({
       type: 'separator'
     })

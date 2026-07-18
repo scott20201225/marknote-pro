@@ -8,21 +8,21 @@ describe('Native theme source', () => {
     expect(getNativeThemeSource({ followSystemTheme: true, theme: 'light' })).to.equal('system')
   })
 
-  it('uses dark native menus for dark MarkTextPro themes', () => {
+  it('uses dark native menus for dark MarkNotePro themes', () => {
     for (const theme of ['dark', 'dracula', 'nord', 'rose-pine', 'kanagawa', 'cyberdream']) {
       expect(isDarkApplicationTheme(theme)).to.equal(true)
       expect(getNativeThemeSource({ followSystemTheme: false, theme })).to.equal('dark')
     }
   })
 
-  it('uses the shared MarkTextPro dark theme classification', () => {
+  it('uses the shared MarkNotePro dark theme classification', () => {
     for (const theme of [...railscastsThemes, ...oneDarkThemes]) {
       expect(isDarkApplicationTheme(theme)).to.equal(true)
       expect(getNativeThemeSource({ followSystemTheme: false, theme })).to.equal('dark')
     }
   })
 
-  it('uses light native menus for light MarkTextPro themes', () => {
+  it('uses light native menus for light MarkNotePro themes', () => {
     for (const theme of ['light', 'graphite', 'ulysses', 'tokyo-night-light', 'unknown-theme']) {
       expect(isDarkApplicationTheme(theme)).to.equal(false)
       expect(getNativeThemeSource({ followSystemTheme: false, theme })).to.equal('light')

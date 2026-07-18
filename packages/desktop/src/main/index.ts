@@ -16,8 +16,8 @@ import { t } from './i18n'
 import { registerSandboxIpcHandlers } from './ipc'
 
 // Set version strings into global and process.versions
-process.env.MARKTEXTPRO_VERSION = MARKTEXTPRO_VERSION
-process.env.MARKTEXTPRO_VERSION_STRING = MARKTEXTPRO_VERSION_STRING
+process.env.MARKNOTEPRO_VERSION = MARKNOTEPRO_VERSION
+process.env.MARKNOTEPRO_VERSION_STRING = MARKNOTEPRO_VERSION_STRING
 
 // -----------------------------------------------
 // Exception handling and logging setup
@@ -54,7 +54,7 @@ initializeLogger(appEnvironment)
 // Handles native level crashes
 crashReporter.start({
   companyName: '',
-  productName: 'MarkTextPro',
+  productName: 'MarkNotePro',
   uploadToServer: false, // collect locally
   compress: true
 })
@@ -102,8 +102,8 @@ try {
     : ''
   log.error(t('error.initializationFailed', { hint: msgHint }), errorObj)
 
-  const EXIT_ON_ERROR = !!process.env.MARKTEXTPRO_EXIT_ON_ERROR
-  const SHOW_ERROR_DIALOG = !process.env.MARKTEXTPRO_ERROR_INTERACTION
+  const EXIT_ON_ERROR = !!process.env.MARKNOTEPRO_EXIT_ON_ERROR
+  const SHOW_ERROR_DIALOG = !process.env.MARKNOTEPRO_ERROR_INTERACTION
   if (!EXIT_ON_ERROR && SHOW_ERROR_DIALOG) {
     dialog.showErrorBox(
       t('error.startupError'),

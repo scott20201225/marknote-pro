@@ -2,11 +2,11 @@ import path from 'path'
 import { shell, type BrowserWindow, type MenuItemConstructorOptions } from 'electron'
 import { isFile } from 'common/filesystem'
 import * as actions from '../actions/help'
-import { checkUpdates } from '../actions/marktextpro'
+import { checkUpdates } from '../actions/marknotepro'
 import { t } from '../../i18n'
 import { withTopLevelMenuMnemonic } from './mnemonics'
 
-const REPO_URL = 'https://github.com/scott20201225/marktext-pro'
+const REPO_URL = 'https://github.com/scott20201225/marknote-pro'
 const REPO_BRANCH = 'main'
 const END_USER_DOCS_URL = `${REPO_URL}/blob/${REPO_BRANCH}/packages/website/content/docs/end-user`
 

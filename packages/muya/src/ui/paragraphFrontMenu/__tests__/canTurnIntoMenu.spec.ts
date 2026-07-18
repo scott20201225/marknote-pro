@@ -3,15 +3,15 @@ import type Parent from '../../../block/base/parent';
 import { describe, expect, it } from 'vitest';
 import { canTurnIntoMenu } from '../config';
 
-// Regression for marktextpro commit 7b7a9424 "should not nest math block into
+// Regression for marknotepro commit 7b7a9424 "should not nest math block into
 // other math block (#1153)".
 //
-// In marktextpro, `insertContainerBlock(functionType, block)` walked from the
+// In marknotepro, `insertContainerBlock(functionType, block)` walked from the
 // caret block up to the paragraph and replaced it with a new container
 // (math/html/code/diagram). When the caret was already inside another
 // container (e.g. inside a math-block's code line), the old code happily
 // constructed a NEW container at the wrong level — yielding a math-block
-// nested inside a math-block. The marktextpro fix added `getAnchor(block)` +
+// nested inside a math-block. The marknotepro fix added `getAnchor(block)` +
 // "if no anchor, abort" + "don't remove the block when not a paragraph".
 //
 // New muya has no `insertContainerBlock`. All math-block / html-block /
@@ -43,7 +43,7 @@ function fakeBlock(blockName: string, paragraphText: string = ''): Parent {
     } as unknown as Parent;
 }
 
-describe('canTurnIntoMenu — no nesting math/code/html/diagram inside themselves (marktextpro 7b7a9424)', () => {
+describe('canTurnIntoMenu — no nesting math/code/html/diagram inside themselves (marknotepro 7b7a9424)', () => {
     it('returns [] for a math-block (front menu shows no turn-into list)', () => {
         expect(canTurnIntoMenu(fakeBlock('math-block'))).toEqual([]);
     });
@@ -86,12 +86,12 @@ describe('canTurnIntoMenu — no nesting math/code/html/diagram inside themselve
     });
 });
 
-// Regression for marktextpro commit f00da152 (#812 — "insert table into `table`,
+// Regression for marknotepro commit f00da152 (#812 — "insert table into `table`,
 // `html`, `code`, `math` block will cause wrong markdown syntax"). The bug:
 // `createFigure` was reachable from inside non-paragraph blocks; the new
 // `<figure><table/></figure>` ended up nested inside another table cell or
 // code-block content, producing garbage markdown that subsequently
-// crashed on re-parse. marktextpro's fix added `getAnchor(block)` + "abort if
+// crashed on re-parse. marknotepro's fix added `getAnchor(block)` + "abort if
 // no anchor" gating.
 //
 // New muya gates the same way at the UI layer: `canTurnIntoMenu` returns
@@ -102,7 +102,7 @@ describe('canTurnIntoMenu — no nesting math/code/html/diagram inside themselve
 // also cover this commit — a single gate keeps both 7b7a9424 and f00da152
 // off the UI.
 
-describe('canTurnIntoMenu — no inserting tables inside non-paragraph containers (marktextpro f00da152)', () => {
+describe('canTurnIntoMenu — no inserting tables inside non-paragraph containers (marknotepro f00da152)', () => {
     it('returns [] for math-block (cannot offer turn-into-table)', () => {
         const items = canTurnIntoMenu(fakeBlock('math-block'));
         expect(items.some((i: { label: string }) => i.label === 'table')).toBe(false);

@@ -160,9 +160,9 @@ class Keybindings {
 
     // Notify key mapper when the keyboard layout was changed.
     keyboardLayoutMonitor.addListener(({ layout, keymap }: KeyboardInfo) => {
-      const globalDebug = (globalThis as typeof globalThis & { MARKTEXTPRO_DEBUG?: boolean })
-        .MARKTEXTPRO_DEBUG
-      if (globalDebug && process.env.MARKTEXTPRO_DEBUG_KEYBOARD) {
+      const globalDebug = (globalThis as typeof globalThis & { MARKNOTEPRO_DEBUG?: boolean })
+        .MARKNOTEPRO_DEBUG
+      if (globalDebug && process.env.MARKNOTEPRO_DEBUG_KEYBOARD) {
         console.log('[DEBUG] Keyboard layout changed:\n', layout)
       }
       electronLocalshortcut.setKeyboardLayout(layout, keymap)
@@ -181,8 +181,8 @@ class Keybindings {
   }
 
   _loadLocalKeybindings(): void {
-    const safeMode = (globalThis as typeof globalThis & { MARKTEXTPRO_SAFE_MODE?: boolean })
-      .MARKTEXTPRO_SAFE_MODE
+    const safeMode = (globalThis as typeof globalThis & { MARKNOTEPRO_SAFE_MODE?: boolean })
+      .MARKNOTEPRO_SAFE_MODE
     if (safeMode || !isFile2(this.configPath)) {
       return
     }

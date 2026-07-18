@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import Content from '../content';
 
-// Regression suite for marktextpro muya auto-pair commits being migrated as
+// Regression suite for marknotepro muya auto-pair commits being migrated as
 // part of PR-3b. Auto-pairing is the input-handler logic that decides
 // whether typing `(`, `*`, `"` etc. should also insert the matching
 // closing character.  In the new architecture the logic lives in
@@ -67,7 +67,7 @@ function invokeAutoPair(
     );
 }
 
-// ── marktextpro 358fa83d "Update auto pair quote logic" (#2960) ──────────────
+// ── marknotepro 358fa83d "Update auto pair quote logic" (#2960) ──────────────
 // User-visible bug: typing `"`, `(`, `[`, `{` (or `'` with the existing
 // pre-char guard) immediately before a non-whitespace character would
 // still insert the closing pair, producing `"|foo` -> `""|foo` instead
@@ -122,7 +122,7 @@ describe('autoPair — 358fa83d quote/bracket gate on postInputChar', () => {
     });
 });
 
-// ── marktextpro 3fa8a9ae "no need to auto pair in inline code" (#1423) ───────
+// ── marknotepro 3fa8a9ae "no need to auto pair in inline code" (#1423) ───────
 // Already covered by the `isInInlineCode` parameter on `autoPair`.
 // Defensive test pins the behaviour so future refactors of `format.ts`
 // (which computes the flag via `_checkCursorInTokenType`) don't regress.
@@ -152,7 +152,7 @@ describe('autoPair — 3fa8a9ae no markdown-syntax pairing inside inline code', 
     });
 });
 
-// ── marktextpro 4278362f "disable autocompletion in inline math" (#715) ─────
+// ── marknotepro 4278362f "disable autocompletion in inline math" (#715) ─────
 // Same shape as 3fa8a9ae but gated on `isInInlineMath`.
 describe('autoPair — 4278362f no markdown-syntax pairing inside inline math', () => {
     it('does not auto-pair `*` inside inline math', () => {
@@ -171,7 +171,7 @@ describe('autoPair — 4278362f no markdown-syntax pairing inside inline math', 
     });
 });
 
-// ── marktextpro 701fb9ae "Append soft-lines on text removal" (#2853) ────────
+// ── marknotepro 701fb9ae "Append soft-lines on text removal" (#2853) ────────
 // The new architecture replaced the old `inputCtrl.removeBlocks` path
 // with native browser deletion + an OT-json1 apply via
 // `Editor.updateContents`, so the original multi-paragraph fix is gone.
@@ -207,7 +207,7 @@ describe('autoPair — 701fb9ae soft-line preservation (in-block branches)', () 
     });
 });
 
-// ── marktextpro 67e18176 "Enter multiple lines in Chinese" (#1117) ──────────
+// ── marknotepro 67e18176 "Enter multiple lines in Chinese" (#1117) ──────────
 // IME composition (e.g. CJK input) ends with a `compositionend` event,
 // not a regular `insertText`. The new arch's soft-line completion
 // branch in `autoPair` already covers this by accepting either event
@@ -230,7 +230,7 @@ describe('autoPair — 67e18176 soft-line completion on compositionend', () => {
     });
 });
 
-// ── marktextpro bbea7eca "do not auto-pair after alphanumeric" (#2843) ──────
+// ── marknotepro bbea7eca "do not auto-pair after alphanumeric" (#2843) ──────
 // Already covered by `!/[a-z0-9]/i.test(preInputChar)` in the
 // markdown-syntax branch. Defensive test.
 describe('autoPair — bbea7eca skip when preInputChar is alphanumeric', () => {
@@ -302,7 +302,7 @@ describe('autoPair — per-option opt-out', () => {
     });
 });
 
-// ── marktextpro #3573 absorb manually typed closing markdown marker ──────────
+// ── marknotepro #3573 absorb manually typed closing markdown marker ──────────
 // With auto-pair on, typing `_` inserts `_|_`. Typing text then the closing
 // `_` should "type over" the auto-paired closing marker (-> `_text_`), but
 // the old `shouldRemoveClosingChar` only absorbed when the char two before

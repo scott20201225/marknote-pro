@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { findMarkdownHeadingLine, scrollSourceEditorToLine } from '@/util/sourceModeToc'
 
-// marktextpro #3580: in Source Code mode, clicking a TOC entry must scroll the
+// marknotepro #3580: in Source Code mode, clicking a TOC entry must scroll the
 // CodeMirror editor to the heading's line. This resolves a TOC index to a line.
 describe('findMarkdownHeadingLine', () => {
   const doc = [
@@ -46,7 +46,7 @@ describe('findMarkdownHeadingLine', () => {
   })
 })
 
-// marktextpro #3580 follow-up: clicking a TOC entry in Source Code mode must put
+// marknotepro #3580 follow-up: clicking a TOC entry in Source Code mode must put
 // the heading at the TOP of the viewport (not the bottom, as CodeMirror's
 // minimal `scrollIntoView` did) and animate the scroll. Because CodeMirror runs
 // with viewportMargin: Infinity (full-height render), the OUTER `.source-code`

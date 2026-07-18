@@ -20,7 +20,7 @@ import {
   isDangerousExecutableFile,
   isMarkdownFile
 } from 'common/filesystem/paths'
-import { checkUpdates, userSetting } from './marktextpro'
+import { checkUpdates, userSetting } from './marknotepro'
 import { COMMANDS } from '../../commands'
 import type { CommandManager } from '../../commands'
 import { EXTENSION_HASN, PANDOC_EXTENSIONS, URL_REG, isOsx } from '../../config'
@@ -158,7 +158,7 @@ const exportHtmlToDocx = async (
   html: string,
   dirname?: string
 ): Promise<void> => {
-  const workDir = await fsPromises.mkdtemp(path.join(tmpdir(), 'marktextpro-docx-'))
+  const workDir = await fsPromises.mkdtemp(path.join(tmpdir(), 'marknotepro-docx-'))
   const sourcePath = path.join(workDir, 'export.html')
 
   try {
@@ -180,9 +180,9 @@ const exportMarkdownToDocx = async (
   markdown: string,
   dirname: string
 ): Promise<void> => {
-  const workDir = await fsPromises.mkdtemp(path.join(tmpdir(), 'marktextpro-docx-'))
+  const workDir = await fsPromises.mkdtemp(path.join(tmpdir(), 'marknotepro-docx-'))
   const sourcePath = path.join(workDir, 'export.md')
-  const pandocCommand = process.env.MARKTEXTPRO_PANDOC || 'pandoc'
+  const pandocCommand = process.env.MARKNOTEPRO_PANDOC || 'pandoc'
 
   try {
     await fsPromises.writeFile(sourcePath, markdown, 'utf8')
@@ -282,7 +282,7 @@ const exportHtmlToImage = async (
   type: 'png' | 'jpeg',
   dirname?: string
 ): Promise<void> => {
-  const workDir = await fsPromises.mkdtemp(path.join(tmpdir(), 'marktextpro-image-'))
+  const workDir = await fsPromises.mkdtemp(path.join(tmpdir(), 'marknotepro-image-'))
   const sourcePath = path.join(workDir, 'export.html')
   const exportWindow = new BrowserWindow({
     show: false,
@@ -440,7 +440,7 @@ const handleResponseForSave = async (
 
   // If the file doesn't exist on disk add it to the recently used documents later
   // and execute file from filesystem watcher for a short time. The file may exists
-  // on disk nevertheless but is already tracked by MarkTextPro.
+  // on disk nevertheless but is already tracked by MarkNotePro.
   const alreadyExistOnDisk = !!pathname
 
   let filePath = pathname
@@ -624,7 +624,7 @@ ipcMain.on(
 
     // If the file doesn't exist on disk add it to the recently used documents later
     // and execute file from filesystem watcher for a short time. The file may exists
-    // on disk nevertheless but is already tracked by MarkTextPro.
+    // on disk nevertheless but is already tracked by MarkNotePro.
     const alreadyExistOnDisk = !!pathname
 
     let { filePath, canceled } = await dialog.showSaveDialog(win, {
@@ -887,7 +887,7 @@ ipcMain.on('mt::format-link-click', async (e, { data, dirname }: FormatLinkPaylo
   }
 
   if (pathname) {
-    // decodeURIComponent() CommonMark #503, allow percent encoded path names to open files. https://github.com/scott20201225/marktext-pro/issues/57
+    // decodeURIComponent() CommonMark #503, allow percent encoded path names to open files. https://github.com/scott20201225/marknote-pro/issues/57
     pathname = path.normalize(decodeURIComponent(pathname))
     if (isMarkdownFile(pathname)) {
       const innerWin = BrowserWindow.fromWebContents(e.sender)

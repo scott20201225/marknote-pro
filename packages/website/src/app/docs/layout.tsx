@@ -5,10 +5,10 @@ import './docs.css'
 export const metadata: Metadata = {
   title: {
     default: 'Documentation',
-    template: '%s · MarkTextPro Docs'
+    template: '%s · MarkNotePro Docs'
   },
   description:
-    'Guides, reference and developer documentation for MarkTextPro — the WYSIWYG markdown editor.'
+    'Guides, reference and developer documentation for MarkNotePro — the WYSIWYG markdown editor.'
 }
 
 export default function DocsLayout({ children }: { children: React.ReactNode }) {

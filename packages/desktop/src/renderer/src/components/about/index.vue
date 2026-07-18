@@ -9,7 +9,7 @@
     >
       <img
         class="logo"
-        :src="MarkTextProLogo"
+        :src="MarkNoteProLogo"
       >
       <el-row>
         <el-col :span="24">
@@ -44,12 +44,12 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useMainStore } from '@/store'
 import bus from '../../bus'
-import MarkTextProLogo from '../../assets/images/logo.png'
+import MarkNoteProLogo from '../../assets/images/logo.png'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
 
-const name = 'MarkTextPro'
+const name = 'MarkNotePro'
 const copyright = t('about.copyright', { year: new Date().getFullYear() })
 const copyrightContributors = t('about.copyrightContributors')
 const showAboutDialog = ref(false)

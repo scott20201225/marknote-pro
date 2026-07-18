@@ -25,7 +25,7 @@ interface UrlArgs {
 
 const parseUrlArgs = (): UrlArgs => {
   const params = new URLSearchParams(window.location.search)
-  const isStandalone = window.electron?.process?.env?.MARKTEXTPRO_STANDALONE === '1'
+  const isStandalone = window.electron?.process?.env?.MARKNOTEPRO_STANDALONE === '1'
   const codeFontFamily = params.get('cff')
   const codeFontSize = params.get('cfs')
   const debug = params.get('debug') === '1'
@@ -33,7 +33,7 @@ const parseUrlArgs = (): UrlArgs => {
   const theme = params.get('theme')
   const titleBarStyle = params.get('tbs')
   const userDataPath =
-    params.get('udp') || (isStandalone ? '/tmp/marktextpro-standalone' : null)
+    params.get('udp') || (isStandalone ? '/tmp/marknotepro-standalone' : null)
   const widParam = params.get('wid')
   const windowId = widParam == null ? (isStandalone ? 1 : Number.NaN) : Number(widParam)
   const type = params.get('type') || (isStandalone ? 'editor' : null)
@@ -109,8 +109,8 @@ const bootstrapRenderer = (): void => {
   const { debug, initialState, userDataPath, windowId, type } = parseUrlArgs()
   // RendererPaths throws when userDataPath is missing; preserve that runtime check.
   const paths = new RendererPaths(userDataPath as string)
-  const standalone = window.electron?.process?.env?.MARKTEXTPRO_STANDALONE === '1'
-  const marktextpro = {
+  const standalone = window.electron?.process?.env?.MARKNOTEPRO_STANDALONE === '1'
+  const marknotepro = {
     initialState,
     env: {
       debug,
@@ -123,7 +123,7 @@ const bootstrapRenderer = (): void => {
   }
   // `global` is not available in a sandboxed renderer — attach to window.
   // RendererPaths has no string index signature, so widen through `unknown`.
-  window.marktextpro = marktextpro as unknown as Window['marktextpro']
+  window.marknotepro = marknotepro as unknown as Window['marknotepro']
 
   configureLogger()
 }

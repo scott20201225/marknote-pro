@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { PasteType } from '../../clipboard/types';
 import { getCopyTextType, isStandaloneTableHtml, resolveClipboardImagePath } from '../paste';
 
-// Regression for marktextpro commit 067ec485 (#1271).
+// Regression for marknotepro commit 067ec485 (#1271).
 // Some clipboard sources (e.g. Apple Numbers, certain spreadsheet
 // exporters) put a raw `<table>...</table>` blob in `text/plain` only,
 // with no `text/html` flavour. Old behaviour: classified as plain text,

@@ -35,7 +35,7 @@ declare module 'minimatch' {
   export function minimatch(target: string, pattern: string, options?: unknown): boolean
 }
 
-declare module '@marktextpro/file-icons' {
+declare module '@marknotepro/file-icons' {
   interface FileIcon {
     getClass(colourMode?: number, asObject?: boolean): string
   }
@@ -55,9 +55,9 @@ declare namespace NodeJS {
   }
   interface Global {
     __static: string
-    MARKTEXTPRO_DEBUG: boolean
-    MARKTEXTPRO_DEBUG_VERBOSE: number
-    MARKTEXTPRO_SAFE_MODE: boolean
+    MARKNOTEPRO_DEBUG: boolean
+    MARKNOTEPRO_DEBUG_VERBOSE: number
+    MARKNOTEPRO_SAFE_MODE: boolean
   }
 }
 
@@ -66,8 +66,8 @@ declare namespace NodeJS {
 // eslint-disable-next-line no-var
 declare var __static: string
 // eslint-disable-next-line no-var
-declare var MARKTEXTPRO_DEBUG: boolean
+declare var MARKNOTEPRO_DEBUG: boolean
 // eslint-disable-next-line no-var
-declare var MARKTEXTPRO_DEBUG_VERBOSE: number
+declare var MARKNOTEPRO_DEBUG_VERBOSE: number
 // eslint-disable-next-line no-var
-declare var MARKTEXTPRO_SAFE_MODE: boolean
+declare var MARKNOTEPRO_SAFE_MODE: boolean

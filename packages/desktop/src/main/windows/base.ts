@@ -6,14 +6,14 @@ import { getThemeBackgroundColor } from '../../common/theme'
 import { isWindows } from '../config'
 
 /**
- * A MarkTextPro window.
+ * A MarkNotePro window.
  * @property id Identifier (= browserWindow.id) or null during initialization.
  * @property browserWindow The browser window.
  * @property lifecycle The window lifecycle state.
  * @property type The window type.
  */
 
-// Window type marktextpro support.
+// Window type marknotepro support.
 export const WindowType = {
   BASE: 'base', // You shold never create a `BASE` window.
   EDITOR: 'editor',

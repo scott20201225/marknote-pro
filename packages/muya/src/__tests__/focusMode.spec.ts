@@ -3,7 +3,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { Muya } from '../muya';
 
-// Coverage for focus mode. marktextpro muyajs declared a `focusMode` option and
+// Coverage for focus mode. marknotepro muyajs declared a `focusMode` option and
 // reserved the `mu-focus-mode` class name but never applied it — focus mode was
 // a complete no-op. `Muya#setFocusMode` now toggles `mu-focus-mode` on the
 // editor container (and the constructor applies it when `focusMode: true` is
