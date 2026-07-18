@@ -224,6 +224,9 @@
     "sideBar": {
       "newFile": "New File",
       "newDirectory": "New Directory",
+      "newGroup": "New Group",
+      "newArea": "New Area",
+      "newDocument": "New Document",
       "copy": "Copy",
       "cut": "Cut",
       "paste": "Paste",
@@ -269,14 +272,22 @@
       "saveAll": "Save All",
       "closeAll": "Close All",
       "emptyProject": "Empty project",
+      "emptyWorkspace": "No note workspace content yet",
       "createFile": "Create File",
-      "openFolder": "Open Folder"
+      "createGroup": "Create Group",
+      "openFolder": "Open Folder",
+      "openWorkspace": "Choose Workspace",
+      "workspaceActions": "Workspace Menu",
+      "nodeActions": "More Actions",
+      "groupNamePlaceholder": "Group name",
+      "areaNamePlaceholder": "Area name",
+      "documentNamePlaceholder": "Document name"
     },
     "toc": {
       "title": "Table Of Contents"
     },
     "icons": {
-      "files": "Files",
+      "files": "Notes",
       "search": "Search",
       "toc": "Table of Contents",
       "settings": "Settings"
@@ -371,7 +382,9 @@
   },
   "recent": {
     "noTabsOpen": "You have no tabs open.",
-    "newFile": "New File"
+    "newFile": "New File",
+    "workspaceRequired": "Select the default directory before using MarkNotePro.",
+    "chooseWorkspace": "Select Default Directory"
   },
   "import": {
     "title": "Import or Open",
@@ -402,9 +415,9 @@
         "hideScrollbar": "Whether to hide scrollbars",
         "wordWrapInToc": "Whether to enable word wrap in TOC",
         "fileSortBy": "Sort files in opened folder by created time, modified time and title",
-        "startUpAction": "The action after MarkNotePro startup, open the last edited content, open the specified folder or blank page",
+        "startUpAction": "The action after MarkNotePro startup: open the last edited content, open the specified workspace, or open a blank page",
         "restoreLayoutState": "Restore previous editor state on startup",
-        "defaultDirectoryToOpen": "The default directory that should be opened on startup when startUp=folder",
+        "defaultDirectoryToOpen": "The default workspace directory to open on startup when startUp=folder",
         "language": "The language MarkNotePro uses",
         "editorFontFamily": "Editor font family",
         "fontSize": "Font size in pixels",
@@ -489,10 +502,11 @@
         "startupFilesFolders": "Startup Files/Folders",
         "restorePreviousState": "Restore previous editor state",
         "openBlankState": "Open blank state",
-        "openDefaultDirectory": "Open default directory",
-        "openLastFolder": "Restore opened folder",
+        "openDefaultDirectory": "Open default workspace",
+        "openLastFolder": "Restore opened workspace",
         "restoreAll": "Restore all opened files and folders",
-        "selectFolder": "Select Folder",
+        "workspaceNotSelected": "No default directory selected.",
+        "selectFolder": "Select Workspace",
         "openBlankPage": "Open blank page"
       },
       "sidebar": {

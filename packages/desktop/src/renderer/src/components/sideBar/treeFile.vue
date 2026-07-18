@@ -19,18 +19,34 @@
       @click.stop="noop"
       @keypress.enter="rename"
     >
-    <span v-else>{{ file.name }}</span>
+    <span
+      v-else
+      class="file-name"
+    >{{ displayName }}</span>
+    <button
+      class="file-action-button"
+      type="button"
+      :title="t('sideBar.tree.nodeActions')"
+      @click.stop="showFileActionMenu"
+    >
+      <el-icon :size="14">
+        <MoreFilled />
+      </el-icon>
+    </button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, nextTick, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useProjectStore } from '@/store/project'
 import { useEditorStore } from '@/store/editor'
+import { MoreFilled } from '@element-plus/icons-vue'
+import { useI18n } from 'vue-i18n'
 import FileIcon from './icon.vue'
 import { showContextMenu } from '../../contextMenu/sideBar'
 import bus from '../../bus'
+import { getNoteDisplayName } from '../../util/noteWorkspace'
 import type { TreeFileNode } from './types'
 
 const props = defineProps<{
@@ -38,6 +54,7 @@ const props = defineProps<{
   depth: number
 }>()
 
+const { t } = useI18n()
 const projectStore = useProjectStore()
 const editorStore = useEditorStore()
 
@@ -49,6 +66,8 @@ const { renameCache } = storeToRefs(projectStore)
 const { activeItem } = storeToRefs(projectStore)
 const { clipboard } = storeToRefs(projectStore)
 const { currentFile, tabs } = storeToRefs(editorStore)
+const rootPath = computed<string | null>(() => projectStore.projectTree?.pathname ?? null)
+const displayName = computed<string>(() => getNoteDisplayName(props.file, rootPath.value))
 
 // from fileMixins
 const handleFileClick = (): void => {
@@ -71,7 +90,7 @@ const focusRenameInput = (): void => {
   nextTick(() => {
     if (renameInput.value) {
       renameInput.value.focus()
-      newName.value = props.file.name
+      newName.value = displayName.value
     }
   })
 }
@@ -82,12 +101,22 @@ const rename = (): void => {
   }
 }
 
+const showFileActionMenu = (event: MouseEvent): void => {
+  projectStore.CHANGE_ACTIVE_ITEM(props.file)
+  const target = event.currentTarget as HTMLElement | null
+  const rect = target?.getBoundingClientRect()
+  showContextMenu({
+    clientX: rect ? rect.left + rect.width / 2 : event.clientX,
+    clientY: rect ? rect.bottom : event.clientY
+  }, props.file, rootPath.value, !!clipboard.value)
+}
+
 onMounted(() => {
   if (fileEl.value) {
     fileEl.value.addEventListener('contextmenu', (event) => {
       event.preventDefault()
       projectStore.CHANGE_ACTIVE_ITEM(props.file)
-      showContextMenu(event, !!clipboard.value)
+      showContextMenu(event, props.file, rootPath.value, !!clipboard.value)
     })
   }
 
@@ -105,10 +134,13 @@ onMounted(() => {
   height: 30px;
   box-sizing: border-box;
   padding-right: 15px;
+  gap: 6px;
   &:hover {
     background: var(--sideBarItemHoverBgColor);
   }
-  & > span {
+  & > .file-name {
+    flex: 1;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -129,12 +161,38 @@ onMounted(() => {
 .side-bar-file.current::before {
   height: 100%;
 }
-.side-bar-file.current > span {
+.side-bar-file.current > .file-name {
   color: var(--themeColor);
 }
-.side-bar-file.active > span {
+.side-bar-file.active > .file-name {
   color: var(--sideBarTitleColor);
 }
+
+.side-bar-file > input.rename {
+  flex: 1;
+  min-width: 0;
+}
+
+.file-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--sideBarIconColor);
+  cursor: pointer;
+}
+
+.file-action-button:hover {
+  background: var(--sideBarItemHoverBgColor);
+  color: var(--sideBarTitleColor);
+}
+
 input.rename {
   height: 22px;
   outline: none;

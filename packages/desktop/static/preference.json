@@ -8,7 +8,7 @@
   "wordWrapInToc": false,
   "fileSortBy": "created",
   "fileSortOrder": "asc",
-  "startUpAction": "restoreAll",
+  "startUpAction": "folder",
   "restoreLayoutState": true,
   "defaultDirectoryToOpen": "",
   "lastOpenedFolder": "",

@@ -196,12 +196,10 @@ class App {
 
     // Initialize language settings
     const rawPreferences = preferences.getAll()
-    const startUpAction = rawPreferences.startUpAction
     const defaultDirectoryToOpen = rawPreferences.defaultDirectoryToOpen
     const theme = normalizeAppTheme(rawPreferences.theme)
     const language = rawPreferences.language
     const followSystemTheme = preferences.getItem<boolean>('followSystemTheme')
-    const lastOpenedFolder = preferences.getItem<string>('lastOpenedFolder')
     const lightModeTheme = normalizeAppTheme(preferences.getItem<string>('lightModeTheme'), 'light')
     const darkModeTheme = normalizeAppTheme(preferences.getItem<string>('darkModeTheme'), 'dark')
 
@@ -223,19 +221,9 @@ class App {
       }
     }
 
-    // We should NOT restore the previous buffer or open a folder if the user just wants to double click to open a file
-    let isRestorePathway = false
     if (_openFilesCache.length === 0) {
-      if (startUpAction === 'restoreAll') {
-        // Restore based off the previous buffer
-        isRestorePathway = true
-      } else if (startUpAction === 'folder' && defaultDirectoryToOpen) {
+      if (defaultDirectoryToOpen) {
         const info = normalizeMarkdownPath(defaultDirectoryToOpen)
-        if (info) {
-          _openFilesCache.unshift(info as PathInfo)
-        }
-      } else if (startUpAction === 'openLastFolder' && lastOpenedFolder) {
-        const info = normalizeMarkdownPath(lastOpenedFolder)
         if (info) {
           _openFilesCache.unshift(info as PathInfo)
         }
@@ -368,17 +356,7 @@ class App {
     }
 
     const createWindow = (): void => {
-      if (isRestorePathway) {
-        const bufferStores = editorBufferStore.getAll()
-        const bufferStoreList = Object.values(bufferStores) as BufferStoreInfo[]
-        const bufferStoreInfo = this._mergeBufferStoresForSingleWindow(bufferStoreList)
-        if (!bufferStoreInfo) {
-          this._createEditorWindow()
-          return
-        }
-
-        this._createEditorWindow(null, [], [], {}, bufferStoreInfo)
-      } else if (_openFilesCache.length) {
+      if (_openFilesCache.length) {
         // We should wipe the buffer store if not it will keep creating new windows whenever we open files via double click in the file manager
         editorBufferStore.clearBufferStoresWithAllSaved()
         this._openFilesToOpen()

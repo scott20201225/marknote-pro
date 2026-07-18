@@ -15,6 +15,12 @@
       >
         <ArrowRight />
       </el-icon>
+      <el-icon
+        class="icon-node-type"
+        :size="14"
+      >
+        <component :is="folderTypeIcon" />
+      </el-icon>
       <input
         v-if="renameCache === folder.pathname"
         ref="renameInput"
@@ -27,14 +33,25 @@
       <span
         v-else
         class="text-overflow"
-      >{{ folder.name }}</span>
+      >{{ displayName }}</span>
+      <button
+        v-if="showActionButton"
+        class="folder-action-button"
+        type="button"
+        :title="t('sideBar.tree.nodeActions')"
+        @click.stop="showFolderActionMenu"
+      >
+        <el-icon :size="14">
+          <MoreFilled />
+        </el-icon>
+      </button>
     </div>
     <div
       v-if="!isCollapsed"
       class="folder-contents"
     >
       <tree-folder
-        v-for="childFolder of folder.folders"
+        v-for="childFolder of visibleFolders"
         :key="childFolder.id"
         :folder="childFolder"
         :depth="depth + 1"
@@ -44,12 +61,13 @@
         ref="input"
         v-model="createName"
         type="text"
+        :placeholder="createPlaceholder"
         class="new-input"
         :style="{ 'margin-left': `${depth * 5 + 15}px` }"
         @keypress.enter="handleInputEnter"
       >
       <File
-        v-for="file of folder.files"
+        v-for="file of visibleFiles"
         :key="file.id"
         :file="file"
         :depth="depth + 1"
@@ -59,20 +77,34 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, nextTick, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useProjectStore } from '@/store/project'
 import { showContextMenu } from '../../contextMenu/sideBar'
 import bus from '../../bus'
 import File from './treeFile.vue'
-import { ArrowRight } from '@element-plus/icons-vue'
-import type { TreeFolderNode } from './types'
+import {
+  ArrowRight,
+  MoreFilled,
+  Folder,
+  FolderOpened,
+  CollectionTag
+} from '@element-plus/icons-vue'
+import { useI18n } from 'vue-i18n'
+import {
+  getNoteNodeKind,
+  getNoteDisplayName,
+  getVisibleNoteFiles,
+  getVisibleNoteFolders
+} from '../../util/noteWorkspace'
+import type { TreeFileNode, TreeFolderNode } from './types'
 
 const props = defineProps<{
   folder: TreeFolderNode
   depth: number
 }>()
 
+const { t } = useI18n()
 const projectStore = useProjectStore()
 
 const createName = ref('')
@@ -89,6 +121,35 @@ const { renameCache } = storeToRefs(projectStore)
 const { createCache } = storeToRefs(projectStore)
 const { activeItem } = storeToRefs(projectStore)
 const { clipboard } = storeToRefs(projectStore)
+const rootPath = computed<string | null>(() => projectStore.projectTree?.pathname ?? null)
+const folderKind = computed(() => getNoteNodeKind(props.folder, rootPath.value))
+const displayName = computed<string>(() => getNoteDisplayName(props.folder, rootPath.value))
+const visibleFolders = computed<TreeFolderNode[]>(() => {
+  return getVisibleNoteFolders(props.folder, rootPath.value) as TreeFolderNode[]
+})
+const visibleFiles = computed<TreeFileNode[]>(() => {
+  return getVisibleNoteFiles(props.folder, rootPath.value) as TreeFileNode[]
+})
+const createPlaceholder = computed<string>(() => {
+  switch ((createCache.value as { type?: string }).type) {
+    case 'group':
+      return t('sideBar.tree.groupNamePlaceholder')
+    case 'area':
+      return t('sideBar.tree.areaNamePlaceholder')
+    case 'document':
+    case 'file':
+      return t('sideBar.tree.documentNamePlaceholder')
+    default:
+      return t('sideBar.tree.documentNamePlaceholder')
+  }
+})
+const showActionButton = computed<boolean>(() => folderKind.value === 'group' || folderKind.value === 'area')
+const folderTypeIcon = computed(() => {
+  if (folderKind.value === 'group') {
+    return isCollapsed.value ? Folder : FolderOpened
+  }
+  return CollectionTag
+})
 
 const handleInputFocus = (): void => {
   // Only the folder that is the create target reacts. Expand it FIRST so the
@@ -114,13 +175,23 @@ const folderNameClick = (): void => {
   isCollapsed.value = !isCollapsed.value
 }
 
+const showFolderActionMenu = (event: MouseEvent): void => {
+  projectStore.CHANGE_ACTIVE_ITEM(props.folder)
+  const target = event.currentTarget as HTMLElement | null
+  const rect = target?.getBoundingClientRect()
+  showContextMenu({
+    clientX: rect ? rect.left + rect.width / 2 : event.clientX,
+    clientY: rect ? rect.bottom : event.clientY
+  }, props.folder, rootPath.value, !!clipboard.value)
+}
+
 const noop = (): void => {}
 
 const focusRenameInput = (): void => {
   nextTick(() => {
     if (renameInput.value) {
       renameInput.value.focus()
-      newName.value = props.folder.name
+      newName.value = displayName.value
     }
   })
 }
@@ -136,7 +207,7 @@ onMounted(() => {
     folderEl.value.addEventListener('contextmenu', (event) => {
       event.preventDefault()
       projectStore.CHANGE_ACTIVE_ITEM(props.folder)
-      showContextMenu(event, !!clipboard.value)
+      showContextMenu(event, props.folder, rootPath.value, !!clipboard.value)
     })
   }
   bus.on('SIDEBAR::show-new-input', handleInputFocus)
@@ -153,12 +224,18 @@ onMounted(() => {
     align-items: center;
     height: 30px;
     padding-right: 15px;
+    gap: 6px;
     & > .icon-arrow {
       flex-shrink: 0;
       color: var(--sideBarIconColor);
       margin-right: 5px;
       transition: transform 0.25s ease-out;
       transform: rotate(90deg);
+    }
+    & > .icon-node-type {
+      flex-shrink: 0;
+      color: var(--sideBarIconColor);
+      opacity: 0.9;
     }
     & > .icon-arrow.fold {
       transform: rotate(0);
@@ -167,6 +244,32 @@ onMounted(() => {
       background: var(--sideBarItemHoverBgColor);
     }
   }
+}
+
+.folder-name > span,
+.folder-name > input.rename {
+  flex: 1;
+  min-width: 0;
+}
+
+.folder-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--sideBarIconColor);
+  cursor: pointer;
+}
+
+.folder-action-button:hover {
+  background: var(--sideBarItemHoverBgColor);
+  color: var(--sideBarTitleColor);
 }
 .new-input,
 input.rename {

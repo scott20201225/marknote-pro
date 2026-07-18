@@ -67,29 +67,30 @@
     >
       <div
         class="title"
-        @contextmenu.prevent="handleRootContextMenu"
+        @contextmenu.prevent.stop="handleRootContextMenu"
       >
-        <el-icon
-          class="icon-arrow"
-          :class="{ fold: !showDirectories }"
-          :size="12"
-          @click.stop="toggleDirectories()"
-        >
-          <ArrowRight />
-        </el-icon>
         <span
           class="default-cursor text-overflow"
-          @click.stop="toggleDirectories()"
         >{{
-          projectTree.name
+          projectDisplayName
         }}</span>
+        <button
+          class="tree-action-button"
+          type="button"
+          :title="t('sideBar.tree.workspaceActions')"
+          @click.stop="showRootActionMenu"
+        >
+          <el-icon :size="14">
+            <Plus />
+          </el-icon>
+        </button>
       </div>
       <div
-        v-show="showDirectories"
         class="tree-wrapper"
+        @contextmenu.prevent.stop="handleTreeWrapperContextMenu"
       >
         <folder
-          v-for="folder of projectTree.folders"
+          v-for="folder of visibleRootFolders"
           :key="folder.id"
           :folder="folder"
           :depth="depth"
@@ -98,33 +99,33 @@
           v-show="createCacheDirname === projectTree.pathname"
           ref="input"
           v-model="createName"
-          placeholder="Enter .md file name"
+          :placeholder="createPlaceholder"
           type="text"
           class="new-input"
           :style="{ 'margin-left': `${depth * 5 + 15}px` }"
           @keypress.enter="handleInputEnter"
         >
         <file
-          v-for="file of projectTree.files"
+          v-for="file of visibleRootFiles"
           :key="file.id"
           :file="file"
           :depth="depth"
         />
         <div
           v-if="
-            projectTree.files.length === 0 &&
-              projectTree.folders.length === 0 &&
+            visibleRootFiles.length === 0 &&
+              visibleRootFolders.length === 0 &&
               createCacheDirname !== projectTree.pathname
           "
           class="empty-project"
         >
-          <span>{{ t('sideBar.tree.emptyProject') }}</span>
+          <span>{{ t('sideBar.tree.emptyWorkspace') }}</span>
           <div class="centered-group">
             <button
               class="button-primary"
-              @click.stop="createFile"
+              @click.stop="createGroup"
             >
-              {{ t('sideBar.tree.createFile') }}
+              {{ t('sideBar.tree.createGroup') }}
             </button>
           </div>
         </div>
@@ -141,7 +142,7 @@
           type="primary"
           @click="openFolder"
         >
-          {{ t('sideBar.tree.openFolder') }}
+          {{ t('sideBar.tree.openWorkspace') }}
         </el-button>
       </div>
     </div>
@@ -160,8 +161,13 @@ import OpenedFile from './treeOpenedTab.vue'
 import bus from '../../bus'
 import { showContextMenu } from '../../contextMenu/sideBar'
 import { useI18n } from 'vue-i18n'
-import { ArrowRight } from '@element-plus/icons-vue'
-import type { TreeNode, TabDescriptor } from './types'
+import { ArrowRight, Plus } from '@element-plus/icons-vue'
+import {
+  getNoteDisplayName,
+  getVisibleNoteFiles,
+  getVisibleNoteFolders
+} from '../../util/noteWorkspace'
+import type { TreeFileNode, TreeFolderNode, TreeNode, TabDescriptor } from './types'
 
 const { t } = useI18n()
 
@@ -180,10 +186,8 @@ const depth = 0
 // v-if and is destroyed when the sidebar collapses to its icon strip, so local
 // refs reset to expanded on re-open. Back them with localStorage (like the
 // sidebar width) so the state survives a re-mount and app restart.
-const SHOW_DIRECTORIES_KEY = 'side-bar-show-directories'
 const SHOW_OPENED_FILES_KEY = 'side-bar-show-opened-files'
 const readSectionExpanded = (key: string): boolean => localStorage.getItem(key) !== 'false'
-const showDirectories = ref(readSectionExpanded(SHOW_DIRECTORIES_KEY))
 const showOpenedFiles = ref(readSectionExpanded(SHOW_OPENED_FILES_KEY))
 const createName = ref('')
 const input = ref<HTMLInputElement | null>(null)
@@ -205,6 +209,36 @@ const createCacheDirname = computed<string | undefined>(() => {
   return cache.dirname
 })
 
+const createCacheType = computed<string | undefined>(() => {
+  const cache = createCache.value as { type?: string }
+  return cache.type
+})
+
+const createPlaceholder = computed<string>(() => {
+  switch (createCacheType.value) {
+    case 'group':
+      return t('sideBar.tree.groupNamePlaceholder')
+    case 'area':
+      return t('sideBar.tree.areaNamePlaceholder')
+    case 'document':
+    case 'file':
+      return t('sideBar.tree.documentNamePlaceholder')
+    default:
+      return t('sideBar.tree.documentNamePlaceholder')
+  }
+})
+
+const rootPath = computed<string | null>(() => props.projectTree?.pathname ?? null)
+const projectDisplayName = computed<string>(() => {
+  return getNoteDisplayName(props.projectTree, rootPath.value)
+})
+const visibleRootFolders = computed<TreeFolderNode[]>(() => {
+  return getVisibleNoteFolders(props.projectTree, rootPath.value) as TreeFolderNode[]
+})
+const visibleRootFiles = computed<TreeFileNode[]>(() => {
+  return getVisibleNoteFiles(props.projectTree, rootPath.value) as TreeFileNode[]
+})
+
 // Methods
 const openFolder = (): void => {
   projectStore.ASK_FOR_OPEN_PROJECT()
@@ -214,24 +248,42 @@ const saveAll = (isClose: boolean): void => {
   editorStore.ASK_FOR_SAVE_ALL(isClose)
 }
 
-const createFile = (): void => {
+const createGroup = (): void => {
   projectStore.CHANGE_ACTIVE_ITEM(props.projectTree)
-  bus.emit('SIDEBAR::new', 'file')
+  bus.emit('SIDEBAR::new', 'group')
 }
 
 const handleRootContextMenu = (event: MouseEvent): void => {
   projectStore.CHANGE_ACTIVE_ITEM(props.projectTree)
-  showContextMenu(event, !!clipboard.value)
+  showContextMenu(event, props.projectTree, rootPath.value, !!clipboard.value)
+}
+
+const showRootActionMenu = (event: MouseEvent): void => {
+  if (!props.projectTree) return
+  projectStore.CHANGE_ACTIVE_ITEM(props.projectTree)
+  const target = event.currentTarget as HTMLElement | null
+  const rect = target?.getBoundingClientRect()
+  showContextMenu({
+    clientX: rect ? rect.left + rect.width / 2 : event.clientX,
+    clientY: rect ? rect.bottom : event.clientY
+  }, props.projectTree, rootPath.value, !!clipboard.value)
+}
+
+const handleTreeWrapperContextMenu = (event: MouseEvent): void => {
+  const target = event.target as HTMLElement | null
+
+  // Let folder/file nodes keep their own context-menu behavior; only treat
+  // clicks on the root wrapper/empty area as "root".
+  if (target?.closest('.side-bar-folder, .side-bar-file')) {
+    return
+  }
+
+  handleRootContextMenu(event)
 }
 
 const toggleOpenedFiles = (): void => {
   showOpenedFiles.value = !showOpenedFiles.value
   localStorage.setItem(SHOW_OPENED_FILES_KEY, String(showOpenedFiles.value))
-}
-
-const toggleDirectories = (): void => {
-  showDirectories.value = !showDirectories.value
-  localStorage.setItem(SHOW_DIRECTORIES_KEY, String(showDirectories.value))
 }
 
 // From createFileOrDirectoryMixins
@@ -387,6 +439,26 @@ onMounted(() => {
 .project-tree > .title > span {
   flex: 1;
   user-select: none;
+}
+
+.tree-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--sideBarIconColor);
+  cursor: pointer;
+}
+
+.tree-action-button:hover {
+  background: var(--sideBarItemHoverBgColor);
+  color: var(--sideBarTitleColor);
 }
 
 .project-tree > .title > a {

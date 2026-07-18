@@ -24,6 +24,30 @@ export const getNewDirectory = () => ({
   }
 })
 
+export const getNewGroup = () => ({
+  label: t('contextMenu.sideBar.newGroup'),
+  id: 'newGroupMenuItem',
+  click(_menuItem: unknown, _browserWindow: unknown) {
+    contextMenu.newGroup()
+  }
+})
+
+export const getNewArea = () => ({
+  label: t('contextMenu.sideBar.newArea'),
+  id: 'newAreaMenuItem',
+  click(_menuItem: unknown, _browserWindow: unknown) {
+    contextMenu.newArea()
+  }
+})
+
+export const getNewDocument = () => ({
+  label: t('contextMenu.sideBar.newDocument'),
+  id: 'newDocumentMenuItem',
+  click(_menuItem: unknown, _browserWindow: unknown) {
+    contextMenu.newDocument()
+  }
+})
+
 export const getCOPY = () => ({
   label: t('contextMenu.sideBar.copy'),
   id: 'copyMenuItem',
@@ -75,6 +99,9 @@ export const getShowInFolder = () => ({
 // Retained for backward compatibility
 export const NEW_FILE = getNewFile()
 export const NEW_DIRECTORY = getNewDirectory()
+export const NEW_GROUP = getNewGroup()
+export const NEW_AREA = getNewArea()
+export const NEW_DOCUMENT = getNewDocument()
 export const COPY = getCOPY()
 export const CUT = getCUT()
 export const PASTE = getPASTE()

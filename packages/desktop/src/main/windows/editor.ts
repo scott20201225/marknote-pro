@@ -90,8 +90,19 @@ class EditorWindow extends BaseWindow {
     bufferStoreInfo: BufferStoreInfo | null = null
   ): BrowserWindow {
     const { menu: appMenu, env, preferences, editorBufferStore } = this._accessor
+    const defaultDirectoryToOpen = preferences.getItem<string>('defaultDirectoryToOpen')
+    const requireWorkspaceSelection =
+      !bufferStoreInfo &&
+      !rootDirectory &&
+      fileList.length === 0 &&
+      markdownList.length === 0 &&
+      !defaultDirectoryToOpen
     const addBlankTab =
-      !bufferStoreInfo && !rootDirectory && fileList.length === 0 && markdownList.length === 0
+      !requireWorkspaceSelection &&
+      !bufferStoreInfo &&
+      !rootDirectory &&
+      fileList.length === 0 &&
+      markdownList.length === 0
 
     const mainWindowState = windowStateKeeper({
       defaultWidth: 1200,
@@ -172,6 +183,7 @@ class EditorWindow extends BaseWindow {
 
       win!.webContents.send('mt::bootstrap-editor', {
         addBlankTab,
+        requireWorkspaceSelection,
         markdownList: this.bufferStoreInfo!.filePath ? [] : this._markdownToOpen,
         lineEnding,
         sideBarVisibility: resolvedSideBarVisibility,
