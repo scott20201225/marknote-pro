@@ -3,8 +3,8 @@
 <h1 align="center">MarkNotePro</h1>
 
 <div align="center">
-  <strong>:high_brightness: Next generation markdown editor :crescent_moon:</strong><br>
-  A simple and elegant open-source markdown editor that focused on speed and usability.<br>
+  <strong>:high_brightness: Local-first Markdown note tool :crescent_moon:</strong><br>
+  A simple and elegant open-source Markdown note tool focused on local organization, speed, and usability.<br>
   <sub>Available for Linux, macOS and Windows.</sub>
 </div>
 
@@ -90,9 +90,9 @@
 
 <br />
 
-> MarkNotePro is built on top of MarkText and is an open-source project that is still being carefully refined. We value every bug report, suggestion, and real-world experience. If you notice rough edges or have ideas while using it, we'd be glad to hear from you and keep improving MarkNotePro together.
+> MarkNotePro is built on top of MarkText and is a local-first open-source Markdown note tool that is still being carefully refined. We value every bug report, suggestion, and real-world experience. If you notice rough edges or have ideas while using it, we'd be glad to hear from you and keep improving MarkNotePro together.
 >
-> MarkNotePro 基于 MarkText 开发，是一个持续打磨中的开源项目。我们珍惜每一条问题反馈、使用建议和体验感受，欢迎你在使用过程中把遇到的问题与想法告诉我们，一起让 MarkNotePro 变得更稳定、更顺手。
+> MarkNotePro 基于 MarkText 开发，是一个以本地化 Markdown 笔记为核心、持续打磨中的开源工具。我们珍惜每一条问题反馈、使用建议和体验感受，欢迎你在使用过程中把遇到的问题与想法告诉我们，一起让 MarkNotePro 变得更稳定、更顺手。
 
 ## Screenshot
 
@@ -155,10 +155,11 @@ The logo is retired from the screenshot area. Below are real product shots taken
 
 ## Features
 
-- Realtime preview (WYSIWYG) and a clean and simple interface to get a distraction-free writing experience.
+- Local-first note workspace with group, area, and note organization for structured personal knowledge management.
+- Realtime preview (WYSIWYG) and a clean and simple interface to keep note taking focused and distraction-free.
 - Support [CommonMark Spec](https://spec.commonmark.org), [GitHub Flavored Markdown Spec](https://github.github.com/gfm/) and selective support [Pandoc markdown](https://pandoc.org/MANUAL.html#pandocs-markdown).
 - Markdown extensions such as math expressions (KaTeX), front matter and emojis.
-- Support paragraphs and inline style shortcuts to improve your writing efficiency.
+- Support paragraphs and inline style shortcuts to improve note-writing efficiency.
 - Output **HTML** and **PDF** files.
 - Various [themes](https://github.com/scott20201225/marknote-pro/tree/main/docs): **Cadmium Light**, **Material Dark** etc.
 - Various editing modes: **Source Code mode**, **Typewriter mode**, **Focus mode**.
@@ -209,9 +210,9 @@ MarkNotePro is in development, please make sure to read the [Contributing Guide]
 
 ## Community
 
-MarkNotePro is built on top of MarkText and is an open-source project under active refinement. Feedback, issues, and suggestions are always welcome to help us improve the experience.
+MarkNotePro is built on top of MarkText and is a local-first open-source Markdown note tool under active refinement. Feedback, issues, and suggestions are always welcome to help us improve the experience.
 
-MarkNotePro 基于 MarkText 开发，是一个持续打磨中的开源项目。欢迎反馈问题与建议，帮助我们把体验做得更好。
+MarkNotePro 基于 MarkText 开发，是一个以本地化 Markdown 笔记为核心、持续打磨中的开源工具。欢迎反馈问题与建议，帮助我们把体验做得更好。
 
 QQ Group: `871505001`
 
