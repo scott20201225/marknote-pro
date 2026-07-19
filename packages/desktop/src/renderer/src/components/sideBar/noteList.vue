@@ -14,8 +14,10 @@
           @click="handleFileClick(file)"
           @contextmenu.prevent.stop="showFileContextMenu($event, file)"
         >
-          <file-icon :name="file.name" />
-          <span class="text-overflow">{{ getNoteDisplayName(file, rootPath) }}</span>
+          <div class="note-list-main">
+            <file-icon :name="file.name" />
+            <span class="note-list-name text-overflow">{{ getNoteDisplayName(file, rootPath) }}</span>
+          </div>
           <button
             class="note-action-button"
             type="button"
@@ -153,7 +155,6 @@ const showFileActionMenu = (event: MouseEvent, file: TreeFileNode): void => {
 .note-list-item {
   display: flex;
   align-items: center;
-  gap: 8px;
   min-height: 32px;
   padding: 0 12px;
   cursor: default;
@@ -168,7 +169,14 @@ const showFileActionMenu = (event: MouseEvent, file: TreeFileNode): void => {
   color: var(--themeColor);
 }
 
-.note-list-item > span {
+.note-list-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.note-list-name {
   flex: 1;
   min-width: 0;
 }

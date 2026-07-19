@@ -19,6 +19,7 @@
       "moveTo": "移動到",
       "rename": "重新命名",
       "export": "匯出",
+      "exportMd": "匯出為 MD",
       "exportHtml": "匯出為 HTML",
       "exportWord": "匯出為 Word",
       "exportPng": "匯出為 PNG",
@@ -49,7 +50,7 @@
       "replace": "取代",
       "findNext": "尋找下一個",
       "findPrevious": "尋找上一個",
-      "findInFolder": "在資料夾中尋找",
+      "findInFolder": "在全部筆記中尋找",
       "screenshot": "螢幕截圖",
       "lineEnding": "行結束符",
       "lineEndingCrlf": "CRLF(Windows)",
@@ -222,14 +223,19 @@
     "addToDictionary": "加入字典",
     "editDictionary": "編輯字典…",
     "sideBar": {
-      "newFile": "新建檔案",
-      "newDirectory": "新建資料夾",
+      "newFile": "新建筆記",
+      "newDirectory": "新建分區組/分區",
+      "newGroup": "新建分區組",
+      "newArea": "新建分區",
+      "newDocument": "新建筆記",
+      "expandAll": "全部展開",
+      "collapseAll": "全部折疊",
       "copy": "複製",
       "cut": "剪下",
       "paste": "貼上",
       "rename": "重新命名",
       "moveToTrash": "移到垃圾桶",
-      "showInFolder": "在資料夾中顯示"
+      "showInFolder": "在系統資料夾中顯示"
     },
     "tabs": {
       "close": "關閉",
@@ -257,26 +263,43 @@
   },
   "sideBar": {
     "search": {
-      "searchInFolder": "在資料夾中搜尋…",
-      "noFolderOpen": "沒有開啟的資料夾",
+      "searchInFolder": "在全部筆記中查找…",
+      "noFolderOpen": "尚未選擇工作區",
       "noResultsFound": "找不到結果。",
       "cancel": "取消",
-      "openFolder": "開啟資料夾",
+      "openFolder": "選擇工作區",
       "showMoreMatches": "顯示更多符合項目"
     },
     "tree": {
-      "openedFiles": "已開啟的檔案",
+      "openedFiles": "已開啟的筆記",
       "saveAll": "全部儲存",
       "closeAll": "全部關閉",
       "emptyProject": "空專案",
-      "createFile": "建立檔案",
-      "openFolder": "開啟資料夾"
+      "emptyWorkspace": "目前筆記工作區還沒有內容",
+      "createFile": "建立筆記",
+      "createGroup": "建立分區組",
+      "openFolder": "選擇工作區",
+      "openWorkspace": "選擇工作區",
+      "workspaceActions": "工作區選單",
+      "nodeActions": "更多操作",
+      "noteNavigationTree": "純樹模式",
+      "noteNavigationTreeList": "樹+列表模式",
+      "noteNavigationTreeShort": "樹",
+      "noteNavigationTreeListShort": "列表",
+      "noteNavigationExpand": "向右展開列表",
+      "noteNavigationCollapse": "向左折疊列表",
+      "notesListTitle": "筆記",
+      "selectAreaToViewNotes": "請選擇一個分區查看筆記",
+      "noNotesInArea": "目前分區還沒有筆記",
+      "groupNamePlaceholder": "輸入分區組名稱",
+      "areaNamePlaceholder": "輸入分區名稱",
+      "documentNamePlaceholder": "輸入筆記名稱"
     },
     "toc": {
       "title": "目錄"
     },
     "icons": {
-      "files": "檔案",
+      "files": "筆記",
       "search": "搜尋",
       "toc": "目錄",
       "settings": "設定"
@@ -371,7 +394,9 @@
   },
   "recent": {
     "noTabsOpen": "您沒有開啟的標籤頁。",
-    "newFile": "新建檔案"
+    "newFile": "新建筆記",
+    "workspaceRequired": "使用 MarkNotePro 前請先選擇預設目錄。",
+    "chooseWorkspace": "選擇預設目錄"
   },
   "import": {
     "title": "匯入或開啟",
@@ -492,6 +517,7 @@
         "openDefaultDirectory": "開啟預設目錄",
         "openLastFolder": "恢復開啟的資料夾",
         "restoreAll": "還原所有已開啟的檔案和資料夾",
+        "workspaceNotSelected": "目前還沒有選擇預設目錄。",
         "selectFolder": "選擇資料夾",
         "openBlankPage": "開啟空白頁面"
       },
@@ -787,6 +813,7 @@
       "toggleAutoSave": "切換自動儲存",
       "importFile": "匯入檔案",
       "exportFile": "匯出檔案",
+      "exportFileMd": "匯出為 MD",
       "exportFilePdf": "匯出為 PDF",
       "zoom": "縮放",
       "checkUpdate": "檢查更新"
@@ -808,7 +835,7 @@
       "findNext": "尋找下一個",
       "findPrevious": "尋找上一個",
       "replace": "取代",
-      "findInFolder": "在資料夾中尋找",
+      "findInFolder": "在全部筆記中尋找",
       "screenshot": "螢幕截圖"
     },
     "paragraph": {
