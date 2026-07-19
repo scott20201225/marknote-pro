@@ -114,8 +114,12 @@ const folderEl = ref<HTMLDivElement | null>(null)
 const renameInput = ref<HTMLInputElement | null>(null)
 const input = ref<HTMLInputElement | null>(null)
 
-// Use a local reactive state for isCollapsed that syncs with the prop
-const isCollapsed = ref<boolean>(!!props.folder.isCollapsed)
+const isCollapsed = computed<boolean>({
+  get: () => !!props.folder.isCollapsed,
+  set: (value) => {
+    props.folder.isCollapsed = value
+  }
+})
 
 const { renameCache } = storeToRefs(projectStore)
 const { createCache } = storeToRefs(projectStore)

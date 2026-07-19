@@ -7,19 +7,7 @@
       :class="[{ active: active }, { frameless: titleBarStyle === 'custom' }, { isOsx: isOsx }]"
     >
       <div class="title" @dblclick.stop="toggleMaxmizeOnMacOS">
-        <span v-if="!filename">MarkNotePro</span>
-        <span v-else>
-          <span v-for="(path, index) of paths" :key="index">
-            {{ path }}
-            <el-icon class="path-arrow" :size="12">
-              <ArrowRight />
-            </el-icon>
-          </span>
-          <span class="filename" :class="{ isOsx: platform === 'darwin' }" @click="rename">
-            {{ filename }}
-          </span>
-          <span class="save-dot" :class="{ show: !isSaved }" />
-        </span>
+        <span />
       </div>
       <div :class="showCustomTitleBar ? 'left-toolbar title-no-drag' : 'right-toolbar'">
         <div
@@ -100,12 +88,10 @@ import { usePreferencesStore } from '@/store/preferences.js'
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { storeToRefs } from 'pinia'
 import { minimizePath, restorePath, maximizePath, closePath } from '../../assets/window-controls.js'
-import { PATH_SEPARATOR } from '../../config'
 import { isOsx as isOsxPlatform } from '@/util'
 import { shouldShowInAppTitleBar } from './visibility'
 import { useEditorStore } from '@/store/editor'
 import { useI18n } from 'vue-i18n'
-import { ArrowRight } from '@element-plus/icons-vue'
 import type { FileWordCount } from '@shared/types/files'
 
 interface ProjectInfo {
@@ -167,12 +153,6 @@ onMounted(async () => {
 })
 
 const { titleBarStyle } = storeToRefs(preferencesStore)
-
-const paths = computed(() => {
-  if (!props.pathname) return []
-  const pathnameToken = props.pathname.split(PATH_SEPARATOR).filter((i) => i)
-  return pathnameToken.slice(0, pathnameToken.length - 1).slice(-3)
-})
 
 const showCustomTitleBar = computed(() => {
   return titleBarStyle.value === 'custom' && !isOsx

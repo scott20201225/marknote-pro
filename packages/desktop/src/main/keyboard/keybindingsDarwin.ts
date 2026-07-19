@@ -10,14 +10,7 @@ const keybindings: Map<string, string> = new Map([
   ['file.preferences', 'Command+,'], // located under MarkNotePro menu in macOS only
 
   // File menu
-  ['file.new-window', 'Command+N'],
-  ['file.new-tab', 'Command+T'],
-  ['file.open-file', 'Command+O'],
-  ['file.open-folder', 'Command+Shift+O'],
   ['file.save', 'Command+S'],
-  ['file.save-as', 'Command+Shift+S'],
-  ['file.move-file', ''],
-  ['file.rename-file', ''],
   ['file.print', ''],
   ['file.close-tab', 'Command+W'],
   ['file.close-window', 'Command+Shift+W'],
@@ -96,7 +89,6 @@ const keybindings: Map<string, string> = new Map([
   ['view.source-code-mode', 'Command+Option+S'],
   ['view.typewriter-mode', 'Command+Option+T'],
   ['view.focus-mode', 'Command+Shift+J'],
-  ['view.toggle-sidebar', 'Command+J'],
   ['view.toggle-toc', 'Command+K'],
   ['view.toggle-dev-tools', 'Command+Option+I'],
   ['view.dev-reload', 'Command+Option+R'],

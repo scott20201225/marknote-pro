@@ -49,6 +49,22 @@ const createProjectRoot = (pathname: string): ProjectTree | null => {
   }
 }
 
+const isSameOrDescendantPath = (pathname: string, basePath: string): boolean => {
+  return window.fileUtils.isSamePathSync(pathname, basePath) ||
+    window.fileUtils.isChildOfDirectory(basePath, pathname)
+}
+
+const replacePathPrefix = (pathname: string, src: string, dest: string): string => {
+  if (!isSameOrDescendantPath(pathname, src)) return pathname
+  if (window.fileUtils.isSamePathSync(pathname, src)) return dest
+  const relativePath = window.path.relative(src, pathname)
+  return window.path.join(dest, relativePath)
+}
+
+const getBasename = (pathname: string): string => {
+  return window.path.basename(pathname) || pathname
+}
+
 interface BufferedProjectState {
   rootDirectory: string
 }
@@ -78,6 +94,10 @@ interface ClipboardEntry {
 interface PendingEvent {
   type: string
   change: TreeChange
+}
+
+interface CollapseOptions {
+  includeSelf?: boolean
 }
 
 export const useProjectStore = defineStore('project', () => {
@@ -115,8 +135,7 @@ export const useProjectStore = defineStore('project', () => {
     projectTree.value = tree
 
     const layout = {
-      rightColumn: 'files',
-      showSideBar: true
+      rightColumn: 'files'
     }
     layoutStore.SET_LAYOUT(layout, { scheduleBufferUpdate })
     layoutStore.DISPATCH_LAYOUT_MENU_ITEMS()
@@ -221,6 +240,23 @@ export const useProjectStore = defineStore('project', () => {
     clipboard.value = data
   }
 
+  function SET_FOLDER_COLLAPSED_RECURSIVELY(
+    node: ProjectTree | null | undefined,
+    collapsed: boolean,
+    { includeSelf = true }: CollapseOptions = {}
+  ): void {
+    if (!node) return
+
+    if (includeSelf) {
+      node.isCollapsed = collapsed
+    }
+
+    node.folders.forEach((child) => {
+      child.isCollapsed = collapsed
+      SET_FOLDER_COLLAPSED_RECURSIVELY(child, collapsed, { includeSelf: false })
+    })
+  }
+
   function ASK_FOR_OPEN_PROJECT(): void {
     const defaultPath =
       preferencesStore.defaultDirectoryToOpen ||
@@ -296,6 +332,24 @@ export const useProjectStore = defineStore('project', () => {
       renameCache.value = pathname
       bus.emit('SIDEBAR::show-rename-input')
     })
+    bus.on('SIDEBAR::expand-all', () => {
+      const rootPath = projectTree.value?.pathname ?? null
+      const kind = getNoteNodeKind(activeItem.value, rootPath)
+      if (kind !== 'root' && kind !== 'group' && kind !== 'area') return
+      SET_FOLDER_COLLAPSED_RECURSIVELY(activeItem.value as ProjectTree, false)
+      debouncedSendBufferedState()
+    })
+    bus.on('SIDEBAR::collapse-all', () => {
+      const rootPath = projectTree.value?.pathname ?? null
+      const kind = getNoteNodeKind(activeItem.value, rootPath)
+      if (kind !== 'root' && kind !== 'group' && kind !== 'area') return
+      SET_FOLDER_COLLAPSED_RECURSIVELY(
+        activeItem.value as ProjectTree,
+        true,
+        { includeSelf: kind !== 'root' }
+      )
+      debouncedSendBufferedState()
+    })
   }
 
   async function CREATE_FILE_DIRECTORY(name: string): Promise<void> {
@@ -370,7 +424,76 @@ export const useProjectStore = defineStore('project', () => {
     if (!storedName) return
     const dest = dirname + PATH_SEPARATOR + storedName
     rename(src, dest).then(() => {
+      if (projectTree.value) {
+        const updateTree = (node: ProjectTree): void => {
+          const nextPath = replacePathPrefix(node.pathname, src, dest)
+          if (!window.fileUtils.isSamePathSync(nextPath, node.pathname)) {
+            node.pathname = nextPath
+            node.name = getBasename(nextPath)
+          }
+          node.folders?.forEach((child) => updateTree(child as ProjectTree))
+          node.files?.forEach((child) => {
+            const nextPath = replacePathPrefix(child.pathname, src, dest)
+            if (!window.fileUtils.isSamePathSync(nextPath, child.pathname)) {
+              child.pathname = nextPath
+              child.name = getBasename(nextPath)
+            }
+          })
+        }
+        updateTree(projectTree.value)
+      }
+
+      if (activeItem.value?.pathname) {
+        activeItem.value.pathname = replacePathPrefix(activeItem.value.pathname, src, dest)
+        activeItem.value.name = getBasename(activeItem.value.pathname)
+      }
+
+      const createCacheValue = createCache.value as CreateCacheEntry
+      if (createCacheValue.dirname) {
+        createCache.value = {
+          ...createCacheValue,
+          dirname: replacePathPrefix(createCacheValue.dirname, src, dest)
+        }
+      }
+
+      if (clipboard.value) {
+        clipboard.value = {
+          ...clipboard.value,
+          src: replacePathPrefix(clipboard.value.src, src, dest),
+          dest: clipboard.value.dest
+            ? replacePathPrefix(clipboard.value.dest, src, dest)
+            : undefined
+        }
+      }
+
+      if (preferencesStore.defaultDirectoryToOpen) {
+        const nextDefaultDirectory = replacePathPrefix(
+          preferencesStore.defaultDirectoryToOpen,
+          src,
+          dest
+        )
+        if (!window.fileUtils.isSamePathSync(nextDefaultDirectory, preferencesStore.defaultDirectoryToOpen)) {
+          preferencesStore.SET_SINGLE_PREFERENCE({
+            type: 'defaultDirectoryToOpen',
+            value: nextDefaultDirectory
+          })
+        }
+      }
+
+      if (preferencesStore.lastOpenedFolder) {
+        const nextLastOpenedFolder = replacePathPrefix(preferencesStore.lastOpenedFolder, src, dest)
+        if (!window.fileUtils.isSamePathSync(nextLastOpenedFolder, preferencesStore.lastOpenedFolder)) {
+          preferencesStore.SET_SINGLE_PREFERENCE({
+            type: 'lastOpenedFolder',
+            value: nextLastOpenedFolder
+          })
+        }
+      }
+
       editorStore.RENAME_IF_NEEDED({ src, dest })
+      renameCache.value = null
+      window.electron.ipcRenderer.send('mt::sidebar-path-renamed', { src, dest })
+      debouncedSendBufferedState()
     })
   }
 

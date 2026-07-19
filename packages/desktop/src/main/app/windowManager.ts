@@ -453,6 +453,17 @@ class WindowManager extends TypedEmitter<WindowManagerEvents> {
         editor.changeOpenedFilePath(pathname, oldPathname)
       }
     )
+    onInternalChannel(
+      'window-change-opened-paths',
+      (windowId: number, pathname: string, oldPathname: string) => {
+        const editor = this.get(windowId) as EditorWindow | undefined
+        if (!editor) {
+          log.error(`Cannot find window id "${windowId}" to change opened paths.`)
+          return
+        }
+        editor.changeOpenedPaths(pathname, oldPathname)
+      }
+    )
 
     onInternalChannel('window-file-saved', (windowId: number, pathname: string) => {
       // A changed event is emitted earliest after the stability threshold.

@@ -12,23 +12,25 @@
     >
       <Close />
     </el-icon>
-    <span class="name">{{ file.filename }}</span>
+    <span class="name">{{ displayName }}</span>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useEditorStore } from '@/store/editor'
 import { Close } from '@element-plus/icons-vue'
 import type { TabDescriptor } from './types'
 
-defineProps<{
+const props = defineProps<{
   file: TabDescriptor
 }>()
 
 const editorStore = useEditorStore()
 
 const { currentFile } = storeToRefs(editorStore)
+const displayName = computed(() => props.file.filename.replace(/\.md$/i, ''))
 
 const selectFile = (file: TabDescriptor): void => {
   if (file.id !== currentFile.value?.id) {

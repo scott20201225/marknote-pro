@@ -154,6 +154,13 @@ export interface EditorState {
 
 const autoSaveTimers = new Map<string, ReturnType<typeof setTimeout>>()
 
+const replacePathPrefix = (pathname: string, src: string, dest: string): string => {
+  if (window.fileUtils.isSamePathSync(pathname, src)) return dest
+  if (!window.fileUtils.isChildOfDirectory(src, pathname)) return pathname
+  const relativePath = window.path.relative(src, pathname)
+  return window.path.join(dest, relativePath)
+}
+
 export const useEditorStore = defineStore('editor', {
   state: (): EditorState => ({
     currentFile: null,
@@ -810,16 +817,20 @@ export const useEditorStore = defineStore('editor', {
      */
     RENAME_IF_NEEDED({ src, dest }: { src: string; dest: string }): void {
       this.tabs.forEach((tab) => {
-        if (tab.pathname === src) {
-          tab.pathname = dest
-          tab.filename = window.path.basename(dest)
+        const nextPath = replacePathPrefix(tab.pathname, src, dest)
+        if (!window.fileUtils.isSamePathSync(nextPath, tab.pathname)) {
+          tab.pathname = nextPath
+          tab.filename = window.path.basename(nextPath)
+          tab.notifications = tab.notifications.filter((item) => item.exclusiveType !== 'file_changed')
         }
       })
-      // Keep DIRNAME in sync when the active tab is the one being renamed,
-      // so link resolution / dirname-based lookups don't keep using the old
-      // folder until the user switches tabs.
-      if (this.currentFile != null && this.currentFile.pathname === dest) {
-        window.DIRNAME = window.path.dirname(dest)
+      if (this.currentFile != null) {
+        const nextCurrentPath = replacePathPrefix(this.currentFile.pathname, src, dest)
+        if (!window.fileUtils.isSamePathSync(nextCurrentPath, this.currentFile.pathname)) {
+          this.currentFile.pathname = nextCurrentPath
+          this.currentFile.filename = window.path.basename(nextCurrentPath)
+        }
+        window.DIRNAME = this.currentFile.pathname ? window.path.dirname(this.currentFile.pathname) : ''
       }
       debouncedSendBufferedState()
     },
@@ -874,7 +885,6 @@ export const useEditorStore = defineStore('editor', {
           requireWorkspaceSelection,
           markdownList,
           lineEnding,
-          sideBarVisibility,
           sourceCodeModeEnabled
         } = config
 
@@ -882,8 +892,7 @@ export const useEditorStore = defineStore('editor', {
         mainStore.SET_INITIALIZED()
         preferencesStore.SET_USER_PREFERENCE({ endOfLine: lineEnding })
         layoutStore.SET_LAYOUT({
-          rightColumn: 'files',
-          showSideBar: !!sideBarVisibility
+          rightColumn: 'files'
         })
         layoutStore.DISPATCH_LAYOUT_MENU_ITEMS()
         preferencesStore.SET_MODE({
@@ -939,7 +948,6 @@ export const useEditorStore = defineStore('editor', {
             addBlankTab: true,
             markdownList: [],
             lineEnding: 'lf',
-            sideBarVisibility: true,
             sourceCodeModeEnabled: false
           })
         }, 0)

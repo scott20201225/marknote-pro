@@ -150,7 +150,6 @@ export interface BootstrapEditorConfig {
    */
   markdownList: string[]
   lineEnding: LineEnding
-  sideBarVisibility: boolean
   sourceCodeModeEnabled: boolean
   preferences?: unknown
   userKeybindings?: unknown
@@ -168,4 +167,4 @@ export interface PageOptions {
   [key: string]: unknown
 }
 
-export type ExportType = 'pdf' | 'html' | 'styledHtml' | 'docx' | 'png' | 'jpeg'
+export type ExportType = 'pdf' | 'html' | 'styledHtml' | 'docx' | 'png' | 'jpeg' | 'md'

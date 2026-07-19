@@ -5,7 +5,6 @@ import log from 'electron-log'
 import { DEFAULT_LANGUAGE } from 'common/i18n'
 import { ensureDirSync, isDirectory2, isFile2 } from 'common/filesystem'
 import { isLinux, isOsx, isWindows } from '../config'
-import { updateSidebarMenu } from '../menu/actions/edit'
 import { updateFormatMenu } from '../menu/actions/format'
 import { updateSelectionMenus, type SelectionState } from '../menu/actions/paragraph'
 import { onInternalChannel } from '../utils/internalIpc'
@@ -318,7 +317,6 @@ class AppMenu {
       updateMenuItem(oldMenu, newMenu, 'sourceCodeModeMenuItem')
       updateMenuItem(oldMenu, newMenu, 'typewriterModeMenuItem')
       updateMenuItem(oldMenu, newMenu, 'focusModeMenuItem')
-      updateMenuItem(oldMenu, newMenu, 'sideBarMenuItem')
 
       // update window menu
       value.menu = newMenu
@@ -349,7 +347,6 @@ class AppMenu {
         updateMenuItem(oldMenu, rebuilt, 'sourceCodeModeMenuItem')
         updateMenuItem(oldMenu, rebuilt, 'typewriterModeMenuItem')
         updateMenuItem(oldMenu, rebuilt, 'focusModeMenuItem')
-        updateMenuItem(oldMenu, rebuilt, 'sideBarMenuItem')
         newMenu = rebuilt
       } else if (type === MenuType.SETTINGS) {
         newMenu = this._buildSettingMenu().menu
@@ -519,14 +516,6 @@ class AppMenu {
         this._refreshActiveApplicationMenu(windowId)
       }
     )
-    ipcMain.on('mt::update-sidebar-menu', (_e, windowId: number, value: unknown) => {
-      if (!this.has(windowId)) {
-        log.error(`UpdateApplicationMenu: Cannot find window menu for window id ${windowId}.`)
-        return
-      }
-      updateSidebarMenu(this.getWindowMenuById(windowId), value)
-      this._refreshActiveApplicationMenu(windowId)
-    })
     ipcMain.on(
       'mt::view-layout-changed',
       (_e, windowId: number, viewSettings: Record<string, unknown>) => {

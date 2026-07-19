@@ -140,7 +140,7 @@ const isWholeWord = ref(false)
 const isRegexp = ref(false)
 const searchEl = ref<HTMLInputElement | null>(null)
 
-const { rightColumn, showSideBar } = storeToRefs(layoutStore)
+const { rightColumn } = storeToRefs(layoutStore)
 const { currentFile } = storeToRefs(editorStore)
 const { projectTree } = storeToRefs(projectStore)
 const {
@@ -311,16 +311,6 @@ const cancelSearcher = (): void => {
     searcherCancelCallback()
   }
 }
-
-watch(showSideBar, (value, oldValue) => {
-  if (rightColumn.value === 'search') {
-    if (value && !oldValue) {
-      handleFindInFolder(false)
-    } else {
-      bus.emit('search-blur')
-    }
-  }
-})
 
 onMounted(() => {
   handleFindInFolder()

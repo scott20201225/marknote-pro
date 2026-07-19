@@ -1295,7 +1295,7 @@ const handleExport = async (options: unknown) => {
   const opts = options as ExportOptions
   const { type, headerFooterStyled, htmlTitle } = opts
 
-  if (!/^(pdf|print|styledHtml|docx|png|jpeg)$/.test(type)) {
+  if (!/^(pdf|print|styledHtml|docx|png|jpeg|md)$/.test(type)) {
     throw new Error(`Invalid type to export: "${type}".`)
   }
 
@@ -1306,6 +1306,10 @@ const handleExport = async (options: unknown) => {
   const footer = (opts.footer ?? null) as HeaderFooterPart | null
 
   switch (type) {
+    case 'md': {
+      editorStore.EXPORT({ type, markdown })
+      break
+    }
     case 'styledHtml':
     case 'docx':
     case 'png':

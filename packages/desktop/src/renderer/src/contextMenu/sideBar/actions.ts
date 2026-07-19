@@ -46,3 +46,11 @@ export const remove = (_menuItem?: MenuItemArg, _browserWindow?: BrowserWindowAr
 export const showInFolder = (_menuItem?: MenuItemArg, _browserWindow?: BrowserWindowArg): void => {
   bus.emit('SIDEBAR::show-in-folder')
 }
+
+export const expandAll = (_menuItem?: MenuItemArg, _browserWindow?: BrowserWindowArg): void => {
+  bus.emit('SIDEBAR::expand-all')
+}
+
+export const collapseAll = (_menuItem?: MenuItemArg, _browserWindow?: BrowserWindowArg): void => {
+  bus.emit('SIDEBAR::collapse-all')
+}

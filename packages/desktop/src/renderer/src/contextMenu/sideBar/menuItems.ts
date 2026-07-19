@@ -96,6 +96,22 @@ export const getShowInFolder = () => ({
   }
 })
 
+export const getExpandAll = () => ({
+  label: t('contextMenu.sideBar.expandAll'),
+  id: 'expandAllMenuItem',
+  click(_menuItem: unknown, _browserWindow: unknown) {
+    contextMenu.expandAll()
+  }
+})
+
+export const getCollapseAll = () => ({
+  label: t('contextMenu.sideBar.collapseAll'),
+  id: 'collapseAllMenuItem',
+  click(_menuItem: unknown, _browserWindow: unknown) {
+    contextMenu.collapseAll()
+  }
+})
+
 // Retained for backward compatibility
 export const NEW_FILE = getNewFile()
 export const NEW_DIRECTORY = getNewDirectory()
@@ -108,3 +124,5 @@ export const PASTE = getPASTE()
 export const RENAME = getRENAME()
 export const DELETE = getDELETE()
 export const SHOW_IN_FOLDER = getShowInFolder()
+export const EXPAND_ALL = getExpandAll()
+export const COLLAPSE_ALL = getCollapseAll()

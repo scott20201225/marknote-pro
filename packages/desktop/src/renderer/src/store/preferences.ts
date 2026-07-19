@@ -97,7 +97,6 @@ export interface PreferencesState {
   spellcheckerLanguage: string
 
   // ----- Side bar visibility / source mode (persisted) -----
-  sideBarVisibility: boolean
   sourceCodeModeEnabled: boolean
   openedFilesInSidebar: boolean
 
@@ -210,7 +209,6 @@ export const usePreferencesStore = defineStore('preferences', {
     spellcheckerLanguage: 'en-US',
 
     // Default values that are overwritten with the entries below.
-    sideBarVisibility: true,
     sourceCodeModeEnabled: false,
     openedFilesInSidebar: true,
 

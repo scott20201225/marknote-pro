@@ -4,62 +4,6 @@
       <!-- Placeholder -->
     </div>
 
-    <!-- Opened tabs -->
-    <div v-if="openedFilesInSidebar" class="opened-files">
-      <div class="title">
-        <el-icon
-          class="icon-arrow"
-          :class="{ fold: !showOpenedFiles }"
-          :size="12"
-          @click.stop="toggleOpenedFiles()"
-        >
-          <ArrowRight />
-        </el-icon>
-        <span
-          class="default-cursor text-overflow"
-          @click.stop="toggleOpenedFiles()"
-        >{{
-          t('sideBar.tree.openedFiles')
-        }}</span>
-        <a
-          href="javascript:;"
-          :title="t('sideBar.tree.saveAll')"
-          @click.stop="saveAll(false)"
-        >
-          <svg
-            class="icon"
-            aria-hidden="true"
-          >
-            <use xlink:href="#icon-save-all" />
-          </svg>
-        </a>
-        <a
-          href="javascript:;"
-          :title="t('sideBar.tree.closeAll')"
-          @click.stop="saveAll(true)"
-        >
-          <svg
-            class="icon"
-            aria-hidden="true"
-          >
-            <use xlink:href="#icon-close-all" />
-          </svg>
-        </a>
-      </div>
-      <div
-        v-show="showOpenedFiles"
-        class="opened-files-list"
-      >
-        <transition-group name="list">
-          <opened-file
-            v-for="tab of tabs"
-            :key="tab.id"
-            :file="tab"
-          />
-        </transition-group>
-      </div>
-    </div>
-
     <!-- Project tree view -->
     <div
       v-if="projectTree"
@@ -70,10 +14,19 @@
         @contextmenu.prevent.stop="handleRootContextMenu"
       >
         <span
-          class="default-cursor text-overflow"
-        >{{
-          projectDisplayName
-        }}</span>
+        class="default-cursor text-overflow"
+        >
+          <input
+            v-if="renameCache === projectTree.pathname"
+            ref="renameInput"
+            v-model="newName"
+            type="text"
+            class="rename root-rename-input"
+            @click.stop
+            @keypress.enter="renameRoot"
+          >
+          <template v-else>{{ projectDisplayName }}</template>
+        </span>
         <button
           class="tree-action-button"
           type="button"
@@ -81,7 +34,7 @@
           @click.stop="showRootActionMenu"
         >
           <el-icon :size="14">
-            <Plus />
+            <MoreFilled />
           </el-icon>
         </button>
       </div>
@@ -153,15 +106,13 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useProjectStore } from '@/store/project'
-import { useEditorStore } from '@/store/editor'
 import { usePreferencesStore } from '@/store/preferences'
 import Folder from './treeFolder.vue'
 import File from './treeFile.vue'
-import OpenedFile from './treeOpenedTab.vue'
 import bus from '../../bus'
 import { showContextMenu } from '../../contextMenu/sideBar'
 import { useI18n } from 'vue-i18n'
-import { ArrowRight, Plus } from '@element-plus/icons-vue'
+import { MoreFilled } from '@element-plus/icons-vue'
 import {
   getNoteDisplayName,
   getVisibleNoteFiles,
@@ -177,29 +128,20 @@ const props = defineProps<{
   // `v-if="projectTree"`. Type the prop nullable to match runtime + the
   // template guard.
   projectTree: TreeNode | null
-  openedFiles?: TabDescriptor[]
   tabs?: TabDescriptor[]
 }>()
 
 const depth = 0
-// Persist the section collapse state (#2421). The tree is rendered under a
-// v-if and is destroyed when the sidebar collapses to its icon strip, so local
-// refs reset to expanded on re-open. Back them with localStorage (like the
-// sidebar width) so the state survives a re-mount and app restart.
-const SHOW_OPENED_FILES_KEY = 'side-bar-show-opened-files'
-const readSectionExpanded = (key: string): boolean => localStorage.getItem(key) !== 'false'
-const showOpenedFiles = ref(readSectionExpanded(SHOW_OPENED_FILES_KEY))
 const createName = ref('')
 const input = ref<HTMLInputElement | null>(null)
+const renameInput = ref<HTMLInputElement | null>(null)
+const newName = ref('')
 
 const projectStore = useProjectStore()
-const editorStore = useEditorStore()
 const preferencesStore = usePreferencesStore()
 
 // Computed properties
-const { createCache } = storeToRefs(projectStore)
-const { clipboard } = storeToRefs(projectStore)
-const { openedFilesInSidebar } = storeToRefs(preferencesStore)
+const { createCache, renameCache, clipboard } = storeToRefs(projectStore)
 
 // The createCache state is `{ dirname, type }` while an input is shown, and
 // `{}` otherwise. Expose a typed accessor for the template so we don't have
@@ -244,10 +186,6 @@ const openFolder = (): void => {
   projectStore.ASK_FOR_OPEN_PROJECT()
 }
 
-const saveAll = (isClose: boolean): void => {
-  editorStore.ASK_FOR_SAVE_ALL(isClose)
-}
-
 const createGroup = (): void => {
   projectStore.CHANGE_ACTIVE_ITEM(props.projectTree)
   bus.emit('SIDEBAR::new', 'group')
@@ -281,11 +219,6 @@ const handleTreeWrapperContextMenu = (event: MouseEvent): void => {
   handleRootContextMenu(event)
 }
 
-const toggleOpenedFiles = (): void => {
-  showOpenedFiles.value = !showOpenedFiles.value
-  localStorage.setItem(SHOW_OPENED_FILES_KEY, String(showOpenedFiles.value))
-}
-
 // From createFileOrDirectoryMixins
 const handleInputFocus = (): void => {
   nextTick(() => {
@@ -300,8 +233,25 @@ const handleInputEnter = (): void => {
   projectStore.CREATE_FILE_DIRECTORY(createName.value)
 }
 
+const focusRootRenameInput = (): void => {
+  if (!props.projectTree || renameCache.value !== props.projectTree.pathname) return
+  nextTick(() => {
+    if (renameInput.value) {
+      renameInput.value.focus()
+      newName.value = projectDisplayName.value
+    }
+  })
+}
+
+const renameRoot = (): void => {
+  if (newName.value) {
+    projectStore.RENAME_IN_SIDEBAR(newName.value)
+  }
+}
+
 onMounted(() => {
   bus.on('SIDEBAR::show-new-input', handleInputFocus)
+  bus.on('SIDEBAR::show-rename-input', focusRootRenameInput)
 
   // Hide rename / create inputs on outside clicks. Buttons that open these
   // inputs must use @click.stop so their click never reaches this listener.
@@ -362,65 +312,33 @@ onMounted(() => {
   flex-direction: row-reverse;
 }
 
-.icon-arrow {
-  margin-right: 5px;
-  transition: transform 0.25s ease-out;
-  transform: rotate(90deg);
-  color: var(--sideBarTextColor);
-  cursor: pointer;
-}
-
-.icon-arrow.fold {
-  transform: rotate(0);
-}
-
-.opened-files > .title,
 .project-tree > .title {
   height: 30px;
   line-height: 30px;
   font-size: 14px;
-}
-
-.opened-files .title {
-  padding-right: 15px;
   display: flex;
   align-items: center;
+  gap: 8px;
 }
 
-.opened-files .title > span {
+.project-tree > .title > span {
   flex: 1;
+  min-width: 0;
 }
 
-.opened-files .title > a {
-  display: none;
-  text-decoration: none;
+.root-rename-input {
+  width: 100%;
+  min-width: 0;
+  height: 22px;
+  outline: none;
+  padding: 0 8px;
   color: var(--sideBarColor);
-  margin-left: 8px;
-}
-.opened-files div.title:hover > a,
-.opened-files div.title > a:hover {
-  display: block;
-}
-
-.opened-files div.title:hover > a:hover,
-.opened-files div.title > a:hover:hover {
-  color: var(--highlightThemeColor);
-}
-.opened-files {
-  display: flex;
-  flex-direction: column;
+  border: 1px solid var(--floatBorderColor);
+  background: var(--floatBorderColor);
+  border-radius: 3px;
 }
 .default-cursor {
   cursor: pointer;
-}
-.opened-files .opened-files-list {
-  max-height: 112px;
-  overflow: auto;
-  flex: 1;
-}
-
-.opened-files .opened-files-list::-webkit-scrollbar:vertical {
-  width: 8px;
 }
 
 .project-tree {

@@ -349,11 +349,6 @@
     "type": "string",
     "default": "assets"
   },
-  "sideBarVisibility": {
-    "description": "View--Whether the side bar is visible.--internal",
-    "type": "boolean",
-    "default": false
-  },
   "sourceCodeModeEnabled": {
     "description": "View--Whether the source-code mode is enabled by default.--internal",
     "type": "boolean",

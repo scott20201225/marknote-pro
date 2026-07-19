@@ -1,6 +1,5 @@
 <template>
   <div
-    v-show="showSideBar"
     ref="sideBar"
     class="side-bar"
     :style="[!rightColumn ? { 'min-width': '45px' } : {}, { width: `${finalSideBarWidth}px` }]"
@@ -31,13 +30,13 @@
       class="right-column"
     >
       <tree
-        v-if="rightColumn === 'files'"
+        v-show="rightColumn === 'files'"
         :project-tree="projectTree"
         :opened-files="openedFiles"
         :tabs="tabs"
       />
-      <side-bar-search v-else-if="rightColumn === 'search'" />
-      <toc v-else-if="rightColumn === 'toc'" />
+      <side-bar-search v-show="rightColumn === 'search'" />
+      <toc v-show="rightColumn === 'toc'" />
     </div>
     <div
       v-show="rightColumn"
@@ -70,13 +69,12 @@ const dragBar = ref<HTMLDivElement | null>(null)
 const openedFiles = ref<TabDescriptor[]>([])
 const sideBarViewWidth = ref(280)
 
-const { rightColumn, showSideBar, sideBarWidth } = storeToRefs(layoutStore)
+const { rightColumn, sideBarWidth } = storeToRefs(layoutStore)
 
 const { projectTree } = storeToRefs(projectStore)
 const { tabs } = storeToRefs(editorStore)
 
 const finalSideBarWidth = computed<number>(() => {
-  if (!showSideBar.value) return 0
   if (rightColumn.value === '') return 45
   return sideBarViewWidth.value < 220 ? 220 : sideBarViewWidth.value
 })

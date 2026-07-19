@@ -50,16 +50,6 @@ export default function (keybindings: Keybindings): MenuItemConstructorOptions {
       type: 'separator'
     },
     {
-      label: t('menu.view.toggleSidebar'),
-      id: 'sideBarMenuItem',
-      accelerator: keybindings.getAccelerator('view.toggle-sidebar') ?? undefined,
-      type: 'checkbox',
-      checked: false,
-      click(_item, focusedWindow) {
-        actions.toggleSidebar(focusedWindow as BrowserWindow | undefined)
-      }
-    },
-    {
       label: t('menu.view.toggleTableOfContents'),
       id: 'tocMenuItem',
       accelerator: keybindings.getAccelerator('view.toggle-toc') ?? undefined,

@@ -32,6 +32,13 @@ interface CandidateScore {
   score: number
 }
 
+const replacePathPrefix = (pathname: string, src: string, dest: string): string => {
+  if (isSamePathSync(pathname, src)) return dest
+  if (!isChildOfDirectory(src, pathname)) return pathname
+  const relativePath = path.relative(src, pathname)
+  return path.join(dest, relativePath)
+}
+
 interface RestoredTab {
   pathname: string
   filename?: string
@@ -122,13 +129,10 @@ class EditorWindow extends BaseWindow {
     const {
       titleBarStyle,
       theme,
-      sideBarVisibility,
-      restoreLayoutState,
       sourceCodeModeEnabled,
       spellcheckerEnabled,
       spellcheckerLanguage
     } = preferences.getAll()
-    const resolvedSideBarVisibility = restoreLayoutState ? !!sideBarVisibility : false
 
     // Enable native or custom/frameless window and titlebar
     if (!isOsx) {
@@ -186,7 +190,6 @@ class EditorWindow extends BaseWindow {
         requireWorkspaceSelection,
         markdownList: this.bufferStoreInfo!.filePath ? [] : this._markdownToOpen,
         lineEnding,
-        sideBarVisibility: resolvedSideBarVisibility,
         sourceCodeModeEnabled
       })
 
@@ -444,6 +447,35 @@ class EditorWindow extends BaseWindow {
   }
 
   /**
+   * Change a path subtree in the opened file list and root directory watcher.
+   */
+  changeOpenedPaths(pathname: string, oldPathname: string): void {
+    const { _openedFiles, _openedRootDirectory, browserWindow } = this
+    const nextOpenedFiles = new Set<string>()
+
+    for (const openedPath of _openedFiles!) {
+      const nextPath = replacePathPrefix(openedPath, oldPathname, pathname)
+      nextOpenedFiles.add(nextPath)
+      if (!isSamePathSync(nextPath, openedPath)) {
+        ipcMain.emit('watcher-unwatch-file', browserWindow, openedPath)
+        ipcMain.emit('watcher-watch-file', browserWindow, nextPath)
+      }
+    }
+
+    this._openedFiles = [...nextOpenedFiles]
+
+    if (_openedRootDirectory) {
+      const nextRootDirectory = replacePathPrefix(_openedRootDirectory, oldPathname, pathname)
+      if (!isSamePathSync(nextRootDirectory, _openedRootDirectory)) {
+        ipcMain.emit('watcher-unwatch-directory', browserWindow, _openedRootDirectory)
+        ipcMain.emit('watcher-watch-directory', browserWindow, nextRootDirectory)
+        this._openedRootDirectory = nextRootDirectory
+        this._accessor.preferences.setItems({ lastOpenedFolder: nextRootDirectory })
+      }
+    }
+  }
+
+  /**
    * Remove a path from the opened file list and stop watching the path.
    */
   removeFromOpenedFiles(pathname: string): void {
@@ -496,14 +528,12 @@ class EditorWindow extends BaseWindow {
     browserWindow!.webContents.once('did-finish-load', () => {
       this.lifecycle = WindowLifecycle.READY
       const { preferences } = this._accessor
-      const { sideBarVisibility, restoreLayoutState, sourceCodeModeEnabled } = preferences.getAll()
-      const resolvedSideBarVisibility = restoreLayoutState ? !!sideBarVisibility : false
+      const { sourceCodeModeEnabled } = preferences.getAll()
       const lineEnding = preferences.getPreferredEol()
       browserWindow!.webContents.send('mt::bootstrap-editor', {
         addBlankTab: true,
         markdownList: [],
         lineEnding,
-        sideBarVisibility: resolvedSideBarVisibility,
         sourceCodeModeEnabled
       })
     })

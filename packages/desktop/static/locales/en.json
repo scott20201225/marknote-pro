@@ -19,6 +19,7 @@
       "moveTo": "Move To",
       "rename": "Rename",
       "export": "Export",
+      "exportMd": "Export as MD",
       "exportHtml": "Export as HTML",
       "exportWord": "Export as Word",
       "exportPng": "Export as PNG",
@@ -49,7 +50,7 @@
       "replace": "Replace",
       "findNext": "Find Next",
       "findPrevious": "Find Previous",
-      "findInFolder": "Find in Folder",
+      "findInFolder": "Search Across All Notes",
       "screenshot": "Screenshot",
       "lineEnding": "Line Ending",
       "lineEndingCrlf": "CRLF(Windows)",
@@ -142,7 +143,6 @@
     },
     "view": {
       "view": "View",
-      "toggleSidebar": "Toggle Sidebar",
       "commandPalette": "Command Palette",
       "sourceCodeMode": "Source Code Mode",
       "typewriterMode": "Typewriter Mode",
@@ -222,17 +222,19 @@
     "addToDictionary": "Add to Dictionary",
     "editDictionary": "Edit Dictionary...",
     "sideBar": {
-      "newFile": "New File",
-      "newDirectory": "New Directory",
+      "newFile": "New Note",
+      "newDirectory": "New Group/Area",
       "newGroup": "New Group",
       "newArea": "New Area",
-      "newDocument": "New Document",
+      "newDocument": "New Note",
+      "expandAll": "Expand All",
+      "collapseAll": "Collapse All",
       "copy": "Copy",
       "cut": "Cut",
       "paste": "Paste",
       "rename": "Rename",
       "moveToTrash": "Move To Trash",
-      "showInFolder": "Show In Folder"
+      "showInFolder": "Show In System Folder"
     },
     "tabs": {
       "close": "Close",
@@ -241,7 +243,7 @@
       "closeAllTabs": "Close all tabs",
       "rename": "Rename",
       "copyPath": "Copy path",
-      "showInFolder": "Show in folder"
+      "showInFolder": "Show in System Folder"
     },
     "copyAsExcel": "Copy As Excel"
   },
@@ -255,33 +257,33 @@
     "replaceSingle": "Replace Single",
     "invalidRegex": "Invalid regular expression \"{pattern}\"",
     "regexMatchEmpty": "Regular expression matches empty string \"{pattern}\"",
-    "searchResultInfo": "{matchCount} matches in {fileCount} files",
+    "searchResultInfo": "{matchCount} matches in {fileCount} notes",
     "searchLimited": "Searched limited to first {count} results"
   },
   "sideBar": {
     "search": {
-      "searchInFolder": "Search in folder...",
-      "noFolderOpen": "No folder open",
+      "searchInFolder": "Search across all notes...",
+      "noFolderOpen": "No workspace selected",
       "noResultsFound": "No results found.",
       "cancel": "Cancel",
-      "openFolder": "Open Folder",
+      "openFolder": "Choose Workspace",
       "showMoreMatches": "Show more matches"
     },
     "tree": {
-      "openedFiles": "Opened files",
+      "openedFiles": "Opened notes",
       "saveAll": "Save All",
       "closeAll": "Close All",
       "emptyProject": "Empty project",
       "emptyWorkspace": "No note workspace content yet",
-      "createFile": "Create File",
+      "createFile": "Create Note",
       "createGroup": "Create Group",
-      "openFolder": "Open Folder",
+      "openFolder": "Choose Workspace",
       "openWorkspace": "Choose Workspace",
       "workspaceActions": "Workspace Menu",
       "nodeActions": "More Actions",
       "groupNamePlaceholder": "Group name",
       "areaNamePlaceholder": "Area name",
-      "documentNamePlaceholder": "Document name"
+      "documentNamePlaceholder": "Note name"
     },
     "toc": {
       "title": "Table Of Contents"
@@ -297,7 +299,7 @@
     "placeholder": "Type a command to execute",
     "placeholders": {
       "selectOption": "Select an option",
-      "searchFileToOpen": "Search file to open",
+      "searchFileToOpen": "Search note to open",
       "selectLanguage": "Select a language to switch to"
     }
   },
@@ -382,7 +384,7 @@
   },
   "recent": {
     "noTabsOpen": "You have no tabs open.",
-    "newFile": "New File",
+    "newFile": "New Note",
     "workspaceRequired": "Select the default directory before using MarkNotePro.",
     "chooseWorkspace": "Select Default Directory"
   },
@@ -465,7 +467,7 @@
         "imageRelativeDirectoryName": "The relative image folder name",
         "autoNormalizeLineEndings": "Automatically normalize line endings when opening files. When disabled, files are opened as-is.",
         "fileSortOrder": "Sort order for files in opened folders: ascending or descending.",
-        "openedFilesInSidebar": "Whether to show opened files in the sidebar."
+        "openedFilesInSidebar": "Whether to show opened notes in the sidebar."
       }
     },
     "categories": {
@@ -504,7 +506,7 @@
         "openBlankState": "Open blank state",
         "openDefaultDirectory": "Open default workspace",
         "openLastFolder": "Restore opened workspace",
-        "restoreAll": "Restore all opened files and folders",
+        "restoreAll": "Restore all opened notes and workspaces",
         "workspaceNotSelected": "No default directory selected.",
         "selectFolder": "Select Workspace",
         "openBlankPage": "Open blank page"
@@ -512,7 +514,7 @@
       "sidebar": {
         "title": "Sidebar",
         "wrapTextInToc": "Wrap text in table of contents",
-        "showOpenedFiles": "Show opened files",
+        "showOpenedFiles": "Show opened notes",
         "excludePatterns": "Exclude patterns",
         "excludePatternsNotes": "Exclude patterns (Notes)",
         "fileSortBy": {
@@ -787,8 +789,8 @@
       "openFolder": "Open Folder",
       "save": "Save",
       "saveAs": "Save As",
-      "moveFile": "Move File",
-      "renameFile": "Rename File",
+      "moveFile": "Move Note",
+      "renameFile": "Rename Note",
       "quickOpen": "Quick Open",
       "changeEncoding": "Change Encoding",
       "changeLineEnding": "Change Line Ending",
@@ -800,7 +802,8 @@
       "quit": "Quit",
       "toggleAutoSave": "Toggle Auto Save",
       "importFile": "Import File",
-      "exportFile": "Export File",
+      "exportFile": "Export Note",
+      "exportFileMd": "Export as MD",
       "exportFilePdf": "Export as PDF",
       "zoom": "Zoom",
       "checkUpdate": "Check for Updates"
@@ -822,7 +825,7 @@
       "findNext": "Find Next",
       "findPrevious": "Find Previous",
       "replace": "Replace",
-      "findInFolder": "Find in Folder",
+      "findInFolder": "Search Across All Notes",
       "screenshot": "Screenshot"
     },
     "paragraph": {
@@ -881,7 +884,6 @@
       "toggleSourceCodeMode": "Toggle Source Code Mode",
       "toggleTypewriterMode": "Toggle Typewriter Mode",
       "toggleFocusMode": "Toggle Focus Mode",
-      "toggleSidebar": "Toggle Sidebar",
       "toggleToc": "Toggle Table of Contents",
       "toggleDevTools": "Toggle Developer Tools",
       "devReload": "Developer Reload",
