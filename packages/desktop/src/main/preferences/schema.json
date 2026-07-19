@@ -359,6 +359,11 @@
     "type": "boolean",
     "default": true
   },
+  "noteNavigationMode": {
+    "description": "View--The note navigation mode for the notes workspace.--internal",
+    "enum": ["tree", "tree-list"],
+    "default": "tree"
+  },
   "searchExclusions": {
     "description": "Searcher--List of glob patterns to exclude from search.--internal",
     "type": "array",

@@ -69,6 +69,7 @@
   "sideBarVisibility": false,
   "sourceCodeModeEnabled": false,
   "openedFilesInSidebar": true,
+  "noteNavigationMode": "tree",
 
   "searchExclusions": [],
   "searchMaxFileSize": "",

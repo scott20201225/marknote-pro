@@ -47,7 +47,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useLayoutStore } from '@/store/layout'
 import { useProjectStore } from '@/store/project'
 import { useEditorStore } from '@/store/editor'
@@ -70,6 +70,7 @@ const dragBar = ref<HTMLDivElement | null>(null)
 
 const openedFiles = ref<TabDescriptor[]>([])
 const sideBarViewWidth = ref(280)
+const noteListViewWidth = ref(300)
 
 const { rightColumn, sideBarWidth, noteNavigationMode, noteListWidth } = storeToRefs(layoutStore)
 
@@ -86,10 +87,26 @@ const finalSideBarWidth = computed<number>(() => {
     ? minimumVisibleWidth.value
     : sideBarViewWidth.value
   if (rightColumn.value === 'files' && noteNavigationMode.value === 'tree-list') {
-    return baseWidth + noteListWidth.value + 4
+    return baseWidth + noteListViewWidth.value + 4
   }
   return baseWidth
 })
+
+watch(
+  () => sideBarWidth.value,
+  width => {
+    sideBarViewWidth.value = +width
+  },
+  { immediate: true }
+)
+
+watch(
+  () => noteListWidth.value,
+  width => {
+    noteListViewWidth.value = +width
+  },
+  { immediate: true }
+)
 
 onMounted(() => {
   nextTick(() => {
@@ -97,29 +114,47 @@ onMounted(() => {
     if (!dragBarEl) return
     let startX = 0
     let currentSideBarWidth = +sideBarWidth.value
+    let currentNoteListWidth = +noteListWidth.value
     let startWidth = currentSideBarWidth
-
-    sideBarViewWidth.value = currentSideBarWidth
+    let resizingListWidth = false
 
     const mouseUpHandler = (): void => {
       document.removeEventListener('mousemove', mouseMoveHandler, false)
       document.removeEventListener('mouseup', mouseUpHandler, false)
-      layoutStore.CHANGE_SIDE_BAR_WIDTH(
-        currentSideBarWidth < minimumVisibleWidth.value
-          ? minimumVisibleWidth.value
-          : currentSideBarWidth
-      )
+      if (resizingListWidth) {
+        layoutStore.SET_NOTE_LIST_WIDTH(currentNoteListWidth)
+      } else {
+        layoutStore.CHANGE_SIDE_BAR_WIDTH(
+          currentSideBarWidth < minimumVisibleWidth.value
+            ? minimumVisibleWidth.value
+            : currentSideBarWidth
+        )
+      }
     }
 
     const mouseMoveHandler = (event: MouseEvent): void => {
       const offset = event.clientX - startX
-      currentSideBarWidth = startWidth + offset
-      sideBarViewWidth.value = currentSideBarWidth
+      if (resizingListWidth) {
+        currentNoteListWidth = Math.max(220, startWidth + offset)
+        noteListViewWidth.value = currentNoteListWidth
+      } else {
+        currentSideBarWidth = startWidth + offset
+        sideBarViewWidth.value = currentSideBarWidth
+      }
     }
 
     const mouseDownHandler = (event: MouseEvent): void => {
       startX = event.clientX
-      startWidth = +sideBarWidth.value
+      resizingListWidth = rightColumn.value === 'files' && noteNavigationMode.value === 'tree-list'
+      if (resizingListWidth) {
+        startWidth = +noteListWidth.value
+        currentNoteListWidth = startWidth
+        noteListViewWidth.value = startWidth
+      } else {
+        startWidth = +sideBarWidth.value
+        currentSideBarWidth = startWidth
+        sideBarViewWidth.value = startWidth
+      }
       document.addEventListener('mousemove', mouseMoveHandler, false)
       document.addEventListener('mouseup', mouseUpHandler, false)
     }
@@ -136,6 +171,7 @@ const handleLeftIconClick = (name: string): void => {
   } else {
     layoutStore.SET_LAYOUT({ rightColumn: name })
     sideBarViewWidth.value = +sideBarWidth.value
+    noteListViewWidth.value = +noteListWidth.value
   }
 }
 

@@ -163,7 +163,7 @@ const props = defineProps<{
 
 const depth = 0
 const TREE_PANEL_MIN_WIDTH = 180
-const NOTE_LIST_MIN_WIDTH = 220
+const TREE_SPLIT_MIN_WIDTH = TREE_PANEL_MIN_WIDTH + 45
 const createName = ref('')
 const input = ref<HTMLInputElement | null>(null)
 const renameInput = ref<HTMLInputElement | null>(null)
@@ -266,7 +266,7 @@ const toggleNoteNavigationMode = (): void => {
 
 const handleSplitDragStart = (event: MouseEvent): void => {
   let startX = event.clientX
-  let startWidth = noteListWidth.value
+  let startWidth = sideBarWidth.value
 
   const mouseUpHandler = (): void => {
     document.removeEventListener('mousemove', mouseMoveHandler, false)
@@ -274,9 +274,9 @@ const handleSplitDragStart = (event: MouseEvent): void => {
   }
 
   const mouseMoveHandler = (moveEvent: MouseEvent): void => {
-    const offset = startX - moveEvent.clientX
-    const nextWidth = Math.max(NOTE_LIST_MIN_WIDTH, startWidth + offset)
-    layoutStore.SET_NOTE_LIST_WIDTH(nextWidth)
+    const offset = moveEvent.clientX - startX
+    const nextWidth = Math.max(TREE_SPLIT_MIN_WIDTH, startWidth + offset)
+    layoutStore.SET_SIDE_BAR_WIDTH(nextWidth)
   }
 
   document.addEventListener('mousemove', mouseMoveHandler, false)
