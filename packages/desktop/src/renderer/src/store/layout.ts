@@ -7,6 +7,8 @@ interface LayoutPartial {
   rightColumn?: string
   showSideBar?: boolean
   sideBarWidth?: number | string
+  noteNavigationMode?: 'tree' | 'tree-list'
+  noteListWidth?: number | string
 }
 
 interface SetLayoutOptions {
@@ -18,10 +20,17 @@ const normalizeSideBarWidth = (width: unknown): number => {
   return Number.isFinite(numericWidth) ? Math.max(numericWidth, 220) : 280
 }
 
+const normalizeNoteListWidth = (width: unknown): number => {
+  const numericWidth = Number(width)
+  return Number.isFinite(numericWidth) ? Math.max(numericWidth, 220) : 300
+}
+
 interface BufferedLayout {
   rightColumn: string | undefined
   showSideBar: boolean
   sideBarWidth: number
+  noteNavigationMode: 'tree' | 'tree-list'
+  noteListWidth: number
 }
 
 const createBufferedLayoutState = (state: unknown): BufferedLayout | null => {
@@ -34,17 +43,22 @@ const createBufferedLayoutState = (state: unknown): BufferedLayout | null => {
   return {
     rightColumn: s.rightColumn,
     showSideBar: true,
-    sideBarWidth: normalizeSideBarWidth(s.sideBarWidth)
+    sideBarWidth: normalizeSideBarWidth(s.sideBarWidth),
+    noteNavigationMode: s.noteNavigationMode === 'tree-list' ? 'tree-list' : 'tree',
+    noteListWidth: normalizeNoteListWidth(s.noteListWidth)
   }
 }
 
 const initialWidth = localStorage.getItem('side-bar-width')
 const initialSideBarWidth = normalizeSideBarWidth(initialWidth)
+const initialNoteListWidth = normalizeNoteListWidth(localStorage.getItem('note-list-width'))
 
 export const useLayoutStore = defineStore('layout', () => {
   const rightColumn = ref<string>('files')
   const showSideBar = ref(true)
   const sideBarWidth = ref<number>(initialSideBarWidth)
+  const noteNavigationMode = ref<'tree' | 'tree-list'>('tree')
+  const noteListWidth = ref<number>(initialNoteListWidth)
 
   // Actual rendered sidebar width. `sideBarWidth` is the right-column width
   // (clamped to ≥220 by `normalizeSideBarWidth`); when `rightColumn` is empty
@@ -52,7 +66,11 @@ export const useLayoutStore = defineStore('layout', () => {
   // subtract the sidebar from viewport space must use this, not the raw ref.
   const effectiveSideBarWidth = computed<number>(() => {
     if (!rightColumn.value) return 45
-    return Number(sideBarWidth.value)
+    const baseWidth = Number(sideBarWidth.value)
+    if (rightColumn.value === 'files' && noteNavigationMode.value === 'tree-list') {
+      return baseWidth + Number(noteListWidth.value) + 4
+    }
+    return baseWidth
   })
 
   function SET_LAYOUT(
@@ -65,6 +83,8 @@ export const useLayoutStore = defineStore('layout', () => {
     if (layout.rightColumn !== undefined) rightColumn.value = layout.rightColumn
     showSideBar.value = true
     if (layout.sideBarWidth !== undefined) sideBarWidth.value = layout.sideBarWidth as number
+    if (layout.noteNavigationMode !== undefined) noteNavigationMode.value = layout.noteNavigationMode
+    if (layout.noteListWidth !== undefined) noteListWidth.value = layout.noteListWidth as number
     if (scheduleBufferUpdate) {
       debouncedSendBufferedState()
     }
@@ -74,7 +94,9 @@ export const useLayoutStore = defineStore('layout', () => {
     return createBufferedLayoutState({
       rightColumn: rightColumn.value,
       showSideBar: true,
-      sideBarWidth: sideBarWidth.value
+      sideBarWidth: sideBarWidth.value,
+      noteNavigationMode: noteNavigationMode.value,
+      noteListWidth: noteListWidth.value
     })
   }
 
@@ -85,10 +107,12 @@ export const useLayoutStore = defineStore('layout', () => {
     SET_SIDE_BAR_WIDTH(layout.sideBarWidth, { scheduleBufferUpdate: false })
     SET_LAYOUT(
       {
-        rightColumn: layout.rightColumn
+        rightColumn: layout.rightColumn,
+        noteListWidth: layout.noteListWidth
       },
       { scheduleBufferUpdate: false }
     )
+    noteNavigationMode.value = layout.noteNavigationMode
     DISPATCH_LAYOUT_MENU_ITEMS()
   }
 
@@ -139,10 +163,34 @@ export const useLayoutStore = defineStore('layout', () => {
     SET_SIDE_BAR_WIDTH(width)
   }
 
+  function SET_NOTE_LIST_WIDTH(
+    width: number | string,
+    { scheduleBufferUpdate = true }: SetLayoutOptions = {}
+  ): void {
+    const normalizedWidth = normalizeNoteListWidth(width)
+    localStorage.setItem('note-list-width', String(normalizedWidth))
+    noteListWidth.value = normalizedWidth
+    if (scheduleBufferUpdate) {
+      debouncedSendBufferedState()
+    }
+  }
+
+  function SET_NOTE_NAVIGATION_MODE(
+    mode: 'tree' | 'tree-list',
+    { scheduleBufferUpdate = true }: SetLayoutOptions = {}
+  ): void {
+    noteNavigationMode.value = mode
+    if (scheduleBufferUpdate) {
+      debouncedSendBufferedState()
+    }
+  }
+
   return {
     rightColumn,
     showSideBar,
     sideBarWidth,
+    noteNavigationMode,
+    noteListWidth,
     effectiveSideBarWidth,
     SET_LAYOUT,
     CREATE_BUFFERED_STATE,
@@ -151,6 +199,8 @@ export const useLayoutStore = defineStore('layout', () => {
     SET_SIDE_BAR_WIDTH,
     LISTEN_FOR_LAYOUT,
     DISPATCH_LAYOUT_MENU_ITEMS,
-    CHANGE_SIDE_BAR_WIDTH
+    CHANGE_SIDE_BAR_WIDTH,
+    SET_NOTE_NAVIGATION_MODE,
+    SET_NOTE_LIST_WIDTH
   }
 })

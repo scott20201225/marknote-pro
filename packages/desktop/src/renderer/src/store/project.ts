@@ -116,6 +116,7 @@ export const useProjectStore = defineStore('project', () => {
   const clipboard = ref<ClipboardEntry | null>(null)
   const projectTree = ref<ProjectTree | null>(null)
   const pendingTreeEvents = ref<PendingEvent[]>([])
+  const selectedNotePath = ref<string | null>(null)
 
   const preferencesStore = usePreferencesStore()
 
@@ -137,6 +138,7 @@ export const useProjectStore = defineStore('project', () => {
     if (!tree) return
 
     projectTree.value = tree
+    selectedNotePath.value = tree.pathname
     void window.fileUtils.ensureDir(
       window.path.join(tree.pathname, NOTE_ATTACHMENTS_DIRECTORY)
     )
@@ -172,6 +174,7 @@ export const useProjectStore = defineStore('project', () => {
     } else {
       projectTree.value = null
       pendingTreeEvents.value = []
+      selectedNotePath.value = null
     }
   }
 
@@ -194,6 +197,7 @@ export const useProjectStore = defineStore('project', () => {
 
   function _processTreeEvent(type: string, change: TreeChange): void {
     const editorStore = useEditorStore()
+    const fallbackSelectedNotePath = projectTree.value?.pathname ?? null
     switch (type) {
       case 'add': {
         const { pathname, data, isMarkdown } = change
@@ -213,12 +217,26 @@ export const useProjectStore = defineStore('project', () => {
       case 'unlink':
         unlinkFile(projectTree.value!, change)
         editorStore.SET_SAVE_STATUS_WHEN_REMOVE(change)
+        if (
+          selectedNotePath.value &&
+          change?.pathname &&
+          window.fileUtils.isSamePathSync(selectedNotePath.value, change.pathname)
+        ) {
+          selectedNotePath.value = fallbackSelectedNotePath
+        }
         break
       case 'addDir':
         addDirectory(projectTree.value!, change)
         break
       case 'unlinkDir':
         unlinkDirectory(projectTree.value!, change)
+        if (
+          selectedNotePath.value &&
+          change?.pathname &&
+          isSameOrDescendantPath(selectedNotePath.value, change.pathname)
+        ) {
+          selectedNotePath.value = fallbackSelectedNotePath
+        }
         break
       case 'change':
         if (change?.mtimeMs !== undefined) {
@@ -241,6 +259,25 @@ export const useProjectStore = defineStore('project', () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function CHANGE_ACTIVE_ITEM(item: any): void {
     activeItem.value = item
+  }
+
+  function SELECT_NOTE_PATH(pathname: string | null): void {
+    if (!projectTree.value) {
+      selectedNotePath.value = null
+      return
+    }
+
+    if (!pathname) {
+      selectedNotePath.value = projectTree.value.pathname
+      return
+    }
+
+    if (!isSameOrDescendantPath(pathname, projectTree.value.pathname)) {
+      selectedNotePath.value = projectTree.value.pathname
+      return
+    }
+
+    selectedNotePath.value = pathname
   }
 
   function CHANGE_CLIPBOARD(data: ClipboardEntry | null): void {
@@ -455,6 +492,10 @@ export const useProjectStore = defineStore('project', () => {
         activeItem.value.name = getBasename(activeItem.value.pathname)
       }
 
+      if (selectedNotePath.value) {
+        selectedNotePath.value = replacePathPrefix(selectedNotePath.value, src, dest)
+      }
+
       const createCacheValue = createCache.value as CreateCacheEntry
       if (createCacheValue.dirname) {
         createCache.value = {
@@ -515,6 +556,7 @@ export const useProjectStore = defineStore('project', () => {
     renameCache,
     clipboard,
     projectTree,
+    selectedNotePath,
     pendingTreeEvents,
     OPEN_PROJECT,
     CREATE_BUFFERED_STATE,
@@ -522,6 +564,7 @@ export const useProjectStore = defineStore('project', () => {
     LISTEN_FOR_LOAD_PROJECT,
     LISTEN_FOR_UPDATE_PROJECT,
     CHANGE_ACTIVE_ITEM,
+    SELECT_NOTE_PATH,
     CHANGE_CLIPBOARD,
     ASK_FOR_OPEN_PROJECT,
     LISTEN_FOR_SIDEBAR_CONTEXT_MENU,

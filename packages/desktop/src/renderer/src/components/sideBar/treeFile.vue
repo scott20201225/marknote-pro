@@ -5,7 +5,7 @@
     class="side-bar-file"
     :style="{ 'padding-left': `${depth * 6 + 10}px`, opacity: file.isMarkdown ? 1 : 0.75 }"
     :class="[
-      { current: currentFile?.pathname === file.pathname, active: file.id === activeItem.id }
+      { current: currentFile?.pathname === file.pathname, active: activeItem?.pathname === file.pathname }
     ]"
     @click="handleFileClick"
   >

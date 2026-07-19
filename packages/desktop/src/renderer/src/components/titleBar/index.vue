@@ -7,7 +7,7 @@
       :class="[{ active: active }, { frameless: titleBarStyle === 'custom' }, { isOsx: isOsx }]"
     >
       <div class="title" @dblclick.stop="toggleMaxmizeOnMacOS">
-        <span />
+        <span :title="notePathDisplay">{{ notePathDisplay }}</span>
       </div>
       <div :class="showCustomTitleBar ? 'left-toolbar title-no-drag' : 'right-toolbar'">
         <div
@@ -92,6 +92,7 @@ import { isOsx as isOsxPlatform } from '@/util'
 import { shouldShowInAppTitleBar } from './visibility'
 import { useEditorStore } from '@/store/editor'
 import { useI18n } from 'vue-i18n'
+import { getNotePathDisplay } from '@/util/noteWorkspace'
 import type { FileWordCount } from '@shared/types/files'
 
 interface ProjectInfo {
@@ -160,6 +161,11 @@ const showCustomTitleBar = computed(() => {
 
 const showTitleBar = computed(() => {
   return shouldShowInAppTitleBar(titleBarStyle.value, isOsx)
+})
+
+const notePathDisplay = computed(() => {
+  const rootPath = typeof props.project?.pathname === 'string' ? props.project.pathname : null
+  return getNotePathDisplay(rootPath, props.pathname ?? null)
 })
 
 watch(
@@ -308,9 +314,9 @@ img {
 div.title > span {
   /* Workaround for GH#339 */
   display: block;
-  direction: rtl;
+  direction: ltr;
   overflow: hidden;
-  text-overflow: clip;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
