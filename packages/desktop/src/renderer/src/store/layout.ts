@@ -1,7 +1,8 @@
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import bus from '../bus'
 import { debouncedSendBufferedState } from './bufferedState'
+import { usePreferencesStore } from './preferences'
 
 interface LayoutPartial {
   rightColumn?: string
@@ -13,6 +14,7 @@ interface LayoutPartial {
 
 interface SetLayoutOptions {
   scheduleBufferUpdate?: boolean
+  persistPreference?: boolean
 }
 
 const normalizeSideBarWidth = (width: unknown): number => {
@@ -54,11 +56,29 @@ const initialSideBarWidth = normalizeSideBarWidth(initialWidth)
 const initialNoteListWidth = normalizeNoteListWidth(localStorage.getItem('note-list-width'))
 
 export const useLayoutStore = defineStore('layout', () => {
+  const preferencesStore = usePreferencesStore()
   const rightColumn = ref<string>('files')
   const showSideBar = ref(true)
   const sideBarWidth = ref<number>(initialSideBarWidth)
-  const noteNavigationMode = ref<'tree' | 'tree-list'>('tree')
+  const noteNavigationMode = ref<'tree' | 'tree-list'>(
+    preferencesStore.noteNavigationMode === 'tree-list' ? 'tree-list' : 'tree'
+  )
   const noteListWidth = ref<number>(initialNoteListWidth)
+
+  watch(
+    () => [preferencesStore.preferenceLoaded, preferencesStore.noteNavigationMode] as const,
+    ([loaded, mode]) => {
+      if (!loaded) return
+      const normalizedMode = mode === 'tree-list' ? 'tree-list' : 'tree'
+      if (noteNavigationMode.value !== normalizedMode) {
+        SET_NOTE_NAVIGATION_MODE(normalizedMode, {
+          scheduleBufferUpdate: false,
+          persistPreference: false
+        })
+      }
+    },
+    { immediate: true }
+  )
 
   // Actual rendered sidebar width. `sideBarWidth` is the right-column width
   // (clamped to ≥220 by `normalizeSideBarWidth`); when `rightColumn` is empty
@@ -177,9 +197,12 @@ export const useLayoutStore = defineStore('layout', () => {
 
   function SET_NOTE_NAVIGATION_MODE(
     mode: 'tree' | 'tree-list',
-    { scheduleBufferUpdate = true }: SetLayoutOptions = {}
+    { scheduleBufferUpdate = true, persistPreference = true }: SetLayoutOptions = {}
   ): void {
     noteNavigationMode.value = mode
+    if (persistPreference && preferencesStore.noteNavigationMode !== mode) {
+      preferencesStore.SET_SINGLE_PREFERENCE({ type: 'noteNavigationMode', value: mode })
+    }
     if (scheduleBufferUpdate) {
       debouncedSendBufferedState()
     }

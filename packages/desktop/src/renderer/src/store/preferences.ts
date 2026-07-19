@@ -20,6 +20,7 @@ export type ImageInsertAction = 'folder' | 'path' | 'upload'
 export type ImageRelativeDirectoryBase = 'file' | 'root'
 export type FileSortBy = 'created' | 'modified' | 'title'
 export type FileSortOrder = 'asc' | 'desc'
+export type NoteNavigationMode = 'tree' | 'tree-list'
 
 export interface PreferencesState {
   // ----- General -----
@@ -99,6 +100,7 @@ export interface PreferencesState {
   // ----- Side bar visibility / source mode (persisted) -----
   sourceCodeModeEnabled: boolean
   openedFilesInSidebar: boolean
+  noteNavigationMode: NoteNavigationMode | string
 
   // ----- Search -----
   searchExclusions: string[]
@@ -211,6 +213,7 @@ export const usePreferencesStore = defineStore('preferences', {
     // Default values that are overwritten with the entries below.
     sourceCodeModeEnabled: false,
     openedFilesInSidebar: true,
+    noteNavigationMode: 'tree',
 
     searchExclusions: [],
     searchMaxFileSize: '',
