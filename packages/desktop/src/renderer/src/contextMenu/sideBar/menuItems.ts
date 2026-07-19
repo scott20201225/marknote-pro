@@ -72,6 +72,14 @@ export const getPASTE = () => ({
   }
 })
 
+export const getMOVE_TO = () => ({
+  label: t('menu.file.moveTo'),
+  id: 'moveToMenuItem',
+  click(_menuItem: unknown, _browserWindow: unknown) {
+    contextMenu.moveTo()
+  }
+})
+
 export const getRENAME = () => ({
   label: t('contextMenu.sideBar.rename'),
   id: 'renameMenuItem',
@@ -121,6 +129,7 @@ export const NEW_DOCUMENT = getNewDocument()
 export const COPY = getCOPY()
 export const CUT = getCUT()
 export const PASTE = getPASTE()
+export const MOVE_TO = getMOVE_TO()
 export const RENAME = getRENAME()
 export const DELETE = getDELETE()
 export const SHOW_IN_FOLDER = getShowInFolder()

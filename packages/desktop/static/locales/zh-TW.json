@@ -289,6 +289,7 @@
       "noteNavigationExpand": "向右展開列表",
       "noteNavigationCollapse": "向左折疊列表",
       "notesListTitle": "筆記",
+      "moveDialogEmpty": "目前沒有可移動到的目標節點",
       "selectAreaToViewNotes": "請選擇一個分區查看筆記",
       "noNotesInArea": "目前分區還沒有筆記",
       "groupNamePlaceholder": "輸入分區組名稱",

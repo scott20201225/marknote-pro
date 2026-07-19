@@ -288,6 +288,7 @@
       "noteNavigationExpand": "向右展开列表",
       "noteNavigationCollapse": "向左折叠列表",
       "notesListTitle": "笔记",
+      "moveDialogEmpty": "当前没有可移动到的目标节点",
       "selectAreaToViewNotes": "请选择一个分区查看笔记",
       "noNotesInArea": "当前分区还没有笔记",
       "groupNamePlaceholder": "输入分区组名称",

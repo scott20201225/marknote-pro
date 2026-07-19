@@ -19,14 +19,17 @@ import { useEditorStore } from './editor'
 import { debouncedSendBufferedState } from './bufferedState'
 import {
   NOTE_ATTACHMENTS_DIRECTORY,
+  getNoteDisplayName,
   getNoteNodeKind,
-  toStoredNoteName
+  toStoredNoteName,
+  type NoteNodeKind
 } from '../util/noteWorkspace'
-import type { TreeNode } from '../components/sideBar/types'
+import type { TreeFileNode, TreeNode } from '../components/sideBar/types'
 import type { FileChangeDetail } from '@shared/types/files'
 
 type ProjectTree = TreeNode
 type TreeChange = FileChangeDetail
+type MoveTargetKind = Extract<NoteNodeKind, 'group' | 'area' | 'document'>
 
 const normalizeProjectRoot = (pathname: string | null | undefined): string => {
   return pathname ? window.path.normalize(pathname) : ''
@@ -104,6 +107,151 @@ interface CollapseOptions {
   includeSelf?: boolean
 }
 
+interface NoteLikeNameCandidate {
+  pathname: string
+  name: string
+  isDirectory?: boolean
+  isFile?: boolean
+  isMarkdown?: boolean
+}
+
+const findFolderNodeByPath = (
+  node: ProjectTree | null | undefined,
+  pathname: string
+): ProjectTree | null => {
+  if (!node) return null
+  if (window.fileUtils.isSamePathSync(node.pathname, pathname)) return node
+
+  for (const child of node.folders) {
+    const match = findFolderNodeByPath(child as ProjectTree, pathname)
+    if (match) return match
+  }
+
+  return null
+}
+
+const takeFolderNode = (
+  node: ProjectTree | null | undefined,
+  pathname: string
+): ProjectTree | null => {
+  if (!node) return null
+
+  const index = node.folders.findIndex((child) => window.fileUtils.isSamePathSync(child.pathname, pathname))
+  if (index >= 0) {
+    return node.folders.splice(index, 1)[0] as ProjectTree
+  }
+
+  for (const child of node.folders) {
+    const match = takeFolderNode(child as ProjectTree, pathname)
+    if (match) return match
+  }
+
+  return null
+}
+
+const takeFileNode = (
+  node: ProjectTree | null | undefined,
+  pathname: string
+): TreeFileNode | null => {
+  if (!node) return null
+
+  const index = node.files.findIndex((child) => window.fileUtils.isSamePathSync(child.pathname, pathname))
+  if (index >= 0) {
+    return node.files.splice(index, 1)[0] as TreeFileNode
+  }
+
+  for (const child of node.folders) {
+    const match = takeFileNode(child as ProjectTree, pathname)
+    if (match) return match
+  }
+
+  return null
+}
+
+const remapFolderNodePaths = (
+  node: ProjectTree,
+  src: string,
+  dest: string
+): void => {
+  const nextPath = replacePathPrefix(node.pathname, src, dest)
+  if (!window.fileUtils.isSamePathSync(nextPath, node.pathname)) {
+    node.pathname = nextPath
+    node.name = getBasename(nextPath)
+  }
+
+  node.folders.forEach((child) => remapFolderNodePaths(child as ProjectTree, src, dest))
+  node.files.forEach((child) => {
+    const nextFilePath = replacePathPrefix(child.pathname, src, dest)
+    if (!window.fileUtils.isSamePathSync(nextFilePath, child.pathname)) {
+      child.pathname = nextFilePath
+      child.name = getBasename(nextFilePath)
+    }
+  })
+}
+
+const remapFileNodePath = (node: TreeFileNode, src: string, dest: string): void => {
+  const nextPath = replacePathPrefix(node.pathname, src, dest)
+  if (!window.fileUtils.isSamePathSync(nextPath, node.pathname)) {
+    node.pathname = nextPath
+    node.name = getBasename(nextPath)
+  }
+}
+
+const normalizeComparableNoteName = (
+  item: NoteLikeNameCandidate,
+  rootPath: string | null
+): string => {
+  return getNoteDisplayName(item, rootPath).trim().toLocaleLowerCase()
+}
+
+const createComparableNoteCandidate = (
+  rawName: string,
+  kind: Extract<NoteNodeKind, 'group' | 'area' | 'document'>
+): NoteLikeNameCandidate | null => {
+  const storedName = toStoredNoteName(rawName, kind)
+  if (!storedName) return null
+
+  if (kind === 'document') {
+    return {
+      pathname: storedName,
+      name: storedName,
+      isDirectory: false,
+      isFile: true,
+      isMarkdown: true
+    }
+  }
+
+  return {
+    pathname: storedName,
+    name: storedName,
+    isDirectory: true,
+    isFile: false,
+    isMarkdown: false
+  }
+}
+
+const hasNoteDisplayNameConflict = (
+  parent: ProjectTree | null | undefined,
+  candidate: NoteLikeNameCandidate,
+  rootPath: string | null,
+  excludePath?: string | null
+): boolean => {
+  if (!parent) return false
+
+  const candidateName = normalizeComparableNoteName(candidate, rootPath)
+  if (!candidateName) return false
+
+  const matches = (node: NoteLikeNameCandidate): boolean => {
+    if (excludePath && window.fileUtils.isSamePathSync(node.pathname, excludePath)) {
+      return false
+    }
+    return normalizeComparableNoteName(node, rootPath) === candidateName
+  }
+
+  return parent.folders.some((folder) => matches(folder)) ||
+    parent.files.some((file) => file.isMarkdown && matches(file))
+}
+
 export const useProjectStore = defineStore('project', () => {
   // Heterogeneous UI state: assigned file nodes, folder nodes, and the empty
   // "no selection" object/null across sidebar components; a single non-`any`
@@ -117,8 +265,233 @@ export const useProjectStore = defineStore('project', () => {
   const projectTree = ref<ProjectTree | null>(null)
   const pendingTreeEvents = ref<PendingEvent[]>([])
   const selectedNotePath = ref<string | null>(null)
+  const moveDialogVisible = ref(false)
+  const moveDialogSourcePath = ref<string | null>(null)
+  const moveDialogSourceKind = ref<MoveTargetKind | null>(null)
 
   const preferencesStore = usePreferencesStore()
+
+  const syncPathReferencesAfterMove = (src: string, dest: string): void => {
+    const editorStore = useEditorStore()
+
+    if (activeItem.value?.pathname) {
+      activeItem.value.pathname = replacePathPrefix(activeItem.value.pathname, src, dest)
+      activeItem.value.name = getBasename(activeItem.value.pathname)
+    }
+
+    if (selectedNotePath.value) {
+      selectedNotePath.value = replacePathPrefix(selectedNotePath.value, src, dest)
+    }
+
+    const createCacheValue = createCache.value as CreateCacheEntry
+    if (createCacheValue.dirname) {
+      createCache.value = {
+        ...createCacheValue,
+        dirname: replacePathPrefix(createCacheValue.dirname, src, dest)
+      }
+    }
+
+    if (clipboard.value) {
+      clipboard.value = {
+        ...clipboard.value,
+        src: replacePathPrefix(clipboard.value.src, src, dest),
+        dest: clipboard.value.dest
+          ? replacePathPrefix(clipboard.value.dest, src, dest)
+          : undefined
+      }
+    }
+
+    editorStore.RENAME_IF_NEEDED({ src, dest })
+    window.electron.ipcRenderer.send('mt::sidebar-path-renamed', { src, dest })
+    debouncedSendBufferedState()
+  }
+
+  const duplicateActiveDocument = async(): Promise<void> => {
+    const rootPath = projectTree.value?.pathname ?? null
+    const kind = getNoteNodeKind(activeItem.value, rootPath)
+    if (kind !== 'document') return
+
+    const src = String(activeItem.value?.pathname || '')
+    if (!src) return
+
+    const dirname = window.path.dirname(src)
+    const parsed = window.path.parse(src)
+    let index = 1
+    let dest = ''
+
+    while (!dest) {
+      const candidate = window.path.join(dirname, `${parsed.name}(${index})${parsed.ext}`)
+      if (!(await window.fileUtils.pathExists(candidate))) {
+        dest = candidate
+      } else {
+        index += 1
+      }
+    }
+
+    await window.fileUtils.copy(src, dest)
+
+    const stat = await window.fileUtils.stat(dest)
+    addFile(
+      projectTree.value!,
+      {
+        pathname: dest,
+        name: getBasename(dest),
+        birthTime: stat.mtimeMs ?? Date.now(),
+        mtimeMs: stat.mtimeMs ?? Date.now(),
+        isDirectory: false,
+        isFile: true,
+        isMarkdown: true
+      },
+      String(preferencesStore.fileSortBy),
+      String(preferencesStore.fileSortOrder)
+    )
+  }
+
+  const getMoveSource = (): { kind: MoveTargetKind; pathname: string } | null => {
+    const rootPath = projectTree.value?.pathname ?? null
+    const kind = getNoteNodeKind(activeItem.value, rootPath)
+    if (kind !== 'group' && kind !== 'area' && kind !== 'document') return null
+
+    const pathname = String(activeItem.value?.pathname || '')
+    if (!pathname) return null
+
+    return { kind, pathname }
+  }
+
+  const openMoveDialog = (): void => {
+    const source = getMoveSource()
+    if (!source) return
+
+    moveDialogSourceKind.value = source.kind
+    moveDialogSourcePath.value = source.pathname
+    moveDialogVisible.value = true
+  }
+
+  const closeMoveDialog = (): void => {
+    moveDialogVisible.value = false
+    moveDialogSourcePath.value = null
+    moveDialogSourceKind.value = null
+  }
+
+  const moveActiveItemTo = async(targetPath: string): Promise<void> => {
+    try {
+      const source = getMoveSource()
+      if (!source || !projectTree.value) return
+
+      const { kind, pathname: src } = source
+      const normalizedTarget = normalizeProjectRoot(targetPath)
+      if (!normalizedTarget) return
+
+      const targetKind = getNoteNodeKind(
+        findFolderNodeByPath(projectTree.value, normalizedTarget),
+        projectTree.value.pathname
+      )
+      const targetFolder = findFolderNodeByPath(projectTree.value, normalizedTarget)
+      const isValidTarget =
+        kind === 'document'
+          ? targetKind === 'area'
+          : kind === 'group'
+            ? targetKind === 'root' || targetKind === 'group'
+            : targetKind === 'group'
+
+      if (!isValidTarget) {
+        notice.notify({
+          title: 'Move Forbidden',
+          type: 'warning',
+          message: 'The selected target is not valid for this item.'
+        })
+        return
+      }
+
+      if (!targetFolder) return
+
+      if ((kind === 'group' || kind === 'area') && isSameOrDescendantPath(normalizedTarget, src)) {
+        notice.notify({
+          title: 'Move Forbidden',
+          type: 'warning',
+          message: kind === 'group'
+            ? 'A group cannot be moved into itself or one of its descendants.'
+            : 'An area cannot be moved into itself or one of its descendants.'
+        })
+        return
+      }
+
+      if (hasNoteDisplayNameConflict(targetFolder, activeItem.value, projectTree.value.pathname, src)) {
+        notice.notify({
+          title: 'Move Forbidden',
+          type: 'warning',
+          message: `A note item named "${getNoteDisplayName(activeItem.value, projectTree.value.pathname)}" already exists in the target location.`
+        })
+        return
+      }
+
+      const dest = window.path.join(normalizedTarget, window.path.basename(src))
+      if (window.fileUtils.isSamePathSync(src, dest)) {
+        closeMoveDialog()
+        return
+      }
+
+      if (await window.fileUtils.pathExists(dest)) {
+        notice.notify({
+          title: 'Move Forbidden',
+          type: 'warning',
+          message: `A node named "${window.path.basename(dest)}" already exists in the target location.`
+        })
+        return
+      }
+
+      await window.fileUtils.move(src, dest)
+
+      if (kind === 'document') {
+        const movedFile = takeFileNode(projectTree.value, src)
+        if (movedFile && targetFolder) {
+          remapFileNodePath(movedFile, src, dest)
+          targetFolder.files.push(movedFile)
+        }
+      } else {
+        const movedFolder = takeFolderNode(projectTree.value, src)
+        if (movedFolder && targetFolder) {
+          remapFolderNodePaths(movedFolder, src, dest)
+          targetFolder.folders.push(movedFolder)
+        }
+      }
+
+      resortTree(projectTree.value, String(preferencesStore.fileSortBy), String(preferencesStore.fileSortOrder))
+
+      if (preferencesStore.defaultDirectoryToOpen) {
+        const nextDefaultDirectory = replacePathPrefix(
+          preferencesStore.defaultDirectoryToOpen,
+          src,
+          dest
+        )
+        if (!window.fileUtils.isSamePathSync(nextDefaultDirectory, preferencesStore.defaultDirectoryToOpen)) {
+          preferencesStore.SET_SINGLE_PREFERENCE({
+            type: 'defaultDirectoryToOpen',
+            value: nextDefaultDirectory
+          })
+        }
+      }
+
+      if (preferencesStore.lastOpenedFolder) {
+        const nextLastOpenedFolder = replacePathPrefix(preferencesStore.lastOpenedFolder, src, dest)
+        if (!window.fileUtils.isSamePathSync(nextLastOpenedFolder, preferencesStore.lastOpenedFolder)) {
+          preferencesStore.SET_SINGLE_PREFERENCE({
+            type: 'lastOpenedFolder',
+            value: nextLastOpenedFolder
+          })
+        }
+      }
+
+      syncPathReferencesAfterMove(src, dest)
+      closeMoveDialog()
+    } catch (err) {
+      notice.notify({
+        title: 'Error while moving',
+        type: 'error',
+        message: err instanceof Error ? err.message : String(err)
+      })
+    }
+  }
 
   watch(
     [() => preferencesStore.fileSortBy, () => preferencesStore.fileSortOrder],
@@ -339,10 +712,30 @@ export const useProjectStore = defineStore('project', () => {
         })
     })
     bus.on('SIDEBAR::copy-cut', (type: unknown) => {
+      const rootPath = projectTree.value?.pathname ?? null
+      const kind = getNoteNodeKind(activeItem.value, rootPath)
+
+      if (kind === 'document' && String(type) === 'copy') {
+        void duplicateActiveDocument().catch((err) => {
+          notice.notify({
+            title: 'Error while copying',
+            type: 'error',
+            message: err instanceof Error ? err.message : String(err)
+          })
+        })
+        return
+      }
+
       const { pathname: src } = activeItem.value
       clipboard.value = { type: String(type), src }
     })
     bus.on('SIDEBAR::paste', () => {
+      const rootPath = projectTree.value?.pathname ?? null
+      const kind = getNoteNodeKind(activeItem.value, rootPath)
+      if (kind === 'root' || kind === 'group' || kind === 'area' || kind === 'document') {
+        return
+      }
+
       const cb = clipboard.value
       const { pathname, isDirectory } = activeItem.value
       const dirname = isDirectory ? pathname : window.path.dirname(pathname)
@@ -368,8 +761,11 @@ export const useProjectStore = defineStore('project', () => {
               type: 'error',
               message: err instanceof Error ? err.message : String(err)
             })
-          })
+        })
       }
+    })
+    bus.on('SIDEBAR::move-to', () => {
+      openMoveDialog()
     })
     bus.on('SIDEBAR::rename', () => {
       const { pathname } = activeItem.value
@@ -399,6 +795,8 @@ export const useProjectStore = defineStore('project', () => {
   async function CREATE_FILE_DIRECTORY(name: string): Promise<void> {
     const cache = createCache.value as CreateCacheEntry
     const { dirname, type } = cache
+    const rootPath = projectTree.value?.pathname ?? null
+    const parentNode = findFolderNodeByPath(projectTree.value, dirname)
     let fileType: FileCreateType = 'directory'
     let storedName = name.trim()
 
@@ -422,6 +820,19 @@ export const useProjectStore = defineStore('project', () => {
     if (!storedName) {
       createCache.value = {}
       return
+    }
+
+    if (type === 'group' || type === 'area' || type === 'document') {
+      const candidate = createComparableNoteCandidate(name, type)
+      if (candidate && hasNoteDisplayNameConflict(parentNode, candidate, rootPath)) {
+        createCache.value = {}
+        notice.notify({
+          title: 'Error in Side Bar',
+          type: 'error',
+          message: `A note item named "${getNoteDisplayName(candidate, rootPath)}" already exists in this location.`
+        })
+        return
+      }
     }
 
     const fullName = window.path.join(dirname, storedName)
@@ -455,63 +866,30 @@ export const useProjectStore = defineStore('project', () => {
   }
 
   function RENAME_IN_SIDEBAR(name: string): void {
-    const editorStore = useEditorStore()
     const src = renameCache.value
     if (!src) return
     const dirname = window.path.dirname(src)
     const rootPath = projectTree.value?.pathname ?? null
+    const parentNode = findFolderNodeByPath(projectTree.value, dirname)
     const kind = getNoteNodeKind(activeItem.value, rootPath)
     let storedName = name.trim()
     if (kind === 'group' || kind === 'area' || kind === 'document') {
+      const candidate = createComparableNoteCandidate(name, kind)
+      if (candidate && hasNoteDisplayNameConflict(parentNode, candidate, rootPath, src)) {
+        notice.notify({
+          title: 'Rename Forbidden',
+          type: 'warning',
+          message: `A note item named "${getNoteDisplayName(candidate, rootPath)}" already exists in this location.`
+        })
+        return
+      }
       storedName = toStoredNoteName(name, kind)
     }
     if (!storedName) return
     const dest = dirname + PATH_SEPARATOR + storedName
     rename(src, dest).then(() => {
       if (projectTree.value) {
-        const updateTree = (node: ProjectTree): void => {
-          const nextPath = replacePathPrefix(node.pathname, src, dest)
-          if (!window.fileUtils.isSamePathSync(nextPath, node.pathname)) {
-            node.pathname = nextPath
-            node.name = getBasename(nextPath)
-          }
-          node.folders?.forEach((child) => updateTree(child as ProjectTree))
-          node.files?.forEach((child) => {
-            const nextPath = replacePathPrefix(child.pathname, src, dest)
-            if (!window.fileUtils.isSamePathSync(nextPath, child.pathname)) {
-              child.pathname = nextPath
-              child.name = getBasename(nextPath)
-            }
-          })
-        }
-        updateTree(projectTree.value)
-      }
-
-      if (activeItem.value?.pathname) {
-        activeItem.value.pathname = replacePathPrefix(activeItem.value.pathname, src, dest)
-        activeItem.value.name = getBasename(activeItem.value.pathname)
-      }
-
-      if (selectedNotePath.value) {
-        selectedNotePath.value = replacePathPrefix(selectedNotePath.value, src, dest)
-      }
-
-      const createCacheValue = createCache.value as CreateCacheEntry
-      if (createCacheValue.dirname) {
-        createCache.value = {
-          ...createCacheValue,
-          dirname: replacePathPrefix(createCacheValue.dirname, src, dest)
-        }
-      }
-
-      if (clipboard.value) {
-        clipboard.value = {
-          ...clipboard.value,
-          src: replacePathPrefix(clipboard.value.src, src, dest),
-          dest: clipboard.value.dest
-            ? replacePathPrefix(clipboard.value.dest, src, dest)
-            : undefined
-        }
+        remapFolderNodePaths(projectTree.value, src, dest)
       }
 
       if (preferencesStore.defaultDirectoryToOpen) {
@@ -538,10 +916,8 @@ export const useProjectStore = defineStore('project', () => {
         }
       }
 
-      editorStore.RENAME_IF_NEEDED({ src, dest })
       renameCache.value = null
-      window.electron.ipcRenderer.send('mt::sidebar-path-renamed', { src, dest })
-      debouncedSendBufferedState()
+      syncPathReferencesAfterMove(src, dest)
     })
   }
 
@@ -557,6 +933,9 @@ export const useProjectStore = defineStore('project', () => {
     clipboard,
     projectTree,
     selectedNotePath,
+    moveDialogVisible,
+    moveDialogSourcePath,
+    moveDialogSourceKind,
     pendingTreeEvents,
     OPEN_PROJECT,
     CREATE_BUFFERED_STATE,
@@ -570,6 +949,8 @@ export const useProjectStore = defineStore('project', () => {
     LISTEN_FOR_SIDEBAR_CONTEXT_MENU,
     CREATE_FILE_DIRECTORY,
     RENAME_IN_SIDEBAR,
+    MOVE_ACTIVE_ITEM_TO: moveActiveItemTo,
+    CLOSE_MOVE_DIALOG: closeMoveDialog,
     OPEN_SETTING_WINDOW
   }
 })
