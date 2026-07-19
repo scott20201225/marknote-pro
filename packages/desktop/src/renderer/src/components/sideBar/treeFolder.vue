@@ -9,6 +9,7 @@
       @click="folderNameClick"
     >
       <el-icon
+        v-if="showCollapseArrow"
         class="icon-arrow"
         :class="{ fold: isCollapsed }"
         :size="12"
@@ -153,6 +154,10 @@ const createPlaceholder = computed<string>(() => {
   }
 })
 const showActionButton = computed<boolean>(() => folderKind.value === 'group' || folderKind.value === 'area')
+const showCollapseArrow = computed<boolean>(() => {
+  if (folderKind.value !== 'area') return true
+  return props.noteNavigationMode !== 'tree-list'
+})
 const folderTypeIcon = computed(() => {
   if (folderKind.value === 'group') {
     return isCollapsed.value ? Folder : FolderOpened
