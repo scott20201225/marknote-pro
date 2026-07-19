@@ -1,7 +1,10 @@
 import pathe from 'pathe'
 
 const STANDALONE_USER_DATA_PATH = '/tmp/marknotepro-standalone'
-const STANDALONE_VERSIONS = process.versions as unknown as Record<string, string>
+const nativeProcess = globalThis.process as
+  | { versions?: Record<string, string> }
+  | undefined
+const STANDALONE_VERSIONS = (nativeProcess?.versions ?? {}) as Record<string, string>
 
 type Listener = (event: unknown, ...args: unknown[]) => void
 
@@ -161,6 +164,23 @@ export const installStandaloneBridge = (): void => {
 
   const ipcRenderer = createIpcRendererStub()
   const path = createPathStub()
+  const standaloneProcess = {
+    platform: 'darwin',
+    arch: 'arm64',
+    versions: STANDALONE_VERSIONS,
+    env: {
+      NODE_ENV: 'development',
+      MARKNOTEPRO_STANDALONE: '1',
+      MARKNOTEPRO_VERSION_STRING:
+        typeof MARKNOTEPRO_VERSION_STRING === 'string' ? MARKNOTEPRO_VERSION_STRING : 'dev'
+    },
+    resourcesPath: '',
+    cwd: () => '/'
+  }
+
+  if (!globalThis.process) {
+    ;(globalThis as typeof globalThis & { process?: typeof standaloneProcess }).process = standaloneProcess
+  }
 
   window.electron = {
     ipcRenderer,
@@ -192,16 +212,7 @@ export const installStandaloneBridge = (): void => {
       getPathForFile: (file: File) => file.name
     },
     process: {
-      platform: 'darwin',
-      arch: 'arm64',
-      versions: STANDALONE_VERSIONS,
-      env: {
-        NODE_ENV: 'development',
-        MARKNOTEPRO_STANDALONE: '1',
-        MARKNOTEPRO_VERSION_STRING:
-          typeof MARKNOTEPRO_VERSION_STRING === 'string' ? MARKNOTEPRO_VERSION_STRING : 'dev'
-      },
-      resourcesPath: '',
+      ...standaloneProcess,
       cwd: '/'
     },
     paths: {

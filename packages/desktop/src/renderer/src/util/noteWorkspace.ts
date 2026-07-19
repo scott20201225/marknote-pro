@@ -20,6 +20,26 @@ interface NoteNodeLike {
   files?: NoteNodeLike[]
 }
 
+export const findNoteFolderByPath = (
+  node: NoteNodeLike | null | undefined,
+  pathname: string | null | undefined
+): NoteNodeLike | null => {
+  if (!node || !pathname) return null
+
+  if (window.path.normalize(node.pathname) === window.path.normalize(pathname)) {
+    return node
+  }
+
+  if (!node.folders?.length) return null
+
+  for (const child of node.folders) {
+    const match = findNoteFolderByPath(child, pathname)
+    if (match) return match
+  }
+
+  return null
+}
+
 const isHiddenNoteFolder = (node: NoteNodeLike | null | undefined): boolean => {
   return !!node?.isDirectory && node.name === NOTE_ATTACHMENTS_DIRECTORY
 }
@@ -32,6 +52,10 @@ const stripNotePrefix = (name: string): string => {
 
 const stripMarkdownExtension = (name: string): string => {
   return name.replace(/\.md$/i, '')
+}
+
+const normalizeNotePathPart = (part: string): string => {
+  return stripMarkdownExtension(stripNotePrefix(part))
 }
 
 const getRelativeParts = (rootPath: string, pathname: string): string[] => {
@@ -86,6 +110,19 @@ export const getNoteDisplayName = (
     default:
       return node.name
   }
+}
+
+export const getNotePathDisplay = (
+  rootPath: string | null | undefined,
+  pathname: string | null | undefined
+): string => {
+  if (!rootPath || !pathname) return ''
+
+  const parts = getRelativeParts(window.path.normalize(rootPath), window.path.normalize(pathname))
+    .map(normalizeNotePathPart)
+    .filter(Boolean)
+
+  return parts.join(' / ')
 }
 
 export const toStoredNoteName = (

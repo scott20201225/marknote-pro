@@ -4,7 +4,7 @@
       ref="folderEl"
       class="folder-name"
       :style="{ 'padding-left': `${depth * 6 + 10}px` }"
-      :class="[{ active: folder.id === activeItem.id }]"
+      :class="[{ active: activeItem?.pathname === folder.pathname || selectedNotePath === folder.pathname }]"
       :title="folder.pathname"
       @click="folderNameClick"
     >
@@ -12,6 +12,7 @@
         class="icon-arrow"
         :class="{ fold: isCollapsed }"
         :size="12"
+        @click.stop="toggleCollapsed"
       >
         <ArrowRight />
       </el-icon>
@@ -55,6 +56,7 @@
         :key="childFolder.id"
         :folder="childFolder"
         :depth="depth + 1"
+        :note-navigation-mode="noteNavigationMode"
       />
       <input
         v-if="createCache.dirname === folder.pathname"
@@ -102,6 +104,7 @@ import type { TreeFileNode, TreeFolderNode } from './types'
 const props = defineProps<{
   folder: TreeFolderNode
   depth: number
+  noteNavigationMode?: 'tree' | 'tree-list'
 }>()
 
 const { t } = useI18n()
@@ -125,6 +128,7 @@ const { renameCache } = storeToRefs(projectStore)
 const { createCache } = storeToRefs(projectStore)
 const { activeItem } = storeToRefs(projectStore)
 const { clipboard } = storeToRefs(projectStore)
+const { selectedNotePath } = storeToRefs(projectStore)
 const rootPath = computed<string | null>(() => projectStore.projectTree?.pathname ?? null)
 const folderKind = computed(() => getNoteNodeKind(props.folder, rootPath.value))
 const displayName = computed<string>(() => getNoteDisplayName(props.folder, rootPath.value))
@@ -132,6 +136,7 @@ const visibleFolders = computed<TreeFolderNode[]>(() => {
   return getVisibleNoteFolders(props.folder, rootPath.value) as TreeFolderNode[]
 })
 const visibleFiles = computed<TreeFileNode[]>(() => {
+  if (props.noteNavigationMode === 'tree-list') return []
   return getVisibleNoteFiles(props.folder, rootPath.value) as TreeFileNode[]
 })
 const createPlaceholder = computed<string>(() => {
@@ -175,11 +180,20 @@ const handleInputEnter = (): void => {
   projectStore.CREATE_FILE_DIRECTORY(createName.value)
 }
 
-const folderNameClick = (): void => {
+const toggleCollapsed = (): void => {
   isCollapsed.value = !isCollapsed.value
 }
 
+const folderNameClick = (): void => {
+  projectStore.CHANGE_ACTIVE_ITEM(props.folder)
+  projectStore.SELECT_NOTE_PATH(props.folder.pathname)
+  if (props.noteNavigationMode !== 'tree-list') {
+    toggleCollapsed()
+  }
+}
+
 const showFolderActionMenu = (event: MouseEvent): void => {
+  projectStore.SELECT_NOTE_PATH(props.folder.pathname)
   projectStore.CHANGE_ACTIVE_ITEM(props.folder)
   const target = event.currentTarget as HTMLElement | null
   const rect = target?.getBoundingClientRect()
@@ -210,6 +224,7 @@ onMounted(() => {
   if (folderEl.value) {
     folderEl.value.addEventListener('contextmenu', (event) => {
       event.preventDefault()
+      projectStore.SELECT_NOTE_PATH(props.folder.pathname)
       projectStore.CHANGE_ACTIVE_ITEM(props.folder)
       showContextMenu(event, props.folder, rootPath.value, !!clipboard.value)
     })
@@ -248,6 +263,10 @@ onMounted(() => {
       background: var(--sideBarItemHoverBgColor);
     }
   }
+}
+
+.side-bar-folder > .folder-name.active {
+  background: var(--sideBarItemHoverBgColor);
 }
 
 .folder-name > span,

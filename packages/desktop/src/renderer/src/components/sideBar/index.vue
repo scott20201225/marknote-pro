@@ -59,6 +59,8 @@ import Toc from './toc.vue'
 import { storeToRefs } from 'pinia'
 import type { TabDescriptor } from './types'
 
+const TREE_MODE_MIN_WIDTH = 220
+
 const layoutStore = useLayoutStore()
 const projectStore = useProjectStore()
 const editorStore = useEditorStore()
@@ -69,14 +71,24 @@ const dragBar = ref<HTMLDivElement | null>(null)
 const openedFiles = ref<TabDescriptor[]>([])
 const sideBarViewWidth = ref(280)
 
-const { rightColumn, sideBarWidth } = storeToRefs(layoutStore)
+const { rightColumn, sideBarWidth, noteNavigationMode, noteListWidth } = storeToRefs(layoutStore)
 
 const { projectTree } = storeToRefs(projectStore)
 const { tabs } = storeToRefs(editorStore)
 
+const minimumVisibleWidth = computed<number>(() => {
+  return TREE_MODE_MIN_WIDTH
+})
+
 const finalSideBarWidth = computed<number>(() => {
   if (rightColumn.value === '') return 45
-  return sideBarViewWidth.value < 220 ? 220 : sideBarViewWidth.value
+  const baseWidth = sideBarViewWidth.value < minimumVisibleWidth.value
+    ? minimumVisibleWidth.value
+    : sideBarViewWidth.value
+  if (rightColumn.value === 'files' && noteNavigationMode.value === 'tree-list') {
+    return baseWidth + noteListWidth.value + 4
+  }
+  return baseWidth
 })
 
 onMounted(() => {
@@ -92,7 +104,11 @@ onMounted(() => {
     const mouseUpHandler = (): void => {
       document.removeEventListener('mousemove', mouseMoveHandler, false)
       document.removeEventListener('mouseup', mouseUpHandler, false)
-      layoutStore.CHANGE_SIDE_BAR_WIDTH(currentSideBarWidth < 220 ? 220 : currentSideBarWidth)
+      layoutStore.CHANGE_SIDE_BAR_WIDTH(
+        currentSideBarWidth < minimumVisibleWidth.value
+          ? minimumVisibleWidth.value
+          : currentSideBarWidth
+      )
     }
 
     const mouseMoveHandler = (event: MouseEvent): void => {
@@ -114,19 +130,12 @@ onMounted(() => {
 
 const handleLeftIconClick = (name: string): void => {
   if (rightColumn.value === name) {
-    // Capture the expanded width BEFORE collapsing: once rightColumn is '',
-    // finalSideBarWidth evaluates to the 45px icon strip and would overwrite
-    // the user's real width with the clamped 220px minimum (#2421).
-    const widthToPersist = finalSideBarWidth.value
+    const widthToPersist = sideBarViewWidth.value
     layoutStore.SET_LAYOUT({ rightColumn: '' })
     layoutStore.CHANGE_SIDE_BAR_WIDTH(widthToPersist)
   } else {
-    const needDispatch = rightColumn.value === ''
     layoutStore.SET_LAYOUT({ rightColumn: name })
     sideBarViewWidth.value = +sideBarWidth.value
-    if (needDispatch) {
-      layoutStore.CHANGE_SIDE_BAR_WIDTH(finalSideBarWidth.value)
-    }
   }
 }
 
