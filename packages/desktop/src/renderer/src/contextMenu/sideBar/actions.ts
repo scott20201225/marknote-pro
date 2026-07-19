@@ -35,6 +35,10 @@ export const paste = (_menuItem?: MenuItemArg, _browserWindow?: BrowserWindowArg
   bus.emit('SIDEBAR::paste')
 }
 
+export const moveTo = (_menuItem?: MenuItemArg, _browserWindow?: BrowserWindowArg): void => {
+  bus.emit('SIDEBAR::move-to')
+}
+
 export const rename = (_menuItem?: MenuItemArg, _browserWindow?: BrowserWindowArg): void => {
   bus.emit('SIDEBAR::rename')
 }

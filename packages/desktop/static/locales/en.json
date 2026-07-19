@@ -288,6 +288,7 @@
       "noteNavigationExpand": "Expand note list",
       "noteNavigationCollapse": "Collapse note list",
       "notesListTitle": "Notes",
+      "moveDialogEmpty": "There are no eligible destination nodes.",
       "selectAreaToViewNotes": "Select an area to view notes",
       "noNotesInArea": "No notes in this area",
       "groupNamePlaceholder": "Group name",
