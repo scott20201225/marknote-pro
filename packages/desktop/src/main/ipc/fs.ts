@@ -1,5 +1,6 @@
 import fs from 'fs-extra'
 import { statSync, constants, type Stats } from 'fs'
+import { createHash } from 'crypto'
 import { ipcMain } from 'electron'
 import { isFile as commonIsFile, isDirectory as commonIsDirectory } from 'common/filesystem'
 
@@ -58,6 +59,14 @@ export const registerFsHandlers = (): void => {
   ipcMain.handle('mt::fs::read-file', async(_e, p: string, encoding?: BufferEncoding) => {
     const buf = await fs.readFile(p, encoding)
     return buf
+  })
+  ipcMain.handle('mt::fs::md5-file', async(_e, p: string) => {
+    const buf = await fs.readFile(p)
+    return createHash('md5').update(buf).digest('hex')
+  })
+  ipcMain.handle('mt::fs::md5-data', (_e, data: unknown) => {
+    const buf = toBuffer(data)
+    return createHash('md5').update(buf as string | NodeJS.ArrayBufferView).digest('hex')
   })
   ipcMain.handle('mt::fs::path-exists', (_e, p: string) => fs.pathExists(p))
   ipcMain.handle('mt::fs::unlink', (_e, p: string) => fs.unlink(p))

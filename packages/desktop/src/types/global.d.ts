@@ -107,6 +107,8 @@ declare global {
     stat(p: string): Promise<SerializedStat>
     writeFile(p: string, data: string | Uint8Array): Promise<void>
     readFile(p: string, encoding?: string): Promise<string | Uint8Array>
+    md5File(p: string): Promise<string>
+    md5Data(data: string | Uint8Array): Promise<string>
     pathExists(p: string): Promise<boolean>
     unlink(p: string): Promise<void>
     readdir(p: string): Promise<string[]>

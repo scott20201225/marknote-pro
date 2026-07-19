@@ -51,6 +51,8 @@ export interface IpcInvokeChannels {
   'mt::fs::is-directory': { args: [path: string]; ret: boolean }
   'mt::fs::is-executable': { args: [path: string]; ret: boolean }
   'mt::fs::is-file': { args: [path: string]; ret: boolean }
+  'mt::fs::md5-data': { args: [data: string | Uint8Array]; ret: string }
+  'mt::fs::md5-file': { args: [path: string]; ret: string }
   'mt::fs::move': { args: [src: string, dest: string]; ret: void }
   'mt::fs::output-file': { args: [path: string, data: string | Uint8Array]; ret: void }
   'mt::fs::path-exists': { args: [path: string]; ret: boolean }
@@ -224,6 +226,7 @@ export interface IpcMainEventChannels {
   'mt::about-dialog': []
   'mt::ask-for-close': []
   'mt::bootstrap-editor': [config: BootstrapEditorConfig]
+  'mt::cm-copy-as-excel': []
   'mt::cm-copy-as-html': []
   'mt::cm-copy-as-rich': []
   'mt::cm-insert-paragraph': [direction: 'before' | 'after']

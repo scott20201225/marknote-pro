@@ -1,8 +1,7 @@
-import dayjs from 'dayjs'
-
 export type FileCreateType = 'file' | 'directory'
 export type PasteType = 'cut' | 'copy'
 export type HashType = 'sha1' | 'sha256' | 'sha512'
+export const NOTE_ATTACHMENTS_DIRECTORY = 'Attachments'
 
 export const create = async(pathname: string, type: FileCreateType): Promise<void> => {
   return type === 'directory'
@@ -60,7 +59,18 @@ export const getHash = async(
 export const getContentHash = (content: string | Uint8Array | ArrayBuffer): Promise<string> =>
   getHash(content, 'utf8', 'sha1')
 
-export const moveImageToFolder = async(
+const buildHashedAttachmentFilename = (filename: string, md5: string): string => {
+  const parsed = window.path.parse(filename)
+  const basename = parsed.name || parsed.base || 'attachment'
+  return `${basename}-${md5}${parsed.ext}`
+}
+
+const hasEmbeddedMd5Suffix = (filename: string, md5: string): boolean => {
+  const parsed = window.path.parse(filename)
+  return parsed.name.endsWith(`-${md5}`)
+}
+
+export const copyImageToFolder = async(
   pathname: string,
   image: string | File,
   outputDir: string,
@@ -74,33 +84,37 @@ export const moveImageToFolder = async(
       : absolutePath
   const isPath = typeof image === 'string'
   if (isPath) {
-    const dir = window.path.dirname(pathname)
+    const dir = pathname ? window.path.dirname(pathname) : currentPathname
+      ? window.path.dirname(currentPathname)
+      : ''
     const imagePath = window.path.resolve(dir, image as string)
     const isImage = await window.fileUtils.isImageFile(imagePath)
     if (isImage) {
       const filename = window.path.basename(imagePath)
-      const ext = window.path.extname(imagePath)
-      const noHashPath = window.path.join(outputDir, filename)
-      if (noHashPath === imagePath) {
+      const hash = await window.fileUtils.md5File(imagePath)
+      if (hasEmbeddedMd5Suffix(filename, hash)) {
         return toResult(imagePath)
       }
-      const hash = await getContentHash(imagePath)
-      const hashFilePath = window.path.join(outputDir, `${hash}${ext}`)
-      await window.fileUtils.copy(imagePath, hashFilePath)
+      const hashFilePath = window.path.join(outputDir, buildHashedAttachmentFilename(filename, hash))
+      if (!window.fileUtils.isSamePathSync(imagePath, hashFilePath) &&
+        !(await window.fileUtils.pathExists(hashFilePath))) {
+        await window.fileUtils.copy(imagePath, hashFilePath)
+      }
       return toResult(hashFilePath)
     } else {
       return image as string
     }
   } else {
     const file = image as File
+    const buffer = new Uint8Array(await file.arrayBuffer())
+    const hash = await window.fileUtils.md5Data(buffer)
     const imagePath = window.path.join(
       outputDir,
-      `${dayjs().format('YYYY-MM-DD-HH-mm-ss')}-${file.name}`
+      buildHashedAttachmentFilename(file.name, hash)
     )
-
-    const buffer = new Uint8Array(await file.arrayBuffer())
-    await window.fileUtils.writeFile(imagePath, buffer)
-
+    if (!(await window.fileUtils.pathExists(imagePath))) {
+      await window.fileUtils.writeFile(imagePath, buffer)
+    }
     return toResult(imagePath)
   }
 }
