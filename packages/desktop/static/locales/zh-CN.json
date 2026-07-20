@@ -287,6 +287,7 @@
       "noteNavigationTreeListShort": "列表",
       "noteNavigationExpand": "向右展开列表",
       "noteNavigationCollapse": "向左折叠列表",
+      "reloadWorkspace": "重新加载工作区",
       "notesListTitle": "笔记",
       "moveDialogEmpty": "当前没有可移动到的目标节点",
       "selectAreaToViewNotes": "请选择一个分区查看笔记",

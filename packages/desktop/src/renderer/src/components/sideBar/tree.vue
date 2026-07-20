@@ -5,51 +5,7 @@
     </div>
 
     <!-- Project tree view -->
-    <div
-      v-if="projectTree"
-      class="project-tree"
-    >
-      <div
-        class="title"
-        :class="{ active: isRootSelected }"
-        @click="selectRoot"
-        @contextmenu.prevent.stop="handleRootContextMenu"
-      >
-        <span
-          class="default-cursor text-overflow"
-        >
-          <input
-            v-if="renameCache === projectTree.pathname"
-            ref="renameInput"
-            v-model="newName"
-            type="text"
-            class="rename root-rename-input"
-            @click.stop
-            @keypress.enter="renameRoot"
-        >
-          <template v-else>{{ projectDisplayName }}</template>
-        </span>
-        <button
-          type="button"
-          class="note-navigation-toggle"
-          :title="noteNavigationToggleTitle"
-          @click.stop="toggleNoteNavigationMode"
-        >
-          <el-icon :size="14">
-            <component :is="noteNavigationToggleIcon" />
-          </el-icon>
-        </button>
-        <button
-          class="tree-action-button"
-          type="button"
-          :title="t('sideBar.tree.workspaceActions')"
-          @click.stop="showRootActionMenu"
-        >
-          <el-icon :size="14">
-            <MoreFilled />
-          </el-icon>
-        </button>
-      </div>
+    <div v-if="projectTree" class="project-tree">
       <div
         class="tree-wrapper"
         :class="{ 'tree-wrapper-split': noteNavigationMode === 'tree-list' }"
@@ -57,6 +13,45 @@
         @contextmenu.prevent.stop="handleTreeWrapperContextMenu"
       >
         <div class="tree-panel">
+          <div
+            class="title"
+            :class="{ active: isRootSelected }"
+            @click="selectRoot"
+            @contextmenu.prevent.stop="handleRootContextMenu"
+          >
+            <span class="default-cursor text-overflow">
+              <input
+                v-if="renameCache === projectTree.pathname"
+                ref="renameInput"
+                v-model="newName"
+                type="text"
+                class="rename root-rename-input"
+                @click.stop
+                @keypress.enter="renameRoot"
+              />
+              <template v-else>{{ projectDisplayName }}</template>
+            </span>
+            <button
+              type="button"
+              class="note-navigation-toggle"
+              :title="noteNavigationToggleTitle"
+              @click.stop="toggleNoteNavigationMode"
+            >
+              <el-icon :size="14">
+                <component :is="noteNavigationToggleIcon" />
+              </el-icon>
+            </button>
+            <button
+              class="tree-action-button"
+              type="button"
+              :title="t('sideBar.tree.workspaceActions')"
+              @click.stop="showRootActionMenu"
+            >
+              <el-icon :size="14">
+                <MoreFilled />
+              </el-icon>
+            </button>
+          </div>
           <folder
             v-for="folder of visibleRootFolders"
             :key="folder.id"
@@ -65,7 +60,7 @@
             :note-navigation-mode="noteNavigationMode"
           />
           <input
-            v-show="createCacheDirname === projectTree.pathname"
+            v-show="showTreeCreateInput"
             ref="input"
             v-model="createName"
             :placeholder="createPlaceholder"
@@ -73,27 +68,19 @@
             class="new-input"
             :style="{ 'margin-left': `${depth * 5 + 15}px` }"
             @keypress.enter="handleInputEnter"
-          >
-          <file
-            v-for="file of visibleRootFiles"
-            :key="file.id"
-            :file="file"
-            :depth="depth"
           />
+          <file v-for="file of visibleRootFiles" :key="file.id" :file="file" :depth="depth" />
           <div
             v-if="
               visibleRootFiles.length === 0 &&
-                visibleRootFolders.length === 0 &&
-                createCacheDirname !== projectTree.pathname
+              visibleRootFolders.length === 0 &&
+              createCacheDirname !== projectTree.pathname
             "
             class="empty-project"
           >
             <span>{{ t('sideBar.tree.emptyWorkspace') }}</span>
             <div class="centered-group">
-              <button
-                class="button-primary"
-                @click.stop="createGroup"
-              >
+              <button class="button-primary" @click.stop="createGroup">
                 {{ t('sideBar.tree.createGroup') }}
               </button>
             </div>
@@ -111,17 +98,9 @@
         />
       </div>
     </div>
-    <div
-      v-else
-      class="open-project"
-    >
+    <div v-else class="open-project">
       <div class="centered-group">
-        <el-button
-          text
-          bg
-          type="primary"
-          @click="openFolder"
-        >
+        <el-button text bg type="primary" @click="openFolder">
           {{ t('sideBar.tree.openWorkspace') }}
         </el-button>
       </div>
@@ -191,6 +170,17 @@ const createCacheDirname = computed<string | undefined>(() => {
 const createCacheType = computed<string | undefined>(() => {
   const cache = createCache.value as { type?: string }
   return cache.type
+})
+
+const isCreatingNoteInListMode = computed<boolean>(() => {
+  return (
+    noteNavigationMode.value === 'tree-list' &&
+    (createCacheType.value === 'document' || createCacheType.value === 'file')
+  )
+})
+
+const showTreeCreateInput = computed<boolean>(() => {
+  return createCacheDirname.value === props.projectTree?.pathname && !isCreatingNoteInListMode.value
 })
 
 const createPlaceholder = computed<string>(() => {
@@ -297,10 +287,15 @@ const showRootActionMenu = (event: MouseEvent): void => {
   projectStore.CHANGE_ACTIVE_ITEM(props.projectTree)
   const target = event.currentTarget as HTMLElement | null
   const rect = target?.getBoundingClientRect()
-  showContextMenu({
-    clientX: rect ? rect.left + rect.width / 2 : event.clientX,
-    clientY: rect ? rect.bottom : event.clientY
-  }, props.projectTree, rootPath.value, !!clipboard.value)
+  showContextMenu(
+    {
+      clientX: rect ? rect.left + rect.width / 2 : event.clientX,
+      clientY: rect ? rect.bottom : event.clientY
+    },
+    props.projectTree,
+    rootPath.value,
+    !!clipboard.value
+  )
 }
 
 const handleTreeWrapperContextMenu = (event: MouseEvent): void => {
@@ -317,6 +312,7 @@ const handleTreeWrapperContextMenu = (event: MouseEvent): void => {
 
 // From createFileOrDirectoryMixins
 const handleInputFocus = (): void => {
+  if (isCreatingNoteInListMode.value) return
   nextTick(() => {
     if (input.value) {
       input.value.focus()
@@ -374,7 +370,6 @@ onMounted(() => {
       projectStore.renameCache = null
     }
   })
-
 })
 
 watch(
@@ -420,7 +415,7 @@ watch(
   flex-direction: row-reverse;
 }
 
-.project-tree > .title {
+.tree-panel > .title {
   height: 30px;
   line-height: 30px;
   font-size: 14px;
@@ -429,7 +424,7 @@ watch(
   gap: 8px;
 }
 
-.project-tree > .title > span {
+.tree-panel > .title > span {
   flex: 1;
   min-width: 0;
 }
@@ -476,17 +471,17 @@ watch(
   flex: 1;
 }
 
-.project-tree > .title {
+.tree-panel > .title {
   padding-right: 15px;
   display: flex;
   align-items: center;
 }
 
-.project-tree > .title.active {
+.tree-panel > .title.active {
   background: var(--sideBarItemHoverBgColor);
 }
 
-.project-tree > .title > span {
+.tree-panel > .title > span {
   flex: 1;
   user-select: none;
 }
@@ -511,7 +506,7 @@ watch(
   color: var(--sideBarTitleColor);
 }
 
-.project-tree > .title > a {
+.tree-panel > .title > a {
   pointer-events: auto;
   cursor: pointer;
   margin-left: 8px;
@@ -519,11 +514,11 @@ watch(
   opacity: 0;
 }
 
-.project-tree > .title > a:hover {
+.tree-panel > .title > a:hover {
   color: var(--highlightThemeColor);
 }
 
-.project-tree > .title > a.active {
+.tree-panel > .title > a.active {
   color: var(--highlightThemeColor);
 }
 
