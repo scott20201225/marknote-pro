@@ -558,6 +558,13 @@ export const useProjectStore = defineStore('project', () => {
 
       await window.fileUtils.move(src, dest)
 
+      if (window.electron.process.platform === 'win32') {
+        syncPathReferencesAfterMove(src, dest)
+        closeMoveDialog()
+        window.electron.ipcRenderer.send('mt::reload-workspace', rootPath)
+        return
+      }
+
       if (kind === 'document') {
         const movedFile = takeFileNode(projectTree.value, src)
         if (!movedFile) {
