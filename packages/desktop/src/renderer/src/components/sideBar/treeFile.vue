@@ -4,9 +4,7 @@
     :title="file.pathname"
     class="side-bar-file"
     :style="{ 'padding-left': `${depth * 6 + 10}px`, opacity: file.isMarkdown ? 1 : 0.75 }"
-    :class="[
-      { current: currentFile?.pathname === file.pathname, active: activeItem?.pathname === file.pathname }
-    ]"
+    :class="[{ current: currentFile?.pathname === file.pathname }]"
     @click="handleFileClick"
   >
     <file-icon :name="file.name" />
@@ -18,11 +16,8 @@
       class="rename"
       @click.stop="noop"
       @keypress.enter="rename"
-    >
-    <span
-      v-else
-      class="file-name"
-    >{{ displayName }}</span>
+    />
+    <span v-else class="file-name">{{ displayName }}</span>
     <button
       class="file-action-button"
       type="button"
@@ -63,7 +58,6 @@ const fileEl = ref<HTMLDivElement | null>(null)
 const renameInput = ref<HTMLInputElement | null>(null)
 
 const { renameCache } = storeToRefs(projectStore)
-const { activeItem } = storeToRefs(projectStore)
 const { clipboard } = storeToRefs(projectStore)
 const { currentFile, tabs } = storeToRefs(editorStore)
 const rootPath = computed<string | null>(() => projectStore.projectTree?.pathname ?? null)
@@ -73,6 +67,8 @@ const displayName = computed<string>(() => getNoteDisplayName(props.file, rootPa
 const handleFileClick = (): void => {
   const { isMarkdown, pathname } = props.file
   if (!isMarkdown) return
+  projectStore.SELECT_NOTE_PATH(window.path.dirname(pathname))
+  projectStore.CHANGE_ACTIVE_ITEM(props.file)
   const openedTab = tabs.value.find((f) => window.fileUtils.isSamePathSync(f.pathname, pathname))
   if (openedTab) {
     if (currentFile.value?.pathname === openedTab.pathname) {
@@ -105,10 +101,15 @@ const showFileActionMenu = (event: MouseEvent): void => {
   projectStore.CHANGE_ACTIVE_ITEM(props.file)
   const target = event.currentTarget as HTMLElement | null
   const rect = target?.getBoundingClientRect()
-  showContextMenu({
-    clientX: rect ? rect.left + rect.width / 2 : event.clientX,
-    clientY: rect ? rect.bottom : event.clientY
-  }, props.file, rootPath.value, !!clipboard.value)
+  showContextMenu(
+    {
+      clientX: rect ? rect.left + rect.width / 2 : event.clientX,
+      clientY: rect ? rect.bottom : event.clientY
+    },
+    props.file,
+    rootPath.value,
+    !!clipboard.value
+  )
 }
 
 onMounted(() => {
@@ -164,10 +165,6 @@ onMounted(() => {
 .side-bar-file.current > .file-name {
   color: var(--themeColor);
 }
-.side-bar-file.active > .file-name {
-  color: var(--sideBarTitleColor);
-}
-
 .side-bar-file > input.rename {
   flex: 1;
   min-width: 0;

@@ -58,3 +58,10 @@ export const expandAll = (_menuItem?: MenuItemArg, _browserWindow?: BrowserWindo
 export const collapseAll = (_menuItem?: MenuItemArg, _browserWindow?: BrowserWindowArg): void => {
   bus.emit('SIDEBAR::collapse-all')
 }
+
+export const reloadWorkspace = (
+  _menuItem?: MenuItemArg,
+  _browserWindow?: BrowserWindowArg
+): void => {
+  bus.emit('SIDEBAR::reload-workspace')
+}

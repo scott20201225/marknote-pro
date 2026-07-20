@@ -56,8 +56,10 @@ const createProjectRoot = (pathname: string): ProjectTree | null => {
 }
 
 const isSameOrDescendantPath = (pathname: string, basePath: string): boolean => {
-  return window.fileUtils.isSamePathSync(pathname, basePath) ||
+  return (
+    window.fileUtils.isSamePathSync(pathname, basePath) ||
     window.fileUtils.isChildOfDirectory(basePath, pathname)
+  )
 }
 
 const replacePathPrefix = (pathname: string, src: string, dest: string): string => {
@@ -135,7 +137,9 @@ const takeFolderNode = (
 ): ProjectTree | null => {
   if (!node) return null
 
-  const index = node.folders.findIndex((child) => window.fileUtils.isSamePathSync(child.pathname, pathname))
+  const index = node.folders.findIndex((child) =>
+    window.fileUtils.isSamePathSync(child.pathname, pathname)
+  )
   if (index >= 0) {
     return node.folders.splice(index, 1)[0] as ProjectTree
   }
@@ -154,7 +158,9 @@ const takeFileNode = (
 ): TreeFileNode | null => {
   if (!node) return null
 
-  const index = node.files.findIndex((child) => window.fileUtils.isSamePathSync(child.pathname, pathname))
+  const index = node.files.findIndex((child) =>
+    window.fileUtils.isSamePathSync(child.pathname, pathname)
+  )
   if (index >= 0) {
     return node.files.splice(index, 1)[0] as TreeFileNode
   }
@@ -167,11 +173,7 @@ const takeFileNode = (
   return null
 }
 
-const remapFolderNodePaths = (
-  node: ProjectTree,
-  src: string,
-  dest: string
-): void => {
+const remapFolderNodePaths = (node: ProjectTree, src: string, dest: string): void => {
   const nextPath = replacePathPrefix(node.pathname, src, dest)
   if (!window.fileUtils.isSamePathSync(nextPath, node.pathname)) {
     node.pathname = nextPath
@@ -247,8 +249,10 @@ const hasNoteDisplayNameConflict = (
     return normalizeComparableNoteName(node, rootPath) === candidateName
   }
 
-  return parent.folders.some((folder) => matches(folder)) ||
+  return (
+    parent.folders.some((folder) => matches(folder)) ||
     parent.files.some((file) => file.isMarkdown && matches(file))
+  )
 }
 
 export const useProjectStore = defineStore('project', () => {
@@ -294,9 +298,7 @@ export const useProjectStore = defineStore('project', () => {
       clipboard.value = {
         ...clipboard.value,
         src: replacePathPrefix(clipboard.value.src, src, dest),
-        dest: clipboard.value.dest
-          ? replacePathPrefix(clipboard.value.dest, src, dest)
-          : undefined
+        dest: clipboard.value.dest ? replacePathPrefix(clipboard.value.dest, src, dest) : undefined
       }
     }
 
@@ -305,7 +307,7 @@ export const useProjectStore = defineStore('project', () => {
     debouncedSendBufferedState()
   }
 
-  const duplicateActiveDocument = async(): Promise<void> => {
+  const duplicateActiveDocument = async (): Promise<void> => {
     const rootPath = projectTree.value?.pathname ?? null
     const kind = getNoteNodeKind(activeItem.value, rootPath)
     if (kind !== 'document') return
@@ -372,7 +374,7 @@ export const useProjectStore = defineStore('project', () => {
     moveDialogSourceKind.value = null
   }
 
-  const moveActiveItemTo = async(targetPath: string): Promise<void> => {
+  const moveActiveItemTo = async (targetPath: string): Promise<void> => {
     try {
       const source = getMoveSource()
       if (!source || !projectTree.value) return
@@ -408,14 +410,17 @@ export const useProjectStore = defineStore('project', () => {
         notice.notify({
           title: 'Move Forbidden',
           type: 'warning',
-          message: kind === 'group'
-            ? 'A group cannot be moved into itself or one of its descendants.'
-            : 'An area cannot be moved into itself or one of its descendants.'
+          message:
+            kind === 'group'
+              ? 'A group cannot be moved into itself or one of its descendants.'
+              : 'An area cannot be moved into itself or one of its descendants.'
         })
         return
       }
 
-      if (hasNoteDisplayNameConflict(targetFolder, activeItem.value, projectTree.value.pathname, src)) {
+      if (
+        hasNoteDisplayNameConflict(targetFolder, activeItem.value, projectTree.value.pathname, src)
+      ) {
         notice.notify({
           title: 'Move Forbidden',
           type: 'warning',
@@ -455,7 +460,11 @@ export const useProjectStore = defineStore('project', () => {
         }
       }
 
-      resortTree(projectTree.value, String(preferencesStore.fileSortBy), String(preferencesStore.fileSortOrder))
+      resortTree(
+        projectTree.value,
+        String(preferencesStore.fileSortBy),
+        String(preferencesStore.fileSortOrder)
+      )
 
       if (preferencesStore.defaultDirectoryToOpen) {
         const nextDefaultDirectory = replacePathPrefix(
@@ -463,7 +472,12 @@ export const useProjectStore = defineStore('project', () => {
           src,
           dest
         )
-        if (!window.fileUtils.isSamePathSync(nextDefaultDirectory, preferencesStore.defaultDirectoryToOpen)) {
+        if (
+          !window.fileUtils.isSamePathSync(
+            nextDefaultDirectory,
+            preferencesStore.defaultDirectoryToOpen
+          )
+        ) {
           preferencesStore.SET_SINGLE_PREFERENCE({
             type: 'defaultDirectoryToOpen',
             value: nextDefaultDirectory
@@ -473,7 +487,9 @@ export const useProjectStore = defineStore('project', () => {
 
       if (preferencesStore.lastOpenedFolder) {
         const nextLastOpenedFolder = replacePathPrefix(preferencesStore.lastOpenedFolder, src, dest)
-        if (!window.fileUtils.isSamePathSync(nextLastOpenedFolder, preferencesStore.lastOpenedFolder)) {
+        if (
+          !window.fileUtils.isSamePathSync(nextLastOpenedFolder, preferencesStore.lastOpenedFolder)
+        ) {
           preferencesStore.SET_SINGLE_PREFERENCE({
             type: 'lastOpenedFolder',
             value: nextLastOpenedFolder
@@ -511,9 +527,7 @@ export const useProjectStore = defineStore('project', () => {
 
     projectTree.value = tree
     selectedNotePath.value = tree.pathname
-    void window.fileUtils.ensureDir(
-      window.path.join(tree.pathname, NOTE_ATTACHMENTS_DIRECTORY)
-    )
+    void window.fileUtils.ensureDir(window.path.join(tree.pathname, NOTE_ATTACHMENTS_DIRECTORY))
 
     const layout = {
       rightColumn: 'files'
@@ -698,7 +712,8 @@ export const useProjectStore = defineStore('project', () => {
     bus.on('SIDEBAR::remove', () => {
       const { pathname } = activeItem.value
       const isDirectory = !!activeItem.value?.isDirectory
-      window.electron.ipcRenderer.invoke('mt::fs-trash-item', pathname)
+      window.electron.ipcRenderer
+        .invoke('mt::fs-trash-item', pathname)
         .then(() => {
           editorStore.CLOSE_TABS_BY_PATH(pathname, { includeDescendants: isDirectory })
         })
@@ -760,7 +775,7 @@ export const useProjectStore = defineStore('project', () => {
               type: 'error',
               message: err instanceof Error ? err.message : String(err)
             })
-        })
+          })
       }
     })
     bus.on('SIDEBAR::move-to', () => {
@@ -782,12 +797,19 @@ export const useProjectStore = defineStore('project', () => {
       const rootPath = projectTree.value?.pathname ?? null
       const kind = getNoteNodeKind(activeItem.value, rootPath)
       if (kind !== 'root' && kind !== 'group' && kind !== 'area') return
-      SET_FOLDER_COLLAPSED_RECURSIVELY(
-        activeItem.value as ProjectTree,
-        true,
-        { includeSelf: kind !== 'root' }
-      )
+      SET_FOLDER_COLLAPSED_RECURSIVELY(activeItem.value as ProjectTree, true, {
+        includeSelf: kind !== 'root'
+      })
       debouncedSendBufferedState()
+    })
+    bus.on('SIDEBAR::reload-workspace', () => {
+      const pathname = projectTree.value?.pathname
+      if (!pathname) return
+
+      editorStore.CLOSE_ALL_TABS()
+
+      const { windowId } = window.marknotepro?.env ?? { windowId: -1 }
+      window.electron.ipcRenderer.send('app-open-directory-by-id', windowId, pathname, true, true)
     })
   }
 
@@ -897,7 +919,12 @@ export const useProjectStore = defineStore('project', () => {
           src,
           dest
         )
-        if (!window.fileUtils.isSamePathSync(nextDefaultDirectory, preferencesStore.defaultDirectoryToOpen)) {
+        if (
+          !window.fileUtils.isSamePathSync(
+            nextDefaultDirectory,
+            preferencesStore.defaultDirectoryToOpen
+          )
+        ) {
           preferencesStore.SET_SINGLE_PREFERENCE({
             type: 'defaultDirectoryToOpen',
             value: nextDefaultDirectory
@@ -907,7 +934,9 @@ export const useProjectStore = defineStore('project', () => {
 
       if (preferencesStore.lastOpenedFolder) {
         const nextLastOpenedFolder = replacePathPrefix(preferencesStore.lastOpenedFolder, src, dest)
-        if (!window.fileUtils.isSamePathSync(nextLastOpenedFolder, preferencesStore.lastOpenedFolder)) {
+        if (
+          !window.fileUtils.isSamePathSync(nextLastOpenedFolder, preferencesStore.lastOpenedFolder)
+        ) {
           preferencesStore.SET_SINGLE_PREFERENCE({
             type: 'lastOpenedFolder',
             value: nextLastOpenedFolder

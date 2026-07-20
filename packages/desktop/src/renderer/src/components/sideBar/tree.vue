@@ -5,51 +5,7 @@
     </div>
 
     <!-- Project tree view -->
-    <div
-      v-if="projectTree"
-      class="project-tree"
-    >
-      <div
-        class="title"
-        :class="{ active: isRootSelected }"
-        @click="selectRoot"
-        @contextmenu.prevent.stop="handleRootContextMenu"
-      >
-        <span
-          class="default-cursor text-overflow"
-        >
-          <input
-            v-if="renameCache === projectTree.pathname"
-            ref="renameInput"
-            v-model="newName"
-            type="text"
-            class="rename root-rename-input"
-            @click.stop
-            @keypress.enter="renameRoot"
-        >
-          <template v-else>{{ projectDisplayName }}</template>
-        </span>
-        <button
-          type="button"
-          class="note-navigation-toggle"
-          :title="noteNavigationToggleTitle"
-          @click.stop="toggleNoteNavigationMode"
-        >
-          <el-icon :size="14">
-            <component :is="noteNavigationToggleIcon" />
-          </el-icon>
-        </button>
-        <button
-          class="tree-action-button"
-          type="button"
-          :title="t('sideBar.tree.workspaceActions')"
-          @click.stop="showRootActionMenu"
-        >
-          <el-icon :size="14">
-            <MoreFilled />
-          </el-icon>
-        </button>
-      </div>
+    <div v-if="projectTree" class="project-tree">
       <div
         class="tree-wrapper"
         :class="{ 'tree-wrapper-split': noteNavigationMode === 'tree-list' }"
@@ -57,6 +13,45 @@
         @contextmenu.prevent.stop="handleTreeWrapperContextMenu"
       >
         <div class="tree-panel">
+          <div
+            class="title"
+            :class="{ active: isRootSelected }"
+            @click="selectRoot"
+            @contextmenu.prevent.stop="handleRootContextMenu"
+          >
+            <span class="default-cursor text-overflow">
+              <input
+                v-if="renameCache === projectTree.pathname"
+                ref="renameInput"
+                v-model="newName"
+                type="text"
+                class="rename root-rename-input"
+                @click.stop
+                @keypress.enter="renameRoot"
+              />
+              <template v-else>{{ projectDisplayName }}</template>
+            </span>
+            <button
+              type="button"
+              class="note-navigation-toggle"
+              :title="noteNavigationToggleTitle"
+              @click.stop="toggleNoteNavigationMode"
+            >
+              <el-icon :size="14">
+                <component :is="noteNavigationToggleIcon" />
+              </el-icon>
+            </button>
+            <button
+              class="tree-action-button"
+              type="button"
+              :title="t('sideBar.tree.workspaceActions')"
+              @click.stop="showRootActionMenu"
+            >
+              <el-icon :size="14">
+                <MoreFilled />
+              </el-icon>
+            </button>
+          </div>
           <folder
             v-for="folder of visibleRootFolders"
             :key="folder.id"
@@ -73,27 +68,19 @@
             class="new-input"
             :style="{ 'margin-left': `${depth * 5 + 15}px` }"
             @keypress.enter="handleInputEnter"
-          >
-          <file
-            v-for="file of visibleRootFiles"
-            :key="file.id"
-            :file="file"
-            :depth="depth"
           />
+          <file v-for="file of visibleRootFiles" :key="file.id" :file="file" :depth="depth" />
           <div
             v-if="
               visibleRootFiles.length === 0 &&
-                visibleRootFolders.length === 0 &&
-                createCacheDirname !== projectTree.pathname
+              visibleRootFolders.length === 0 &&
+              createCacheDirname !== projectTree.pathname
             "
             class="empty-project"
           >
             <span>{{ t('sideBar.tree.emptyWorkspace') }}</span>
             <div class="centered-group">
-              <button
-                class="button-primary"
-                @click.stop="createGroup"
-              >
+              <button class="button-primary" @click.stop="createGroup">
                 {{ t('sideBar.tree.createGroup') }}
               </button>
             </div>
@@ -111,17 +98,9 @@
         />
       </div>
     </div>
-    <div
-      v-else
-      class="open-project"
-    >
+    <div v-else class="open-project">
       <div class="centered-group">
-        <el-button
-          text
-          bg
-          type="primary"
-          @click="openFolder"
-        >
+        <el-button text bg type="primary" @click="openFolder">
           {{ t('sideBar.tree.openWorkspace') }}
         </el-button>
       </div>
@@ -284,31 +263,32 @@ const handleSplitDragStart = (event: MouseEvent): void => {
 }
 
 const handleRootContextMenu = (event: MouseEvent): void => {
-  if (props.projectTree) {
-    projectStore.SELECT_NOTE_PATH(props.projectTree.pathname)
-  }
   projectStore.CHANGE_ACTIVE_ITEM(props.projectTree)
   showContextMenu(event, props.projectTree, rootPath.value, !!clipboard.value)
 }
 
 const showRootActionMenu = (event: MouseEvent): void => {
   if (!props.projectTree) return
-  projectStore.SELECT_NOTE_PATH(props.projectTree.pathname)
   projectStore.CHANGE_ACTIVE_ITEM(props.projectTree)
   const target = event.currentTarget as HTMLElement | null
   const rect = target?.getBoundingClientRect()
-  showContextMenu({
-    clientX: rect ? rect.left + rect.width / 2 : event.clientX,
-    clientY: rect ? rect.bottom : event.clientY
-  }, props.projectTree, rootPath.value, !!clipboard.value)
+  showContextMenu(
+    {
+      clientX: rect ? rect.left + rect.width / 2 : event.clientX,
+      clientY: rect ? rect.bottom : event.clientY
+    },
+    props.projectTree,
+    rootPath.value,
+    !!clipboard.value
+  )
 }
 
 const handleTreeWrapperContextMenu = (event: MouseEvent): void => {
   const target = event.target as HTMLElement | null
 
   // Let folder/file nodes keep their own context-menu behavior; only treat
-  // clicks on the root wrapper/empty area as "root".
-  if (target?.closest('.side-bar-folder, .side-bar-file')) {
+  // clicks on the root tree panel empty area as "root".
+  if (target?.closest('.side-bar-folder, .side-bar-file, .note-list')) {
     return
   }
 
@@ -354,7 +334,6 @@ onMounted(() => {
   document.addEventListener('click', (event) => {
     const target = event.target as HTMLElement | null
     if (target && target.tagName !== 'INPUT') {
-      projectStore.CHANGE_ACTIVE_ITEM({})
       projectStore.createCache = {}
       projectStore.renameCache = null
     }
@@ -374,7 +353,6 @@ onMounted(() => {
       projectStore.renameCache = null
     }
   })
-
 })
 
 watch(
@@ -420,7 +398,7 @@ watch(
   flex-direction: row-reverse;
 }
 
-.project-tree > .title {
+.tree-panel > .title {
   height: 30px;
   line-height: 30px;
   font-size: 14px;
@@ -429,7 +407,7 @@ watch(
   gap: 8px;
 }
 
-.project-tree > .title > span {
+.tree-panel > .title > span {
   flex: 1;
   min-width: 0;
 }
@@ -476,17 +454,21 @@ watch(
   flex: 1;
 }
 
-.project-tree > .title {
+.tree-panel > .title {
   padding-right: 15px;
   display: flex;
   align-items: center;
 }
 
-.project-tree > .title.active {
+.tree-panel > .title.active {
   background: var(--sideBarItemHoverBgColor);
 }
 
-.project-tree > .title > span {
+.tree-panel > .title.active > span {
+  color: var(--themeColor);
+}
+
+.tree-panel > .title > span {
   flex: 1;
   user-select: none;
 }
@@ -511,7 +493,7 @@ watch(
   color: var(--sideBarTitleColor);
 }
 
-.project-tree > .title > a {
+.tree-panel > .title > a {
   pointer-events: auto;
   cursor: pointer;
   margin-left: 8px;
@@ -519,11 +501,11 @@ watch(
   opacity: 0;
 }
 
-.project-tree > .title > a:hover {
+.tree-panel > .title > a:hover {
   color: var(--highlightThemeColor);
 }
 
-.project-tree > .title > a.active {
+.tree-panel > .title > a.active {
   color: var(--highlightThemeColor);
 }
 
@@ -566,7 +548,7 @@ watch(
 .project-tree > .tree-wrapper::-webkit-scrollbar:vertical {
   width: 8px;
 }
-.project-tree div.title:hover > a {
+.tree-panel > .title:hover > a {
   opacity: 1;
 }
 .open-project {

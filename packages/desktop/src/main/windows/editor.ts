@@ -393,12 +393,12 @@ class EditorWindow extends BaseWindow {
   /**
    * Open a (new) directory and replaces the old one.
    */
-  openFolder(pathname: string): void {
+  openFolder(pathname: string, forceReload = false): void {
     // TODO: Don't allow new files if quitting.
     if (
       !pathname ||
       this.lifecycle === WindowLifecycle.QUITTED ||
-      isSamePathSync(pathname, this._openedRootDirectory ?? '')
+      (!forceReload && isSamePathSync(pathname, this._openedRootDirectory ?? ''))
     ) {
       return
     }

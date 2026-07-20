@@ -230,6 +230,7 @@
       "newDocument": "新建筆記",
       "expandAll": "全部展開",
       "collapseAll": "全部折疊",
+      "reloadWorkspace": "重新載入工作區",
       "copy": "複製",
       "cut": "剪下",
       "paste": "貼上",

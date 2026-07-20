@@ -94,7 +94,12 @@ export interface IpcInvokeChannels {
 export interface IpcSendChannels {
   'app-create-editor-window': [config?: unknown]
   'app-create-settings-window': []
-  'app-open-directory-by-id': [windowId: number, dirPath: string]
+  'app-open-directory-by-id': [
+    windowId: number,
+    dirPath: string,
+    openInSameWindow?: boolean,
+    forceReload?: boolean
+  ]
   'app-open-file-by-id': [windowId: number, filePath: string, options?: unknown]
   'app-open-files-by-id': [windowId: number, filePaths: string[], options?: unknown]
   'app-open-markdown-by-id': [windowId: number, markdown: string, options?: unknown]
@@ -132,7 +137,9 @@ export interface IpcSendChannels {
   'mt::open-file-by-window-id': [windowId: number, filePath: string, options?: unknown]
   'mt::open-keybindings-config': []
   'mt::open-setting-window': []
-  'mt::rename': [payload: { id: string; pathname: string; newPathname: string; currentFile?: unknown }]
+  'mt::rename': [
+    payload: { id: string; pathname: string; newPathname: string; currentFile?: unknown }
+  ]
   'mt::request-keybindings': []
   'mt::set-editor-format-menus-enabled': [windowId: number, enabled: boolean]
   'mt::response-export': [

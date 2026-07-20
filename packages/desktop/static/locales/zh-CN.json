@@ -229,6 +229,7 @@
       "newDocument": "新建笔记",
       "expandAll": "全部展开",
       "collapseAll": "全部折叠",
+      "reloadWorkspace": "重载工作区",
       "copy": "复制",
       "cut": "剪切",
       "paste": "粘贴",

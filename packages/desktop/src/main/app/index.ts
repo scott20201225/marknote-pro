@@ -449,6 +449,23 @@ class App {
     return editor
   }
 
+  private _openDirectoryById(
+    windowId: number,
+    pathname: string,
+    openInSameWindow = false,
+    forceReload = false
+  ): void {
+    const { openFolderInNewWindow } = this._accessor.preferences.getAll()
+    if (openInSameWindow || !openFolderInNewWindow) {
+      const editor = this._windowManager.get(windowId) as EditorWindow | undefined
+      if (editor) {
+        editor.openFolder(pathname, forceReload)
+        return
+      }
+    }
+    this._createEditorWindow(pathname)
+  }
+
   /**
    * Create a new setting window.
    */
@@ -771,17 +788,9 @@ class App {
     })
 
     onInternalChannel(
-      'app-open-directory-by-id',
-      (windowId: number, pathname: string, openInSameWindow: boolean) => {
-        const { openFolderInNewWindow } = this._accessor.preferences.getAll()
-        if (openInSameWindow || !openFolderInNewWindow) {
-          const editor = this._windowManager.get(windowId) as EditorWindow | undefined
-          if (editor) {
-            editor.openFolder(pathname)
-            return
-          }
-        }
-        this._createEditorWindow(pathname)
+      'app-open-directory-by-id-internal',
+      (windowId: number, pathname: string, openInSameWindow = false, forceReload = false) => {
+        this._openDirectoryById(windowId, pathname, openInSameWindow, forceReload)
       }
     )
 
@@ -790,6 +799,13 @@ class App {
     ipcMain.on('mt::app-try-quit', () => {
       app.quit()
     })
+
+    ipcMain.on(
+      'app-open-directory-by-id',
+      (_e, windowId: number, pathname: string, openInSameWindow = false, forceReload = false) => {
+        this._openDirectoryById(windowId, pathname, openInSameWindow, forceReload)
+      }
+    )
 
     ipcMain.on('mt::open-file-by-window-id', (_e, windowId: number, filePath: string) => {
       const resolvedPath = normalizeAndResolvePath(filePath)

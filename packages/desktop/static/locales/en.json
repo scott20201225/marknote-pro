@@ -229,6 +229,7 @@
       "newDocument": "New Note",
       "expandAll": "Expand All",
       "collapseAll": "Collapse All",
+      "reloadWorkspace": "Reload Workspace",
       "copy": "Copy",
       "cut": "Cut",
       "paste": "Paste",

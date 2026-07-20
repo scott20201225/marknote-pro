@@ -867,7 +867,7 @@ ipcMain.on('mt::ask-for-open-project-in-sidebar', async (e, payload?: { defaultP
       defaultDirectoryToOpen: resolvedPath,
       startUpAction: 'folder'
     })
-    ipcMain.emit('app-open-directory-by-id', win.id, resolvedPath, true)
+    ipcMain.emit('app-open-directory-by-id-internal', win.id, resolvedPath, true)
   }
 })
 
@@ -1051,7 +1051,7 @@ export const openFileOrFolder = (win: BrowserWindow, pathname: string): void => 
   if (isFile(resolvedPath)) {
     ipcMain.emit('app-open-file-by-id', win.id, resolvedPath)
   } else if (isDirectory(resolvedPath)) {
-    ipcMain.emit('app-open-directory-by-id', win.id, resolvedPath)
+    ipcMain.emit('app-open-directory-by-id-internal', win.id, resolvedPath)
   } else {
     console.error(`[ERROR] Cannot open unknown file: "${resolvedPath}"`)
   }

@@ -13,7 +13,8 @@ import {
   getDELETE,
   getShowInFolder,
   getExpandAll,
-  getCollapseAll
+  getCollapseAll,
+  getReloadWorkspace
 } from './menuItems'
 import { popupContextMenu, type ContextMenuItem } from '../popupMenu'
 import { getNoteNodeKind } from '../../util/noteWorkspace'
@@ -40,7 +41,13 @@ const normalizeContextItems = (
 
 export const showContextMenu = (
   event: { clientX: number; clientY: number },
-  activeItem: { pathname: string; name: string; isDirectory?: boolean; isFile?: boolean; isMarkdown?: boolean } | null,
+  activeItem: {
+    pathname: string
+    name: string
+    isDirectory?: boolean
+    isFile?: boolean
+    isMarkdown?: boolean
+  } | null,
   rootPath: string | null,
   hasPathCache: boolean
 ): void => {
@@ -54,6 +61,8 @@ export const showContextMenu = (
       SEPARATOR,
       getExpandAll(),
       getCollapseAll(),
+      SEPARATOR,
+      getReloadWorkspace(),
       SEPARATOR,
       getShowInFolder()
     ]
