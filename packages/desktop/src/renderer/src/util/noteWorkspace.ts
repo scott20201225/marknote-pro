@@ -62,7 +62,7 @@ const getRelativeParts = (rootPath: string, pathname: string): string[] => {
   if (!rootPath) return []
   const relativePath = window.path.relative(rootPath, pathname)
   if (!relativePath || relativePath === '.') return []
-  return relativePath.split(window.path.sep).filter(Boolean)
+  return relativePath.split(/[\\/]+/).filter(Boolean)
 }
 
 export const getNoteNodeKind = (

@@ -11,7 +11,6 @@ import {
 import { usePreferencesStore } from './preferences'
 import bus from '../bus'
 import { create, paste, rename, type FileCreateType, type PasteOptions } from '../util/fileSystem'
-import { PATH_SEPARATOR } from '../config'
 import notice from '../services/notification'
 import { getFileStateFromData } from './help'
 import { useLayoutStore } from './layout'
@@ -740,7 +739,7 @@ export const useProjectStore = defineStore('project', () => {
       const { pathname, isDirectory } = activeItem.value
       const dirname = isDirectory ? pathname : window.path.dirname(pathname)
       if (cb && cb.src) {
-        cb.dest = dirname + PATH_SEPARATOR + window.path.basename(cb.src)
+        cb.dest = window.path.join(dirname, window.path.basename(cb.src))
 
         if (window.path.normalize(cb.src) === window.path.normalize(cb.dest)) {
           notice.notify({
@@ -886,7 +885,7 @@ export const useProjectStore = defineStore('project', () => {
       storedName = toStoredNoteName(name, kind)
     }
     if (!storedName) return
-    const dest = dirname + PATH_SEPARATOR + storedName
+    const dest = window.path.join(dirname, storedName)
     rename(src, dest).then(() => {
       if (projectTree.value) {
         remapFolderNodePaths(projectTree.value, src, dest)

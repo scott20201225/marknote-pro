@@ -4,9 +4,10 @@ export type HashType = 'sha1' | 'sha256' | 'sha512'
 export const NOTE_ATTACHMENTS_DIRECTORY = 'Attachments'
 
 export const create = async(pathname: string, type: FileCreateType): Promise<void> => {
+  const normalizedPathname = window.path.normalize(pathname)
   return type === 'directory'
-    ? window.fileUtils.ensureDir(pathname)
-    : window.fileUtils.outputFile(pathname, '')
+    ? window.fileUtils.ensureDir(normalizedPathname)
+    : window.fileUtils.outputFile(normalizedPathname, '')
 }
 
 export interface PasteOptions {
@@ -16,11 +17,15 @@ export interface PasteOptions {
 }
 
 export const paste = async({ src, dest, type }: PasteOptions): Promise<void> => {
-  return type === 'cut' ? window.fileUtils.move(src, dest) : window.fileUtils.copy(src, dest)
+  const normalizedSrc = window.path.normalize(src)
+  const normalizedDest = window.path.normalize(dest)
+  return type === 'cut'
+    ? window.fileUtils.move(normalizedSrc, normalizedDest)
+    : window.fileUtils.copy(normalizedSrc, normalizedDest)
 }
 
 export const rename = async(src: string, dest: string): Promise<void> => {
-  return window.fileUtils.move(src, dest)
+  return window.fileUtils.move(window.path.normalize(src), window.path.normalize(dest))
 }
 
 const toHex = (buf: ArrayBuffer | Uint8Array): string => {

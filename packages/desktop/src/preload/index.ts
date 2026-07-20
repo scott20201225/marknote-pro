@@ -34,6 +34,8 @@ const send = <K extends keyof IpcSendChannels>(channel: K, ...args: IpcSendChann
 // One synchronous handshake at startup so the renderer can read platform/env
 // without an `await` from inside Vue computed properties etc.
 const bootInfo = ipcRenderer.sendSync('mt::boot-info') as BootInfo | undefined
+const currentPlatform = bootInfo?.platform || process.platform
+const platformPath = currentPlatform === 'win32' ? pathe.win32 : pathe.posix
 
 const ipcWrapper = {
   send,
@@ -133,14 +135,17 @@ const hasMarkdownExtension = (filename: string): boolean => {
 
 const isChildOfDirectory = (dir: string, child: string): boolean => {
   if (!dir || !child) return false
-  const relative = pathe.relative(dir, child)
-  return !!relative && !relative.startsWith('..') && !pathe.isAbsolute(relative)
+  const relative = platformPath.relative(
+    platformPath.normalize(dir),
+    platformPath.normalize(child)
+  )
+  return !!relative && relative !== '.' && !relative.startsWith('..') && !platformPath.isAbsolute(relative)
 }
 
 const isSamePathSync = (pathA: string, pathB: string, isNormalized: boolean = false): boolean => {
   if (!pathA || !pathB) return false
-  const a = isNormalized ? pathA : pathe.normalize(pathA)
-  const b = isNormalized ? pathB : pathe.normalize(pathB)
+  const a = isNormalized ? pathA : platformPath.normalize(pathA)
+  const b = isNormalized ? pathB : platformPath.normalize(pathB)
   if (a.length !== b.length) return false
   if (a === b) return true
   if (a.toLowerCase() === b.toLowerCase()) {
@@ -247,22 +252,21 @@ const electronAPI = {
   windowControl: windowControlAPI
 }
 
-// Expose a Node-`path`-compatible API to the renderer. `pathe` is a
-// cross-platform reimplementation that always uses `/` separators and works
-// inside a sandboxed renderer.
+// Expose a Node-`path`-compatible API to the renderer. We bind `pathe`'s
+// platform-specific facade once so renderer path math follows the host OS.
 const pathAPI = {
-  basename: (...args: Parameters<typeof pathe.basename>) => pathe.basename(...args),
-  dirname: (...args: Parameters<typeof pathe.dirname>) => pathe.dirname(...args),
-  extname: (...args: Parameters<typeof pathe.extname>) => pathe.extname(...args),
-  join: (...args: string[]) => pathe.join(...args),
-  resolve: (...args: string[]) => pathe.resolve(...args),
-  relative: (...args: Parameters<typeof pathe.relative>) => pathe.relative(...args),
-  isAbsolute: (...args: Parameters<typeof pathe.isAbsolute>) => pathe.isAbsolute(...args),
-  normalize: (...args: Parameters<typeof pathe.normalize>) => pathe.normalize(...args),
-  parse: (...args: Parameters<typeof pathe.parse>) => pathe.parse(...args),
-  format: (...args: Parameters<typeof pathe.format>) => pathe.format(...args),
-  sep: pathe.sep,
-  delimiter: pathe.delimiter
+  basename: (...args: Parameters<typeof platformPath.basename>) => platformPath.basename(...args),
+  dirname: (...args: Parameters<typeof platformPath.dirname>) => platformPath.dirname(...args),
+  extname: (...args: Parameters<typeof platformPath.extname>) => platformPath.extname(...args),
+  join: (...args: string[]) => platformPath.join(...args),
+  resolve: (...args: string[]) => platformPath.resolve(...args),
+  relative: (...args: Parameters<typeof platformPath.relative>) => platformPath.relative(...args),
+  isAbsolute: (...args: Parameters<typeof platformPath.isAbsolute>) => platformPath.isAbsolute(...args),
+  normalize: (...args: Parameters<typeof platformPath.normalize>) => platformPath.normalize(...args),
+  parse: (...args: Parameters<typeof platformPath.parse>) => platformPath.parse(...args),
+  format: (...args: Parameters<typeof platformPath.format>) => platformPath.format(...args),
+  sep: platformPath.sep,
+  delimiter: platformPath.delimiter
   // Note: `pathe.posix` / `pathe.win32` are intentionally not exposed.
   // Each contains a self-reference (`pathe.posix.posix === pathe.posix`),
   // which breaks structured cloning inside `contextBridge.exposeInMainWorld`.
