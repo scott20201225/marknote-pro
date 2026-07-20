@@ -418,6 +418,7 @@ export const useProjectStore = defineStore('project', () => {
 
       const kind = moveDialogSourceKind.value
       const src = moveDialogSourcePath.value
+      const rootPath = projectTree.value.pathname
       const normalizedTarget = normalizeProjectRoot(targetPath)
       if (!normalizedTarget) return
 
@@ -497,13 +498,21 @@ export const useProjectStore = defineStore('project', () => {
 
       if (kind === 'document') {
         const movedFile = takeFileNode(projectTree.value, src)
-        if (!movedFile) return
+        if (!movedFile) {
+          closeMoveDialog()
+          window.electron.ipcRenderer.send('mt::reload-workspace', rootPath)
+          return
+        }
         remapFileNodePath(movedFile, src, dest)
         ensureFolderArrays(targetFolder)
         targetFolder.files.push(movedFile)
       } else {
         const movedFolder = takeFolderNode(projectTree.value, src)
-        if (!movedFolder) return
+        if (!movedFolder) {
+          closeMoveDialog()
+          window.electron.ipcRenderer.send('mt::reload-workspace', rootPath)
+          return
+        }
         remapFolderNodePaths(movedFolder, src, dest)
         ensureFolderArrays(targetFolder)
         targetFolder.folders.push(movedFolder)

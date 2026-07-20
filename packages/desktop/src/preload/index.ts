@@ -131,16 +131,19 @@ const hasMarkdownExtension = (filename: string): boolean => {
   return MARKDOWN_EXTENSIONS.some((ext) => filename.toLowerCase().endsWith(`.${ext}`))
 }
 
+const toRendererPath = (pathname: string): string =>
+  pathname.replace(/\\/g, '/').replace(/^\/([A-Za-z]:\/)/, '$1')
+
 const isChildOfDirectory = (dir: string, child: string): boolean => {
   if (!dir || !child) return false
-  const relative = pathe.relative(dir, child)
+  const relative = pathe.relative(toRendererPath(dir), toRendererPath(child))
   return !!relative && !relative.startsWith('..') && !pathe.isAbsolute(relative)
 }
 
 const isSamePathSync = (pathA: string, pathB: string, isNormalized: boolean = false): boolean => {
   if (!pathA || !pathB) return false
-  const a = isNormalized ? pathA : pathe.normalize(pathA)
-  const b = isNormalized ? pathB : pathe.normalize(pathB)
+  const a = isNormalized ? toRendererPath(pathA) : pathe.normalize(toRendererPath(pathA))
+  const b = isNormalized ? toRendererPath(pathB) : pathe.normalize(toRendererPath(pathB))
   if (a.length !== b.length) return false
   if (a === b) return true
   if (a.toLowerCase() === b.toLowerCase()) {
@@ -251,15 +254,15 @@ const electronAPI = {
 // cross-platform reimplementation that always uses `/` separators and works
 // inside a sandboxed renderer.
 const pathAPI = {
-  basename: (...args: Parameters<typeof pathe.basename>) => pathe.basename(...args),
-  dirname: (...args: Parameters<typeof pathe.dirname>) => pathe.dirname(...args),
-  extname: (...args: Parameters<typeof pathe.extname>) => pathe.extname(...args),
-  join: (...args: string[]) => pathe.join(...args),
-  resolve: (...args: string[]) => pathe.resolve(...args),
-  relative: (...args: Parameters<typeof pathe.relative>) => pathe.relative(...args),
-  isAbsolute: (...args: Parameters<typeof pathe.isAbsolute>) => pathe.isAbsolute(...args),
-  normalize: (...args: Parameters<typeof pathe.normalize>) => pathe.normalize(...args),
-  parse: (...args: Parameters<typeof pathe.parse>) => pathe.parse(...args),
+  basename: (pathname: string, ext?: string) => pathe.basename(toRendererPath(pathname), ext),
+  dirname: (pathname: string) => pathe.dirname(toRendererPath(pathname)),
+  extname: (pathname: string) => pathe.extname(toRendererPath(pathname)),
+  join: (...args: string[]) => pathe.join(...args.map(toRendererPath)),
+  resolve: (...args: string[]) => pathe.resolve(...args.map(toRendererPath)),
+  relative: (from: string, to: string) => pathe.relative(toRendererPath(from), toRendererPath(to)),
+  isAbsolute: (pathname: string) => pathe.isAbsolute(toRendererPath(pathname)),
+  normalize: (pathname: string) => pathe.normalize(toRendererPath(pathname)),
+  parse: (pathname: string) => pathe.parse(toRendererPath(pathname)),
   format: (...args: Parameters<typeof pathe.format>) => pathe.format(...args),
   sep: pathe.sep,
   delimiter: pathe.delimiter
