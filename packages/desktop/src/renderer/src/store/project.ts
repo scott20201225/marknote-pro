@@ -345,6 +345,68 @@ export const useProjectStore = defineStore('project', () => {
     debouncedSendBufferedState()
   }
 
+  const isPathAffectedByDelete = (
+    pathname: string,
+    deletedPath: string,
+    isDirectory: boolean
+  ): boolean => {
+    return isDirectory
+      ? isSameOrDescendantPath(pathname, deletedPath)
+      : window.fileUtils.isSamePathSync(pathname, deletedPath)
+  }
+
+  const removeDeletedPathFromTree = (pathname: string, isDirectory: boolean): boolean => {
+    if (!projectTree.value) return false
+    return isDirectory
+      ? !!takeFolderNode(projectTree.value, pathname)
+      : !!takeFileNode(projectTree.value, pathname)
+  }
+
+  const hasDeletedPathInTree = (pathname: string, isDirectory: boolean): boolean => {
+    if (!projectTree.value) return false
+    return isDirectory
+      ? !!findFolderNodeByPath(projectTree.value, pathname)
+      : !!findFileNodeByPath(projectTree.value, pathname)
+  }
+
+  const syncPathReferencesAfterDelete = (pathname: string, isDirectory: boolean): void => {
+    const rootPath = projectTree.value?.pathname ?? null
+
+    if (
+      activeItem.value?.pathname &&
+      isPathAffectedByDelete(activeItem.value.pathname, pathname, isDirectory)
+    ) {
+      activeItem.value = projectTree.value ?? {}
+    }
+
+    if (
+      selectedNotePath.value &&
+      isPathAffectedByDelete(selectedNotePath.value, pathname, isDirectory)
+    ) {
+      selectedNotePath.value = rootPath
+    }
+
+    const createCacheValue = createCache.value as CreateCacheEntry
+    if (
+      createCacheValue.dirname &&
+      isPathAffectedByDelete(createCacheValue.dirname, pathname, isDirectory)
+    ) {
+      createCache.value = {}
+    }
+
+    if (
+      clipboard.value &&
+      ((clipboard.value.src &&
+        isPathAffectedByDelete(clipboard.value.src, pathname, isDirectory)) ||
+        (clipboard.value.dest &&
+          isPathAffectedByDelete(clipboard.value.dest, pathname, isDirectory)))
+    ) {
+      clipboard.value = null
+    }
+
+    debouncedSendBufferedState()
+  }
+
   const duplicateActiveDocument = async (): Promise<void> => {
     const rootPath = projectTree.value?.pathname ?? null
     const kind = getNoteNodeKind(activeItem.value, rootPath)
@@ -774,6 +836,11 @@ export const useProjectStore = defineStore('project', () => {
         .invoke('mt::fs-trash-item', pathname)
         .then(() => {
           editorStore.CLOSE_TABS_BY_PATH(pathname, { includeDescendants: isDirectory })
+          removeDeletedPathFromTree(pathname, isDirectory)
+          syncPathReferencesAfterDelete(pathname, isDirectory)
+          if (hasDeletedPathInTree(pathname, isDirectory) && projectTree.value?.pathname) {
+            window.electron.ipcRenderer.send('mt::reload-workspace', projectTree.value.pathname)
+          }
         })
         .catch((err) => {
           notice.notify({
