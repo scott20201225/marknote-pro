@@ -877,7 +877,28 @@ class App {
     })
 
     ipcMain.handle('mt::fs-trash-item', async (_event, fullPath: string) => {
-      return shell.trashItem(fullPath)
+      const rawPath = typeof fullPath === 'string' ? fullPath.trim() : ''
+      if (!rawPath) {
+        throw new Error('Failed to parse path')
+      }
+
+      let normalizedPath = path.normalize(rawPath)
+      const root = path.parse(normalizedPath).root
+      if (normalizedPath.length > root.length) {
+        normalizedPath = normalizedPath.replace(/[\\/]+$/, '')
+      }
+
+      const resolvedPath = normalizeAndResolvePath(normalizedPath) || path.resolve(normalizedPath)
+      const trashPath = fs.existsSync(resolvedPath) ? resolvedPath : normalizedPath
+
+      log.info('Trash item request', {
+        rawPath,
+        normalizedPath,
+        resolvedPath,
+        trashPath
+      })
+
+      return shell.trashItem(trashPath)
     })
   }
 }

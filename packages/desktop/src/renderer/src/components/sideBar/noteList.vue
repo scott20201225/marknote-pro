@@ -220,14 +220,12 @@ const handleFileClick = (file: TreeFileNode): void => {
 }
 
 const showFileContextMenu = (event: MouseEvent, file: TreeFileNode): void => {
-  projectStore.SELECT_NOTE_PATH(window.path.dirname(file.pathname))
-  projectStore.CHANGE_ACTIVE_ITEM(file)
+  projectStore.CHANGE_CONTEXT_MENU_ITEM(file)
   showContextMenu(event, file, rootPath.value, !!clipboard.value)
 }
 
 const showFileActionMenu = (event: MouseEvent, file: TreeFileNode): void => {
-  projectStore.SELECT_NOTE_PATH(window.path.dirname(file.pathname))
-  projectStore.CHANGE_ACTIVE_ITEM(file)
+  projectStore.CHANGE_CONTEXT_MENU_ITEM(file)
   const target = event.currentTarget as HTMLElement | null
   const rect = target?.getBoundingClientRect()
   showContextMenu(
@@ -243,13 +241,13 @@ const showFileActionMenu = (event: MouseEvent, file: TreeFileNode): void => {
 
 const showListContextMenu = (event: MouseEvent): void => {
   if (!contextTarget.value) return
-  selectContextTarget()
+  projectStore.CHANGE_CONTEXT_MENU_ITEM(contextTarget.value)
   showContextMenu(event, contextTarget.value, rootPath.value, !!clipboard.value)
 }
 
 const showListActionMenu = (event: MouseEvent): void => {
   if (!contextTarget.value) return
-  selectContextTarget()
+  projectStore.CHANGE_CONTEXT_MENU_ITEM(contextTarget.value)
   const target = event.currentTarget as HTMLElement | null
   const rect = target?.getBoundingClientRect()
   showContextMenu(

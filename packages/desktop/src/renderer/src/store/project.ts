@@ -261,6 +261,8 @@ export const useProjectStore = defineStore('project', () => {
   // union breaks both the assignments and the field reads, so it stays a hatch.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const activeItem = ref<any>({})
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const contextMenuItem = ref<any>({})
   const createCache = ref<CreateCacheEntry | Record<string, never>>({})
   const newFileNameCache = ref<string>('')
   const renameCache = ref<string | null>(null)
@@ -274,12 +276,35 @@ export const useProjectStore = defineStore('project', () => {
 
   const preferencesStore = usePreferencesStore()
 
+  const snapshotContextMenuItem = (item: unknown): Record<string, unknown> => {
+    if (!item || typeof item !== 'object') return {}
+    return { ...(item as Record<string, unknown>) }
+  }
+
+  const getActionItem = (): Record<string, unknown> => {
+    return contextMenuItem.value?.pathname ? contextMenuItem.value : activeItem.value
+  }
+
+  const getActionPathname = (): string => {
+    const pathname = getActionItem()?.pathname
+    return typeof pathname === 'string' ? pathname : ''
+  }
+
   const syncPathReferencesAfterMove = (src: string, dest: string): void => {
     const editorStore = useEditorStore()
 
     if (activeItem.value?.pathname) {
-      activeItem.value.pathname = replacePathPrefix(activeItem.value.pathname, src, dest)
+      activeItem.value.pathname = replacePathPrefix(String(activeItem.value.pathname), src, dest)
       activeItem.value.name = getBasename(activeItem.value.pathname)
+    }
+
+    if (contextMenuItem.value?.pathname) {
+      contextMenuItem.value.pathname = replacePathPrefix(
+        String(contextMenuItem.value.pathname),
+        src,
+        dest
+      )
+      contextMenuItem.value.name = getBasename(contextMenuItem.value.pathname)
     }
 
     if (selectedNotePath.value) {
@@ -309,10 +334,11 @@ export const useProjectStore = defineStore('project', () => {
 
   const duplicateActiveDocument = async (): Promise<void> => {
     const rootPath = projectTree.value?.pathname ?? null
-    const kind = getNoteNodeKind(activeItem.value, rootPath)
+    const actionItem = getActionItem()
+    const kind = getNoteNodeKind(actionItem, rootPath)
     if (kind !== 'document') return
 
-    const src = String(activeItem.value?.pathname || '')
+    const src = getActionPathname()
     if (!src) return
 
     const dirname = window.path.dirname(src)
@@ -350,10 +376,11 @@ export const useProjectStore = defineStore('project', () => {
 
   const getMoveSource = (): { kind: MoveTargetKind; pathname: string } | null => {
     const rootPath = projectTree.value?.pathname ?? null
-    const kind = getNoteNodeKind(activeItem.value, rootPath)
+    const actionItem = getActionItem()
+    const kind = getNoteNodeKind(actionItem, rootPath)
     if (kind !== 'group' && kind !== 'area' && kind !== 'document') return null
 
-    const pathname = String(activeItem.value?.pathname || '')
+    const pathname = getActionPathname()
     if (!pathname) return null
 
     return { kind, pathname }
@@ -418,13 +445,11 @@ export const useProjectStore = defineStore('project', () => {
         return
       }
 
-      if (
-        hasNoteDisplayNameConflict(targetFolder, activeItem.value, projectTree.value.pathname, src)
-      ) {
+      if (hasNoteDisplayNameConflict(targetFolder, actionItem, projectTree.value.pathname, src)) {
         notice.notify({
           title: 'Move Forbidden',
           type: 'warning',
-          message: `A note item named "${getNoteDisplayName(activeItem.value, projectTree.value.pathname)}" already exists in the target location.`
+          message: `A note item named "${getNoteDisplayName(actionItem, projectTree.value.pathname)}" already exists in the target location.`
         })
         return
       }
@@ -647,6 +672,15 @@ export const useProjectStore = defineStore('project', () => {
     activeItem.value = item
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function CHANGE_CONTEXT_MENU_ITEM(item: any): void {
+    contextMenuItem.value = snapshotContextMenuItem(item)
+  }
+
+  function CLEAR_CONTEXT_MENU_ITEM(): void {
+    contextMenuItem.value = {}
+  }
+
   function SELECT_NOTE_PATH(pathname: string | null): void {
     if (!projectTree.value) {
       selectedNotePath.value = null
@@ -700,18 +734,31 @@ export const useProjectStore = defineStore('project', () => {
     const editorStore = useEditorStore()
 
     bus.on('SIDEBAR::show-in-folder', () => {
-      const { pathname } = activeItem.value
+      const pathname = getActionPathname()
+      if (!pathname) return
       window.electron.shell.showItemInFolder(pathname)
     })
     bus.on('SIDEBAR::new', (type: unknown) => {
-      const { pathname, isDirectory } = activeItem.value
+      const actionItem = getActionItem()
+      const pathname = getActionPathname()
+      if (!pathname) return
+      const isDirectory = !!actionItem?.isDirectory
       const dirname = isDirectory ? pathname : window.path.dirname(pathname)
       createCache.value = { dirname, type: String(type) }
       bus.emit('SIDEBAR::show-new-input')
     })
     bus.on('SIDEBAR::remove', () => {
-      const { pathname } = activeItem.value
-      const isDirectory = !!activeItem.value?.isDirectory
+      const actionItem = getActionItem()
+      const pathname = getActionPathname()
+      const isDirectory = !!actionItem?.isDirectory
+      if (!pathname) {
+        notice.notify({
+          title: 'Error while deleting',
+          type: 'error',
+          message: 'Cannot determine the selected note path.'
+        })
+        return
+      }
       window.electron.ipcRenderer
         .invoke('mt::fs-trash-item', pathname)
         .then(() => {
@@ -727,7 +774,8 @@ export const useProjectStore = defineStore('project', () => {
     })
     bus.on('SIDEBAR::copy-cut', (type: unknown) => {
       const rootPath = projectTree.value?.pathname ?? null
-      const kind = getNoteNodeKind(activeItem.value, rootPath)
+      const actionItem = getActionItem()
+      const kind = getNoteNodeKind(actionItem, rootPath)
 
       if (kind === 'document' && String(type) === 'copy') {
         void duplicateActiveDocument().catch((err) => {
@@ -740,18 +788,22 @@ export const useProjectStore = defineStore('project', () => {
         return
       }
 
-      const { pathname: src } = activeItem.value
+      const src = getActionPathname()
+      if (!src) return
       clipboard.value = { type: String(type), src }
     })
     bus.on('SIDEBAR::paste', () => {
       const rootPath = projectTree.value?.pathname ?? null
-      const kind = getNoteNodeKind(activeItem.value, rootPath)
+      const actionItem = getActionItem()
+      const kind = getNoteNodeKind(actionItem, rootPath)
       if (kind === 'root' || kind === 'group' || kind === 'area' || kind === 'document') {
         return
       }
 
       const cb = clipboard.value
-      const { pathname, isDirectory } = activeItem.value
+      const pathname = getActionPathname()
+      if (!pathname) return
+      const isDirectory = !!actionItem?.isDirectory
       const dirname = isDirectory ? pathname : window.path.dirname(pathname)
       if (cb && cb.src) {
         cb.dest = window.path.join(dirname, window.path.basename(cb.src))
@@ -782,22 +834,25 @@ export const useProjectStore = defineStore('project', () => {
       openMoveDialog()
     })
     bus.on('SIDEBAR::rename', () => {
-      const { pathname } = activeItem.value
+      const pathname = getActionPathname()
+      if (!pathname) return
       renameCache.value = pathname
       bus.emit('SIDEBAR::show-rename-input')
     })
     bus.on('SIDEBAR::expand-all', () => {
       const rootPath = projectTree.value?.pathname ?? null
-      const kind = getNoteNodeKind(activeItem.value, rootPath)
+      const actionItem = getActionItem()
+      const kind = getNoteNodeKind(actionItem, rootPath)
       if (kind !== 'root' && kind !== 'group' && kind !== 'area') return
-      SET_FOLDER_COLLAPSED_RECURSIVELY(activeItem.value as ProjectTree, false)
+      SET_FOLDER_COLLAPSED_RECURSIVELY(actionItem as ProjectTree, false)
       debouncedSendBufferedState()
     })
     bus.on('SIDEBAR::collapse-all', () => {
       const rootPath = projectTree.value?.pathname ?? null
-      const kind = getNoteNodeKind(activeItem.value, rootPath)
+      const actionItem = getActionItem()
+      const kind = getNoteNodeKind(actionItem, rootPath)
       if (kind !== 'root' && kind !== 'group' && kind !== 'area') return
-      SET_FOLDER_COLLAPSED_RECURSIVELY(activeItem.value as ProjectTree, true, {
+      SET_FOLDER_COLLAPSED_RECURSIVELY(actionItem as ProjectTree, true, {
         includeSelf: kind !== 'root'
       })
       debouncedSendBufferedState()
@@ -810,6 +865,9 @@ export const useProjectStore = defineStore('project', () => {
 
       const { windowId } = window.marknotepro?.env ?? { windowId: -1 }
       window.electron.ipcRenderer.send('app-open-directory-by-id', windowId, pathname, true, true)
+    })
+    window.electron.ipcRenderer.on('mt::menu::closed', () => {
+      CLEAR_CONTEXT_MENU_ITEM()
     })
   }
 
@@ -892,7 +950,7 @@ export const useProjectStore = defineStore('project', () => {
     const dirname = window.path.dirname(src)
     const rootPath = projectTree.value?.pathname ?? null
     const parentNode = findFolderNodeByPath(projectTree.value, dirname)
-    const kind = getNoteNodeKind(activeItem.value, rootPath)
+    const kind = getNoteNodeKind(getActionItem(), rootPath)
     let storedName = name.trim()
     if (kind === 'group' || kind === 'area' || kind === 'document') {
       const candidate = createComparableNoteCandidate(name, kind)
@@ -946,6 +1004,7 @@ export const useProjectStore = defineStore('project', () => {
 
       renameCache.value = null
       syncPathReferencesAfterMove(src, dest)
+      CLEAR_CONTEXT_MENU_ITEM()
     })
   }
 
@@ -955,6 +1014,7 @@ export const useProjectStore = defineStore('project', () => {
 
   return {
     activeItem,
+    contextMenuItem,
     createCache,
     newFileNameCache,
     renameCache,
@@ -971,6 +1031,8 @@ export const useProjectStore = defineStore('project', () => {
     LISTEN_FOR_LOAD_PROJECT,
     LISTEN_FOR_UPDATE_PROJECT,
     CHANGE_ACTIVE_ITEM,
+    CHANGE_CONTEXT_MENU_ITEM,
+    CLEAR_CONTEXT_MENU_ITEM,
     SELECT_NOTE_PATH,
     CHANGE_CLIPBOARD,
     ASK_FOR_OPEN_PROJECT,

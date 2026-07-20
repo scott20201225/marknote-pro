@@ -198,7 +198,7 @@ const folderNameClick = (): void => {
 }
 
 const showFolderActionMenu = (event: MouseEvent): void => {
-  projectStore.CHANGE_ACTIVE_ITEM(props.folder)
+  projectStore.CHANGE_CONTEXT_MENU_ITEM(props.folder)
   const target = event.currentTarget as HTMLElement | null
   const rect = target?.getBoundingClientRect()
   showContextMenu(
@@ -233,7 +233,7 @@ onMounted(() => {
   if (folderEl.value) {
     folderEl.value.addEventListener('contextmenu', (event) => {
       event.preventDefault()
-      projectStore.CHANGE_ACTIVE_ITEM(props.folder)
+      projectStore.CHANGE_CONTEXT_MENU_ITEM(props.folder)
       showContextMenu(event, props.folder, rootPath.value, !!clipboard.value)
     })
   }

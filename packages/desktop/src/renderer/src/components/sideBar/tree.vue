@@ -263,13 +263,13 @@ const handleSplitDragStart = (event: MouseEvent): void => {
 }
 
 const handleRootContextMenu = (event: MouseEvent): void => {
-  projectStore.CHANGE_ACTIVE_ITEM(props.projectTree)
+  projectStore.CHANGE_CONTEXT_MENU_ITEM(props.projectTree)
   showContextMenu(event, props.projectTree, rootPath.value, !!clipboard.value)
 }
 
 const showRootActionMenu = (event: MouseEvent): void => {
   if (!props.projectTree) return
-  projectStore.CHANGE_ACTIVE_ITEM(props.projectTree)
+  projectStore.CHANGE_CONTEXT_MENU_ITEM(props.projectTree)
   const target = event.currentTarget as HTMLElement | null
   const rect = target?.getBoundingClientRect()
   showContextMenu(

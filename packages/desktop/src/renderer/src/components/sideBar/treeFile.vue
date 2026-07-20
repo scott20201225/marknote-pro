@@ -98,7 +98,7 @@ const rename = (): void => {
 }
 
 const showFileActionMenu = (event: MouseEvent): void => {
-  projectStore.CHANGE_ACTIVE_ITEM(props.file)
+  projectStore.CHANGE_CONTEXT_MENU_ITEM(props.file)
   const target = event.currentTarget as HTMLElement | null
   const rect = target?.getBoundingClientRect()
   showContextMenu(
@@ -116,7 +116,7 @@ onMounted(() => {
   if (fileEl.value) {
     fileEl.value.addEventListener('contextmenu', (event) => {
       event.preventDefault()
-      projectStore.CHANGE_ACTIVE_ITEM(props.file)
+      projectStore.CHANGE_CONTEXT_MENU_ITEM(props.file)
       showContextMenu(event, props.file, rootPath.value, !!clipboard.value)
     })
   }
