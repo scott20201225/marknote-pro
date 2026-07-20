@@ -1,9 +1,34 @@
 <template>
   <div class="note-list">
-    <div class="note-list-header">
+    <div
+      class="note-list-header"
+      :class="{ active: !!listTarget }"
+      @click="selectListTarget"
+      @contextmenu.prevent.stop="showListContextMenu"
+    >
       <span class="note-list-title text-overflow">{{ listTitle }}</span>
+      <button
+        v-if="listTarget"
+        class="note-action-button"
+        type="button"
+        :title="t('sideBar.tree.nodeActions')"
+        @click.stop="showListActionMenu"
+      >
+        <el-icon :size="14">
+          <MoreFilled />
+        </el-icon>
+      </button>
     </div>
-    <div class="note-list-body">
+    <div class="note-list-body" @contextmenu.prevent.stop="handleBodyContextMenu">
+      <input
+        v-if="showCreateInput"
+        ref="createInput"
+        v-model="createName"
+        :placeholder="t('sideBar.tree.documentNamePlaceholder')"
+        type="text"
+        class="note-list-create-input"
+        @keypress.enter="createDocument"
+      />
       <template v-if="visibleFiles.length">
         <div
           v-for="file of visibleFiles"
@@ -16,7 +41,18 @@
         >
           <div class="note-list-main">
             <file-icon :name="file.name" />
-            <span class="note-list-name text-overflow">{{ getNoteDisplayName(file, rootPath) }}</span>
+            <input
+              v-if="renameCache === file.pathname"
+              :ref="(el) => setRenameInputRef(file.pathname, el)"
+              v-model="newName"
+              type="text"
+              class="rename"
+              @click.stop="noop"
+              @keypress.enter="rename"
+            />
+            <span v-else class="note-list-name text-overflow">{{
+              getNoteDisplayName(file, rootPath)
+            }}</span>
           </div>
           <button
             class="note-action-button"
@@ -30,10 +66,7 @@
           </button>
         </div>
       </template>
-      <div
-        v-else
-        class="note-list-empty"
-      >
+      <div v-else class="note-list-empty">
         {{ emptyText }}
       </div>
     </div>
@@ -41,13 +74,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
 import { MoreFilled } from '@element-plus/icons-vue'
 import { useEditorStore } from '@/store/editor'
 import { useProjectStore } from '@/store/project'
-import { showContextMenu } from '../../contextMenu/sideBar'
+import bus from '../../bus'
+import { showContextMenu, showNoteListContextMenu } from '../../contextMenu/sideBar'
 import FileIcon from './icon.vue'
 import {
   findNoteFolderByPath,
@@ -66,15 +100,29 @@ const projectStore = useProjectStore()
 const editorStore = useEditorStore()
 
 const { currentFile, tabs } = storeToRefs(editorStore)
-const { clipboard, selectedNotePath } = storeToRefs(projectStore)
+const { clipboard, createCache, renameCache, selectedNotePath } = storeToRefs(projectStore)
+const createInput = ref<HTMLInputElement | null>(null)
+const createName = ref('')
+const newName = ref('')
+const renameInputs = new Map<string, HTMLInputElement>()
 
 const rootPath = computed<string | null>(() => props.projectTree?.pathname ?? null)
 const selectedFolder = computed(() => {
   return findNoteFolderByPath(props.projectTree, selectedNotePath.value)
 })
 const selectedKind = computed(() => getNoteNodeKind(selectedFolder.value, rootPath.value))
+const listTarget = computed<TreeNode | null>(() => {
+  return (selectedFolder.value as TreeNode | null) ?? props.projectTree
+})
 const visibleFiles = computed<TreeFileNode[]>(() => {
   return getVisibleNoteFiles(selectedFolder.value, rootPath.value) as TreeFileNode[]
+})
+const showCreateInput = computed<boolean>(() => {
+  if (!listTarget.value) return false
+  if (selectedKind.value !== 'area' && selectedKind.value !== 'document') return false
+  const cache = createCache.value as { dirname?: string; type?: string }
+  if (cache.type !== 'document' && cache.type !== 'file') return false
+  return cache.dirname === listTarget.value.pathname
 })
 const listTitle = computed(() => {
   if (selectedKind.value === 'area' || selectedKind.value === 'document') {
@@ -92,11 +140,67 @@ const emptyText = computed(() => {
   return t('sideBar.tree.noNotesInArea')
 })
 
+const noop = (): void => {}
+
+const setRenameInputRef = (pathname: string, el: unknown): void => {
+  if (el instanceof HTMLInputElement) {
+    renameInputs.set(pathname, el)
+  } else {
+    renameInputs.delete(pathname)
+  }
+}
+
+const focusCreateInput = (): void => {
+  if (!showCreateInput.value) return
+  nextTick(() => {
+    if (!createInput.value) return
+    createName.value = ''
+    createInput.value.focus()
+  })
+}
+
+const focusRenameInput = (): void => {
+  const pathname = renameCache.value
+  if (!pathname) return
+
+  nextTick(() => {
+    const input = renameInputs.get(pathname)
+    const file = visibleFiles.value.find((item) =>
+      window.fileUtils.isSamePathSync(item.pathname, pathname)
+    )
+    if (!input || !file) return
+
+    newName.value = getNoteDisplayName(file, rootPath.value)
+    input.focus()
+    input.select()
+  })
+}
+
+const rename = (): void => {
+  if (newName.value) {
+    projectStore.RENAME_IN_SIDEBAR(newName.value)
+  }
+}
+
+const createDocument = (): void => {
+  if (createName.value) {
+    projectStore.CREATE_FILE_DIRECTORY(createName.value)
+  }
+}
+
+const selectListTarget = (): void => {
+  if (!listTarget.value) return
+  projectStore.SELECT_NOTE_PATH(listTarget.value.pathname)
+  projectStore.CHANGE_ACTIVE_ITEM(listTarget.value)
+}
+
 const handleFileClick = (file: TreeFileNode): void => {
   const { pathname } = file
   projectStore.SELECT_NOTE_PATH(window.path.dirname(pathname))
   projectStore.CHANGE_ACTIVE_ITEM(file)
-  const openedTab = tabs.value.find((tab) => window.fileUtils.isSamePathSync(tab.pathname, pathname))
+  const openedTab = tabs.value.find((tab) =>
+    window.fileUtils.isSamePathSync(tab.pathname, pathname)
+  )
   if (openedTab) {
     if (currentFile.value?.pathname === openedTab.pathname) return
     editorStore.UPDATE_CURRENT_FILE(openedTab)
@@ -116,11 +220,54 @@ const showFileActionMenu = (event: MouseEvent, file: TreeFileNode): void => {
   projectStore.CHANGE_ACTIVE_ITEM(file)
   const target = event.currentTarget as HTMLElement | null
   const rect = target?.getBoundingClientRect()
-  showContextMenu({
-    clientX: rect ? rect.left + rect.width / 2 : event.clientX,
-    clientY: rect ? rect.bottom : event.clientY
-  }, file, rootPath.value, !!clipboard.value)
+  showContextMenu(
+    {
+      clientX: rect ? rect.left + rect.width / 2 : event.clientX,
+      clientY: rect ? rect.bottom : event.clientY
+    },
+    file,
+    rootPath.value,
+    !!clipboard.value
+  )
 }
+
+const showListContextMenu = (event: MouseEvent): void => {
+  if (!listTarget.value) return
+  selectListTarget()
+  showNoteListContextMenu(event, listTarget.value, rootPath.value, !!clipboard.value)
+}
+
+const showListActionMenu = (event: MouseEvent): void => {
+  if (!listTarget.value) return
+  selectListTarget()
+  const target = event.currentTarget as HTMLElement | null
+  const rect = target?.getBoundingClientRect()
+  showNoteListContextMenu(
+    {
+      clientX: rect ? rect.left + rect.width / 2 : event.clientX,
+      clientY: rect ? rect.bottom : event.clientY
+    },
+    listTarget.value,
+    rootPath.value,
+    !!clipboard.value
+  )
+}
+
+const handleBodyContextMenu = (event: MouseEvent): void => {
+  const target = event.target as HTMLElement | null
+  if (target?.closest('.note-list-item')) return
+  showListContextMenu(event)
+}
+
+onMounted(() => {
+  bus.on('SIDEBAR::show-new-input', focusCreateInput)
+  bus.on('SIDEBAR::show-rename-input', focusRenameInput)
+})
+
+onBeforeUnmount(() => {
+  bus.off('SIDEBAR::show-new-input', focusCreateInput)
+  bus.off('SIDEBAR::show-rename-input', focusRenameInput)
+})
 </script>
 
 <style scoped>
@@ -135,12 +282,20 @@ const showFileActionMenu = (event: MouseEvent, file: TreeFileNode): void => {
 .note-list-header {
   display: flex;
   align-items: center;
+  gap: 8px;
   min-height: 30px;
   padding: 0 12px;
   border-bottom: 1px solid var(--itemBgColor);
 }
 
+.note-list-header.active,
+.note-list-header:hover {
+  background: var(--sideBarItemHoverBgColor);
+}
+
 .note-list-title {
+  flex: 1;
+  min-width: 0;
   font-size: 12px;
   color: var(--sideBarTitleColor);
 }
@@ -150,6 +305,19 @@ const showFileActionMenu = (event: MouseEvent, file: TreeFileNode): void => {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+}
+
+.note-list-create-input {
+  display: block;
+  width: calc(100% - 24px);
+  margin: 8px 12px 4px;
+  height: 22px;
+  outline: none;
+  padding: 0 8px;
+  color: var(--sideBarColor);
+  border: 1px solid var(--floatBorderColor);
+  background: var(--inputBgColor);
+  border-radius: 3px;
 }
 
 .note-list-item {
@@ -174,6 +342,7 @@ const showFileActionMenu = (event: MouseEvent, file: TreeFileNode): void => {
   min-width: 0;
   display: flex;
   align-items: center;
+  gap: 6px;
 }
 
 .note-list-name {

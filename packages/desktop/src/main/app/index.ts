@@ -772,12 +772,12 @@ class App {
 
     onInternalChannel(
       'app-open-directory-by-id',
-      (windowId: number, pathname: string, openInSameWindow: boolean) => {
+      (windowId: number, pathname: string, openInSameWindow: boolean, forceReload = false) => {
         const { openFolderInNewWindow } = this._accessor.preferences.getAll()
         if (openInSameWindow || !openFolderInNewWindow) {
           const editor = this._windowManager.get(windowId) as EditorWindow | undefined
           if (editor) {
-            editor.openFolder(pathname)
+            editor.openFolder(pathname, forceReload)
             return
           }
         }
@@ -789,6 +789,15 @@ class App {
 
     ipcMain.on('mt::app-try-quit', () => {
       app.quit()
+    })
+
+    ipcMain.on('mt::reload-workspace', (event, pathname: string) => {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      if (!win || !pathname) return
+      const editor = this._windowManager.get(win.id) as EditorWindow | undefined
+      if (editor) {
+        editor.openFolder(pathname, true)
+      }
     })
 
     ipcMain.on('mt::open-file-by-window-id', (_e, windowId: number, filePath: string) => {

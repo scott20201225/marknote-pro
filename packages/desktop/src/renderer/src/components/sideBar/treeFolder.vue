@@ -4,7 +4,9 @@
       ref="folderEl"
       class="folder-name"
       :style="{ 'padding-left': `${depth * 6 + 10}px` }"
-      :class="[{ active: activeItem?.pathname === folder.pathname || selectedNotePath === folder.pathname }]"
+      :class="[
+        { active: activeItem?.pathname === folder.pathname || selectedNotePath === folder.pathname }
+      ]"
       :title="folder.pathname"
       @click="folderNameClick"
     >
@@ -17,10 +19,7 @@
       >
         <ArrowRight />
       </el-icon>
-      <el-icon
-        class="icon-node-type"
-        :size="14"
-      >
+      <el-icon class="icon-node-type" :size="14">
         <component :is="folderTypeIcon" />
       </el-icon>
       <input
@@ -31,11 +30,8 @@
         class="rename"
         @click.stop="noop"
         @keypress.enter="rename"
-      >
-      <span
-        v-else
-        class="text-overflow"
-      >{{ displayName }}</span>
+      />
+      <span v-else class="text-overflow">{{ displayName }}</span>
       <button
         v-if="showActionButton"
         class="folder-action-button"
@@ -48,10 +44,7 @@
         </el-icon>
       </button>
     </div>
-    <div
-      v-if="!isCollapsed"
-      class="folder-contents"
-    >
+    <div v-if="!isCollapsed" class="folder-contents">
       <tree-folder
         v-for="childFolder of visibleFolders"
         :key="childFolder.id"
@@ -60,7 +53,7 @@
         :note-navigation-mode="noteNavigationMode"
       />
       <input
-        v-if="createCache.dirname === folder.pathname"
+        v-if="showTreeCreateInput"
         ref="input"
         v-model="createName"
         type="text"
@@ -68,13 +61,8 @@
         class="new-input"
         :style="{ 'margin-left': `${depth * 5 + 15}px` }"
         @keypress.enter="handleInputEnter"
-      >
-      <File
-        v-for="file of visibleFiles"
-        :key="file.id"
-        :file="file"
-        :depth="depth + 1"
       />
+      <File v-for="file of visibleFiles" :key="file.id" :file="file" :depth="depth + 1" />
     </div>
   </div>
 </template>
@@ -153,7 +141,24 @@ const createPlaceholder = computed<string>(() => {
       return t('sideBar.tree.documentNamePlaceholder')
   }
 })
-const showActionButton = computed<boolean>(() => folderKind.value === 'group' || folderKind.value === 'area')
+const createCacheDirname = computed<string | undefined>(() => {
+  return (createCache.value as { dirname?: string }).dirname
+})
+const createCacheType = computed<string | undefined>(() => {
+  return (createCache.value as { type?: string }).type
+})
+const isCreatingNoteInListMode = computed<boolean>(() => {
+  return (
+    props.noteNavigationMode === 'tree-list' &&
+    (createCacheType.value === 'document' || createCacheType.value === 'file')
+  )
+})
+const showTreeCreateInput = computed<boolean>(() => {
+  return createCacheDirname.value === props.folder.pathname && !isCreatingNoteInListMode.value
+})
+const showActionButton = computed<boolean>(
+  () => folderKind.value === 'group' || folderKind.value === 'area'
+)
 const showCollapseArrow = computed<boolean>(() => {
   if (folderKind.value !== 'area') return true
   return props.noteNavigationMode !== 'tree-list'
@@ -171,7 +176,7 @@ const handleInputFocus = (): void => {
   // the next tick — previously the expand sat behind `if (input.value)`, which
   // is null while collapsed, so New File on a collapsed folder did nothing
   // (#3439).
-  if (createCache.value.dirname !== props.folder.pathname) return
+  if (!showTreeCreateInput.value) return
   isCollapsed.value = false
   nextTick(() => {
     if (input.value) {
@@ -202,10 +207,15 @@ const showFolderActionMenu = (event: MouseEvent): void => {
   projectStore.CHANGE_ACTIVE_ITEM(props.folder)
   const target = event.currentTarget as HTMLElement | null
   const rect = target?.getBoundingClientRect()
-  showContextMenu({
-    clientX: rect ? rect.left + rect.width / 2 : event.clientX,
-    clientY: rect ? rect.bottom : event.clientY
-  }, props.folder, rootPath.value, !!clipboard.value)
+  showContextMenu(
+    {
+      clientX: rect ? rect.left + rect.width / 2 : event.clientX,
+      clientY: rect ? rect.bottom : event.clientY
+    },
+    props.folder,
+    rootPath.value,
+    !!clipboard.value
+  )
 }
 
 const noop = (): void => {}

@@ -14,7 +14,35 @@
       />
 
       <div v-if="!init" class="editor-placeholder" />
-      <tabs v-if="init" />
+      <div
+        v-if="init"
+        class="editor-tab-shell"
+        :class="{ 'has-tab-scroll-controls': tabScrollState.show }"
+      >
+        <button
+          v-if="tabScrollState.show"
+          class="editor-tab-scroll-button editor-tab-scroll-button-left"
+          type="button"
+          :disabled="!tabScrollState.canLeft"
+          @click="scrollEditorTabs('left')"
+        >
+          <el-icon :size="14">
+            <ArrowLeft />
+          </el-icon>
+        </button>
+        <tabs ref="tabsRef" @scroll-state-change="updateTabScrollState" />
+        <button
+          v-if="tabScrollState.show"
+          class="editor-tab-scroll-button editor-tab-scroll-button-right"
+          type="button"
+          :disabled="!tabScrollState.canRight"
+          @click="scrollEditorTabs('right')"
+        >
+          <el-icon :size="14">
+            <ArrowRight />
+          </el-icon>
+        </button>
+      </div>
       <recent v-if="!hasCurrentFile && init" />
       <editor-with-tabs
         v-if="hasCurrentFile && init"
@@ -37,6 +65,7 @@
 
 <script setup lang="ts">
 import { computed, watch, nextTick, onMounted, ref } from 'vue'
+import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
 import { useMainStore } from '@/store'
 import { storeToRefs } from 'pinia'
 import { addStyles, addThemeStyle, addCustomStyle, type AddStylesOptions } from '@/util/theme'
@@ -74,6 +103,12 @@ const notificationStore = useNotificationStore()
 
 const timer = ref<ReturnType<typeof setTimeout> | null>(null)
 const workspacePrompted = ref(false)
+const tabsRef = ref<{ scrollTabs: (direction: 'left' | 'right') => void } | null>(null)
+const tabScrollState = ref({
+  show: false,
+  canLeft: false,
+  canRight: false
+})
 
 const { windowActive, platform, init } = storeToRefs(mainStore)
 const { sourceCode, theme, customCss, textDirection, zoom } = storeToRefs(preferencesStore)
@@ -108,6 +143,14 @@ const workspaceSelectionRequired = computed<boolean>(() => {
     !projectTree.value
   )
 })
+
+const updateTabScrollState = (state: { show: boolean; canLeft: boolean; canRight: boolean }) => {
+  tabScrollState.value = state
+}
+
+const scrollEditorTabs = (direction: 'left' | 'right') => {
+  tabsRef.value?.scrollTabs(direction)
+}
 
 // Watchers
 watch(theme, (value, oldValue) => {
@@ -275,10 +318,72 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   flex: 1;
+  min-width: 0;
+  max-width: 100%;
   min-height: 100vh;
   position: relative;
+  overflow: hidden;
   & > .editor {
     flex: 1;
   }
+}
+
+.editor-tab-shell {
+  display: grid;
+  grid-template-columns: 0 minmax(0, 1fr) 0;
+  flex: 0 0 28px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: 28px;
+  user-select: none;
+  overflow: hidden;
+  box-shadow: 0px 0px 9px 2px rgba(0, 0, 0, 0.1);
+}
+
+.editor-tab-shell.has-tab-scroll-controls {
+  grid-template-columns: 24px minmax(0, 1fr) 24px;
+}
+
+.editor-tab-shell :deep(.editor-tabs) {
+  grid-column: 2;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-shadow: none;
+}
+
+.editor-tab-scroll-button {
+  width: 24px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: var(--editorBgColor);
+  color: var(--editorColor50);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.editor-tab-scroll-button-left {
+  grid-column: 1;
+  border-right: 1px solid var(--borderColor);
+}
+
+.editor-tab-scroll-button-right {
+  grid-column: 3;
+  border-left: 1px solid var(--borderColor);
+}
+
+.editor-tab-scroll-button:hover:not(:disabled) {
+  color: var(--focusColor);
+  background: var(--floatBgColor);
+}
+
+.editor-tab-scroll-button:disabled {
+  color: var(--editorColor10);
+  cursor: default;
 }
 </style>

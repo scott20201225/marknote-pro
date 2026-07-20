@@ -13,7 +13,8 @@ import {
   getDELETE,
   getShowInFolder,
   getExpandAll,
-  getCollapseAll
+  getCollapseAll,
+  getReloadWorkspace
 } from './menuItems'
 import { popupContextMenu, type ContextMenuItem } from '../popupMenu'
 import { getNoteNodeKind } from '../../util/noteWorkspace'
@@ -40,7 +41,13 @@ const normalizeContextItems = (
 
 export const showContextMenu = (
   event: { clientX: number; clientY: number },
-  activeItem: { pathname: string; name: string; isDirectory?: boolean; isFile?: boolean; isMarkdown?: boolean } | null,
+  activeItem: {
+    pathname: string
+    name: string
+    isDirectory?: boolean
+    isFile?: boolean
+    isMarkdown?: boolean
+  } | null,
   rootPath: string | null,
   hasPathCache: boolean
 ): void => {
@@ -54,6 +61,8 @@ export const showContextMenu = (
       SEPARATOR,
       getExpandAll(),
       getCollapseAll(),
+      SEPARATOR,
+      getReloadWorkspace(),
       SEPARATOR,
       getShowInFolder()
     ]
@@ -112,6 +121,54 @@ export const showContextMenu = (
       SEPARATOR,
       getShowInFolder()
     ]
+  }
+
+  const items = normalizeContextItems(contextItems, hasPathCache)
+
+  popupContextMenu(items, { x: event.clientX, y: event.clientY })
+}
+
+export const showNoteListContextMenu = (
+  event: { clientX: number; clientY: number },
+  activeItem: {
+    pathname: string
+    name: string
+    isDirectory?: boolean
+    isFile?: boolean
+    isMarkdown?: boolean
+  } | null,
+  rootPath: string | null,
+  hasPathCache: boolean
+): void => {
+  const kind = getNoteNodeKind(activeItem, rootPath)
+  let contextItems: ContextMenuItem[]
+
+  if (kind === 'root') {
+    contextItems = [getNewGroup(), SEPARATOR, getRENAME(), SEPARATOR, getShowInFolder()]
+  } else if (kind === 'group') {
+    contextItems = [
+      getNewArea(),
+      SEPARATOR,
+      getMOVE_TO(),
+      SEPARATOR,
+      getRENAME(),
+      getDELETE(),
+      SEPARATOR,
+      getShowInFolder()
+    ]
+  } else if (kind === 'area' || kind === 'document') {
+    contextItems = [
+      getNewDocument(),
+      SEPARATOR,
+      getMOVE_TO(),
+      SEPARATOR,
+      getRENAME(),
+      getDELETE(),
+      SEPARATOR,
+      getShowInFolder()
+    ]
+  } else {
+    contextItems = [getNewDocument(), SEPARATOR, getPASTE()]
   }
 
   const items = normalizeContextItems(contextItems, hasPathCache)

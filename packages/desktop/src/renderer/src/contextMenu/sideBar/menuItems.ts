@@ -120,6 +120,14 @@ export const getCollapseAll = () => ({
   }
 })
 
+export const getReloadWorkspace = () => ({
+  label: t('sideBar.tree.reloadWorkspace'),
+  id: 'reloadWorkspaceMenuItem',
+  click(_menuItem: unknown, _browserWindow: unknown) {
+    contextMenu.reloadWorkspace()
+  }
+})
+
 // Retained for backward compatibility
 export const NEW_FILE = getNewFile()
 export const NEW_DIRECTORY = getNewDirectory()
@@ -135,3 +143,4 @@ export const DELETE = getDELETE()
 export const SHOW_IN_FOLDER = getShowInFolder()
 export const EXPAND_ALL = getExpandAll()
 export const COLLAPSE_ALL = getCollapseAll()
+export const RELOAD_WORKSPACE = getReloadWorkspace()

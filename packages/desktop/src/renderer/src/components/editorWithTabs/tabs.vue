@@ -40,6 +40,16 @@ const layoutStore = useLayoutStore()
 
 const { currentFile, tabs } = storeToRefs(editorStore)
 
+interface TabScrollState {
+  show: boolean
+  canLeft: boolean
+  canRight: boolean
+}
+
+const emit = defineEmits<{
+  (event: 'scroll-state-change', state: TabScrollState): void
+}>()
+
 interface AutoScroller {
   readonly down: boolean
   destroy: (forceCleanAnimation?: boolean) => void
@@ -47,12 +57,15 @@ interface AutoScroller {
 
 const tabContainer = ref<HTMLElement | null>(null)
 const tabDropContainer = ref<HTMLElement | null>(null)
+const showTabScrollControls = ref(false)
+const canScrollTabsLeft = ref(false)
+const canScrollTabsRight = ref(false)
 let autoScroller: AutoScroller | null = null
 let drake: dragula.Drake | null = null
+let tabResizeObserver: ResizeObserver | null = null
 
 const getDisplayFilename = (filename: string) => filename.replace(/\.md$/i, '')
 
-// Methods incorporated from tabsMixins
 const selectFile = (file: IFileState) => {
   if (file.id !== currentFile.value?.id) {
     editorStore.UPDATE_CURRENT_FILE(file)
@@ -68,10 +81,21 @@ const removeFileInTab = (file: IFileState) => {
   }
 }
 
-// Keep the active tab visible when the selection changes by something other
-// than a direct click on a visible tab (keyboard cycle, switch-by-index, open
-// from the sidebar): the strip has `overflow: hidden` and only scrolls on the
-// wheel, so an off-screen tab would otherwise stay hidden (#3958).
+const updateTabScrollState = () => {
+  const tabsEl = tabContainer.value
+  if (!tabsEl) return
+
+  const maxLeft = Math.max(0, tabsEl.scrollWidth - tabsEl.clientWidth)
+  showTabScrollControls.value = maxLeft > 1
+  canScrollTabsLeft.value = tabsEl.scrollLeft > 1
+  canScrollTabsRight.value = tabsEl.scrollLeft < maxLeft - 1
+  emit('scroll-state-change', {
+    show: showTabScrollControls.value,
+    canLeft: canScrollTabsLeft.value,
+    canRight: canScrollTabsRight.value
+  })
+}
+
 const scrollActiveTabIntoView = () => {
   const container = tabContainer.value
   if (!container) return
@@ -85,19 +109,37 @@ const scrollActiveTabIntoView = () => {
   } else if (tabRect.right > containerRect.right) {
     container.scrollLeft += tabRect.right - containerRect.right
   }
+  updateTabScrollState()
+}
+
+const scrollTabs = (direction: 'left' | 'right') => {
+  const tabsEl = tabContainer.value
+  if (!tabsEl) return
+
+  const distance = Math.max(160, Math.floor(tabsEl.clientWidth * 0.6))
+  const maxLeft = Math.max(0, tabsEl.scrollWidth - tabsEl.clientWidth)
+  const nextLeft =
+    direction === 'left'
+      ? Math.max(0, tabsEl.scrollLeft - distance)
+      : Math.min(maxLeft, tabsEl.scrollLeft + distance)
+  tabsEl.scrollTo({ left: nextLeft, behavior: 'smooth' })
 }
 
 const handleTabScroll = (event: WheelEvent) => {
-  // Use mouse wheel value first but prioritize X value more (e.g. touchpad input).
+  const tabsEl = tabContainer.value
+  if (!tabsEl || tabsEl.scrollWidth <= tabsEl.clientWidth) return
+
+  event.preventDefault()
+
   let delta = event.deltaY
   if (event.deltaX !== 0) {
     delta = event.deltaX
   }
 
-  const tabsEl = tabContainer.value
-  if (!tabsEl) return
-  const newLeft = Math.max(0, Math.min(tabsEl.scrollLeft + delta, tabsEl.scrollWidth))
+  const maxLeft = tabsEl.scrollWidth - tabsEl.clientWidth
+  const newLeft = Math.max(0, Math.min(tabsEl.scrollLeft + delta, maxLeft))
   tabsEl.scrollLeft = newLeft
+  updateTabScrollState()
 }
 
 const closeTab = (tabId: unknown) => {
@@ -160,6 +202,13 @@ watch(
   }
 )
 
+watch(
+  () => tabs.value.map((file) => file.id).join('|'),
+  () => {
+    nextTick(updateTabScrollState)
+  }
+)
+
 onMounted(() => {
   bus.on('TABS::close-this', closeTab)
   bus.on('TABS::close-others', closeOthers)
@@ -173,20 +222,19 @@ onMounted(() => {
   const tabsEl = tabContainer.value
   if (!tabsEl || !tabDropContainer.value) return
 
-  // Allow to scroll through the tabs by mouse wheel or touchpad.
-  tabsEl.addEventListener('wheel', handleTabScroll)
+  tabsEl.addEventListener('wheel', handleTabScroll, { passive: false })
+  tabsEl.addEventListener('scroll', updateTabScrollState)
+  tabResizeObserver = new ResizeObserver(updateTabScrollState)
+  tabResizeObserver.observe(tabsEl)
+  nextTick(updateTabScrollState)
 
-  // Allow tab drag and drop to reorder tabs.
   drake = dragula([tabDropContainer.value], {
     direction: 'horizontal',
     revertOnSpill: true,
     mirrorContainer: tabDropContainer.value,
     ignoreInputTextSelection: false
   }).on('drop', (el, _target, _source, sibling) => {
-    // Current tab that was dropped and need to be reordered.
     const droppedId = el?.getAttribute('data-id')
-    // This should be the next tab (tab | ... | el | sibling | tab | ...) but may be
-    // the mirror image or null (tab | ... | el | sibling or null) if last tab.
     const nextTabId = sibling ? sibling.getAttribute('data-id') : null
     const isLastTab = !sibling || sibling.classList.contains('gu-mirror')
     if (!droppedId || (sibling && !nextTabId)) {
@@ -200,7 +248,6 @@ onMounted(() => {
     })
   })
 
-  // Scroll when dragging a tab to the beginning or end of the tab container.
   autoScroller = autoScroll([tabsEl], {
     margin: 20,
     maxSpeed: 6,
@@ -215,17 +262,17 @@ onBeforeUnmount(() => {
   const tabsEl = tabContainer.value
   if (tabsEl) {
     tabsEl.removeEventListener('wheel', handleTabScroll)
+    tabsEl.removeEventListener('scroll', updateTabScrollState)
   }
+  tabResizeObserver?.disconnect()
 
   if (autoScroller) {
-    // Force destroy
     autoScroller.destroy(true)
   }
   if (drake) {
     drake.destroy()
   }
 
-  // Remove event listeners
   bus.off('TABS::close-this', closeTab)
   bus.off('TABS::close-others', closeOthers)
   bus.off('TABS::close-saved', closeSaved)
@@ -234,6 +281,10 @@ onBeforeUnmount(() => {
   bus.off('TABS::copy-path', copyPath)
   bus.off('TABS::show-in-folder', showInFolder)
   bus.off('EDITOR_TABS::change-max-width', changeMaxWidth)
+})
+
+defineExpose({
+  scrollTabs
 })
 </script>
 
@@ -251,16 +302,30 @@ onBeforeUnmount(() => {
   position: relative;
   display: flex;
   flex-direction: row;
+  flex: 0 0 28px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   height: 28px;
   user-select: none;
   box-shadow: 0px 0px 9px 2px rgba(0, 0, 0, 0.1);
   overflow: hidden;
 }
+
 .scrollable-tabs {
-  flex: 0 1 auto;
+  flex: 1 1 auto;
+  min-width: 0;
   height: 28px;
-  overflow: hidden;
+  box-sizing: border-box;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
 }
+
+.scrollable-tabs::-webkit-scrollbar {
+  display: none;
+}
+
 .tabs-container {
   min-width: min-content;
   list-style: none;
@@ -270,12 +335,9 @@ onBeforeUnmount(() => {
   position: relative;
   display: flex;
   flex-direction: row;
-  overflow-y: hidden;
   z-index: 2;
-  &::-webkit-scrollbar:horizontal {
-    display: none;
-  }
   & > li {
+    flex: 0 0 auto;
     transition: all 0.15s ease-in-out;
     position: relative;
     padding: 0 8px;
@@ -351,26 +413,6 @@ onBeforeUnmount(() => {
     & > .unsaved-dot {
       display: none;
     }
-  }
-}
-.editor-tabs > .new-file {
-  flex: 0 0 28px;
-  width: 28px;
-  height: 28px;
-  border-right: none;
-  background: transparent;
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
-  cursor: pointer;
-  color: var(--editorColor50);
-  opacity: 1;
-}
-
-.editor-tabs > .new-file:hover {
-  transition: all 0.15s ease-in-out;
-  & > svg {
-    fill: var(--focusColor);
   }
 }
 
