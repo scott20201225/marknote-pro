@@ -31,6 +31,21 @@ type ProjectTree = TreeNode
 type TreeChange = FileChangeDetail
 type MoveTargetKind = Extract<NoteNodeKind, 'group' | 'area' | 'document'>
 
+const getFolders = (node: ProjectTree | null | undefined): ProjectTree[] =>
+  Array.isArray(node?.folders) ? (node.folders as ProjectTree[]) : []
+
+const getFiles = (node: ProjectTree | null | undefined): TreeFileNode[] =>
+  Array.isArray(node?.files) ? (node.files as TreeFileNode[]) : []
+
+const ensureFolderArrays = (node: ProjectTree): void => {
+  if (!Array.isArray(node.folders)) {
+    node.folders = []
+  }
+  if (!Array.isArray(node.files)) {
+    node.files = []
+  }
+}
+
 const normalizeProjectRoot = (pathname: string | null | undefined): string => {
   return pathname ? window.path.normalize(pathname) : ''
 }
@@ -124,9 +139,28 @@ const findFolderNodeByPath = (
   if (!node) return null
   if (window.fileUtils.isSamePathSync(node.pathname, pathname)) return node
 
-  for (const child of node.folders) {
+  for (const child of getFolders(node)) {
     const match = findFolderNodeByPath(child as ProjectTree, pathname)
     if (match) return match
+  }
+
+  return null
+}
+
+const findFileNodeByPath = (
+  node: ProjectTree | null | undefined,
+  pathname: string
+): TreeFileNode | null => {
+  if (!node) return null
+
+  const match = getFiles(node).find((child) =>
+    window.fileUtils.isSamePathSync(child.pathname, pathname)
+  )
+  if (match) return match
+
+  for (const child of getFolders(node)) {
+    const childMatch = findFileNodeByPath(child as ProjectTree, pathname)
+    if (childMatch) return childMatch
   }
 
   return null
@@ -138,14 +172,15 @@ const takeFolderNode = (
 ): ProjectTree | null => {
   if (!node) return null
 
-  const index = node.folders.findIndex((child) =>
+  const folders = getFolders(node)
+  const index = folders.findIndex((child) =>
     window.fileUtils.isSamePathSync(child.pathname, pathname)
   )
   if (index >= 0) {
-    return node.folders.splice(index, 1)[0] as ProjectTree
+    return folders.splice(index, 1)[0] as ProjectTree
   }
 
-  for (const child of node.folders) {
+  for (const child of folders) {
     const match = takeFolderNode(child as ProjectTree, pathname)
     if (match) return match
   }
@@ -159,14 +194,15 @@ const takeFileNode = (
 ): TreeFileNode | null => {
   if (!node) return null
 
-  const index = node.files.findIndex((child) =>
+  const files = getFiles(node)
+  const index = files.findIndex((child) =>
     window.fileUtils.isSamePathSync(child.pathname, pathname)
   )
   if (index >= 0) {
-    return node.files.splice(index, 1)[0] as TreeFileNode
+    return files.splice(index, 1)[0] as TreeFileNode
   }
 
-  for (const child of node.folders) {
+  for (const child of getFolders(node)) {
     const match = takeFileNode(child as ProjectTree, pathname)
     if (match) return match
   }
@@ -175,14 +211,15 @@ const takeFileNode = (
 }
 
 const remapFolderNodePaths = (node: ProjectTree, src: string, dest: string): void => {
+  ensureFolderArrays(node)
   const nextPath = replacePathPrefix(node.pathname, src, dest)
   if (!window.fileUtils.isSamePathSync(nextPath, node.pathname)) {
     node.pathname = nextPath
     node.name = getBasename(nextPath)
   }
 
-  node.folders.forEach((child) => remapFolderNodePaths(child as ProjectTree, src, dest))
-  node.files.forEach((child) => {
+  getFolders(node).forEach((child) => remapFolderNodePaths(child as ProjectTree, src, dest))
+  getFiles(node).forEach((child) => {
     const nextFilePath = replacePathPrefix(child.pathname, src, dest)
     if (!window.fileUtils.isSamePathSync(nextFilePath, child.pathname)) {
       child.pathname = nextFilePath
@@ -251,8 +288,8 @@ const hasNoteDisplayNameConflict = (
   }
 
   return (
-    parent.folders.some((folder) => matches(folder)) ||
-    parent.files.some((file) => file.isMarkdown && matches(file))
+    getFolders(parent).some((folder) => matches(folder)) ||
+    getFiles(parent).some((file) => file.isMarkdown && matches(file))
   )
 }
 
@@ -377,12 +414,25 @@ export const useProjectStore = defineStore('project', () => {
 
   const moveActiveItemTo = async (targetPath: string): Promise<void> => {
     try {
-      const source = getMoveSource()
-      if (!source || !projectTree.value) return
+      if (!moveDialogSourcePath.value || !moveDialogSourceKind.value || !projectTree.value) return
 
-      const { kind, pathname: src } = source
+      const kind = moveDialogSourceKind.value
+      const src = moveDialogSourcePath.value
       const normalizedTarget = normalizeProjectRoot(targetPath)
       if (!normalizedTarget) return
+
+      const sourceNode =
+        kind === 'document'
+          ? findFileNodeByPath(projectTree.value, src)
+          : findFolderNodeByPath(projectTree.value, src)
+      if (!sourceNode) {
+        notice.notify({
+          title: 'Move Forbidden',
+          type: 'warning',
+          message: 'The selected item no longer exists.'
+        })
+        return
+      }
 
       const targetKind = getNoteNodeKind(
         findFolderNodeByPath(projectTree.value, normalizedTarget),
@@ -419,13 +469,11 @@ export const useProjectStore = defineStore('project', () => {
         return
       }
 
-      if (
-        hasNoteDisplayNameConflict(targetFolder, activeItem.value, projectTree.value.pathname, src)
-      ) {
+      if (hasNoteDisplayNameConflict(targetFolder, sourceNode, projectTree.value.pathname, src)) {
         notice.notify({
           title: 'Move Forbidden',
           type: 'warning',
-          message: `A note item named "${getNoteDisplayName(activeItem.value, projectTree.value.pathname)}" already exists in the target location.`
+          message: `A note item named "${getNoteDisplayName(sourceNode, projectTree.value.pathname)}" already exists in the target location.`
         })
         return
       }
@@ -449,16 +497,16 @@ export const useProjectStore = defineStore('project', () => {
 
       if (kind === 'document') {
         const movedFile = takeFileNode(projectTree.value, src)
-        if (movedFile && targetFolder) {
-          remapFileNodePath(movedFile, src, dest)
-          targetFolder.files.push(movedFile)
-        }
+        if (!movedFile) return
+        remapFileNodePath(movedFile, src, dest)
+        ensureFolderArrays(targetFolder)
+        targetFolder.files.push(movedFile)
       } else {
         const movedFolder = takeFolderNode(projectTree.value, src)
-        if (movedFolder && targetFolder) {
-          remapFolderNodePaths(movedFolder, src, dest)
-          targetFolder.folders.push(movedFolder)
-        }
+        if (!movedFolder) return
+        remapFolderNodePaths(movedFolder, src, dest)
+        ensureFolderArrays(targetFolder)
+        targetFolder.folders.push(movedFolder)
       }
 
       resortTree(

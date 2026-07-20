@@ -13,6 +13,7 @@ import type { IUserPreferences } from '@shared/types/preferences'
 import { isLinux, isOsx, isWindows } from '../config'
 import parseArgs from '../cli/parser'
 import { normalizeAndResolvePath } from '../filesystem'
+import { normalizeIpcPath } from '../ipc/fs'
 import { normalizeMarkdownPath } from '../filesystem/markdown'
 import { registerKeyboardListeners } from '../keyboard'
 import { selectTheme } from '../menu/actions/theme'
@@ -870,7 +871,7 @@ class App {
     })
 
     ipcMain.handle('mt::fs-trash-item', async (_event, fullPath: string) => {
-      return shell.trashItem(fullPath)
+      return shell.trashItem(normalizeIpcPath(fullPath))
     })
   }
 }
