@@ -558,6 +558,10 @@ class EditorWindow extends BaseWindow {
     return this._openedRootDirectory
   }
 
+  get openedFiles(): string[] {
+    return [...(this._openedFiles ?? [])]
+  }
+
   // --- private ---------------------------------
 
   /**

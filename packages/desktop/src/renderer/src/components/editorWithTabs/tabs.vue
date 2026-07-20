@@ -20,6 +20,9 @@
         </li>
       </ul>
     </div>
+    <button class="new-file" title="新建笔记" @click="createNewTab">
+      <span>+</span>
+    </button>
   </div>
 </template>
 
@@ -120,6 +123,10 @@ const closeSaved = () => {
 
 const closeAll = () => {
   editorStore.CLOSE_ALL_TABS()
+}
+
+const createNewTab = () => {
+  bus.emit('mt::new-untitled-tab', { selected: true, markdown: '' })
 }
 
 const changeMaxWidth = (width: unknown) => {
@@ -257,9 +264,30 @@ onBeforeUnmount(() => {
   overflow: hidden;
 }
 .scrollable-tabs {
-  flex: 0 1 auto;
+  flex: 1 1 auto;
+  min-width: 0;
   height: 28px;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--editorColor10) transparent;
+}
+
+.scrollable-tabs::-webkit-scrollbar {
+  height: 6px;
+}
+
+.scrollable-tabs::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollable-tabs::-webkit-scrollbar-thumb {
+  background: var(--editorColor10);
+  border-radius: 999px;
+}
+
+.scrollable-tabs::-webkit-scrollbar-thumb:hover {
+  background: var(--editorColor30);
 }
 .tabs-container {
   min-width: min-content;
@@ -270,11 +298,7 @@ onBeforeUnmount(() => {
   position: relative;
   display: flex;
   flex-direction: row;
-  overflow-y: hidden;
   z-index: 2;
-  &::-webkit-scrollbar:horizontal {
-    display: none;
-  }
   & > li {
     transition: all 0.15s ease-in-out;
     position: relative;
@@ -357,21 +381,25 @@ onBeforeUnmount(() => {
   flex: 0 0 28px;
   width: 28px;
   height: 28px;
+  padding: 0;
+  border: none;
+  border-left: 1px solid var(--borderColor);
   border-right: none;
-  background: transparent;
+  background: var(--editorBgColor);
   display: flex;
   align-items: center;
-  justify-content: space-around;
+  justify-content: center;
   cursor: pointer;
   color: var(--editorColor50);
   opacity: 1;
+  font-size: 16px;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 .editor-tabs > .new-file:hover {
   transition: all 0.15s ease-in-out;
-  & > svg {
-    fill: var(--focusColor);
-  }
+  color: var(--focusColor);
 }
 
 /* dragula effects */

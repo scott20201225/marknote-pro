@@ -763,6 +763,10 @@ export const useProjectStore = defineStore('project', () => {
         .invoke('mt::fs-trash-item', pathname)
         .then(() => {
           editorStore.CLOSE_TABS_BY_PATH(pathname, { includeDescendants: isDirectory })
+          if (projectTree.value) {
+            _processTreeEvent(isDirectory ? 'unlinkDir' : 'unlink', { pathname } as TreeChange)
+          }
+          CLEAR_CONTEXT_MENU_ITEM()
         })
         .catch((err) => {
           notice.notify({

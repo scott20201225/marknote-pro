@@ -6,7 +6,7 @@ import dayjs from 'dayjs'
 import log from 'electron-log'
 import { app, BrowserWindow, clipboard, dialog, nativeTheme, shell, ipcMain } from 'electron'
 import type { BrowserWindowConstructorOptions } from 'electron'
-import { isChildOfDirectory } from 'common/filesystem/paths'
+import { isChildOfDirectory, isSamePathSync } from 'common/filesystem/paths'
 import { DEFAULT_LANGUAGE, isLanguageSupported } from 'common/i18n'
 import { normalizeAppTheme } from 'common/theme'
 import type { IUserPreferences } from '@shared/types/preferences'
@@ -53,6 +53,12 @@ interface BufferedEditorState {
   [key: string]: unknown
 }
 
+interface WatcherReleaseEntry {
+  editor: EditorWindow
+  rootDirectory: string | null
+  filePaths: string[]
+}
+
 class App {
   private _accessor: Accessor
   private _args: CliArgs
@@ -79,6 +85,73 @@ class App {
     this._listenForIpcMain()
     // Initialize theme listener
     this._themeListenerRegistered = false
+  }
+
+  private async _releaseWatchersForTrash(targetPath: string): Promise<WatcherReleaseEntry[]> {
+    const released: WatcherReleaseEntry[] = []
+
+    for (const { win } of this._windowManager.getWindowsByType(WindowType.EDITOR)) {
+      const editor = win as EditorWindow
+      const browserWindow = editor.browserWindow
+      if (!browserWindow) continue
+
+      const rootDirectory = editor.openedRootDirectory
+      const shouldReleaseRootDirectory =
+        !!rootDirectory &&
+        (isSamePathSync(rootDirectory, targetPath) || isChildOfDirectory(rootDirectory, targetPath))
+
+      const filePaths = editor.openedFiles.filter(
+        (filePath) =>
+          isSamePathSync(filePath, targetPath) || isChildOfDirectory(targetPath, filePath)
+      )
+
+      if (!shouldReleaseRootDirectory && filePaths.length === 0) {
+        continue
+      }
+
+      if (shouldReleaseRootDirectory && rootDirectory) {
+        await this._windowManager.unwatchDirectory(browserWindow, rootDirectory)
+      }
+
+      for (const filePath of filePaths) {
+        await this._windowManager.unwatchFile(browserWindow, filePath)
+      }
+
+      released.push({
+        editor,
+        rootDirectory: shouldReleaseRootDirectory ? rootDirectory : null,
+        filePaths
+      })
+    }
+
+    return released
+  }
+
+  private _restoreWatchersAfterTrash(
+    released: WatcherReleaseEntry[],
+    targetPath: string,
+    trashSucceeded: boolean
+  ): void {
+    for (const entry of released) {
+      const browserWindow = entry.editor.browserWindow
+      if (!browserWindow) continue
+
+      if (entry.rootDirectory) {
+        const shouldRestoreRootDirectory =
+          fs.existsSync(entry.rootDirectory) &&
+          (!trashSucceeded || !isSamePathSync(entry.rootDirectory, targetPath))
+
+        if (shouldRestoreRootDirectory) {
+          ipcMain.emit('watcher-watch-directory', browserWindow, entry.rootDirectory)
+        }
+      }
+
+      for (const filePath of entry.filePaths) {
+        if (fs.existsSync(filePath)) {
+          ipcMain.emit('watcher-watch-file', browserWindow, filePath)
+        }
+      }
+    }
   }
 
   /**
@@ -898,7 +971,16 @@ class App {
         trashPath
       })
 
-      return shell.trashItem(trashPath)
+      const releasedWatchers = await this._releaseWatchersForTrash(trashPath)
+
+      try {
+        const result = await shell.trashItem(trashPath)
+        this._restoreWatchersAfterTrash(releasedWatchers, trashPath, true)
+        return result
+      } catch (error) {
+        this._restoreWatchersAfterTrash(releasedWatchers, trashPath, false)
+        throw error
+      }
     })
   }
 }

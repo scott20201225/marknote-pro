@@ -36,9 +36,10 @@ interface WatcherEntry {
   pathname: string
   type: WatchType
   close: () => void
+  dispose: () => Promise<void>
 }
 
-const add = async(
+const add = async (
   win: BrowserWindow,
   pathname: string,
   type: WatchType,
@@ -106,7 +107,7 @@ const unlink = (win: BrowserWindow, pathname: string, type: WatchType): void => 
   })
 }
 
-const change = async(
+const change = async (
   win: BrowserWindow,
   pathname: string,
   type: WatchType,
@@ -133,7 +134,13 @@ const change = async(
   if (isMarkdown) {
     try {
       const [data, stats] = await Promise.all([
-        loadMarkdownFile(pathname, endOfLine, autoGuessEncoding, trimTrailingNewline, autoNormalizeLineEndings),
+        loadMarkdownFile(
+          pathname,
+          endOfLine,
+          autoGuessEncoding,
+          trimTrailingNewline,
+          autoNormalizeLineEndings
+        ),
         fsPromises.stat(pathname)
       ])
       const file = { pathname, data, mtimeMs: stats.mtimeMs }
@@ -235,11 +242,11 @@ class Watcher {
       // ~1s late (GH#3955).
       ...(type === 'file'
         ? {
-          awaitWriteFinish: {
-            stabilityThreshold: WATCHER_STABILITY_THRESHOLD,
-            pollInterval: WATCHER_STABILITY_POLL_INTERVAL
+            awaitWriteFinish: {
+              stabilityThreshold: WATCHER_STABILITY_THRESHOLD,
+              pollInterval: WATCHER_STABILITY_POLL_INTERVAL
+            }
           }
-        }
         : {}),
 
       usePolling
@@ -252,7 +259,7 @@ class Watcher {
     let renameTimer: NodeJS.Timeout | null = null
 
     watcher
-      .on('add', async(pathname: string) => {
+      .on('add', async (pathname: string) => {
         if (!(await this._shouldIgnoreEvent(win.id, pathname, type, usePolling))) {
           const { _preferences } = this
           const eol = _preferences.getPreferredEol() as LineEnding
@@ -272,7 +279,7 @@ class Watcher {
           )
         }
       })
-      .on('change', async(pathname: string) => {
+      .on('change', async (pathname: string) => {
         if (!(await this._shouldIgnoreEvent(win.id, pathname, type, usePolling))) {
           const { _preferences } = this
           const eol = _preferences.getPreferredEol() as LineEnding
@@ -296,9 +303,7 @@ class Watcher {
       .on('addDir', (pathname: string) => addDir(win, pathname, type))
       .on('unlinkDir', (pathname: string) => unlinkDir(win, pathname, type))
       .on('raw', (event: string, subpath: string, details: unknown) => {
-        if (
-          globalThis.MARKNOTEPRO_DEBUG_VERBOSE >= 3
-        ) {
+        if (globalThis.MARKNOTEPRO_DEBUG_VERBOSE >= 3) {
           console.log('watcher: ', event, subpath, details)
         }
 
@@ -307,7 +312,7 @@ class Watcher {
           if (renameTimer) {
             clearTimeout(renameTimer)
           }
-          renameTimer = setTimeout(async() => {
+          renameTimer = setTimeout(async () => {
             renameTimer = null
             if (disposed) {
               return
@@ -340,7 +345,7 @@ class Watcher {
         }
       })
 
-    const closeFn = (): void => {
+    const disposeFn = async (): Promise<void> => {
       disposed = true
       if (this.watchers[id]) {
         delete this.watchers[id]
@@ -349,7 +354,11 @@ class Watcher {
         clearTimeout(renameTimer)
         renameTimer = null
       }
-      watcher.close()
+      await watcher.close()
+    }
+
+    const closeFn = (): void => {
+      void disposeFn()
     }
 
     this.watchers[id] = {
@@ -357,36 +366,33 @@ class Watcher {
       watcher,
       pathname: watchPath,
       type,
-      close: closeFn
+      close: closeFn,
+      dispose: disposeFn
     }
 
     return closeFn
   }
 
-  unwatch(win: BrowserWindow, watchPath: string, type: WatchType = 'dir'): void {
+  async unwatch(win: BrowserWindow, watchPath: string, type: WatchType = 'dir'): Promise<void> {
     for (const id of Object.keys(this.watchers)) {
       const w = this.watchers[id]
       if (w.win === win && w.pathname === watchPath && w.type === type) {
-        w.watcher.close()
-        delete this.watchers[id]
+        await w.dispose()
         break
       }
     }
   }
 
-  unwatchByWindowId(windowId: number): void {
-    const watchers: FSWatcher[] = []
-    const watchIds: string[] = []
+  async unwatchByWindowId(windowId: number): Promise<void> {
+    const disposers: Array<Promise<void>> = []
     for (const id of Object.keys(this.watchers)) {
       const w = this.watchers[id]
       if (w.win.id === windowId) {
-        watchers.push(w.watcher)
-        watchIds.push(id)
+        disposers.push(w.dispose())
       }
     }
-    if (watchers.length) {
-      watchIds.forEach((id) => delete this.watchers[id])
-      watchers.forEach((watcher) => watcher.close())
+    if (disposers.length) {
+      await Promise.allSettled(disposers)
     }
   }
 
@@ -438,9 +444,7 @@ class Watcher {
             try {
               const fileInfo = await fsPromises.stat(pathname)
               if (fileInfo.mtime.getTime() - start.getTime() < duration) {
-                if (
-                  globalThis.MARKNOTEPRO_DEBUG_VERBOSE >= 3
-                ) {
+                if (globalThis.MARKNOTEPRO_DEBUG_VERBOSE >= 3) {
                   console.log(
                     `Ignoring file event after "stat": current="${currentTime.toISOString()}", start="${start.toISOString()}", file="${fileInfo.mtime.toISOString()}".`
                   )

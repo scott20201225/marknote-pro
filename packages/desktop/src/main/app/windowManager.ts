@@ -76,10 +76,7 @@ interface AppMenuLike {
 }
 
 interface EditorBufferStoreLike {
-  handleClose(
-    restoreBufferId: string | undefined,
-    windows: { id: number; win: BaseWindow }[]
-  ): void
+  handleClose(restoreBufferId: string | undefined, windows: { id: number; win: BaseWindow }[]): void
 }
 
 class WindowManager extends TypedEmitter<WindowManagerEvents> {
@@ -248,6 +245,14 @@ class WindowManager extends TypedEmitter<WindowManagerEvents> {
       }
     }
     return result
+  }
+
+  async unwatchFile(win: IBrowserWindow, filePath: string): Promise<void> {
+    await this._watcher.unwatch(win, filePath, 'file')
+  }
+
+  async unwatchDirectory(win: IBrowserWindow, pathname: string): Promise<void> {
+    await this._watcher.unwatch(win, pathname, 'dir')
   }
 
   /**
