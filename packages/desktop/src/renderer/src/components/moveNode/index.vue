@@ -1,11 +1,6 @@
 <template>
   <div class="move-node">
-    <el-dialog
-      v-model="showDialog"
-      :modal="true"
-      custom-class="ag-dialog-table"
-      width="460px"
-    >
+    <el-dialog v-model="showDialog" :modal="true" custom-class="ag-dialog-table" width="460px">
       <template #header>
         <div class="dialog-title">
           {{ t('menu.file.moveTo') }}
@@ -24,10 +19,7 @@
           @node-click="handleNodeClick"
         >
           <template #default="{ data }">
-            <div
-              class="move-node-row"
-              :class="{ disabled: !data.selectable }"
-            >
+            <div class="move-node-row" :class="{ disabled: !data.selectable }">
               <el-icon :size="14">
                 <component :is="data.icon" />
               </el-icon>
@@ -36,10 +28,7 @@
           </template>
         </el-tree>
 
-        <div
-          v-else
-          class="move-node-empty"
-        >
+        <div v-else class="move-node-empty">
           {{ t('sideBar.tree.moveDialogEmpty') }}
         </div>
       </div>
@@ -49,11 +38,7 @@
           <el-button @click="projectStore.CLOSE_MOVE_DIALOG()">
             {{ t('common.cancel') }}
           </el-button>
-          <el-button
-            type="primary"
-            :disabled="!selectedTargetPath"
-            @click="confirmMove"
-          >
+          <el-button type="primary" :disabled="!selectedTargetPath" @click="confirmMove">
             {{ t('common.ok') }}
           </el-button>
         </div>
@@ -90,10 +75,14 @@ interface MoveNodeOption {
 
 const { t } = useI18n()
 const projectStore = useProjectStore()
-const { projectTree, moveDialogVisible, moveDialogSourcePath, moveDialogSourceKind } = storeToRefs(projectStore)
+const { projectTree, moveDialogVisible, moveDialogSourcePath, moveDialogSourceKind } =
+  storeToRefs(projectStore)
 
 const treeRef = ref<InstanceType<typeof ElTree> | null>(null)
 const selectedTargetPath = ref<string | null>(null)
+
+const getFolders = (node: TreeNode | null | undefined): TreeNode[] =>
+  Array.isArray(node?.folders) ? (node.folders as TreeNode[]) : []
 
 const showDialog = computed({
   get: () => moveDialogVisible.value,
@@ -107,8 +96,10 @@ const showDialog = computed({
 const rootPath = computed<string | null>(() => projectTree.value?.pathname ?? null)
 
 const isSameOrDescendantPath = (pathname: string, basePath: string): boolean => {
-  return window.fileUtils.isSamePathSync(pathname, basePath) ||
+  return (
+    window.fileUtils.isSamePathSync(pathname, basePath) ||
     window.fileUtils.isChildOfDirectory(basePath, pathname)
+  )
 }
 
 const isHiddenNoteFolder = (node: TreeNode | null | undefined): boolean =>
@@ -119,11 +110,12 @@ const buildMoveTree = (
   sourceKind: SourceKind,
   sourcePath: string
 ): MoveNodeOption[] => {
-  if (!node?.folders?.length) return []
+  const folders = getFolders(node)
+  if (!folders.length) return []
 
   const items: MoveNodeOption[] = []
 
-  for (const child of node.folders) {
+  for (const child of folders) {
     const folder = child as TreeNode
     if (isHiddenNoteFolder(folder)) continue
     if (sourceKind === 'group' && isSameOrDescendantPath(folder.pathname, sourcePath)) continue
@@ -182,7 +174,11 @@ const targetTree = computed<MoveNodeOption[]>(() => {
         kind: 'root',
         selectable: true,
         icon: Folder,
-        children: buildMoveTree(projectTree.value, moveDialogSourceKind.value, moveDialogSourcePath.value)
+        children: buildMoveTree(
+          projectTree.value,
+          moveDialogSourceKind.value,
+          moveDialogSourcePath.value
+        )
       }
     ]
   }
@@ -199,7 +195,7 @@ const handleNodeClick = (data: MoveNodeOption): void => {
   selectedTargetPath.value = data.pathname
 }
 
-const confirmMove = async(): Promise<void> => {
+const confirmMove = async (): Promise<void> => {
   if (!selectedTargetPath.value) return
   await projectStore.MOVE_ACTIVE_ITEM_TO(selectedTargetPath.value)
 }
