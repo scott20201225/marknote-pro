@@ -70,26 +70,12 @@ const tryNormalizeIpcPath = (value: string): string | null => {
   }
 }
 
-const shouldFallbackMove = (err: unknown): boolean => {
-  const code = (err as NodeJS.ErrnoException | undefined)?.code
-  return code === 'EPERM' || code === 'EACCES' || code === 'EXDEV' || code === 'ENOTEMPTY'
-}
-
-const moveWithFallback = async (src: string, dest: string): Promise<void> => {
+const moveRecursively = async (src: string, dest: string): Promise<void> => {
   const srcPath = normalizeIpcPath(src)
   const destPath = normalizeIpcPath(dest)
 
   if (await fs.pathExists(destPath)) {
     throw new Error(`Destination already exists: ${destPath}`)
-  }
-
-  try {
-    await fs.rename(srcPath, destPath)
-    return
-  } catch (err) {
-    if (!shouldFallbackMove(err)) {
-      throw err
-    }
   }
 
   try {
@@ -99,6 +85,14 @@ const moveWithFallback = async (src: string, dest: string): Promise<void> => {
     await fs.remove(destPath).catch(() => undefined)
     throw err
   }
+}
+
+const movePath = (src: string, dest: string): Promise<void> => {
+  if (process.platform === 'win32') {
+    return moveRecursively(src, dest)
+  }
+
+  return fs.move(normalizeIpcPath(src), normalizeIpcPath(dest), { overwrite: false })
 }
 
 export const registerFsHandlers = (): void => {
@@ -119,7 +113,7 @@ export const registerFsHandlers = (): void => {
   ipcMain.handle('mt::fs::output-file', (_e, p: string, data: unknown) =>
     fs.outputFile(normalizeIpcPath(p), toBuffer(data) as string | NodeJS.ArrayBufferView)
   )
-  ipcMain.handle('mt::fs::move', (_e, src: string, dest: string) => moveWithFallback(src, dest))
+  ipcMain.handle('mt::fs::move', (_e, src: string, dest: string) => movePath(src, dest))
   ipcMain.handle('mt::fs::stat', async (_e, p: string) =>
     serializeStat(await fs.stat(normalizeIpcPath(p)))
   )
