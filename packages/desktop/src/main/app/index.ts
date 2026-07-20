@@ -4,7 +4,7 @@ import fsPromises from 'fs/promises'
 import { exec } from 'child_process'
 import dayjs from 'dayjs'
 import log from 'electron-log'
-import { app, BrowserWindow, clipboard, dialog, nativeTheme, shell, ipcMain } from 'electron'
+import { app, BrowserWindow, clipboard, dialog, nativeTheme, ipcMain } from 'electron'
 import type { BrowserWindowConstructorOptions } from 'electron'
 import { isChildOfDirectory } from 'common/filesystem/paths'
 import { DEFAULT_LANGUAGE, isLanguageSupported } from 'common/i18n'
@@ -871,7 +871,7 @@ class App {
     })
 
     ipcMain.handle('mt::fs-trash-item', async (_event, fullPath: string) => {
-      return shell.trashItem(normalizeIpcPath(fullPath))
+      return fsPromises.rm(normalizeIpcPath(fullPath), { recursive: true, force: true })
     })
   }
 }
