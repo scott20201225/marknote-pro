@@ -33,6 +33,16 @@ import type {
 import type { BufferedState as BufferedStateType } from './bufferedState'
 import type { MenuTemplate, MenuPopupPosition } from './menu'
 
+export interface GitHubDesktopThemePayload {
+  theme: string
+  isDark: boolean
+  colors: Record<string, string>
+}
+
+export interface GitHubDesktopLocalePayload {
+  language: string
+}
+
 // =================================================================
 // Invoke channels (renderer → main, returns Promise<T>)
 // =================================================================
@@ -50,6 +60,7 @@ export interface IpcInvokeChannels {
   }
   'mt::github-desktop::get-selected-repository-path': { args: []; ret: string | null }
   'mt::github-desktop::select-workspace-directory': { args: [defaultPath: string]; ret: string | null }
+  'mt::github-desktop::choose-workspace-from-current-repository': { args: []; ret: string | null }
   'mt::github-desktop::keytar-delete-password': { args: [service: string, account: string]; ret: boolean }
   'mt::github-desktop::keytar-get-password': { args: [service: string, account: string]; ret: string | null }
   'mt::github-desktop::keytar-set-password': { args: [service: string, account: string, password: string]; ret: boolean }
@@ -141,6 +152,10 @@ export interface IpcSendChannels {
   'mt::handle-renderer-error': [error: unknown]
   'mt::github-desktop::hide': []
   'mt::github-desktop::set-bounds': [bounds: { x: number; y: number; width: number; height: number }]
+  'mt::github-desktop::switch-to-note': []
+  'mt::github-desktop::workspace-selected': [workspacePath: string]
+  'mt::github-desktop::theme-update': [payload: GitHubDesktopThemePayload]
+  'mt::github-desktop::locale-update': [payload: GitHubDesktopLocalePayload]
   'mt::keybinding-debug-dump-keyboard-info': []
   'mt::make-screenshot': []
   'mt::menu::popup': [template: MenuTemplate, position?: MenuPopupPosition]

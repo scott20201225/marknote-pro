@@ -32,7 +32,12 @@ export default defineConfig({
     },
     define: {
       MARKNOTEPRO_VERSION: JSON.stringify(packageJson.version),
-      MARKNOTEPRO_VERSION_STRING: JSON.stringify(`v${packageJson.version}`)
+      MARKNOTEPRO_VERSION_STRING: JSON.stringify(`v${packageJson.version}`),
+      __DEV__: JSON.stringify(process.env.NODE_ENV !== 'production'),
+      __DARWIN__: JSON.stringify(isDarwin),
+      __WIN32__: JSON.stringify(isWin32),
+      __LINUX__: JSON.stringify(isLinux),
+      __RELEASE_CHANNEL__: JSON.stringify('production')
     },
     resolve: {
       alias: {

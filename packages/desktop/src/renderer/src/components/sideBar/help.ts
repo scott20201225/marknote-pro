@@ -33,6 +33,11 @@ export const sideBarIcons: SideBarIconEntry[] = [
 
 export const sideBarBottomIcons: SideBarIconEntry[] = [
   {
+    id: 'settings',
+    name: () => t('sideBar.icons.settings'),
+    icon: SettingIcon
+  },
+  {
     id: 'git',
     name: () => t('sideBar.icons.git'),
     icon: {
@@ -56,10 +61,5 @@ export const sideBarBottomIcons: SideBarIconEntry[] = [
           ]
         )
     }
-  },
-  {
-    id: 'settings',
-    name: () => t('sideBar.icons.settings'),
-    icon: SettingIcon
   }
 ]

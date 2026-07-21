@@ -279,7 +279,8 @@
       "files": "Dateien",
       "search": "Suchen",
       "toc": "Inhaltsverzeichnis",
-      "settings": "Einstellungen"
+      "settings": "Einstellungen",
+      "git": "Git"
     }
   },
   "commandPalette": {

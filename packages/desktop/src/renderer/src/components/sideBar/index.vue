@@ -10,6 +10,8 @@
           v-for="(c, index) of sideBarIcons"
           :key="index"
           :class="{ active: c.id === rightColumn }"
+          :title="c.name()"
+          :aria-label="c.name()"
           @click="handleLeftIconClick(c.id)"
         >
           <component :is="c.icon" />
@@ -19,6 +21,8 @@
         <li
           v-for="(c, index) of sideBarBottomIcons"
           :key="index"
+          :title="c.name()"
+          :aria-label="c.name()"
           @click="handleLeftBottomClick(c.id)"
         >
           <component :is="c.icon" />

@@ -87,7 +87,14 @@ export type RequestChannels = {
   'show-installing-update': () => void
   'install-windows-cli': () => void
   'uninstall-windows-cli': () => void
+  'mt::github-desktop::switch-to-note': () => void
   'mt::github-desktop::selected-repository-path': (path: string | null) => void
+  'marknotepro-theme-updated': (payload: {
+    theme: string
+    isDark: boolean
+    colors: Record<string, string>
+  }) => void
+  'marknotepro-locale-updated': (payload: { language: string }) => void
 }
 
 /**
@@ -136,4 +143,5 @@ export type RequestResponseChannels = {
   ) => Promise<string | null>
   'get-notifications-permission': () => Promise<DesktopNotificationPermission>
   'request-notifications-permission': () => Promise<boolean>
+  'mt::github-desktop::choose-workspace-from-current-repository': () => Promise<string | null>
 }

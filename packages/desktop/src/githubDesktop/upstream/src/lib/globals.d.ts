@@ -165,6 +165,7 @@ declare namespace Electron {
 interface Window {
   Element: typeof Element
   HTMLElement: typeof HTMLElement
+  __MARKNOTEPRO_EMBEDDED__?: boolean
 }
 
 interface HTMLDialogElement {

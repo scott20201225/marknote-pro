@@ -279,7 +279,8 @@
       "files": "Dosyalar",
       "search": "Ara",
       "toc": "İçindekiler",
-      "settings": "Ayarlar"
+      "settings": "Ayarlar",
+      "git": "Git"
     }
   },
   "commandPalette": {

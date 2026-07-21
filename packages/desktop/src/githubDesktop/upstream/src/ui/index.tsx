@@ -77,6 +77,9 @@ import { trampolineServer } from '../lib/trampoline/trampoline-server'
 import { TrampolineCommandIdentifier } from '../lib/trampoline/trampoline-command'
 import { createAskpassTrampolineHandler } from '../lib/trampoline/trampoline-askpass-handler'
 import { createCredentialHelperTrampolineHandler } from '../lib/trampoline/trampoline-credential-helper'
+import { installMarkNoteProThemeAdapter } from './marknotepro-theme-adapter'
+
+window.__MARKNOTEPRO_EMBEDDED__ = true
 
 if (__DEV__) {
   installDevGlobals()
@@ -110,6 +113,8 @@ if (!process.env.TEST_ENV) {
    * our sass into css and inject it into the DOM. */
   require('../../styles/desktop.scss')
 }
+
+installMarkNoteProThemeAdapter()
 
 // TODO (electron): Remove this once
 // https://bugs.chromium.org/p/chromium/issues/detail?id=1113293
