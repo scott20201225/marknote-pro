@@ -1,72 +1,53 @@
 <template>
   <div class="github-desktop-shell">
-    <div class="github-desktop-rail">
-      <button
-        class="github-desktop-action-button github-desktop-workspace-button"
-        type="button"
-        title="设为笔记工作区"
-        :disabled="!currentRepositoryPath"
-        @click="setRepositoryAsWorkspace"
-      >
-        <el-icon :size="18">
-          <FolderChecked />
-        </el-icon>
-      </button>
-      <button
-        class="github-desktop-action-button github-desktop-note-button"
-        type="button"
-        title="笔记"
-        @click="switchToNote"
-      >
-        <el-icon :size="18">
-          <Notebook />
-        </el-icon>
-      </button>
-    </div>
     <div
       ref="surfaceRef"
       class="github-desktop-surface"
     />
-    <el-dialog
-      v-model="workspaceDialogVisible"
-      title="设置笔记工作区"
-      width="560px"
-      append-to-body
-      :close-on-click-modal="false"
-      :before-close="cancelWorkspaceDialog"
-    >
-      <div class="github-desktop-workspace-dialog">
-        <p>这将会切换笔记目录。默认使用当前 Git 项目根目录。</p>
-        <div class="github-desktop-workspace-path">
-          {{ workspaceTargetPath }}
-        </div>
-      </div>
-      <template #footer>
-        <el-button @click="cancelWorkspaceDialog()">
-          取消
-        </el-button>
-        <el-button @click="selectWorkspaceSubdirectory">
-          选择子目录
-        </el-button>
-        <el-button type="primary" @click="confirmWorkspaceDialog">
-          确认
-        </el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { ElMessage } from 'element-plus'
-import { FolderChecked, Notebook } from '@element-plus/icons-vue'
 import { usePreferencesStore } from '@/store/preferences'
+import bus from '@/bus'
+import { getCurrentLanguage } from '@/i18n'
+import type { GitHubDesktopLocalePayload, GitHubDesktopThemePayload } from '@shared/types/ipc'
 
 const surfaceRef = ref<HTMLDivElement | null>(null)
-const currentRepositoryPath = ref<string | null>(null)
-const workspaceDialogVisible = ref(false)
-const workspaceTargetPath = ref('')
 const preferencesStore = usePreferencesStore()
+const { language, theme } = storeToRefs(preferencesStore)
+
+const GITHUB_DESKTOP_THEME_VARIABLES = [
+  'themeColor',
+  'themeColor10',
+  'themeColor20',
+  'themeColor30',
+  'themeColor40',
+  'themeColor50',
+  'selectionColor',
+  'editorColor',
+  'editorColor80',
+  'editorColor60',
+  'editorColor50',
+  'editorColor40',
+  'editorColor30',
+  'editorColor10',
+  'editorBgColor',
+  'sideBarBgColor',
+  'sideBarItemHoverBgColor',
+  'itemBgColor',
+  'floatBgColor',
+  'floatHoverColor',
+  'floatBorderColor',
+  'inputBgColor',
+  'tableBorderColor',
+  'iconColor',
+  'deleteColor',
+  'buttonPrimaryFontColor'
+] as const
 
 const getBounds = () => {
   const rect = surfaceRef.value?.getBoundingClientRect()
@@ -92,62 +73,45 @@ const showGitHubDesktop = async(): Promise<void> => {
   await window.electron.ipcRenderer.invoke('mt::github-desktop::show', bounds)
 }
 
+const readGitHubDesktopThemePayload = (): GitHubDesktopThemePayload => {
+  const style = window.getComputedStyle(document.documentElement)
+  const colors: Record<string, string> = {}
+  for (const name of GITHUB_DESKTOP_THEME_VARIABLES) {
+    const value = style.getPropertyValue(`--${name}`).trim()
+    if (value) {
+      colors[name] = value
+    }
+  }
+
+  return {
+    theme: theme.value,
+    isDark: document.body.classList.contains('dark'),
+    colors
+  }
+}
+
+const syncGitHubDesktopTheme = async(): Promise<void> => {
+  await nextTick()
+  window.requestAnimationFrame(() => {
+    window.electron.ipcRenderer.send('mt::github-desktop::theme-update', readGitHubDesktopThemePayload())
+  })
+}
+
+const readGitHubDesktopLocalePayload = (locale = getCurrentLanguage() || language.value): GitHubDesktopLocalePayload => ({
+  language: locale
+})
+
+const syncGitHubDesktopLocale = async(locale = getCurrentLanguage() || language.value): Promise<void> => {
+  await nextTick()
+  window.electron.ipcRenderer.send('mt::github-desktop::locale-update', readGitHubDesktopLocalePayload(locale))
+}
+
 const switchToNote = (): void => {
   window.dispatchEvent(new CustomEvent('marknotepro:switch-workbench', { detail: 'note' }))
 }
 
-const setRepositoryAsWorkspace = async(): Promise<void> => {
-  const repositoryPath = currentRepositoryPath.value
-  if (!repositoryPath) {
-    ElMessage.warning('请先选择一个 Git 仓库。')
-    return
-  }
-
-  workspaceTargetPath.value = window.path.normalize(repositoryPath)
-  workspaceDialogVisible.value = true
-  window.electron.ipcRenderer.send('mt::github-desktop::hide')
-}
-
-const cancelWorkspaceDialog = async(done?: () => void): Promise<void> => {
-  workspaceDialogVisible.value = false
-  done?.()
-  await showGitHubDesktop()
-}
-
-const selectWorkspaceSubdirectory = async(): Promise<void> => {
-  const repositoryPath = currentRepositoryPath.value
-  if (!repositoryPath) return
-
-  const selectedPath = await window.electron.ipcRenderer.invoke(
-    'mt::github-desktop::select-workspace-directory',
-    workspaceTargetPath.value || repositoryPath
-  )
-  if (!selectedPath) return
-
-  const normalizedRepositoryPath = window.path.normalize(repositoryPath)
-  const normalizedSelectedPath = window.path.normalize(selectedPath)
-  if (!window.fileUtils.isChildOfDirectory(normalizedRepositoryPath, normalizedSelectedPath)) {
-    ElMessage.warning('请选择当前 Git 项目下的子目录。')
-    return
-  }
-
-  workspaceTargetPath.value = normalizedSelectedPath
-}
-
-const confirmWorkspaceDialog = async(): Promise<void> => {
-  const repositoryPath = currentRepositoryPath.value
-  const workspacePath = workspaceTargetPath.value
-  if (!repositoryPath || !workspacePath) return
-
-  const normalizedRepositoryPath = window.path.normalize(repositoryPath)
+const applyWorkspacePath = async(_event: unknown, workspacePath: string): Promise<void> => {
   const normalizedWorkspacePath = window.path.normalize(workspacePath)
-  const isRepositoryRoot = window.fileUtils.isSamePathSync(normalizedRepositoryPath, normalizedWorkspacePath)
-  if (!isRepositoryRoot && !window.fileUtils.isChildOfDirectory(normalizedRepositoryPath, normalizedWorkspacePath)) {
-    ElMessage.warning('笔记工作区必须是当前 Git 项目根目录或其子目录。')
-    return
-  }
-
-  workspaceDialogVisible.value = false
   await window.fileUtils.ensureDir(normalizedWorkspacePath)
   preferencesStore.SET_SINGLE_PREFERENCE({
     type: 'defaultDirectoryToOpen',
@@ -158,24 +122,40 @@ const confirmWorkspaceDialog = async(): Promise<void> => {
   ElMessage.success('已切换笔记工作区。')
 }
 
-const syncSelectedRepositoryPath = async(): Promise<void> => {
-  currentRepositoryPath.value = await window.electron.ipcRenderer.invoke(
-    'mt::github-desktop::get-selected-repository-path'
-  )
-}
-
 onMounted(() => {
   showGitHubDesktop()
-  window.electron.ipcRenderer.on('mt::github-desktop::selected-repository-path', (_event, repositoryPath) => {
-    currentRepositoryPath.value = repositoryPath
-  })
-  syncSelectedRepositoryPath()
+    .then(async() => {
+      await syncGitHubDesktopTheme()
+      await syncGitHubDesktopLocale()
+    })
+    .catch(() => {})
+  window.electron.ipcRenderer.on('mt::github-desktop::switch-to-note', switchToNote)
+  window.electron.ipcRenderer.on('mt::github-desktop::workspace-selected', applyWorkspacePath)
   window.addEventListener('resize', syncBounds)
+  bus.on('language-changed', handleLanguageChanged)
 })
+
+watch(theme, () => {
+  syncGitHubDesktopTheme()
+})
+
+watch(language, () => {
+  syncGitHubDesktopLocale()
+})
+
+const handleLanguageChanged = (locale?: unknown): void => {
+  if (typeof locale === 'string') {
+    syncGitHubDesktopLocale(locale)
+  } else {
+    syncGitHubDesktopLocale()
+  }
+}
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', syncBounds)
-  window.electron.ipcRenderer.removeAllListeners('mt::github-desktop::selected-repository-path')
+  bus.off('language-changed', handleLanguageChanged)
+  window.electron.ipcRenderer.removeAllListeners('mt::github-desktop::switch-to-note')
+  window.electron.ipcRenderer.removeAllListeners('mt::github-desktop::workspace-selected')
   window.electron.ipcRenderer.send('mt::github-desktop::hide')
 })
 </script>
@@ -184,83 +164,16 @@ onBeforeUnmount(() => {
 .github-desktop-shell {
   position: fixed;
   inset: 0;
-  display: flex;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  background: #1f242b;
-}
-
-.github-desktop-rail {
-  position: relative;
-  z-index: 1;
-  width: 45px;
-  height: 100vh;
-  flex: 0 0 45px;
-  background: var(--sideBarBgColor);
-  border-right: 1px solid var(--itemBgColor);
-  -webkit-app-region: drag;
-}
-
-.github-desktop-action-button {
-  position: absolute;
-  left: 5px;
-  width: 35px;
-  height: 35px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  border: 0;
-  border-radius: 6px;
-  color: var(--iconColor);
-  background: transparent;
-  cursor: pointer;
-  -webkit-app-region: no-drag;
-}
-
-.github-desktop-workspace-button {
-  bottom: 54px;
-}
-
-.github-desktop-note-button {
-  bottom: 12px;
-}
-
-.github-desktop-action-button:hover {
-  color: var(--themeColor);
-  background: var(--itemBgColor);
-}
-
-.github-desktop-action-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
+  background: var(--editorBgColor);
 }
 
 .github-desktop-surface {
-  position: relative;
-  flex: 1 1 auto;
+  position: absolute;
+  inset: 0;
   min-width: 0;
-  height: 100vh;
-}
-
-.github-desktop-workspace-dialog {
-  color: var(--editorColor);
-  line-height: 1.7;
-}
-
-.github-desktop-workspace-dialog p {
-  margin: 0 0 12px;
-}
-
-.github-desktop-workspace-path {
-  padding: 10px 12px;
-  border-radius: 6px;
-  color: var(--editorColor);
-  background: var(--itemBgColor);
-  font-family: var(--monospace);
-  line-height: 1.5;
-  overflow-wrap: anywhere;
-  user-select: text;
+  min-height: 0;
 }
 </style>

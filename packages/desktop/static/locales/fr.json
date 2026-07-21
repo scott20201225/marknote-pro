@@ -279,7 +279,8 @@
       "files": "Fichiers",
       "search": "Rechercher",
       "toc": "Table des matières",
-      "settings": "Paramètres"
+      "settings": "Paramètres",
+      "git": "Git"
     }
   },
   "commandPalette": {

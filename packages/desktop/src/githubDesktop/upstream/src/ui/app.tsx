@@ -1392,8 +1392,9 @@ export class App extends React.Component<IAppProps, IAppState> {
    * on Windows.
    */
   private renderAppMenuBar() {
-    // We only render the app menu bar on Windows
-    if (!__WIN32__) {
+    // MarkNotePro embeds GitHub Desktop in a BrowserView and places the menu in
+    // its own left rail. Standalone upstream still keeps the original platform rule.
+    if (!__WIN32__ && !window.__MARKNOTEPRO_EMBEDDED__) {
       return null
     }
 

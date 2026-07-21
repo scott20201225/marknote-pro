@@ -304,7 +304,8 @@
       "files": "筆記",
       "search": "搜尋",
       "toc": "目錄",
-      "settings": "設定"
+      "settings": "設定",
+      "git": "Git"
     }
   },
   "commandPalette": {
