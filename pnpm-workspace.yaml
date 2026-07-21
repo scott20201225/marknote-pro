@@ -1,5 +1,6 @@
 packages:
   - 'packages/*'
+  - 'packages/desktop/src/githubDesktop/upstream/vendor/desktop-trampoline'
   # muya v2 (TS) nests its dev surface and Playwright suite inside its own
   # package directory rather than as siblings under packages/, so list them
   # explicitly.
@@ -7,11 +8,18 @@ packages:
   - 'packages/muya/e2e'
 
 allowBuilds:
+  desktop-trampoline: true
+  '@parcel/watcher': true
   ced: true
+  dugite: true
   electron-winstaller: true
   esbuild: true
+  fs-admin: true
   keytar: true
+  koffi: true
   native-keymap: true
+  process-proxy: true
+  registry-js: true
   sharp: true
   unrs-resolver: true
   workerd: true

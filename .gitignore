@@ -4,6 +4,7 @@ dist
 out
 packages/*/out
 packages/*/dist
+packages/desktop/src/githubDesktop/upstream/vendor/desktop-trampoline/build/
 .DS_Store
 .eslintcache
 *.log*

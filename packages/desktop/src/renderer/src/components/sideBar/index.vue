@@ -176,6 +176,10 @@ const handleLeftIconClick = (name: string): void => {
 }
 
 const handleLeftBottomClick = (name: string): void => {
+  if (name === 'git') {
+    window.dispatchEvent(new CustomEvent('marknotepro:switch-workbench', { detail: 'git' }))
+    return
+  }
   if (name === 'settings') {
     projectStore.OPEN_SETTING_WINDOW()
   }
