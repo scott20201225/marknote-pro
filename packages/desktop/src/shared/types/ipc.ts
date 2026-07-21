@@ -44,6 +44,15 @@ export interface IpcInvokeChannels {
   'mt::clipboard::read-text': { args: []; ret: string }
   'mt::cmd::exists': { args: [name: string]; ret: boolean }
   'mt::fonts::list': { args: []; ret: string[] }
+  'mt::github-desktop::show': {
+    args: [bounds: { x: number; y: number; width: number; height: number }]
+    ret: void
+  }
+  'mt::github-desktop::get-selected-repository-path': { args: []; ret: string | null }
+  'mt::github-desktop::select-workspace-directory': { args: [defaultPath: string]; ret: string | null }
+  'mt::github-desktop::keytar-delete-password': { args: [service: string, account: string]; ret: boolean }
+  'mt::github-desktop::keytar-get-password': { args: [service: string, account: string]; ret: string | null }
+  'mt::github-desktop::keytar-set-password': { args: [service: string, account: string, password: string]; ret: boolean }
   'mt::fs-trash-item': { args: [pathname: string]; ret: void }
   'mt::fs::copy': { args: [src: string, dest: string]; ret: void }
   'mt::fs::empty-dir': { args: [path: string]; ret: void }
@@ -130,6 +139,8 @@ export interface IpcSendChannels {
   'mt::format-link-click': [payload: { data: unknown; dirname: string }]
   'mt::get-current-language': []
   'mt::handle-renderer-error': [error: unknown]
+  'mt::github-desktop::hide': []
+  'mt::github-desktop::set-bounds': [bounds: { x: number; y: number; width: number; height: number }]
   'mt::keybinding-debug-dump-keyboard-info': []
   'mt::make-screenshot': []
   'mt::menu::popup': [template: MenuTemplate, position?: MenuPopupPosition]
@@ -291,6 +302,7 @@ export interface IpcMainEventChannels {
   'mt::update-file': [payload: { type: 'add' | 'change' | 'unlink'; change: FileChangeDetail }]
   'mt::update-object-tree': [payload: unknown]
   'mt::user-preference': [partial: unknown]
+  'mt::github-desktop::selected-repository-path': [repositoryPath: string | null]
   'mt::window-active-status': [active: boolean]
   'mt::window-enter-full-screen': []
   'mt::window-leave-full-screen': []
