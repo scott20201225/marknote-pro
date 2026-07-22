@@ -94,7 +94,14 @@ export type RequestChannels = {
     isDark: boolean
     colors: Record<string, string>
   }) => void
-  'marknotepro-locale-updated': (payload: { language: string }) => void
+  'marknotepro-locale-updated': (payload: {
+    language: string
+    actions?: {
+      note: string
+      setWorkspace: string
+    }
+    internalText?: Record<string, string>
+  }) => void
 }
 
 /**

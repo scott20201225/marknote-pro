@@ -39,8 +39,26 @@ export interface GitHubDesktopThemePayload {
   colors: Record<string, string>
 }
 
+export interface GitHubDesktopActionTranslations {
+  note: string
+  setWorkspace: string
+}
+
+export interface GitHubDesktopDialogTranslations {
+  selectRepositoryFirst: string
+  ok: string
+  setWorkspaceTitle: string
+  setWorkspaceDetail: string
+  useRepositoryRoot: string
+  selectSubdirectory: string
+  cancel: string
+  selectRepositorySubdirectory: string
+}
+
 export interface GitHubDesktopLocalePayload {
   language: string
+  actions?: GitHubDesktopActionTranslations
+  internalText?: Record<string, string>
 }
 
 // =================================================================
@@ -278,6 +296,8 @@ export interface IpcMainEventChannels {
   'mt::export-success': [payload: { type: string; filePath: string }]
   'mt::file-saved': [tabId: string]
   'mt::force-close-tabs-by-id': [tabIds: string[]]
+  'mt::github-desktop::switch-to-note': []
+  'mt::github-desktop::workspace-selected': [workspacePath: string]
   'mt::invalidate-image-cache': []
   'mt::keybindings-response': [bindings: unknown]
   'mt::load-state': [state: BufferedStateType]

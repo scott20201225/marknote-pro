@@ -284,6 +284,7 @@ export class MenuPane extends React.Component<IMenuPaneProps> {
               onMouseEnter={this.onRowMouseEnter}
               onMouseLeave={this.onRowMouseLeave}
               onClick={this.onRowClick}
+              renderAcceleratorText={false}
               renderLabel={this.props.renderLabel}
               focusOnSelection={true}
             />
