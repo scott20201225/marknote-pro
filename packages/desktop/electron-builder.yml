@@ -47,12 +47,24 @@ extraResources:
     filter:
       - '**/*'
       - '!locales/**/!(*.min).json'
+  - from: src/githubDesktop/out
+    to: githubDesktop/out
+    filter:
+      - '**/*'
+  - from: src/githubDesktop/upstream/vendor/desktop-trampoline/build/Release
+    to: githubDesktop/out/desktop-trampoline
+    filter:
+      - 'desktop-askpass-trampoline*'
+      - 'desktop-credential-helper-trampoline*'
+      - 'git-credential-desktop*'
+      - 'ssh-wrapper*'
 npmRebuild: false
 electronLanguages: # Avoid packaging all chromium locales since our app has in-built locales
   - en-US
 
 asarUnpack:
   - resources/**
+  - node_modules/dugite/git/**
 fileAssociations:
   - ext: md
     name: Markdown
@@ -90,6 +102,13 @@ fileAssociations:
     mimeType: text/markdown
     role: Editor
     icon: icons/md.ico
+protocols:
+  - name: GitHub Desktop
+    schemes:
+      - x-github-client
+      - x-github-desktop-dev-auth
+      - x-github-desktop-auth
+      - github-mac
 win:
   executableName: marknotepro
   artifactName: 'marknotepro-win-${arch}-${version}.${ext}'
