@@ -1,8 +1,21 @@
 import * as path from 'path'
 import * as webpack from 'webpack'
+import * as fs from 'fs-extra'
 import HtmlWebpackPlugin from 'html-webpack-plugin'
 import MiniCssExtractPlugin from 'mini-css-extract-plugin'
 import { getReplacements } from './app-info'
+
+const copyGitHubDesktopStaticPlugin: webpack.WebpackPluginInstance = {
+  apply(compiler) {
+    compiler.hooks.afterEmit.tap('CopyGitHubDesktopStaticPlugin', () => {
+      fs.copySync(
+        path.resolve(__dirname, 'static', 'common'),
+        path.resolve(__dirname, '..', 'out', 'static'),
+        { overwrite: true }
+      )
+    })
+  },
+}
 
 const rendererConfig: webpack.Configuration = {
   mode: 'production',
@@ -94,6 +107,7 @@ const rendererConfig: webpack.Configuration = {
       })
     ),
     new MiniCssExtractPlugin({ filename: 'renderer.css' }),
+    copyGitHubDesktopStaticPlugin,
   ],
   node: {
     __dirname: false,

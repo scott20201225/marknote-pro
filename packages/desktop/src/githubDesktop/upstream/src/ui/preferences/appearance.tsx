@@ -286,7 +286,6 @@ export class Appearance extends React.Component<
   public render() {
     return (
       <DialogContent>
-        {this.renderSelectedTheme()}
         {this.renderFormatting()}
         {this.renderSelectedTabSize()}
       </DialogContent>

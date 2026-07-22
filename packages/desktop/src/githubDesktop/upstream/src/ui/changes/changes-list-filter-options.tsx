@@ -155,6 +155,7 @@ export class ChangesListFilterOptions extends React.Component<
         anchor={this.filterOptionsButtonRef}
         anchorPosition={PopoverAnchorPosition.BottomRight}
         decoration={PopoverDecoration.Balloon}
+        style={{ zIndex: 1001 }}
         onMousedownOutside={this.closeFilterOptions}
         onClickOutside={this.closeFilterOptions}
       >
