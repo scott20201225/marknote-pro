@@ -21,10 +21,13 @@ import { resolveEmbeddedGitDir } from 'dugite'
 import { parseAppURL } from '../../githubDesktop/upstream/src/lib/parse-app-url'
 import type { URLActionType } from '../../githubDesktop/upstream/src/lib/parse-app-url'
 import { buildDefaultMenu } from '../../githubDesktop/upstream/src/main-process/menu/build-default-menu'
+import { buildContextMenu } from '../../githubDesktop/upstream/src/main-process/menu/build-context-menu'
 import type { MenuEvent } from '../../githubDesktop/upstream/src/main-process/menu/menu-event'
+import { buildSpellCheckMenu } from '../../githubDesktop/upstream/src/main-process/menu/build-spell-check-menu'
 import type { MenuLabelsEvent } from '../../githubDesktop/upstream/src/models/menu-labels'
 import { menuFromElectronMenu } from '../../githubDesktop/upstream/src/models/app-menu'
 import type { IMenu, MenuItem } from '../../githubDesktop/upstream/src/models/app-menu'
+import type { ISerializableMenuItem } from '../../githubDesktop/upstream/src/lib/menu-item'
 import type { GitHubDesktopLocalePayload, GitHubDesktopThemePayload } from '../../shared/types/ipc'
 
 interface GitHubDesktopViewEntry {
@@ -1008,6 +1011,535 @@ for (const [language, translations] of Object.entries(additionalAppMenuTranslati
   Object.assign(appMenuRootTranslations[language], translations)
 }
 
+const additionalContextMenuTranslations: Record<string, Record<string, string>> = {
+  de: {
+    'Create Alias': 'Alias erstellen',
+    'Change Alias': 'Alias ändern',
+    'Remove Alias': 'Alias entfernen',
+    'Amend Commit': 'Commit ändern…',
+    'Undo Commit': 'Commit rückgängig machen…',
+    'Reset to Commit': 'Auf Commit zurücksetzen…',
+    'Checkout Commit': 'Commit auschecken',
+    'Reorder Commit': 'Commit neu anordnen',
+    'Revert Changes in Commit': 'Änderungen im Commit zurücknehmen',
+    'Create Branch from Commit': 'Branch aus Commit erstellen',
+    'Create Tag': 'Tag erstellen…',
+    'Cherry-pick Commit': 'Commit cherry-picken…',
+    'Copy SHA': 'SHA kopieren',
+    'Copy Tag': 'Tag kopieren',
+    'Copy Tags': 'Tags kopieren',
+    'Delete tag': 'Tag löschen…',
+    'Rename': 'Umbenennen…',
+    'Copy Branch Name': 'Branchnamen kopieren',
+    'Copy Repo Name': 'Repository-Namen kopieren',
+    'Copy Repo Path': 'Repository-Pfad kopieren',
+    'Copy Worktree Name': 'Worktree-Namen kopieren',
+    'Copy Worktree Path': 'Worktree-Pfad kopieren',
+    'Copy File Path': 'Dateipfad kopieren',
+    'Copy file path': 'Dateipfad kopieren',
+    'Copy Relative File Path': 'Relativen Dateipfad kopieren',
+    'Copy relative file path': 'Relativen Dateipfad kopieren',
+    'Clone Repository': 'Repository klonen…',
+    'Create New Repository': 'Neues Repository erstellen…',
+    'Show Worktrees': 'Worktrees anzeigen',
+    'New Worktree': 'Neuer Worktree…',
+    'Preview Pull Request': 'Pull-Request-Vorschau',
+    'View Pull Request on GitHub': 'Pull Request auf GitHub anzeigen',
+    'View Branch on GitHub': 'Branch auf GitHub anzeigen',
+    'Re-run Failed Checks': 'Fehlgeschlagene Prüfungen erneut ausführen',
+    'Re-run All Checks': 'Alle Prüfungen erneut ausführen',
+    'Bypass Commit Hooks': 'Commit-Hooks umgehen',
+    'Allow Empty Commit': 'Leeren Commit erlauben',
+    'Discard All Changes': 'Alle Änderungen verwerfen…',
+    'Expand Whole File': 'Gesamte Datei erweitern',
+    'Reveal in Finder': 'Im Finder anzeigen',
+    'Open in External Editor': 'Im externen Editor öffnen',
+    'Open in Shell': 'Im Terminal öffnen',
+    'Open with Default Program': 'Mit Standardprogramm öffnen',
+    'Open with default program': 'Mit Standardprogramm öffnen',
+    Copy: 'Kopieren',
+    SelectAll: 'Alles auswählen',
+    'Select All': 'Alles auswählen',
+    Delete: 'Löschen…',
+    'Add to Dictionary': 'Zum Wörterbuch hinzufügen',
+    'Set spellcheck to English': 'Rechtschreibung auf Englisch umstellen',
+    'Set spellcheck to system language': 'Rechtschreibung auf Systemsprache umstellen'
+  },
+  en: {},
+  es: {
+    'Create Alias': 'Crear alias',
+    'Change Alias': 'Cambiar alias',
+    'Remove Alias': 'Quitar alias',
+    'Amend Commit': 'Modificar commit…',
+    'Undo Commit': 'Deshacer commit…',
+    'Reset to Commit': 'Restablecer a este commit…',
+    'Checkout Commit': 'Cambiar a este commit',
+    'Reorder Commit': 'Reordenar commit',
+    'Revert Changes in Commit': 'Revertir cambios del commit',
+    'Create Branch from Commit': 'Crear rama desde este commit',
+    'Create Tag': 'Crear etiqueta…',
+    'Cherry-pick Commit': 'Cherry-pick del commit…',
+    'Copy SHA': 'Copiar SHA',
+    'Copy Tag': 'Copiar etiqueta',
+    'Copy Tags': 'Copiar etiquetas',
+    'Delete tag': 'Eliminar etiqueta…',
+    'Rename': 'Renombrar…',
+    'Copy Branch Name': 'Copiar nombre de la rama',
+    'Copy Repo Name': 'Copiar nombre del repositorio',
+    'Copy Repo Path': 'Copiar ruta del repositorio',
+    'Copy Worktree Name': 'Copiar nombre del worktree',
+    'Copy Worktree Path': 'Copiar ruta del worktree',
+    'Copy File Path': 'Copiar ruta del archivo',
+    'Copy file path': 'Copiar ruta del archivo',
+    'Copy Relative File Path': 'Copiar ruta relativa del archivo',
+    'Copy relative file path': 'Copiar ruta relativa del archivo',
+    'Clone Repository': 'Clonar repositorio…',
+    'Create New Repository': 'Crear repositorio nuevo…',
+    'Show Worktrees': 'Mostrar worktrees',
+    'New Worktree': 'Nuevo worktree…',
+    'Preview Pull Request': 'Vista previa del pull request',
+    'View Pull Request on GitHub': 'Ver pull request en GitHub',
+    'View Branch on GitHub': 'Ver rama en GitHub',
+    'Re-run Failed Checks': 'Reejecutar comprobaciones fallidas',
+    'Re-run All Checks': 'Reejecutar todas las comprobaciones',
+    'Bypass Commit Hooks': 'Omitir hooks del commit',
+    'Allow Empty Commit': 'Permitir commit vacío',
+    'Discard All Changes': 'Descartar todos los cambios…',
+    'Expand Whole File': 'Expandir archivo completo',
+    'Reveal in Finder': 'Mostrar en Finder',
+    'Open in External Editor': 'Abrir en editor externo',
+    'Open in Shell': 'Abrir en Terminal',
+    'Open with Default Program': 'Abrir con el programa predeterminado',
+    'Open with default program': 'Abrir con el programa predeterminado',
+    Copy: 'Copiar',
+    'Select All': 'Seleccionar todo',
+    Delete: 'Eliminar…',
+    'Add to Dictionary': 'Añadir al diccionario',
+    'Set spellcheck to English': 'Usar corrector en inglés',
+    'Set spellcheck to system language': 'Usar el idioma del sistema'
+  },
+  fr: {
+    'Create Alias': 'Créer un alias',
+    'Change Alias': "Modifier l’alias",
+    'Remove Alias': "Supprimer l’alias",
+    'Amend Commit': 'Modifier le commit…',
+    'Undo Commit': 'Annuler le commit…',
+    'Reset to Commit': 'Réinitialiser sur ce commit…',
+    'Checkout Commit': 'Basculer sur ce commit',
+    'Reorder Commit': 'Réordonner le commit',
+    'Revert Changes in Commit': 'Rétablir les changements du commit',
+    'Create Branch from Commit': 'Créer une branche depuis ce commit',
+    'Create Tag': 'Créer un tag…',
+    'Cherry-pick Commit': 'Cherry-pick du commit…',
+    'Copy SHA': 'Copier le SHA',
+    'Copy Tag': 'Copier le tag',
+    'Copy Tags': 'Copier les tags',
+    'Delete tag': 'Supprimer le tag…',
+    Rename: 'Renommer…',
+    'Copy Branch Name': 'Copier le nom de la branche',
+    'Copy Repo Name': 'Copier le nom du dépôt',
+    'Copy Repo Path': 'Copier le chemin du dépôt',
+    'Copy Worktree Name': 'Copier le nom du worktree',
+    'Copy Worktree Path': 'Copier le chemin du worktree',
+    'Copy File Path': 'Copier le chemin du fichier',
+    'Copy file path': 'Copier le chemin du fichier',
+    'Copy Relative File Path': 'Copier le chemin relatif du fichier',
+    'Copy relative file path': 'Copier le chemin relatif du fichier',
+    'Clone Repository': 'Cloner le dépôt…',
+    'Create New Repository': 'Créer un nouveau dépôt…',
+    'Show Worktrees': 'Afficher les worktrees',
+    'New Worktree': 'Nouveau worktree…',
+    'Preview Pull Request': 'Aperçu de la pull request',
+    'View Pull Request on GitHub': 'Voir la pull request sur GitHub',
+    'View Branch on GitHub': 'Voir la branche sur GitHub',
+    'Re-run Failed Checks': 'Relancer les vérifications échouées',
+    'Re-run All Checks': 'Relancer toutes les vérifications',
+    'Bypass Commit Hooks': 'Ignorer les hooks de commit',
+    'Allow Empty Commit': 'Autoriser un commit vide',
+    'Discard All Changes': 'Ignorer toutes les modifications…',
+    'Expand Whole File': 'Développer tout le fichier',
+    'Reveal in Finder': 'Afficher dans le Finder',
+    'Open in External Editor': "Ouvrir dans l’éditeur externe",
+    'Open in Shell': 'Ouvrir dans le Terminal',
+    'Open with Default Program': 'Ouvrir avec le programme par défaut',
+    'Open with default program': 'Ouvrir avec le programme par défaut',
+    Copy: 'Copier',
+    'Select All': 'Tout sélectionner',
+    Delete: 'Supprimer…',
+    'Add to Dictionary': 'Ajouter au dictionnaire',
+    'Set spellcheck to English': "Passer l'orthographe en anglais",
+    'Set spellcheck to system language': "Passer à la langue du système"
+  },
+  it: {
+    'Create Alias': 'Crea alias',
+    'Change Alias': 'Modifica alias',
+    'Remove Alias': 'Rimuovi alias',
+    'Amend Commit': 'Modifica commit…',
+    'Undo Commit': 'Annulla commit…',
+    'Reset to Commit': 'Reimposta a questo commit…',
+    'Checkout Commit': 'Passa a questo commit',
+    'Reorder Commit': 'Riordina commit',
+    'Revert Changes in Commit': 'Ripristina modifiche del commit',
+    'Create Branch from Commit': 'Crea branch da questo commit',
+    'Create Tag': 'Crea tag…',
+    'Cherry-pick Commit': 'Cherry-pick del commit…',
+    'Copy SHA': 'Copia SHA',
+    'Copy Tag': 'Copia tag',
+    'Copy Tags': 'Copia tag',
+    'Delete tag': 'Elimina tag…',
+    Rename: 'Rinomina…',
+    'Copy Branch Name': 'Copia nome branch',
+    'Copy Repo Name': 'Copia nome repository',
+    'Copy Repo Path': 'Copia percorso repository',
+    'Copy Worktree Name': 'Copia nome worktree',
+    'Copy Worktree Path': 'Copia percorso worktree',
+    'Copy File Path': 'Copia percorso file',
+    'Copy file path': 'Copia percorso file',
+    'Copy Relative File Path': 'Copia percorso file relativo',
+    'Copy relative file path': 'Copia percorso file relativo',
+    'Clone Repository': 'Clona repository…',
+    'Create New Repository': 'Crea nuovo repository…',
+    'Show Worktrees': 'Mostra worktree',
+    'New Worktree': 'Nuovo worktree…',
+    'Preview Pull Request': 'Anteprima pull request',
+    'View Pull Request on GitHub': 'Visualizza pull request su GitHub',
+    'View Branch on GitHub': 'Visualizza branch su GitHub',
+    'Re-run Failed Checks': 'Riesegui controlli non riusciti',
+    'Re-run All Checks': 'Riesegui tutti i controlli',
+    'Bypass Commit Hooks': 'Ignora hook di commit',
+    'Allow Empty Commit': 'Consenti commit vuoto',
+    'Discard All Changes': 'Scarta tutte le modifiche…',
+    'Expand Whole File': 'Espandi file completo',
+    'Reveal in Finder': 'Mostra nel Finder',
+    'Open in External Editor': 'Apri nell’editor esterno',
+    'Open in Shell': 'Apri nel Terminale',
+    'Open with Default Program': 'Apri con il programma predefinito',
+    'Open with default program': 'Apri con il programma predefinito',
+    Copy: 'Copia',
+    'Select All': 'Seleziona tutto',
+    Delete: 'Elimina…',
+    'Add to Dictionary': 'Aggiungi al dizionario',
+    'Set spellcheck to English': "Imposta il controllo ortografico su inglese",
+    'Set spellcheck to system language': 'Usa la lingua di sistema'
+  },
+  ja: {
+    'Create Alias': 'エイリアスを作成',
+    'Change Alias': 'エイリアスを変更',
+    'Remove Alias': 'エイリアスを削除',
+    'Amend Commit': 'コミットを修正…',
+    'Undo Commit': 'コミットを取り消す…',
+    'Reset to Commit': 'このコミットにリセット…',
+    'Checkout Commit': 'このコミットをチェックアウト',
+    'Reorder Commit': 'コミットを並べ替え',
+    'Revert Changes in Commit': 'このコミットの変更を取り消す',
+    'Create Branch from Commit': 'このコミットからブランチを作成',
+    'Create Tag': 'タグを作成…',
+    'Cherry-pick Commit': 'コミットをチェリーピック…',
+    'Copy SHA': 'SHA をコピー',
+    'Copy Tag': 'タグをコピー',
+    'Copy Tags': 'タグをコピー',
+    'Delete tag': 'タグを削除…',
+    Rename: '名前を変更…',
+    'Copy Branch Name': 'ブランチ名をコピー',
+    'Copy Repo Name': 'リポジトリ名をコピー',
+    'Copy Repo Path': 'リポジトリパスをコピー',
+    'Copy Worktree Name': 'ワークツリー名をコピー',
+    'Copy Worktree Path': 'ワークツリーパスをコピー',
+    'Copy File Path': 'ファイルパスをコピー',
+    'Copy file path': 'ファイルパスをコピー',
+    'Copy Relative File Path': '相対ファイルパスをコピー',
+    'Copy relative file path': '相対ファイルパスをコピー',
+    'Clone Repository': 'リポジトリをクローン…',
+    'Create New Repository': '新しいリポジトリを作成…',
+    'Show Worktrees': 'ワークツリーを表示',
+    'New Worktree': '新しいワークツリー…',
+    'Preview Pull Request': 'プルリクエストをプレビュー',
+    'View Pull Request on GitHub': 'GitHub でプルリクエストを表示',
+    'View Branch on GitHub': 'GitHub でブランチを表示',
+    'Re-run Failed Checks': '失敗したチェックを再実行',
+    'Re-run All Checks': 'すべてのチェックを再実行',
+    'Bypass Commit Hooks': 'コミットフックをスキップ',
+    'Allow Empty Commit': '空のコミットを許可',
+    'Discard All Changes': 'すべての変更を破棄…',
+    'Expand Whole File': 'ファイル全体を展開',
+    'Reveal in Finder': 'Finder で表示',
+    'Open in External Editor': '外部エディタで開く',
+    'Open in Shell': 'ターミナルで開く',
+    'Open with Default Program': '既定のプログラムで開く',
+    'Open with default program': '既定のプログラムで開く',
+    Copy: 'コピー',
+    'Select All': 'すべて選択',
+    Delete: '削除…',
+    'Add to Dictionary': '辞書に追加',
+    'Set spellcheck to English': 'スペルチェックを英語に設定',
+    'Set spellcheck to system language': 'スペルチェックをシステム言語に設定'
+  },
+  ko: {
+    'Create Alias': '별칭 만들기',
+    'Change Alias': '별칭 변경',
+    'Remove Alias': '별칭 제거',
+    'Amend Commit': '커밋 수정…',
+    'Undo Commit': '커밋 실행 취소…',
+    'Reset to Commit': '이 커밋으로 재설정…',
+    'Checkout Commit': '이 커밋 체크아웃',
+    'Reorder Commit': '커밋 순서 변경',
+    'Revert Changes in Commit': '이 커밋의 변경 내용 되돌리기',
+    'Create Branch from Commit': '이 커밋에서 브랜치 만들기',
+    'Create Tag': '태그 만들기…',
+    'Cherry-pick Commit': '커밋 체리픽…',
+    'Copy SHA': 'SHA 복사',
+    'Copy Tag': '태그 복사',
+    'Copy Tags': '태그 복사',
+    'Delete tag': '태그 삭제…',
+    Rename: '이름 바꾸기…',
+    'Copy Branch Name': '브랜치 이름 복사',
+    'Copy Repo Name': '저장소 이름 복사',
+    'Copy Repo Path': '저장소 경로 복사',
+    'Copy Worktree Name': '워크트리 이름 복사',
+    'Copy Worktree Path': '워크트리 경로 복사',
+    'Copy File Path': '파일 경로 복사',
+    'Copy file path': '파일 경로 복사',
+    'Copy Relative File Path': '상대 파일 경로 복사',
+    'Copy relative file path': '상대 파일 경로 복사',
+    'Clone Repository': '저장소 복제…',
+    'Create New Repository': '새 저장소 만들기…',
+    'Show Worktrees': '워크트리 표시',
+    'New Worktree': '새 워크트리…',
+    'Preview Pull Request': '풀 리퀘스트 미리보기',
+    'View Pull Request on GitHub': 'GitHub에서 풀 리퀘스트 보기',
+    'View Branch on GitHub': 'GitHub에서 브랜치 보기',
+    'Re-run Failed Checks': '실패한 검사 다시 실행',
+    'Re-run All Checks': '모든 검사 다시 실행',
+    'Bypass Commit Hooks': '커밋 훅 우회',
+    'Allow Empty Commit': '빈 커밋 허용',
+    'Discard All Changes': '모든 변경 사항 버리기…',
+    'Expand Whole File': '전체 파일 펼치기',
+    'Reveal in Finder': 'Finder에서 보기',
+    'Open in External Editor': '외부 편집기에서 열기',
+    'Open in Shell': '터미널에서 열기',
+    'Open with Default Program': '기본 프로그램으로 열기',
+    'Open with default program': '기본 프로그램으로 열기',
+    Copy: '복사',
+    'Select All': '전체 선택',
+    Delete: '삭제…',
+    'Add to Dictionary': '사전에 추가',
+    'Set spellcheck to English': '맞춤법 검사 언어를 영어로 설정',
+    'Set spellcheck to system language': '맞춤법 검사 언어를 시스템 언어로 설정'
+  },
+  pt: {
+    'Create Alias': 'Criar alias',
+    'Change Alias': 'Alterar alias',
+    'Remove Alias': 'Remover alias',
+    'Amend Commit': 'Alterar commit…',
+    'Undo Commit': 'Desfazer commit…',
+    'Reset to Commit': 'Redefinir para este commit…',
+    'Checkout Commit': 'Fazer checkout deste commit',
+    'Reorder Commit': 'Reordenar commit',
+    'Revert Changes in Commit': 'Reverter alterações do commit',
+    'Create Branch from Commit': 'Criar branch deste commit',
+    'Create Tag': 'Criar tag…',
+    'Cherry-pick Commit': 'Cherry-pick do commit…',
+    'Copy SHA': 'Copiar SHA',
+    'Copy Tag': 'Copiar tag',
+    'Copy Tags': 'Copiar tags',
+    'Delete tag': 'Excluir tag…',
+    Rename: 'Renomear…',
+    'Copy Branch Name': 'Copiar nome da branch',
+    'Copy Repo Name': 'Copiar nome do repositório',
+    'Copy Repo Path': 'Copiar caminho do repositório',
+    'Copy Worktree Name': 'Copiar nome do worktree',
+    'Copy Worktree Path': 'Copiar caminho do worktree',
+    'Copy File Path': 'Copiar caminho do arquivo',
+    'Copy file path': 'Copiar caminho do arquivo',
+    'Copy Relative File Path': 'Copiar caminho relativo do arquivo',
+    'Copy relative file path': 'Copiar caminho relativo do arquivo',
+    'Clone Repository': 'Clonar repositório…',
+    'Create New Repository': 'Criar novo repositório…',
+    'Show Worktrees': 'Mostrar worktrees',
+    'New Worktree': 'Novo worktree…',
+    'Preview Pull Request': 'Visualizar pull request',
+    'View Pull Request on GitHub': 'Ver pull request no GitHub',
+    'View Branch on GitHub': 'Ver branch no GitHub',
+    'Re-run Failed Checks': 'Executar novamente verificações com falha',
+    'Re-run All Checks': 'Executar novamente todas as verificações',
+    'Bypass Commit Hooks': 'Ignorar hooks de commit',
+    'Allow Empty Commit': 'Permitir commit vazio',
+    'Discard All Changes': 'Descartar todas as alterações…',
+    'Expand Whole File': 'Expandir arquivo inteiro',
+    'Reveal in Finder': 'Mostrar no Finder',
+    'Open in External Editor': 'Abrir no editor externo',
+    'Open in Shell': 'Abrir no Terminal',
+    'Open with Default Program': 'Abrir com o programa padrão',
+    'Open with default program': 'Abrir com o programa padrão',
+    Copy: 'Copiar',
+    'Select All': 'Selecionar tudo',
+    Delete: 'Excluir…',
+    'Add to Dictionary': 'Adicionar ao dicionário',
+    'Set spellcheck to English': 'Definir verificação ortográfica para inglês',
+    'Set spellcheck to system language': 'Usar idioma do sistema'
+  },
+  tr: {
+    'Create Alias': 'Takma ad oluştur',
+    'Change Alias': 'Takma adı değiştir',
+    'Remove Alias': 'Takma adı kaldır',
+    'Amend Commit': 'Commiti değiştir…',
+    'Undo Commit': 'Commiti geri al…',
+    'Reset to Commit': 'Bu commite sıfırla…',
+    'Checkout Commit': 'Bu commiti checkout yap',
+    'Reorder Commit': 'Commit sırasını değiştir',
+    'Revert Changes in Commit': 'Committeki değişiklikleri geri al',
+    'Create Branch from Commit': 'Bu committen dal oluştur',
+    'Create Tag': 'Etiket oluştur…',
+    'Cherry-pick Commit': 'Commiti cherry-pick yap…',
+    'Copy SHA': 'SHA kopyala',
+    'Copy Tag': 'Etiketi kopyala',
+    'Copy Tags': 'Etiketleri kopyala',
+    'Delete tag': 'Etiketi sil…',
+    Rename: 'Yeniden adlandır…',
+    'Copy Branch Name': 'Dal adını kopyala',
+    'Copy Repo Name': 'Depo adını kopyala',
+    'Copy Repo Path': 'Depo yolunu kopyala',
+    'Copy Worktree Name': 'Worktree adını kopyala',
+    'Copy Worktree Path': 'Worktree yolunu kopyala',
+    'Copy File Path': 'Dosya yolunu kopyala',
+    'Copy file path': 'Dosya yolunu kopyala',
+    'Copy Relative File Path': 'Göreli dosya yolunu kopyala',
+    'Copy relative file path': 'Göreli dosya yolunu kopyala',
+    'Clone Repository': 'Depoyu klonla…',
+    'Create New Repository': 'Yeni depo oluştur…',
+    'Show Worktrees': 'Worktreeleri göster',
+    'New Worktree': 'Yeni worktree…',
+    'Preview Pull Request': 'Pull request önizle',
+    'View Pull Request on GitHub': 'Pull requesti GitHub’da görüntüle',
+    'View Branch on GitHub': 'Dalı GitHub’da görüntüle',
+    'Re-run Failed Checks': 'Başarısız kontrolleri yeniden çalıştır',
+    'Re-run All Checks': 'Tüm kontrolleri yeniden çalıştır',
+    'Bypass Commit Hooks': 'Commit hooklarını atla',
+    'Allow Empty Commit': 'Boş commite izin ver',
+    'Discard All Changes': 'Tüm değişiklikleri at…',
+    'Expand Whole File': 'Tüm dosyayı genişlet',
+    'Reveal in Finder': 'Finder’da göster',
+    'Open in External Editor': 'Harici düzenleyicide aç',
+    'Open in Shell': 'Terminalde aç',
+    'Open with Default Program': 'Varsayılan programla aç',
+    'Open with default program': 'Varsayılan programla aç',
+    Copy: 'Kopyala',
+    'Select All': 'Tümünü seç',
+    Delete: 'Sil…',
+    'Add to Dictionary': 'Sözlüğe ekle',
+    'Set spellcheck to English': 'Yazım denetimini İngilizce yap',
+    'Set spellcheck to system language': 'Yazım denetimini sistem diline ayarla'
+  },
+  'zh-CN': {
+    'Create Alias': '创建别名',
+    'Change Alias': '更改别名',
+    'Remove Alias': '移除别名',
+    'Amend Commit': '修订提交…',
+    'Undo Commit': '撤销提交…',
+    'Reset to Commit': '重置到该提交…',
+    'Checkout Commit': '检出该提交',
+    'Reorder Commit': '重新排序该提交',
+    'Revert Changes in Commit': '还原该提交中的更改',
+    'Create Branch from Commit': '从该提交创建分支',
+    'Create Tag': '创建标签…',
+    'Cherry-pick Commit': '拣选该提交…',
+    'Copy SHA': '复制 SHA',
+    'Copy Tag': '复制标签',
+    'Copy Tags': '复制标签',
+    'Delete tag': '删除标签…',
+    Rename: '重命名…',
+    'Copy Branch Name': '复制分支名称',
+    'Copy Repo Name': '复制仓库名称',
+    'Copy Repo Path': '复制仓库路径',
+    'Copy Worktree Name': '复制工作树名称',
+    'Copy Worktree Path': '复制工作树路径',
+    'Copy File Path': '复制文件路径',
+    'Copy file path': '复制文件路径',
+    'Copy Relative File Path': '复制相对文件路径',
+    'Copy relative file path': '复制相对文件路径',
+    'Clone Repository': '克隆仓库…',
+    'Create New Repository': '创建新仓库…',
+    'Show Worktrees': '显示工作树',
+    'New Worktree': '新建工作树…',
+    'Preview Pull Request': '预览拉取请求',
+    'View Pull Request on GitHub': '在 GitHub 上查看拉取请求',
+    'View Branch on GitHub': '在 GitHub 上查看分支',
+    'Re-run Failed Checks': '重新运行失败的检查',
+    'Re-run All Checks': '重新运行所有检查',
+    'Bypass Commit Hooks': '绕过提交钩子',
+    'Allow Empty Commit': '允许空提交',
+    'Discard All Changes': '丢弃所有更改…',
+    'Expand Whole File': '展开整个文件',
+    'Reveal in Finder': '在访达中显示',
+    'Open in External Editor': '在外部编辑器中打开',
+    'Open in Shell': '在终端中打开',
+    'Open with Default Program': '使用默认程序打开',
+    'Open with default program': '使用默认程序打开',
+    Copy: '复制',
+    'Select All': '全选',
+    Delete: '删除…',
+    'Add to Dictionary': '添加到词典',
+    'Set spellcheck to English': '将拼写检查设为英语',
+    'Set spellcheck to system language': '将拼写检查设为系统语言'
+  },
+  'zh-TW': {
+    'Create Alias': '建立別名',
+    'Change Alias': '更改別名',
+    'Remove Alias': '移除別名',
+    'Amend Commit': '修訂提交…',
+    'Undo Commit': '撤銷提交…',
+    'Reset to Commit': '重設到該提交…',
+    'Checkout Commit': '檢出該提交',
+    'Reorder Commit': '重新排序該提交',
+    'Revert Changes in Commit': '還原該提交中的變更',
+    'Create Branch from Commit': '從該提交建立分支',
+    'Create Tag': '建立標籤…',
+    'Cherry-pick Commit': '挑選該提交…',
+    'Copy SHA': '複製 SHA',
+    'Copy Tag': '複製標籤',
+    'Copy Tags': '複製標籤',
+    'Delete tag': '刪除標籤…',
+    Rename: '重新命名…',
+    'Copy Branch Name': '複製分支名稱',
+    'Copy Repo Name': '複製倉庫名稱',
+    'Copy Repo Path': '複製倉庫路徑',
+    'Copy Worktree Name': '複製工作樹名稱',
+    'Copy Worktree Path': '複製工作樹路徑',
+    'Copy File Path': '複製檔案路徑',
+    'Copy file path': '複製檔案路徑',
+    'Copy Relative File Path': '複製相對檔案路徑',
+    'Copy relative file path': '複製相對檔案路徑',
+    'Clone Repository': '複製倉庫…',
+    'Create New Repository': '建立新倉庫…',
+    'Show Worktrees': '顯示工作樹',
+    'New Worktree': '新增工作樹…',
+    'Preview Pull Request': '預覽拉取請求',
+    'View Pull Request on GitHub': '在 GitHub 上檢視拉取請求',
+    'View Branch on GitHub': '在 GitHub 上檢視分支',
+    'Re-run Failed Checks': '重新執行失敗的檢查',
+    'Re-run All Checks': '重新執行所有檢查',
+    'Bypass Commit Hooks': '略過提交 Hook',
+    'Allow Empty Commit': '允許空提交',
+    'Discard All Changes': '捨棄所有變更…',
+    'Expand Whole File': '展開整個檔案',
+    'Reveal in Finder': '在 Finder 中顯示',
+    'Open in External Editor': '在外部編輯器中開啟',
+    'Open in Shell': '在終端機中開啟',
+    'Open with Default Program': '使用預設程式開啟',
+    'Open with default program': '使用預設程式開啟',
+    Copy: '複製',
+    'Select All': '全選',
+    Delete: '刪除…',
+    'Add to Dictionary': '加入字典',
+    'Set spellcheck to English': '將拼字檢查設為英文',
+    'Set spellcheck to system language': '將拼字檢查設為系統語言'
+  }
+}
+
+for (const [language, translations] of Object.entries(additionalContextMenuTranslations)) {
+  Object.assign(appMenuRootTranslations[language], translations)
+}
+
 const dialogTranslations: Record<string, {
   selectRepositoryFirst: string
   ok: string
@@ -1133,18 +1665,244 @@ const dialogTranslations: Record<string, {
 const getDialogText = (language: string | null | undefined): typeof dialogTranslations.en =>
   dialogTranslations[language || ''] ?? dialogTranslations.en
 
-const normalizeMenuLabel = (label: string): string =>
-  label.replace(/&/g, '').replace(/\.\.\.$/, '').replace(/…$/, '')
+const normalizeMenuLabel = (label: string | null | undefined): string =>
+  (label ?? '').replace(/&/g, '').replace(/\.\.\.$/, '').replace(/…$/, '')
 
-const cloneMenuItemWithLocale = (item: MenuItem, translations: Record<string, string>): MenuItem => {
+const findMenuTranslation = (
+  normalizedLabel: string,
+  translations: Record<string, string>
+): string | undefined => {
+  const normalizedLower = normalizedLabel.toLocaleLowerCase()
+
+  for (const [source, translation] of Object.entries(translations)) {
+    if (normalizeMenuLabel(source).toLocaleLowerCase() === normalizedLower) {
+      return translation
+    }
+  }
+
+  return undefined
+}
+
+const buildOpenInTargetLabel = (
+  language: string | null | undefined,
+  target: string
+): string | null => {
+  switch (language) {
+    case 'de':
+      return `Öffnen in ${target}`
+    case 'es':
+      return `Abrir en ${target}`
+    case 'fr':
+      return `Ouvrir dans ${target}`
+    case 'it':
+      return `Apri in ${target}`
+    case 'ja':
+      return `${target} で開く`
+    case 'ko':
+      return `${target}에서 열기`
+    case 'pt':
+      return `Abrir em ${target}`
+    case 'tr':
+      return `${target} içinde aç`
+    case 'zh-CN':
+      return `在 ${target} 中打开`
+    case 'zh-TW':
+      return `在 ${target} 中開啟`
+    default:
+      return null
+  }
+}
+
+const translateMenuLabel = (
+  label: string | null | undefined,
+  translations: Record<string, string>,
+  language: string | null | undefined
+): string | undefined => {
+  if (!label) return label ?? undefined
+
+  const normalized = normalizeMenuLabel(label)
+  const exact = findMenuTranslation(normalized, translations)
+  if (exact) return exact
+
+  if (normalized.toLocaleLowerCase().startsWith('delete tag ')) {
+    const tagName = normalized.slice('Delete tag '.length)
+    const prefix = findMenuTranslation('Delete tag', translations)
+    if (prefix) {
+      return prefix.replace(/…$/, ` ${tagName}`)
+    }
+  }
+
+  if (normalized.toLocaleLowerCase().startsWith('open in ')) {
+    const target = normalized.slice('Open in '.length)
+    return buildOpenInTargetLabel(language, target) ?? label
+  }
+
+  return label
+}
+
+const localizeSerializedMenuItems = (
+  items: ReadonlyArray<ISerializableMenuItem>,
+  translations: Record<string, string>,
+  language: string | null | undefined
+): ReadonlyArray<ISerializableMenuItem> => {
+  return items.map(item => ({
+    ...item,
+    label: translateMenuLabel(item.label, translations, language),
+    submenu: item.submenu ? localizeSerializedMenuItems(item.submenu, translations, language) : undefined
+  }))
+}
+
+const localizeElectronMenuItems = (
+  items: Electron.MenuItem[],
+  translations: Record<string, string>,
+  language: string | null | undefined
+): void => {
+  for (const item of items) {
+    if (item.type !== 'separator') {
+      const translatedLabel = translateMenuLabel(item.label, translations, language)
+      if (translatedLabel && translatedLabel !== item.label) {
+        item.label = translatedLabel
+      }
+    }
+
+    if (item.submenu) {
+      localizeElectronMenuItems(item.submenu.items, translations, language)
+    }
+  }
+}
+
+const serializedMacOSServicesLabels = new Set([
+  'Services',
+  ...Object.values(appMenuRootTranslations).map(translations => translations.Services)
+].map(normalizeMenuLabel))
+
+const permanentlyHiddenMenuItemIds = new Set([
+  'about'
+])
+
+const localizedHiddenMenuLabels = [
+  ...Object.values(appMenuRootTranslations).flatMap(translations => [
+    translations['About GitHub Desktop'],
+    translations.Services,
+    translations['Hide marknotepro'],
+    translations['Hide Others'],
+    translations['Show All'],
+    translations['Quit marknotepro'],
+    translations.Exit
+  ])
+].filter(Boolean) as string[]
+
+const permanentlyHiddenMenuLabels = new Set([
+  'About GitHub Desktop',
+  'Services',
+  'Hide MarkNotePro',
+  'Hide marknotepro',
+  'Hide Others',
+  'Show All',
+  'Quit MarkNotePro',
+  'Quit marknotepro',
+  'Exit',
+  'Toggle Full Screen',
+  'Reset Zoom',
+  'Zoom In',
+  'Zoom Out',
+  'Minimize',
+  'Zoom',
+  'Close',
+  'Bring All to Front',
+  'Report Issue',
+  'Contact GitHub Support',
+  'Show User Guides',
+  'Show Keyboard Shortcuts'
+].concat(localizedHiddenMenuLabels).map(normalizeMenuLabel))
+
+const permanentlyHiddenTopLevelMenuLabels = new Set([
+  'Window',
+  'Help'
+].map(normalizeMenuLabel))
+
+const showLogsMenuLabels = new Set([
+  'Show Logs in Finder',
+  'Show logs in Explorer',
+  'Show logs in your File Manager'
+].map(normalizeMenuLabel))
+
+const isShowLogsMenuItem = (item: MenuItem): boolean => {
+  if (item.type === 'separator') return false
+  return showLogsMenuLabels.has(normalizeMenuLabel(item.label))
+}
+
+const shouldHideSerializedMenuItem = (item: MenuItem, parentMenuId?: string): boolean => {
+  if (item.type !== 'submenuItem') return false
+
+  const isMacOSServicesMenu = serializedMacOSServicesLabels.has(normalizeMenuLabel(item.label))
+  const hasVisibleAction = item.menu.items.some(menuItem =>
+    menuItem.visible && menuItem.type !== 'separator'
+  )
+
+  if (isMacOSServicesMenu && !hasVisibleAction) return true
+
+  if (parentMenuId === undefined) {
+    return permanentlyHiddenTopLevelMenuLabels.has(normalizeMenuLabel(item.label))
+  }
+
+  return false
+}
+
+const shouldPermanentlyHideMenuItem = (item: MenuItem, parentMenuId?: string): boolean => {
+  if (shouldHideSerializedMenuItem(item, parentMenuId)) return true
+  if (permanentlyHiddenMenuItemIds.has(item.id)) return true
+  if (item.type === 'separator') return false
+
+  return permanentlyHiddenMenuLabels.has(normalizeMenuLabel(item.label))
+}
+
+const collapseMenuSeparators = (items: ReadonlyArray<MenuItem>): ReadonlyArray<MenuItem> => {
+  const collapsed: MenuItem[] = []
+
+  for (const item of items) {
+    if (!item.visible) {
+      collapsed.push(item)
+      continue
+    }
+
+    if (item.type === 'separator') {
+      const previous = collapsed[collapsed.length - 1]
+      const previousVisible = previous && previous.visible
+      if (!previous || !previousVisible || previous.type === 'separator') {
+        collapsed.push({ ...item, visible: false })
+        continue
+      }
+    }
+
+    collapsed.push(item)
+  }
+
+  for (let index = collapsed.length - 1; index >= 0; index--) {
+    const item = collapsed[index]
+    if (!item.visible) continue
+    if (item.type !== 'separator') break
+    collapsed[index] = { ...item, visible: false }
+  }
+
+  return collapsed
+}
+
+const cloneMenuItemWithLocale = (
+  item: MenuItem,
+  translations: Record<string, string>,
+  parentMenuId?: string
+): MenuItem => {
   if (item.type === 'separator') return item
 
   const label = translations[normalizeMenuLabel(item.label)] ?? item.label
+  const visible = item.visible && !shouldPermanentlyHideMenuItem(item, parentMenuId)
 
   if (item.type === 'submenuItem') {
     return {
       ...item,
       label,
+      visible,
       accessKey: null,
       menu: localizeAppMenu(item.menu, translations)
     }
@@ -1153,21 +1911,76 @@ const cloneMenuItemWithLocale = (item: MenuItem, translations: Record<string, st
   return {
     ...item,
     label,
+    visible,
     accelerator: null,
     accessKey: null
   }
 }
 
-const localizeAppMenu = (menu: IMenu, translations: Record<string, string>): IMenu => ({
-  ...menu,
-  selectedItem: menu.selectedItem
-    ? cloneMenuItemWithLocale(menu.selectedItem, translations)
-    : undefined,
-  items: menu.items.map(item => cloneMenuItemWithLocale(item, translations))
-})
+const findShowLogsMenuItem = (menu: IMenu): MenuItem | null => {
+  for (const item of menu.items) {
+    if (isShowLogsMenuItem(item)) return item
+    if (item.type === 'submenuItem') {
+      const found = findShowLogsMenuItem(item.menu)
+      if (found) return found
+    }
+  }
+
+  return null
+}
+
+const withShowLogsInViewMenu = (menu: IMenu): IMenu => {
+  const showLogsItem = findShowLogsMenuItem(menu)
+  if (!showLogsItem) return menu
+
+  const items = menu.items.map(item => {
+    if (item.type !== 'submenuItem' || normalizeMenuLabel(item.label) !== 'View') {
+      return item
+    }
+
+    const alreadyHasShowLogs = item.menu.items.some(isShowLogsMenuItem)
+    if (alreadyHasShowLogs) return item
+
+    return {
+      ...item,
+      menu: {
+        ...item.menu,
+        items: [
+          ...item.menu.items,
+          {
+            id: `${item.id}.marknotepro-show-logs-separator`,
+            type: 'separator',
+            visible: true
+          },
+          showLogsItem
+        ]
+      }
+    }
+  })
+
+  return {
+    ...menu,
+    items
+  }
+}
+
+const localizeAppMenu = (menu: IMenu, translations: Record<string, string>): IMenu => {
+  const selectedItem = menu.selectedItem
+    ? cloneMenuItemWithLocale(menu.selectedItem, translations, menu.id)
+    : undefined
+  const items = collapseMenuSeparators(
+    menu.items.map(item => cloneMenuItemWithLocale(item, translations, menu.id))
+  )
+
+  return {
+    ...menu,
+    selectedItem,
+    items
+  }
+}
 
 const getLocalizedAppMenu = (language: string | null | undefined): IMenu => {
-  const menu = menuFromElectronMenu(githubDesktopMenu)
+  const menu = withShowLogsInViewMenu(menuFromElectronMenu(githubDesktopMenu))
   const translations = appMenuRootTranslations[language || ''] ?? appMenuRootTranslations.en
   return localizeAppMenu(menu, translations)
 }
@@ -1194,6 +2007,23 @@ const getMenuEventForId = (id: string): MenuEvent | null => {
   }
 
   return menuEventById[id] ?? null
+}
+
+const shouldBlockHiddenMenuExecution = (id: string): boolean => {
+  const menuItem = githubDesktopMenu.getMenuItemById(id)
+  if (!menuItem) return permanentlyHiddenMenuItemIds.has(id)
+
+  const label = normalizeMenuLabel(menuItem.label)
+  const role = (menuItem as unknown as { role?: string }).role
+
+  return permanentlyHiddenMenuItemIds.has(id) ||
+    permanentlyHiddenMenuLabels.has(label) ||
+    role === 'quit' ||
+    role === 'togglefullscreen' ||
+    role === 'minimize' ||
+    role === 'zoom' ||
+    role === 'close' ||
+    role === 'front'
 }
 
 const executeRoleMenuItem = (
@@ -1641,6 +2471,10 @@ const registerGitHubDesktopRendererHandlers = (): void => {
     shell.openPath(targetPath).catch(err => log.error('open directory failed:', err))
   })
   ipcMain.on('execute-menu-item-by-id', (event, id: string) => {
+    if (shouldBlockHiddenMenuExecution(id)) {
+      return
+    }
+
     const menuEvent = getMenuEventForId(id)
     if (menuEvent) {
       event.sender.send('menu-event', menuEvent)
@@ -1721,7 +2555,36 @@ const registerGitHubDesktopRendererHandlers = (): void => {
   ipcMain.handle('move-to-applications-folder', () => undefined)
   ipcMain.handle('check-for-updates', () => undefined)
   ipcMain.handle('resolve-proxy', (_event, url: string) => session.defaultSession.resolveProxy(url))
-  ipcMain.handle('show-contextual-menu', () => null)
+  ipcMain.handle(
+    'show-contextual-menu',
+    async (
+      event,
+      items: ReadonlyArray<ISerializableMenuItem>,
+      addSpellCheckMenu: boolean
+    ) => {
+      return new Promise<ReadonlyArray<number> | null>(async (resolve) => {
+        const win = getWindowFromSender(event) || undefined
+        const language = win ? views.get(win.id)?.currentLocalePayload?.language : null
+        const translations = appMenuRootTranslations[language || ''] ?? appMenuRootTranslations.en
+
+        const spellCheckMenuItems = addSpellCheckMenu
+          ? await buildSpellCheckMenu(win)
+          : undefined
+
+        const menu = buildContextMenu(
+          localizeSerializedMenuItems(items, translations, language),
+          (indices) => resolve(indices),
+          spellCheckMenuItems
+        )
+        localizeElectronMenuItems(menu.items, translations, language)
+
+        menu.popup({
+          window: win,
+          callback: () => resolve(null)
+        })
+      })
+    }
+  )
   ipcMain.handle('save-guid', async (_event, guid: string) => {
     await fs.outputFile(getGuidPath(), guid)
   })
