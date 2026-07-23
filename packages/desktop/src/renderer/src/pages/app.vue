@@ -1,5 +1,6 @@
 <template>
-  <div class="editor-container">
+  <git-desktop v-if="workbench === 'git'" />
+  <div v-else class="editor-container">
     <side-bar v-if="init" />
 
     <div class="editor-middle">
@@ -64,7 +65,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch, nextTick, onMounted, ref } from 'vue'
+import { computed, watch, nextTick, onMounted, onBeforeUnmount, ref } from 'vue'
 import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
 import { useMainStore } from '@/store'
 import { storeToRefs } from 'pinia'
@@ -80,6 +81,7 @@ import ExportSettingDialog from '@/components/exportSettings/index.vue'
 import MoveNodeDialog from '@/components/moveNode/index.vue'
 import Rename from '@/components/rename/index.vue'
 import ImportModal from '@/components/import/index.vue'
+import GitDesktop from '@/components/gitDesktop/index.vue'
 import bus from '@/bus'
 import { DEFAULT_STYLE } from '@/config'
 import { useLayoutStore } from '@/store/layout'
@@ -109,6 +111,7 @@ const tabScrollState = ref({
   canLeft: false,
   canRight: false
 })
+const workbench = ref<'note' | 'git'>('note')
 
 const { windowActive, platform, init } = storeToRefs(mainStore)
 const { sourceCode, theme, customCss, textDirection, zoom } = storeToRefs(preferencesStore)
@@ -150,6 +153,13 @@ const updateTabScrollState = (state: { show: boolean; canLeft: boolean; canRight
 
 const scrollEditorTabs = (direction: 'left' | 'right') => {
   tabsRef.value?.scrollTabs(direction)
+}
+
+const handleWorkbenchSwitch = (event: Event): void => {
+  const target = (event as CustomEvent).detail
+  if (target === 'note' || target === 'git') {
+    workbench.value = target
+  }
 }
 
 // Watchers
@@ -225,6 +235,8 @@ const setupDragDropHandler = (): void => {
   )
 }
 onMounted(() => {
+  window.addEventListener('marknotepro:switch-workbench', handleWorkbenchSwitch)
+
   if (window.marknotepro?.initialState) {
     preferencesStore.SET_USER_PREFERENCE(window.marknotepro.initialState)
   }
@@ -289,6 +301,10 @@ onMounted(() => {
     }
     addStyles(style)
   })
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('marknotepro:switch-workbench', handleWorkbenchSwitch)
 })
 </script>
 

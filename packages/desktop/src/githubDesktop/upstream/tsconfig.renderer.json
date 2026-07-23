@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "module": "esnext",
+    "moduleResolution": "node",
+    "target": "ES2022",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "importHelpers": true,
+    "sourceMap": true,
+    "jsx": "react",
+    "strict": true,
+    "ignoreDeprecations": "6.0",
+    "useUnknownInCatchVariables": false,
+    "lib": ["ES2023", "DOM", "DOM.Iterable", "ESNext.Array"],
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.tsx"],
+  "exclude": ["node_modules", "out", "src/highlighter"],
+  "compileOnSave": false
+}

@@ -9,6 +9,9 @@ import { fileURLToPath } from 'url'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
+const isDarwin = process.platform === 'darwin'
+const isWin32 = process.platform === 'win32'
+const isLinux = process.platform === 'linux'
 
 export default defineConfig({
   main: {
@@ -29,7 +32,12 @@ export default defineConfig({
     },
     define: {
       MARKNOTEPRO_VERSION: JSON.stringify(packageJson.version),
-      MARKNOTEPRO_VERSION_STRING: JSON.stringify(`v${packageJson.version}`)
+      MARKNOTEPRO_VERSION_STRING: JSON.stringify(`v${packageJson.version}`),
+      __DEV__: JSON.stringify(process.env.NODE_ENV !== 'production'),
+      __DARWIN__: JSON.stringify(isDarwin),
+      __WIN32__: JSON.stringify(isWin32),
+      __LINUX__: JSON.stringify(isLinux),
+      __RELEASE_CHANNEL__: JSON.stringify('production')
     },
     resolve: {
       alias: {
@@ -75,7 +83,12 @@ export default defineConfig({
     // Substitute it with `globalThis` at build time so the imports don't
     // throw before Vue mounts.
     define: {
-      global: 'globalThis'
+      global: 'globalThis',
+      __DEV__: JSON.stringify(process.env.NODE_ENV !== 'production'),
+      __DARWIN__: JSON.stringify(isDarwin),
+      __WIN32__: JSON.stringify(isWin32),
+      __LINUX__: JSON.stringify(isLinux),
+      __RELEASE_CHANNEL__: JSON.stringify('production')
     },
     server: {
       host: '127.0.0.1',
@@ -87,9 +100,16 @@ export default defineConfig({
         common: resolve(__dirname, 'src/common'),
         muya: resolve(__dirname, '../muyajs'),
         '@shared': resolve(__dirname, 'src/shared'),
-        path: 'pathe'
+        path: 'pathe',
+        electron: resolve(__dirname, 'src/githubDesktop/shims/electron.ts'),
+        keytar: resolve(__dirname, 'src/githubDesktop/shims/keytar.ts'),
+        'fs/promises': resolve(__dirname, 'src/githubDesktop/shims/fsPromises.ts'),
+        'desktop-notifications/dist/notification-callback': resolve(__dirname, 'src/githubDesktop/upstream/vendor/desktop-notifications/lib/notification-callback.ts'),
+        'desktop-notifications': resolve(__dirname, 'src/githubDesktop/upstream/vendor/desktop-notifications/lib/index.ts'),
+        'desktop-trampoline': resolve(__dirname, 'src/githubDesktop/upstream/vendor/desktop-trampoline/index.ts'),
+        'windows-argv-parser': resolve(__dirname, 'src/githubDesktop/upstream/vendor/windows-argv-parser/index.ts')
       },
-      extensions: ['.mjs', '.ts', '.js', '.json', '.vue']
+      extensions: ['.mjs', '.ts', '.tsx', '.js', '.jsx', '.json', '.vue']
     },
     optimizeDeps: {
       include: ['pako', 'pathe'],
