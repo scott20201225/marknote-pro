@@ -555,6 +555,19 @@ importers:
         specifier: ^5.4.5
         version: 5.9.3
 
+  packages/desktop/src/githubDesktop/upstream/vendor/windows-argv-parser:
+    dependencies:
+      node-addon-api:
+        specifier: ^7.0.0
+        version: 7.1.1
+    devDependencies:
+      node-gyp:
+        specifier: ^10.1.0
+        version: 10.3.1
+      typescript:
+        specifier: ^5.4.5
+        version: 5.9.3
+
   packages/file-icons:
     dependencies:
       file-icons:

@@ -1,6 +1,7 @@
 packages:
   - 'packages/*'
   - 'packages/desktop/src/githubDesktop/upstream/vendor/desktop-trampoline'
+  - 'packages/desktop/src/githubDesktop/upstream/vendor/windows-argv-parser'
   # muya v2 (TS) nests its dev surface and Playwright suite inside its own
   # package directory rather than as siblings under packages/, so list them
   # explicitly.
@@ -9,6 +10,7 @@ packages:
 
 allowBuilds:
   desktop-trampoline: true
+  windows-argv-parser: true
   '@parcel/watcher': true
   ced: true
   dugite: true
