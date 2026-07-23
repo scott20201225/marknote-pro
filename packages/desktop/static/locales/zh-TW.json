@@ -246,7 +246,8 @@
       "copyPath": "複製路徑",
       "showInFolder": "在資料夾中顯示"
     },
-    "copyAsExcel": "複製為 Excel"
+    "copyAsExcel": "複製為 Excel",
+    "tableBatchEdit": "批次編輯"
   },
   "search": {
     "searchPlaceholder": "搜尋",

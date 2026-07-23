@@ -6,6 +6,7 @@ import {
   getCopyAsRich,
   getCopyAsHtml,
   getCopyAsExcel,
+  getTableBatchEdit,
   getPasteAsPlainText,
   SEPARATOR,
   getInsertBefore,
@@ -133,6 +134,7 @@ const getContextItems = (
     (inOrderedList || inBulletList) &&
     (!hasSelectedText(selectionText) || !hasLineBreak(selectionText))
   const shouldShowCopyAsExcel = editorContextState?.hasTableSelection === true
+  const shouldShowTableBatchEdit = editorContextState?.hasTableSelection === true
 
   if (shouldShowLineHyperlinkAction) {
     items.push(getHyperlink())
@@ -163,6 +165,7 @@ const getContextItems = (
     getCOPY(),
     getPASTE(),
     SEPARATOR,
+    ...(shouldShowTableBatchEdit ? [getTableBatchEdit()] : []),
     getCopyAsRich(),
     getCopyAsHtml(),
     ...(shouldShowCopyAsExcel ? [getCopyAsExcel()] : []),

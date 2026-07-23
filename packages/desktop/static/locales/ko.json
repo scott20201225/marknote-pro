@@ -240,7 +240,8 @@
       "copyPath": "경로 복사",
       "showInFolder": "폴더에서 보기"
     },
-    "copyAsExcel": "Excel로 복사"
+    "copyAsExcel": "Excel로 복사",
+    "tableBatchEdit": "일괄 편집"
   },
   "search": {
     "searchPlaceholder": "검색",

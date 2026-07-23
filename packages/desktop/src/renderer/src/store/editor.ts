@@ -1800,6 +1800,9 @@ export const useEditorStore = defineStore('editor', {
       window.electron.ipcRenderer.on('mt::cm-copy-as-excel', () => {
         bus.emit('copyAsExcel', 'copyAsExcel')
       })
+      window.electron.ipcRenderer.on('mt::cm-table-batch-edit', () => {
+        bus.emit('tableBatchEdit')
+      })
       window.electron.ipcRenderer.on('mt::cm-paste-as-plain-text', () => {
         bus.emit('pasteAsPlainText', 'pasteAsPlainText')
       })

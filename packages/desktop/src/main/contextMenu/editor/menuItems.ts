@@ -56,6 +56,16 @@ export const getCopyAsExcel = (): MenuItemConstructorOptions => ({
   }
 })
 
+export const getTableBatchEdit = (): MenuItemConstructorOptions => ({
+  label: t('contextMenu.tableBatchEdit'),
+  id: 'tableBatchEditMenuItem',
+  click(_menuItem, targetWindow) {
+    if (targetWindow) {
+      ;(targetWindow as BrowserWindow).webContents.send('mt::cm-table-batch-edit')
+    }
+  }
+})
+
 export const getPasteAsPlainText = (): MenuItemConstructorOptions => ({
   label: t('contextMenu.pasteAsPlainText'),
   id: 'pasteAsPlainTextMenuItem',

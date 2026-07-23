@@ -240,7 +240,8 @@
       "copyPath": "Copy path",
       "showInFolder": "Show in folder"
     },
-    "copyAsExcel": "Copia come Excel"
+    "copyAsExcel": "Copia come Excel",
+    "tableBatchEdit": "Modifica in blocco"
   },
   "search": {
     "searchPlaceholder": "Search",

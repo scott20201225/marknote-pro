@@ -245,7 +245,8 @@
       "copyPath": "复制路径",
       "showInFolder": "在系统文件夹中显示"
     },
-    "copyAsExcel": "复制为 Excel"
+    "copyAsExcel": "复制为 Excel",
+    "tableBatchEdit": "批量编辑"
   },
   "search": {
     "searchPlaceholder": "搜索",
