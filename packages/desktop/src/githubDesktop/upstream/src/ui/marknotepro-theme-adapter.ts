@@ -39,6 +39,11 @@ const STYLE_ID = 'marknotepro-github-desktop-theme'
 const ACTIONS_ID = 'marknotepro-github-desktop-actions'
 const MENU_OBSERVER_ID = 'marknotepro-menu-observer-installed'
 const INTERNAL_I18N_OBSERVER_ID = 'marknotepro-internal-i18n-observer-installed'
+const DEFAULT_THEME_PAYLOAD: MarkNoteProThemePayload = {
+  theme: 'marknotepro-default',
+  isDark: false,
+  colors: {}
+}
 
 interface InternalTextNodeState {
   original: string
@@ -1231,6 +1236,11 @@ const applyMarkNoteProLocale = (payload: MarkNoteProLocalePayload): void => {
 }
 
 export const installMarkNoteProThemeAdapter = (): void => {
+  applyMarkNoteProTheme({
+    ...DEFAULT_THEME_PAYLOAD,
+    isDark: window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false
+  })
+
   ipcRenderer.on('marknotepro-theme-updated', (_event, payload: MarkNoteProThemePayload) => {
     applyMarkNoteProTheme(payload)
     window.setTimeout(() => applyMarkNoteProTheme(payload), 100)

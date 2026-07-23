@@ -599,8 +599,19 @@ const getWindowState = (win: BrowserWindow): string => {
 
 const getGuidPath = (): string => path.join(app.getPath('userData'), '.github-desktop-guid')
 
+const getPackagedEmbeddedGitDir = (): string | null => {
+  const gitDir = path.join(process.resourcesPath, 'embedded-git')
+  return fs.existsSync(gitDir) ? gitDir : null
+}
+
 const configureGitHubDesktopGitEnvironment = (): void => {
   if (process.env.MARKNOTEPRO_GITHUB_DESKTOP_GIT_DIR) return
+
+  const packagedGitDir = getPackagedEmbeddedGitDir()
+  if (packagedGitDir) {
+    process.env.MARKNOTEPRO_GITHUB_DESKTOP_GIT_DIR = packagedGitDir
+    return
+  }
 
   try {
     process.env.MARKNOTEPRO_GITHUB_DESKTOP_GIT_DIR = resolveEmbeddedGitDir()
