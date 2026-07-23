@@ -24,7 +24,7 @@
     "start": "cross-env PERF_TESTING=true electron-vite preview",
     "dev": "electron-vite dev",
     "build": "electron-vite build",
-    "build:github-desktop-trampoline": "pnpm --filter desktop-trampoline exec node-gyp rebuild && pnpm --filter desktop-trampoline exec tsc && node src/githubDesktop/script/prepare-trampoline.mjs",
+    "build:github-desktop-trampoline": "node src/githubDesktop/script/build-native-vendors.mjs",
     "build:github-desktop": "pnpm build:github-desktop-trampoline && cross-env NODE_ENV=production RELEASE_CHANNEL=production CIRCLE_SHA1=marknotepro node --import tsx ./node_modules/webpack-cli/bin/cli.js --config src/githubDesktop/upstream/webpack.renderer.production.ts",
     "build:unpack": "tsx ../../scripts/minify-locales.ts && electron-vite build",
     "build:win": "pnpm build:github-desktop && tsx ../../scripts/minify-locales.ts && electron-rebuild && electron-vite build && electron-builder --win --x64 --publish never",
