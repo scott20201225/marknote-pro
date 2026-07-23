@@ -69,43 +69,6 @@ electronLanguages: # Avoid packaging all chromium locales since our app has in-b
 asarUnpack:
   - resources/**
   - node_modules/dugite/git/**
-fileAssociations:
-  - ext: md
-    name: Markdown
-    description: Markdown document
-    mimeType: text/markdown
-    role: Editor
-    icon: icons/md.ico
-  - ext: markdown
-    name: Markdown
-    description: Markdown document
-    mimeType: text/markdown
-    role: Editor
-    icon: icons/md.ico
-  - ext: mmd
-    name: Markdown
-    description: Markdown document
-    mimeType: text/markdown
-    role: Editor
-    icon: icons/md.ico
-  - ext: mdown
-    name: Markdown
-    description: Markdown document
-    mimeType: text/markdown
-    role: Editor
-    icon: icons/md.ico
-  - ext: mdtxt
-    name: Markdown
-    description: Markdown document
-    mimeType: text/markdown
-    role: Editor
-    icon: icons/md.ico
-  - ext: mdtext
-    name: Markdown
-    description: Markdown document
-    mimeType: text/markdown
-    role: Editor
-    icon: icons/md.ico
 protocols:
   - name: GitHub Desktop
     schemes:
@@ -155,11 +118,9 @@ dmg:
 linux:
   artifactName: 'marknotepro-linux-${arch}-${version}.${ext}'
   executableName: 'marknotepro'
-  description: 'MarkNotePro is a fast, open-source Markdown editor focused on speed and usability.'
+  description: 'MarkNotePro is a local-first note app for organizing local notes.'
   maintainer: 'ScottCheng'
   category: 'Office;TextEditor;Utility'
-  mimeTypes:
-    - 'text/markdown'
   icon: 'static/icon.png'
   desktop:
     entry:
@@ -171,22 +132,3 @@ linux:
     - deb
     - rpm
     - tar.gz
-  fileAssociations:
-    - ext: 'md'
-      name: 'Markdown'
-      description: 'Markdown document'
-    - ext: 'markdown'
-      name: 'Markdown'
-      description: 'Markdown document'
-    - ext: 'mmd'
-      name: 'Markdown'
-      description: 'Markdown document'
-    - ext: 'mdown'
-      name: 'Markdown'
-      description: 'Markdown document'
-    - ext: 'mdtxt'
-      name: 'Markdown'
-      description: 'Markdown document'
-    - ext: 'mdtext'
-      name: 'Markdown'
-      description: 'Markdown document'
