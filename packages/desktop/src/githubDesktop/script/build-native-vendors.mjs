@@ -1,9 +1,11 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { spawnSync } from 'node:child_process'
+import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url))
+const require = createRequire(import.meta.url)
 const isWindows = process.platform === 'win32'
 
 function run(command, args) {
@@ -54,5 +56,20 @@ function prepareWindowsArgvParser() {
   console.log(`Prepared ${path.relative(parserDir, target)}`)
 }
 
+function prepareEmbeddedGit() {
+  const dugitePackagePath = require.resolve('dugite/package.json')
+  const source = path.join(path.dirname(dugitePackagePath), 'git')
+  const target = path.resolve(scriptDir, '../../../build/embedded-git')
+
+  if (!fs.existsSync(source)) {
+    throw new Error(`Missing dugite embedded Git directory: ${source}`)
+  }
+
+  fs.rmSync(target, { recursive: true, force: true })
+  fs.cpSync(source, target, { recursive: true })
+  console.log(`Prepared embedded Git at ${path.relative(process.cwd(), target)}`)
+}
+
 prepareTrampoline()
 prepareWindowsArgvParser()
+prepareEmbeddedGit()

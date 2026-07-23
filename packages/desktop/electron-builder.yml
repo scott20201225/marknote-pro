@@ -58,6 +58,10 @@ extraResources:
       - 'desktop-credential-helper-trampoline*'
       - 'git-credential-desktop*'
       - 'ssh-wrapper*'
+  - from: build/embedded-git
+    to: embedded-git
+    filter:
+      - '**/*'
 npmRebuild: false
 electronLanguages: # Avoid packaging all chromium locales since our app has in-built locales
   - en-US

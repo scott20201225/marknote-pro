@@ -4,7 +4,9 @@ dist
 out
 packages/*/out
 packages/*/dist
+packages/desktop/build/embedded-git
 packages/desktop/src/githubDesktop/upstream/vendor/desktop-trampoline/build/
+packages/desktop/src/githubDesktop/upstream/vendor/windows-argv-parser/build/
 .DS_Store
 .eslintcache
 *.log*
