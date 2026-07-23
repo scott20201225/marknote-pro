@@ -1018,5 +1018,47 @@
       "switchError": "Spellcheck switch error for {languageCode}, {error}",
       "title": "Spellcheck"
     }
+  },
+  "githubDesktop": {
+    "ui": {
+      "actions": {
+        "note": "Notes",
+        "setWorkspace": "Set current repository as notes workspace"
+      },
+      "internalText": {
+        "Last fetched": "Last fetched",
+        "menu or": "menu or",
+        "Select your editor in": "Select your editor in",
+        "Open the repository in your external editor": "Open the repository in your external editor",
+        "Always available in the toolbar for local repositories or": "Always available in the toolbar for local repositories or",
+        "Publish your repository to GitHub": "Publish your repository to GitHub",
+        "This repository is currently only available on your local machine. By publishing it on GitHub you can share it, and collaborate with others.": "This repository is currently only available on your local machine. By publishing it on GitHub you can share it, and collaborate with others.",
+        "Always available in the toolbar or": "Always available in the toolbar or",
+        "Always available in the toolbar when there are remote changes or": "Always available in the toolbar when there are remote changes or",
+        "Always available in the toolbar when there are local commits waiting to be pushed or": "Always available in the toolbar when there are local commits waiting to be pushed or"
+      }
+    },
+    "menu": {
+      "root": {
+        "GitHub Desktop": "GitHub Desktop",
+        "File": "File",
+        "Edit": "Edit",
+        "View": "View",
+        "Repository": "Repository",
+        "Branch": "Branch",
+        "Window": "Window",
+        "Help": "Help"
+      },
+      "dialogs": {
+        "selectRepositoryFirst": "Please select a Git repository first.",
+        "ok": "OK",
+        "setWorkspaceTitle": "Set notes workspace",
+        "setWorkspaceDetail": "This will switch the notes directory. By default it uses the current Git project root; you can also choose a subdirectory inside the project.",
+        "useRepositoryRoot": "Use project root",
+        "selectSubdirectory": "Choose subdirectory",
+        "cancel": "Cancel",
+        "selectRepositorySubdirectory": "Please choose a subdirectory inside the current Git project."
+      }
+    }
   }
 }

@@ -13,7 +13,6 @@ import { storeToRefs } from 'pinia'
 import { ElMessage } from 'element-plus'
 import { usePreferencesStore } from '@/store/preferences'
 import bus from '@/bus'
-import { getCurrentLanguage } from '@/i18n'
 import type { GitHubDesktopLocalePayload, GitHubDesktopThemePayload } from '@shared/types/ipc'
 
 const surfaceRef = ref<HTMLDivElement | null>(null)
@@ -97,11 +96,11 @@ const syncGitHubDesktopTheme = async(): Promise<void> => {
   })
 }
 
-const readGitHubDesktopLocalePayload = (locale = getCurrentLanguage() || language.value): GitHubDesktopLocalePayload => ({
+const readGitHubDesktopLocalePayload = (locale = language.value): GitHubDesktopLocalePayload => ({
   language: locale
 })
 
-const syncGitHubDesktopLocale = async(locale = getCurrentLanguage() || language.value): Promise<void> => {
+const syncGitHubDesktopLocale = async(locale = language.value): Promise<void> => {
   await nextTick()
   window.electron.ipcRenderer.send('mt::github-desktop::locale-update', readGitHubDesktopLocalePayload(locale))
 }
@@ -126,7 +125,7 @@ onMounted(() => {
   showGitHubDesktop()
     .then(async() => {
       await syncGitHubDesktopTheme()
-      await syncGitHubDesktopLocale()
+      await syncGitHubDesktopLocale(language.value)
     })
     .catch(() => {})
   window.electron.ipcRenderer.on('mt::github-desktop::switch-to-note', switchToNote)
@@ -139,8 +138,8 @@ watch(theme, () => {
   syncGitHubDesktopTheme()
 })
 
-watch(language, () => {
-  syncGitHubDesktopLocale()
+watch(language, (locale) => {
+  syncGitHubDesktopLocale(locale)
 })
 
 const handleLanguageChanged = (locale?: unknown): void => {

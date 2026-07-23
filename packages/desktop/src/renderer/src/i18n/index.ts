@@ -102,6 +102,11 @@ export const getCurrentLanguage = (): string => {
   return i18n.global.locale.value
 }
 
+const applyAndBroadcastLanguage = async(locale: string): Promise<void> => {
+  await setLanguage(locale)
+  bus.emit('language-changed', locale)
+}
+
 // Export the i18n instance (named and default export)
 export { i18n }
 export default i18n
@@ -109,14 +114,12 @@ export default i18n
 // Listen for language changes
 if (window.electron && window.electron.ipcRenderer) {
   window.electron.ipcRenderer.on('language-changed', (_event, newLocale) => {
-    setLanguage(newLocale)
-    bus.emit('language-changed', newLocale)
+    void applyAndBroadcastLanguage(newLocale)
   })
 
   // Request the current language setting at startup
   window.electron.ipcRenderer.send('mt::get-current-language')
   window.electron.ipcRenderer.on('mt::current-language', (_event, language) => {
-    setLanguage(language)
-    bus.emit('language-changed', language)
+    void applyAndBroadcastLanguage(language)
   })
 }
