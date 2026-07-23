@@ -277,6 +277,11 @@ body.marknotepro-theme-adapted #app-menu-bar .toolbar-button {
   min-height: 34px;
 }
 
+body.marknotepro-theme-adapted #app-menu-bar .toolbar-button {
+  position: relative;
+  z-index: calc(var(--foldout-z-index) + 1);
+}
+
 body.marknotepro-theme-adapted #app-menu-bar .toolbar-button > button {
   width: 34px;
   height: 34px;
@@ -330,7 +335,24 @@ body.marknotepro-theme-adapted .marknotepro-menu-button-icon svg {
 }
 
 body.marknotepro-theme-adapted #app-menu-bar #foldout-container .foldout {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  margin-left: 0 !important;
   pointer-events: none;
+}
+
+body.marknotepro-theme-adapted #app-menu-bar #foldout-container {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+}
+
+body.marknotepro-theme-adapted #app-menu-bar #foldout-container .overlay {
+  height: 100vh !important;
+  background: transparent !important;
 }
 
 body.marknotepro-theme-adapted #app-menu-bar #foldout-container .foldout .menu-pane {
@@ -342,9 +364,9 @@ body.marknotepro-theme-adapted #app-menu-bar #foldout-container .foldout .menu-p
 
 body.marknotepro-theme-adapted #app-menu-bar #app-menu-foldout {
   position: fixed;
-  left: calc(var(--marknotepro-github-action-rail-width) + 8px);
-  top: 72px;
-  max-height: calc(100vh - 92px);
+  left: var(--marknotepro-github-menu-foldout-left, calc(var(--marknotepro-github-action-rail-width) + 8px));
+  top: var(--marknotepro-github-menu-foldout-top, 72px);
+  max-height: var(--marknotepro-github-menu-foldout-max-height, calc(100vh - 92px));
 }
 
 body.marknotepro-theme-adapted #app-menu-bar .menu-pane {
@@ -433,22 +455,64 @@ const workspaceIcon = `
 </svg>
 `
 
-const menuButtonIcons = [
-  `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.75 20.25 7.5v9L12 21.25 3.75 16.5v-9z"/><path d="M12 12.25v9"/><path d="m3.95 7.75 8.05 4.5 8.05-4.5"/></svg>`,
-  `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 6.75A2.75 2.75 0 0 1 7.25 4h3l2 2h4.5a2.75 2.75 0 0 1 2.75 2.75v8A2.75 2.75 0 0 1 16.75 19H7.25a2.75 2.75 0 0 1-2.75-2.75z"/></svg>`,
-  `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 19 3.75-1 9.5-9.5a2.12 2.12 0 0 0-3-3L5.75 15z"/><path d="m14 6 4 4"/></svg>`,
-  `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.75 12s3.5-6 9.25-6 9.25 6 9.25 6-3.5 6-9.25 6-9.25-6-9.25-6z"/><circle cx="12" cy="12" r="2.5"/></svg>`,
-  `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 7.5A2.5 2.5 0 0 1 7 5h10a2.5 2.5 0 0 1 2.5 2.5v9A2.5 2.5 0 0 1 17 19H7a2.5 2.5 0 0 1-2.5-2.5z"/><path d="M8 9h8"/><path d="M8 13h5"/></svg>`,
-  `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="2.25"/><circle cx="18" cy="12" r="2.25"/><circle cx="6" cy="18" r="2.25"/><path d="M6 8.25v7.5"/><path d="M8.15 7 15.9 11"/></svg>`,
-  `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="2.5"/><path d="M4 9h16"/></svg>`,
-  `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.75 9.25a2.4 2.4 0 0 1 4.65.8c0 1.85-2.4 2.2-2.4 3.95"/><path d="M12 17.2h.01"/></svg>`
-]
+const menuButtonIcons: Record<string, string> = {
+  app: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.75 20.25 7.5v9L12 21.25 3.75 16.5v-9z"/><path d="M12 12.25v9"/><path d="m3.95 7.75 8.05 4.5 8.05-4.5"/></svg>`,
+  file: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 6.75A2.75 2.75 0 0 1 7.25 4h3l2 2h4.5a2.75 2.75 0 0 1 2.75 2.75v8A2.75 2.75 0 0 1 16.75 19H7.25a2.75 2.75 0 0 1-2.75-2.75z"/></svg>`,
+  edit: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 19 3.75-1 9.5-9.5a2.12 2.12 0 0 0-3-3L5.75 15z"/><path d="m14 6 4 4"/></svg>`,
+  view: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.75 12s3.5-6 9.25-6 9.25 6 9.25 6-3.5 6-9.25 6-9.25-6-9.25-6z"/><circle cx="12" cy="12" r="2.5"/></svg>`,
+  repository: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 7.5A2.5 2.5 0 0 1 7 5h10a2.5 2.5 0 0 1 2.5 2.5v9A2.5 2.5 0 0 1 17 19H7a2.5 2.5 0 0 1-2.5-2.5z"/><path d="M8 9h8"/><path d="M8 13h5"/></svg>`,
+  branch: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="2.25"/><circle cx="18" cy="12" r="2.25"/><circle cx="6" cy="18" r="2.25"/><path d="M6 8.25v7.5"/><path d="M8.15 7 15.9 11"/></svg>`,
+  window: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="2.5"/><path d="M4 9h16"/></svg>`,
+  help: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.75 9.25a2.4 2.4 0 0 1 4.65.8c0 1.85-2.4 2.2-2.4 3.95"/><path d="M12 17.2h.01"/></svg>`
+}
+
+const getMenuButtonKey = (button: HTMLButtonElement): string => {
+  const className =
+    button.closest<HTMLElement>('.app-menu-root-item')?.className ?? ''
+  const normalizedClassName = String(className).toLocaleLowerCase()
+
+  if (normalizedClassName.includes('github-desktop')) return 'app'
+
+  for (const key of ['file', 'edit', 'view', 'repository', 'branch', 'window', 'help']) {
+    if (normalizedClassName.includes(key)) {
+      return key
+    }
+  }
+
+  return 'app'
+}
+
+const updateAppMenuFoldoutPosition = (menuBar: HTMLElement): void => {
+  const openButton = menuBar.querySelector<HTMLButtonElement>(
+    '.toolbar-dropdown.open > .toolbar-button > button'
+  )
+  if (!openButton) return
+
+  const rect = openButton.getBoundingClientRect()
+  const left = Math.round(rect.right + 8)
+  const top = Math.max(8, Math.round(rect.top - 2))
+  const maxHeight = Math.max(120, Math.round(window.innerHeight - top - 12))
+  const style = document.documentElement.style
+  const values: Record<string, string> = {
+    '--marknotepro-github-menu-foldout-left': `${left}px`,
+    '--marknotepro-github-menu-foldout-top': `${top}px`,
+    '--marknotepro-github-menu-foldout-max-height': `${maxHeight}px`
+  }
+
+  for (const [property, value] of Object.entries(values)) {
+    if (style.getPropertyValue(property) !== value) {
+      style.setProperty(property, value)
+    }
+  }
+}
 
 const syncAppMenuButtons = (): void => {
   const menuBar = document.getElementById('app-menu-bar')
   if (!menuBar) return
 
-  menuBar.querySelectorAll<HTMLButtonElement>('.toolbar-button > button').forEach((button, index) => {
+  updateAppMenuFoldoutPosition(menuBar)
+
+  menuBar.querySelectorAll<HTMLButtonElement>('.toolbar-button > button').forEach(button => {
     const label =
       button.querySelector<HTMLElement>('.label')?.innerText?.trim() ||
       button.getAttribute('aria-label') ||
@@ -464,10 +528,10 @@ const syncAppMenuButtons = (): void => {
       icon.className = 'marknotepro-menu-button-icon'
       button.appendChild(icon)
     }
-    const iconIndex = String(index)
-    if (icon.dataset.iconIndex !== iconIndex) {
-      icon.dataset.iconIndex = iconIndex
-      icon.innerHTML = menuButtonIcons[index] ?? menuButtonIcons[menuButtonIcons.length - 1]
+    const iconKey = getMenuButtonKey(button)
+    if (icon.dataset.iconKey !== iconKey) {
+      icon.dataset.iconKey = iconKey
+      icon.innerHTML = menuButtonIcons[iconKey] ?? menuButtonIcons.app
     }
   })
 }
@@ -480,7 +544,14 @@ const ensureAppMenuButtonObserver = (): void => {
 
   document.documentElement.setAttribute(MENU_OBSERVER_ID, 'true')
   const observer = new MutationObserver(() => syncAppMenuButtons())
-  observer.observe(document.body, { childList: true, subtree: true })
+  observer.observe(document.body, {
+    attributes: true,
+    attributeFilter: ['class', 'aria-expanded'],
+    childList: true,
+    subtree: true
+  })
+  window.addEventListener('resize', syncAppMenuButtons)
+  window.addEventListener('scroll', syncAppMenuButtons, true)
   syncAppMenuButtons()
 }
 

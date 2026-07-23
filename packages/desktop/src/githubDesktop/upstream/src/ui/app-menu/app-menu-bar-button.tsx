@@ -176,11 +176,14 @@ export class AppMenuBarButton extends React.Component<
   public render() {
     const item = this.props.menuItem
     const dropDownState = this.isMenuOpen ? 'open' : 'closed'
+    const menuIdClass = item.id.replace(/[^a-z0-9_-]/gi, '-').toLowerCase()
 
     return (
       <ToolbarDropdown
         ref={this.onDropDownRef}
         key={item.id}
+        className={`app-menu-root-item app-menu-root-item-${menuIdClass}`}
+        buttonClassName={`app-menu-root-button app-menu-root-button-${menuIdClass}`}
         dropdownState={dropDownState}
         onDropdownStateChanged={this.onDropdownStateChanged}
         dropdownContentRenderer={this.dropDownContentRenderer}
