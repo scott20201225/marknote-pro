@@ -245,7 +245,8 @@
       "copyPath": "Copy path",
       "showInFolder": "Show in System Folder"
     },
-    "copyAsExcel": "Copy As Excel"
+    "copyAsExcel": "Copy As Excel",
+    "tableBatchEdit": "Batch Edit"
   },
   "search": {
     "searchPlaceholder": "Search",

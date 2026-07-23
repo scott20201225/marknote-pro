@@ -240,7 +240,8 @@
       "copyPath": "パスをコピー",
       "showInFolder": "フォルダで表示"
     },
-    "copyAsExcel": "Excelとしてコピー"
+    "copyAsExcel": "Excelとしてコピー",
+    "tableBatchEdit": "一括編集"
   },
   "search": {
     "searchPlaceholder": "検索",

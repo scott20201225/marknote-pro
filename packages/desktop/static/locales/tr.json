@@ -240,7 +240,8 @@
       "copyPath": "Yolu kopyala",
       "showInFolder": "Klasörde göster"
     },
-    "copyAsExcel": "Excel olarak kopyala"
+    "copyAsExcel": "Excel olarak kopyala",
+    "tableBatchEdit": "Toplu düzenle"
   },
   "search": {
     "searchPlaceholder": "Ara",

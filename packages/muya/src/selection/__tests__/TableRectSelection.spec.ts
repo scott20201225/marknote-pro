@@ -168,6 +168,24 @@ describe('cross-cell table selection — highlight', () => {
         expect(selectedCount(table)).toBe(0);
     });
 
+    it('replaces every selected cell from the batch edit command', async () => {
+        const muya = bootMuya(TABLE_MD);
+        const table = firstTable(muya);
+        dragSelect(table, 0, 0, 1, 1);
+
+        expect(muya.editor.selection.table.getBatchEditText()).toBe('a1');
+        expect(muya.editor.selection.table.replaceSelectedCellsText('同值')).toBe(true);
+
+        await vi.waitFor(() => {
+            const md = muya.getMarkdown();
+            expect(md).toMatch(/\|\s*同值\s*\|\s*同值\s*\|\s*c1\s*\|/);
+            expect(md).toMatch(/\|\s*同值\s*\|\s*同值\s*\|\s*c2\s*\|/);
+            expect(md).not.toMatch(/\ba1\b/);
+            expect(md).not.toMatch(/\bb2\b/);
+        });
+        expect(muya.editor.selection.table.hasSelection).toBe(true);
+    });
+
     it('cancels the selection when the pointer is released outside the table', () => {
         const muya = bootMuya(TABLE_MD);
         const table = firstTable(muya);

@@ -1,5 +1,6 @@
 import type Table from '../block/gfm/table';
 import type TableBodyCell from '../block/gfm/table/cell';
+import type TableCellContent from '../block/content/tableCell';
 import type { Muya } from '../muya';
 import type { ITableState } from '../state/types';
 import type { Nullable } from '../types';
@@ -18,6 +19,13 @@ interface ICellPosition {
     cell: TableBodyCell;
     row: number;
     column: number;
+}
+
+interface ICellRange {
+    minRow: number;
+    maxRow: number;
+    minColumn: number;
+    maxColumn: number;
 }
 
 class TableRectSelection {
@@ -254,6 +262,26 @@ class TableRectSelection {
         this._dragEventIds = [];
     }
 
+    private _getSelectedRange(): Nullable<ICellRange> {
+        if (!this.hasSelection)
+            return null;
+
+        return {
+            minRow: Math.min(this._anchor!.row, this._focus!.row),
+            maxRow: Math.max(this._anchor!.row, this._focus!.row),
+            minColumn: Math.min(this._anchor!.column, this._focus!.column),
+            maxColumn: Math.max(this._anchor!.column, this._focus!.column),
+        };
+    }
+
+    private _contentAt(table: Table, row: number, column: number): Nullable<TableCellContent> {
+        const content = table.cellAt(row, column)?.firstChild;
+        if (!content || !content.isContent())
+            return null;
+
+        return content as TableCellContent;
+    }
+
     private _cellPositionFromEvent(event: MouseEvent): Nullable<ICellPosition> {
         const { target } = event;
         if (!(target instanceof Element))
@@ -350,14 +378,13 @@ class TableRectSelection {
         if (!this.hasSelection)
             return false;
 
-        const minRow = Math.min(this._anchor!.row, this._focus!.row);
-        const maxRow = Math.max(this._anchor!.row, this._focus!.row);
-        const minColumn = Math.min(this._anchor!.column, this._focus!.column);
-        const maxColumn = Math.max(this._anchor!.column, this._focus!.column);
+        const range = this._getSelectedRange();
+        if (range == null)
+            return false;
 
         let hadContent = false;
-        for (let r = minRow; r <= maxRow; r++) {
-            for (let c = minColumn; c <= maxColumn; c++) {
+        for (let r = range.minRow; r <= range.maxRow; r++) {
+            for (let c = range.minColumn; c <= range.maxColumn; c++) {
                 const content = this._table!.cellAt(r, c)?.firstChild;
                 if (content && content.isContent() && content.text !== '') {
                     hadContent = true;
@@ -368,6 +395,41 @@ class TableRectSelection {
         }
 
         return hadContent;
+    }
+
+    getBatchEditText(): string {
+        const table = this._table;
+        const range = this._getSelectedRange();
+        if (table == null || range == null)
+            return '';
+
+        const source = this._contentAt(table, range.minRow, range.minColumn);
+        return source?.text ?? '';
+    }
+
+    replaceSelectedCellsText(text: string): boolean {
+        const table = this._table;
+        const range = this._getSelectedRange();
+        if (table == null || range == null)
+            return false;
+
+        let changed = false;
+        for (let r = range.minRow; r <= range.maxRow; r++) {
+            for (let c = range.minColumn; c <= range.maxColumn; c++) {
+                const content = this._contentAt(table, r, c);
+                if (!content || content.text === text)
+                    continue;
+
+                content.text = text;
+                content.update();
+                changed = true;
+            }
+        }
+
+        if (changed)
+            this._muya.editor.history.markInputBoundary('insertText', text);
+
+        return changed;
     }
 
     clearSelectedCells(): void {
@@ -385,6 +447,7 @@ class TableRectSelection {
     clear(): void {
         this._clearHighlight();
         this._restoreNativeTextSelection();
+        this._detachDragEvents();
         this._table = null;
         this._anchor = null;
         this._focus = null;

@@ -681,6 +681,17 @@ export class Muya {
         this.editor.clipboard.copyAsExcel();
     }
 
+    getTableBatchEditText() {
+        return this.editor.selection.table.getBatchEditText();
+    }
+
+    /**
+     * Replace every cell in the current frozen table rectangle with `text`.
+     */
+    replaceTableSelectionText(text: string) {
+        return this.editor.selection.table.replaceSelectedCellsText(text);
+    }
+
     /**
      * Paste the clipboard content as plain text at the current cursor.
      */
