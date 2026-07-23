@@ -363,8 +363,7 @@ body.marknotepro-theme-adapted #app-menu-bar .menu-pane .menu-item .label {
   margin-right: 14px;
 }
 
-body.marknotepro-theme-adapted #app-menu-bar .menu-pane .menu-item .accelerator,
-body.marknotepro-theme-adapted #app-menu-bar .menu-pane .menu-item .access-key {
+body.marknotepro-theme-adapted #app-menu-bar .menu-pane .menu-item .accelerator {
   display: none !important;
 }
 
