@@ -44,9 +44,15 @@ const isHiddenNoteFolder = (node: NoteNodeLike | null | undefined): boolean => {
   return !!node?.isDirectory && node.name === NOTE_ATTACHMENTS_DIRECTORY
 }
 
+const isNoteGroupName = (name: string): boolean => name.startsWith(NOTE_GROUP_PREFIX)
+
+const isNoteAreaName = (name: string): boolean => name.startsWith(NOTE_AREA_PREFIX)
+
+const isMarkdownFileName = (name: string): boolean => /\.md$/i.test(name)
+
 const stripNotePrefix = (name: string): string => {
-  if (name.startsWith(NOTE_GROUP_PREFIX)) return name.slice(NOTE_GROUP_PREFIX.length)
-  if (name.startsWith(NOTE_AREA_PREFIX)) return name.slice(NOTE_AREA_PREFIX.length)
+  if (isNoteGroupName(name)) return name.slice(NOTE_GROUP_PREFIX.length)
+  if (isNoteAreaName(name)) return name.slice(NOTE_AREA_PREFIX.length)
   return name
 }
 
@@ -65,6 +71,53 @@ const getRelativeParts = (rootPath: string, pathname: string): string[] => {
   return relativePath.split(window.path.sep).filter(Boolean)
 }
 
+export const isValidNoteDirectoryPath = (
+  pathname: string | null | undefined,
+  rootPath: string | null | undefined
+): boolean => {
+  if (!pathname || !rootPath) return false
+
+  const normalizedRoot = window.path.normalize(rootPath)
+  const normalizedPath = window.path.normalize(pathname)
+
+  if (normalizedPath === normalizedRoot) return true
+  if (!window.fileUtils.isChildOfDirectory(normalizedRoot, normalizedPath)) return false
+
+  const parts = getRelativeParts(normalizedRoot, normalizedPath)
+  let hasArea = false
+
+  for (const part of parts) {
+    if (part === NOTE_ATTACHMENTS_DIRECTORY) return false
+
+    if (isNoteAreaName(part)) {
+      if (hasArea) return false
+      hasArea = true
+      continue
+    }
+
+    if (isNoteGroupName(part) && !hasArea) {
+      continue
+    }
+
+    return false
+  }
+
+  return parts.length > 0
+}
+
+export const isValidNoteFilePath = (
+  pathname: string | null | undefined,
+  rootPath: string | null | undefined
+): boolean => {
+  if (!pathname || !rootPath) return false
+  const name = window.path.basename(pathname)
+  if (!isMarkdownFileName(name)) return false
+
+  const parentPath = window.path.dirname(pathname)
+  const parentName = window.path.basename(parentPath)
+  return isNoteAreaName(parentName) && isValidNoteDirectoryPath(parentPath, rootPath)
+}
+
 export const getNoteNodeKind = (
   node: NoteNodeLike | null | undefined,
   rootPath: string | null | undefined
@@ -79,19 +132,18 @@ export const getNoteNodeKind = (
   }
 
   if (node.isFile) {
-    return node.isMarkdown ? 'document' : 'otherFile'
+    return isValidNoteFilePath(node.pathname, rootPath) ? 'document' : 'otherFile'
   }
 
   if (!node.isDirectory) {
     return 'otherFile'
   }
 
-  if (node.name.startsWith(NOTE_GROUP_PREFIX)) return 'group'
-  if (node.name.startsWith(NOTE_AREA_PREFIX)) return 'area'
+  if (!isValidNoteDirectoryPath(normalizedPath, normalizedRoot)) return 'otherFolder'
 
-  const relativeParts = getRelativeParts(normalizedRoot, normalizedPath)
-  if (relativeParts.length <= 1) return 'group'
-  return 'area'
+  if (isNoteGroupName(node.name)) return 'group'
+  if (isNoteAreaName(node.name)) return 'area'
+  return 'otherFolder'
 }
 
 export const getNoteDisplayName = (
@@ -155,7 +207,14 @@ export const getVisibleNoteFolders = (
   const kind = getNoteNodeKind(node, rootPath)
   if (kind === 'area') return []
 
-  return node.folders.filter((child) => child.isDirectory && !isHiddenNoteFolder(child))
+  return node.folders.filter((child) => {
+    const childKind = getNoteNodeKind(child, rootPath)
+    return (
+      child.isDirectory &&
+      !isHiddenNoteFolder(child) &&
+      (childKind === 'group' || childKind === 'area')
+    )
+  })
 }
 
 export const getVisibleNoteFiles = (
@@ -167,5 +226,5 @@ export const getVisibleNoteFiles = (
   const kind = getNoteNodeKind(node, rootPath)
   if (kind === 'root' || kind === 'group') return []
 
-  return node.files.filter((child) => child.isMarkdown)
+  return node.files.filter((child) => getNoteNodeKind(child, rootPath) === 'document')
 }

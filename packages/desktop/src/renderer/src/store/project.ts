@@ -21,6 +21,8 @@ import {
   NOTE_ATTACHMENTS_DIRECTORY,
   getNoteDisplayName,
   getNoteNodeKind,
+  isValidNoteDirectoryPath,
+  isValidNoteFilePath,
   toStoredNoteName,
   type NoteNodeKind
 } from '../util/noteWorkspace'
@@ -711,9 +713,11 @@ export const useProjectStore = defineStore('project', () => {
   function _processTreeEvent(type: string, change: TreeChange): void {
     const editorStore = useEditorStore()
     const fallbackSelectedNotePath = projectTree.value?.pathname ?? null
+    const rootPath = projectTree.value?.pathname ?? null
     switch (type) {
       case 'add': {
         const { pathname, data, isMarkdown } = change
+        if (!isValidNoteFilePath(pathname, rootPath)) return
         addFile(
           projectTree.value!,
           change as Parameters<typeof addFile>[1],
@@ -728,6 +732,7 @@ export const useProjectStore = defineStore('project', () => {
         break
       }
       case 'unlink':
+        if (!isValidNoteFilePath(change.pathname, rootPath)) return
         unlinkFile(projectTree.value!, change)
         editorStore.SET_SAVE_STATUS_WHEN_REMOVE(change)
         if (
@@ -739,9 +744,11 @@ export const useProjectStore = defineStore('project', () => {
         }
         break
       case 'addDir':
+        if (!isValidNoteDirectoryPath(change.pathname, rootPath)) return
         addDirectory(projectTree.value!, change)
         break
       case 'unlinkDir':
+        if (!isValidNoteDirectoryPath(change.pathname, rootPath)) return
         unlinkDirectory(projectTree.value!, change)
         if (
           selectedNotePath.value &&
@@ -752,6 +759,7 @@ export const useProjectStore = defineStore('project', () => {
         }
         break
       case 'change':
+        if (!isValidNoteFilePath(change.pathname, rootPath)) return
         if (change?.mtimeMs !== undefined) {
           updateFileMtime(
             projectTree.value!,
