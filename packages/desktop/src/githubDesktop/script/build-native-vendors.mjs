@@ -58,11 +58,31 @@ function prepareWindowsArgvParser() {
 
 function prepareEmbeddedGit() {
   const dugitePackagePath = require.resolve('dugite/package.json')
-  const source = path.join(path.dirname(dugitePackagePath), 'git')
+  const dugiteDir = path.dirname(dugitePackagePath)
+  const source = path.join(dugiteDir, 'git')
   const target = path.resolve(scriptDir, '../../../build/embedded-git')
 
   if (!fs.existsSync(source)) {
-    throw new Error(`Missing dugite embedded Git directory: ${source}`)
+    const downloadScript = path.join(dugiteDir, 'script', 'download-git.js')
+
+    if (!fs.existsSync(downloadScript)) {
+      throw new Error(`Missing dugite embedded Git download script: ${downloadScript}`)
+    }
+
+    console.log(`Downloading dugite embedded Git into ${source}`)
+    const result = spawnSync(process.execPath, [downloadScript], {
+      cwd: dugiteDir,
+      stdio: 'inherit',
+      env: process.env,
+    })
+
+    if (result.status !== 0) {
+      throw new Error(`Failed to download dugite embedded Git: ${downloadScript}`)
+    }
+
+    if (!fs.existsSync(source)) {
+      throw new Error(`Missing dugite embedded Git directory after download: ${source}`)
+    }
   }
 
   fs.rmSync(target, { recursive: true, force: true })
