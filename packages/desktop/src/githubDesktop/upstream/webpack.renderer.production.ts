@@ -55,7 +55,7 @@ const rendererConfig: webpack.Configuration = {
         test: /\.node$/,
         loader: 'awesome-node-loader',
         options: {
-          name: '[name].[ext]',
+          name: '[name].[hash].[ext]',
         },
       },
       {
