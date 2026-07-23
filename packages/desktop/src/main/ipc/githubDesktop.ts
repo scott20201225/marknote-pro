@@ -116,6 +116,9 @@ const allGitHubDesktopMenuTranslations = SUPPORTED_LANGUAGES.map(language =>
 
 const getDialogText = getGitHubDesktopDialogText
 
+const normalizeMenuLabelKey = (label: string | null | undefined): string =>
+  normalizeMenuLabel(label).toLocaleLowerCase()
+
 const translateMenuLabel = (
   label: string | null | undefined,
   translations: Record<string, string>,
@@ -124,10 +127,19 @@ const translateMenuLabel = (
   if (!label) return label ?? undefined
 
   const normalized = normalizeMenuLabel(label)
+  const normalizedLower = normalized.toLocaleLowerCase()
   const exact = findMenuTranslation(normalized, translations)
   if (exact) return exact
 
-  if (normalized.toLocaleLowerCase().startsWith('delete tag ')) {
+  if (normalizedLower === 'show toggle changes filter') {
+    return findMenuTranslation('Show Changes Filter', translations) ?? label
+  }
+
+  if (normalizedLower === 'hide toggle changes filter') {
+    return findMenuTranslation('Hide Changes Filter', translations) ?? label
+  }
+
+  if (normalizedLower.startsWith('delete tag ')) {
     const tagName = normalized.slice('Delete tag '.length)
     const prefix = findMenuTranslation('Delete tag', translations)
     if (prefix) {
@@ -177,7 +189,7 @@ const localizeElectronMenuItems = (
 const serializedMacOSServicesLabels = new Set([
   'Services',
   ...allGitHubDesktopMenuTranslations.map(translations => translations.Services)
-].map(normalizeMenuLabel))
+].map(normalizeMenuLabelKey))
 
 const permanentlyHiddenMenuItemIds = new Set([
   'about'
@@ -217,28 +229,27 @@ const permanentlyHiddenMenuLabels = new Set([
   'Contact GitHub Support',
   'Show User Guides',
   'Show Keyboard Shortcuts'
-].concat(localizedHiddenMenuLabels).map(normalizeMenuLabel))
+].concat(localizedHiddenMenuLabels).map(normalizeMenuLabelKey))
 
 const permanentlyHiddenTopLevelMenuLabels = new Set([
-  'Window',
-  'Help'
-].map(normalizeMenuLabel))
+  'Window'
+].map(normalizeMenuLabelKey))
 
 const showLogsMenuLabels = new Set([
   'Show Logs in Finder',
   'Show logs in Explorer',
   'Show logs in your File Manager'
-].map(normalizeMenuLabel))
+].map(normalizeMenuLabelKey))
 
 const isShowLogsMenuItem = (item: MenuItem): boolean => {
   if (item.type === 'separator') return false
-  return showLogsMenuLabels.has(normalizeMenuLabel(item.label))
+  return showLogsMenuLabels.has(normalizeMenuLabelKey(item.label))
 }
 
 const shouldHideSerializedMenuItem = (item: MenuItem, parentMenuId?: string): boolean => {
   if (item.type !== 'submenuItem') return false
 
-  const isMacOSServicesMenu = serializedMacOSServicesLabels.has(normalizeMenuLabel(item.label))
+  const isMacOSServicesMenu = serializedMacOSServicesLabels.has(normalizeMenuLabelKey(item.label))
   const hasVisibleAction = item.menu.items.some(menuItem =>
     menuItem.visible && menuItem.type !== 'separator'
   )
@@ -246,7 +257,7 @@ const shouldHideSerializedMenuItem = (item: MenuItem, parentMenuId?: string): bo
   if (isMacOSServicesMenu && !hasVisibleAction) return true
 
   if (parentMenuId === undefined) {
-    return permanentlyHiddenTopLevelMenuLabels.has(normalizeMenuLabel(item.label))
+    return permanentlyHiddenTopLevelMenuLabels.has(normalizeMenuLabelKey(item.label))
   }
 
   return false
@@ -257,7 +268,7 @@ const shouldPermanentlyHideMenuItem = (item: MenuItem, parentMenuId?: string): b
   if (permanentlyHiddenMenuItemIds.has(item.id)) return true
   if (item.type === 'separator') return false
 
-  return permanentlyHiddenMenuLabels.has(normalizeMenuLabel(item.label))
+  return permanentlyHiddenMenuLabels.has(normalizeMenuLabelKey(item.label))
 }
 
 const collapseMenuSeparators = (items: ReadonlyArray<MenuItem>): ReadonlyArray<MenuItem> => {
@@ -294,11 +305,12 @@ const collapseMenuSeparators = (items: ReadonlyArray<MenuItem>): ReadonlyArray<M
 const cloneMenuItemWithLocale = (
   item: MenuItem,
   translations: Record<string, string>,
+  language: string | null | undefined,
   parentMenuId?: string
 ): MenuItem => {
   if (item.type === 'separator') return item
 
-  const label = translations[normalizeMenuLabel(item.label)] ?? item.label
+  const label = translateMenuLabel(item.label, translations, language) ?? item.label
   const visible = item.visible && !shouldPermanentlyHideMenuItem(item, parentMenuId)
 
   if (item.type === 'submenuItem') {
@@ -307,7 +319,7 @@ const cloneMenuItemWithLocale = (
       label,
       visible,
       accessKey: null,
-      menu: localizeAppMenu(item.menu, translations)
+      menu: localizeAppMenu(item.menu, translations, language)
     }
   }
 
@@ -336,7 +348,7 @@ const withShowLogsInViewMenu = (menu: IMenu): IMenu => {
   if (!showLogsItem) return menu
 
   const items = menu.items.map(item => {
-    if (item.type !== 'submenuItem' || normalizeMenuLabel(item.label) !== 'View') {
+    if (item.type !== 'submenuItem' || normalizeMenuLabelKey(item.label) !== 'view') {
       return item
     }
 
@@ -366,12 +378,16 @@ const withShowLogsInViewMenu = (menu: IMenu): IMenu => {
   }
 }
 
-const localizeAppMenu = (menu: IMenu, translations: Record<string, string>): IMenu => {
+const localizeAppMenu = (
+  menu: IMenu,
+  translations: Record<string, string>,
+  language: string | null | undefined
+): IMenu => {
   const selectedItem = menu.selectedItem
-    ? cloneMenuItemWithLocale(menu.selectedItem, translations, menu.id)
+    ? cloneMenuItemWithLocale(menu.selectedItem, translations, language, menu.id)
     : undefined
   const items = collapseMenuSeparators(
-    menu.items.map(item => cloneMenuItemWithLocale(item, translations, menu.id))
+    menu.items.map(item => cloneMenuItemWithLocale(item, translations, language, menu.id))
   )
 
   return {
@@ -384,7 +400,7 @@ const localizeAppMenu = (menu: IMenu, translations: Record<string, string>): IMe
 const getLocalizedAppMenu = (language: string | null | undefined): IMenu => {
   const menu = withShowLogsInViewMenu(menuFromElectronMenu(githubDesktopMenu))
   const translations = getGitHubDesktopMenuTranslations(language)
-  return localizeAppMenu(menu, translations)
+  return localizeAppMenu(menu, translations, language)
 }
 
 const sendAppMenu = (event: IpcMainEvent | IpcMainInvokeEvent): void => {
@@ -415,7 +431,7 @@ const shouldBlockHiddenMenuExecution = (id: string): boolean => {
   const menuItem = githubDesktopMenu.getMenuItemById(id)
   if (!menuItem) return permanentlyHiddenMenuItemIds.has(id)
 
-  const label = normalizeMenuLabel(menuItem.label)
+  const label = normalizeMenuLabelKey(menuItem.label)
   const role = (menuItem as unknown as { role?: string }).role
 
   return permanentlyHiddenMenuItemIds.has(id) ||
