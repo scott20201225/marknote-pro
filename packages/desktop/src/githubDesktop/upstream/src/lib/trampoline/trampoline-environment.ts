@@ -1,6 +1,7 @@
 import { trampolineServer } from './trampoline-server'
 import { withTrampolineToken } from './trampoline-tokens'
 import * as Path from 'path'
+import * as Fs from 'fs'
 import { getSSHEnvironment } from '../ssh/ssh'
 import {
   deleteMostRecentSSHCredential,
@@ -214,7 +215,42 @@ export function getDesktopAskpassTrampolinePath(): string {
 
 /** Returns the directory containing Desktop's git credential helper binaries. */
 function getDesktopTrampolineDirectory(): string {
-  return Path.resolve(__dirname, 'desktop-trampoline')
+  const candidates = [
+    process.resourcesPath
+      ? Path.resolve(
+          process.resourcesPath,
+          'githubDesktop',
+          'out',
+          'desktop-trampoline'
+        )
+      : null,
+    Path.resolve(__dirname, 'desktop-trampoline'),
+    Path.resolve(
+      __dirname,
+      '..',
+      'upstream',
+      'vendor',
+      'desktop-trampoline',
+      'build',
+      'Release'
+    ),
+    Path.resolve(
+      process.cwd(),
+      'src',
+      'githubDesktop',
+      'upstream',
+      'vendor',
+      'desktop-trampoline',
+      'build',
+      'Release'
+    ),
+  ].filter((candidate): candidate is string => Boolean(candidate))
+
+  return (
+    candidates.find(candidate =>
+      Fs.existsSync(Path.join(candidate, getDesktopAskpassTrampolineFilename()))
+    ) ?? candidates[1]
+  )
 }
 
 function getTrampolinePathEnvironment(
@@ -235,5 +271,5 @@ function getTrampolinePathEnvironment(
 
 /** Returns the path of the ssh-wrapper binary. */
 export function getSSHWrapperPath(): string {
-  return Path.resolve(__dirname, 'desktop-trampoline', 'ssh-wrapper')
+  return Path.resolve(getDesktopTrampolineDirectory(), 'ssh-wrapper')
 }
