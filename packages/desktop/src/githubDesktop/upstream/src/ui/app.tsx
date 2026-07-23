@@ -1439,6 +1439,10 @@ export class App extends React.Component<IAppProps, IAppState> {
   }
 
   private renderTitlebar() {
+    if (window.__MARKNOTEPRO_EMBEDDED__) {
+      return this.renderAppMenuBar()
+    }
+
     const inFullScreen = this.state.windowState === 'full-screen'
 
     const menuBarActive =
