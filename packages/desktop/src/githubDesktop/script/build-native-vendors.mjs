@@ -56,6 +56,55 @@ function prepareWindowsArgvParser() {
   console.log(`Prepared ${path.relative(parserDir, target)}`)
 }
 
+function normalizeSymlinks(root, sourceRoot) {
+  for (const entry of fs.readdirSync(root)) {
+    const entryPath = path.join(root, entry)
+    const stat = fs.lstatSync(entryPath)
+
+    if (stat.isSymbolicLink()) {
+      const linkTarget = fs.readlinkSync(entryPath)
+
+      if (path.isAbsolute(linkTarget)) {
+        const sourceRelativeTarget = path.relative(sourceRoot, linkTarget)
+        const pointsInsideSource =
+          sourceRelativeTarget !== '' &&
+          !sourceRelativeTarget.startsWith('..') &&
+          !path.isAbsolute(sourceRelativeTarget)
+
+        if (pointsInsideSource) {
+          const packagedTarget = path.join(root, sourceRelativeTarget)
+          const relativeTarget =
+            path.relative(path.dirname(entryPath), packagedTarget) || '.'
+
+          fs.unlinkSync(entryPath)
+          fs.symlinkSync(relativeTarget, entryPath)
+        } else {
+          const realPath = fs.realpathSync(entryPath)
+          const realStat = fs.statSync(realPath)
+
+          fs.rmSync(entryPath, { recursive: true, force: true })
+
+          if (realStat.isDirectory()) {
+            fs.cpSync(realPath, entryPath, {
+              recursive: true,
+              verbatimSymlinks: true,
+            })
+            normalizeSymlinks(entryPath, sourceRoot)
+          } else {
+            fs.copyFileSync(realPath, entryPath)
+            fs.chmodSync(entryPath, realStat.mode)
+          }
+        }
+      }
+      continue
+    }
+
+    if (stat.isDirectory()) {
+      normalizeSymlinks(entryPath, sourceRoot)
+    }
+  }
+}
+
 function prepareEmbeddedGit() {
   const dugitePackagePath = require.resolve('dugite/package.json')
   const dugiteDir = path.dirname(dugitePackagePath)
@@ -86,7 +135,8 @@ function prepareEmbeddedGit() {
   }
 
   fs.rmSync(target, { recursive: true, force: true })
-  fs.cpSync(source, target, { recursive: true })
+  fs.cpSync(source, target, { recursive: true, verbatimSymlinks: true })
+  normalizeSymlinks(target, source)
   console.log(`Prepared embedded Git at ${path.relative(process.cwd(), target)}`)
 }
 
