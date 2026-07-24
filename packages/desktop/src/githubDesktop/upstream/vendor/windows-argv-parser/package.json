@@ -12,7 +12,7 @@
     "node-addon-api": "^7.0.0"
   },
   "devDependencies": {
-    "node-gyp": "^12.1.0",
+    "node-gyp": "^10.1.0",
     "typescript": "^5.4.5"
   }
 }
