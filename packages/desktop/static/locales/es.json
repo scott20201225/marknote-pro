@@ -1464,7 +1464,13 @@
         "This repository is currently only available on your local machine. By publishing it on GitHub you can share it, and collaborate with others.": "Este repositorio actualmente solo está disponible en tu equipo local. Al publicarlo en GitHub puedes compartirlo y colaborar con otras personas.",
         "Always available in the toolbar or": "Siempre disponible en la barra de herramientas o",
         "Always available in the toolbar when there are remote changes or": "Siempre disponible en la barra de herramientas cuando hay cambios remotos o",
-        "Always available in the toolbar when there are local commits waiting to be pushed or": "Siempre disponible en la barra de herramientas cuando hay commits locales esperando ser enviados o"
+        "Always available in the toolbar when there are local commits waiting to be pushed or": "Siempre disponible en la barra de herramientas cuando hay commits locales esperando ser enviados o",
+        "Switch Repository?": "¿Cambiar de repositorio?",
+        "Switch repository?": "¿Cambiar de repositorio?",
+        "Are you sure you want to switch to this repository?": "¿Quieres cambiar a este repositorio Git?",
+        "Repository:": "Repositorio:",
+        "Also switch notes workspace to this repository": "Cambiar también el espacio de notas a este repositorio",
+        "Switch": "Cambiar"
       }
     },
     "menu": {

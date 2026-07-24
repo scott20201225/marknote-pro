@@ -47,6 +47,7 @@ export enum PopupType {
   Acknowledgements = 'Acknowledgements',
   UntrustedCertificate = 'UntrustedCertificate',
   RemoveRepository = 'RemoveRepository',
+  ConfirmRepositorySwitch = 'ConfirmRepositorySwitch',
   TermsAndConditions = 'TermsAndConditions',
   PushBranchCommits = 'PushBranchCommits',
   CLIInstalled = 'CLIInstalled',
@@ -210,6 +211,10 @@ export type PopupDetail =
       url: string
     }
   | { type: PopupType.RemoveRepository; repository: Repository }
+  | {
+      type: PopupType.ConfirmRepositorySwitch
+      repository: Repository | CloningRepository
+    }
   | { type: PopupType.TermsAndConditions }
   | {
       type: PopupType.PushBranchCommits

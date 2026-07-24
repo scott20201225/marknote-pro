@@ -10,7 +10,11 @@ import {
 } from './group-repositories'
 import { IFilterListGroup } from '../lib/filter-list'
 import { IMatches } from '../../lib/fuzzy-find'
-import { ILocalRepositoryState, Repository } from '../../models/repository'
+import {
+  ILocalRepositoryState,
+  Repository,
+  displayNameOf,
+} from '../../models/repository'
 import { Dispatcher } from '../dispatcher'
 import { Button } from '../lib/button'
 import { Octicon } from '../octicons'
@@ -195,6 +199,8 @@ export class RepositoriesList extends React.Component<
       repository instanceof Repository ? repository.gitHubRepository : null
     const alias = repository instanceof Repository ? repository.alias : null
     const realName = gitHubRepo ? gitHubRepo.fullName : repository.name
+    const title =
+      repository instanceof Repository ? displayNameOf(repository) : repository.name
     const aheadBehindTooltip = this.getAheadBehindTooltip(aheadBehind)
     const hasChanges = changedFilesCount > 0
     const uncommittedChangesTooltip = hasChanges
@@ -208,8 +214,8 @@ export class RepositoriesList extends React.Component<
       <div className="repository-list-item-tooltip list-item-tooltip">
         <div>
           <div className="label">Full Name: </div>
-          {realName}
-          {alias && <> ({alias})</>}
+          {title}
+          {alias && title !== realName && <> ({realName})</>}
         </div>
         <div>
           <div className="label">Path: </div>

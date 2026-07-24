@@ -111,7 +111,10 @@ const switchToNote = (): void => {
   window.dispatchEvent(new CustomEvent('marknotepro:switch-workbench', { detail: 'note' }))
 }
 
-const applyWorkspacePath = async(_event: unknown, workspacePath: string): Promise<void> => {
+const setWorkspacePath = async(
+  workspacePath: string,
+  options: { switchToNote: boolean; showMessage: boolean }
+): Promise<void> => {
   const normalizedWorkspacePath = window.path.normalize(workspacePath)
   await window.fileUtils.ensureDir(normalizedWorkspacePath)
   preferencesStore.SET_SINGLE_PREFERENCE({
@@ -119,8 +122,20 @@ const applyWorkspacePath = async(_event: unknown, workspacePath: string): Promis
     value: normalizedWorkspacePath
   })
   window.electron.ipcRenderer.send('mt::reload-workspace', normalizedWorkspacePath)
-  window.dispatchEvent(new CustomEvent('marknotepro:switch-workbench', { detail: 'note' }))
-  ElMessage.success('已切换笔记工作区。')
+  if (options.switchToNote) {
+    window.dispatchEvent(new CustomEvent('marknotepro:switch-workbench', { detail: 'note' }))
+  }
+  if (options.showMessage) {
+    ElMessage.success('已切换笔记工作区。')
+  }
+}
+
+const applyWorkspacePath = async(_event: unknown, workspacePath: string): Promise<void> => {
+  await setWorkspacePath(workspacePath, { switchToNote: true, showMessage: true })
+}
+
+const applyWorkspacePathSilently = async(_event: unknown, workspacePath: string): Promise<void> => {
+  await setWorkspacePath(workspacePath, { switchToNote: false, showMessage: false })
 }
 
 onMounted(() => {
@@ -132,6 +147,7 @@ onMounted(() => {
     .catch(() => {})
   window.electron.ipcRenderer.on('mt::github-desktop::switch-to-note', switchToNote)
   window.electron.ipcRenderer.on('mt::github-desktop::workspace-selected', applyWorkspacePath)
+  window.electron.ipcRenderer.on('mt::github-desktop::workspace-selected-silent', applyWorkspacePathSilently)
   window.addEventListener('resize', syncBounds)
   bus.on('language-changed', handleLanguageChanged)
 })
@@ -157,6 +173,7 @@ onBeforeUnmount(() => {
   bus.off('language-changed', handleLanguageChanged)
   window.electron.ipcRenderer.removeAllListeners('mt::github-desktop::switch-to-note')
   window.electron.ipcRenderer.removeAllListeners('mt::github-desktop::workspace-selected')
+  window.electron.ipcRenderer.removeAllListeners('mt::github-desktop::workspace-selected-silent')
   window.electron.ipcRenderer.send('mt::github-desktop::hide')
 })
 </script>

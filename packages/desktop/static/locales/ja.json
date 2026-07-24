@@ -1464,7 +1464,13 @@
         "This repository is currently only available on your local machine. By publishing it on GitHub you can share it, and collaborate with others.": "このリポジトリは現在あなたのローカルマシンにのみ存在します。GitHub に公開すると、共有したり他の人と共同作業したりできます。",
         "Always available in the toolbar or": "ツールバーからいつでも利用できるか、または",
         "Always available in the toolbar when there are remote changes or": "リモートに変更があるときはツールバーからいつでも利用できるか、または",
-        "Always available in the toolbar when there are local commits waiting to be pushed or": "プッシュ待ちのローカルコミットがあるときはツールバーからいつでも利用できるか、または"
+        "Always available in the toolbar when there are local commits waiting to be pushed or": "プッシュ待ちのローカルコミットがあるときはツールバーからいつでも利用できるか、または",
+        "Switch Repository?": "リポジトリを切り替えますか？",
+        "Switch repository?": "リポジトリを切り替えますか？",
+        "Are you sure you want to switch to this repository?": "この Git リポジトリに切り替えますか？",
+        "Repository:": "リポジトリ:",
+        "Also switch notes workspace to this repository": "ノートのワークスペースもこのリポジトリに切り替える",
+        "Switch": "切り替え"
       }
     },
     "menu": {

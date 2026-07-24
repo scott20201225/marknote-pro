@@ -1491,7 +1491,13 @@
         "This repository is currently only available on your local machine. By publishing it on GitHub you can share it, and collaborate with others.": "此仓库当前仅存在于你的本地设备上。将它发布到 GitHub 后，你就可以分享它并与他人协作。",
         "Always available in the toolbar or": "始终可在工具栏中使用，或",
         "Always available in the toolbar when there are remote changes or": "当存在远程变更时，始终可在工具栏中使用，或",
-        "Always available in the toolbar when there are local commits waiting to be pushed or": "当有本地提交等待推送时，始终可在工具栏中使用，或"
+        "Always available in the toolbar when there are local commits waiting to be pushed or": "当有本地提交等待推送时，始终可在工具栏中使用，或",
+        "Switch Repository?": "确认切换仓库？",
+        "Switch repository?": "确认切换仓库？",
+        "Are you sure you want to switch to this repository?": "确认切换到这个 Git 仓库吗？",
+        "Repository:": "仓库：",
+        "Also switch notes workspace to this repository": "同时切换笔记工作区到该仓库",
+        "Switch": "切换"
       }
     },
     "menu": {

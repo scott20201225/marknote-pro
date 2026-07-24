@@ -573,12 +573,40 @@ const selectedCopilotModelsByAccountKey = 'selected-copilot-models-by-account'
 const CopilotLicenseTypeNoAccess = 'NO_ACCESS'
 export const showChangesFilterDefault = true
 
+const normalizeComparablePath = (pathname: string): string => {
+  const normalized = Path.normalize(pathname)
+  return __WIN32__ ? normalized.toLowerCase() : normalized
+}
+
+const isSameOrChildPath = (pathname: string, basePath: string): boolean => {
+  const normalizedPathname = normalizeComparablePath(pathname)
+  const normalizedBasePath = normalizeComparablePath(basePath)
+  if (normalizedPathname === normalizedBasePath) return true
+
+  const relativePath = Path.relative(normalizedBasePath, normalizedPathname)
+  return (
+    !!relativePath &&
+    !relativePath.startsWith('..') &&
+    !Path.isAbsolute(relativePath)
+  )
+}
+
+const replacePathPrefix = (pathname: string, src: string, dest: string): string => {
+  if (!isSameOrChildPath(pathname, src)) return pathname
+  if (normalizeComparablePath(pathname) === normalizeComparablePath(src)) {
+    return Path.normalize(dest)
+  }
+
+  return Path.join(dest, Path.relative(src, pathname))
+}
+
 export class AppStore extends TypedBaseStore<IAppState> {
   private readonly gitStoreCache: GitStoreCache
 
   private accounts: ReadonlyArray<Account> = new Array<Account>()
   private repositories: ReadonlyArray<Repository> = new Array<Repository>()
   private recentRepositories: ReadonlyArray<number> = new Array<number>()
+  private pendingWorkspacePathRenames = new Array<{ src: string; dest: string }>()
 
   private selectedRepository: Repository | CloningRepository | null = null
 
@@ -1048,6 +1076,7 @@ export class AppStore extends TypedBaseStore<IAppState> {
 
     this.repositoriesStore.onDidUpdate(updateRepositories => {
       this.repositories = updateRepositories
+      this.flushPendingWorkspacePathRenames()
       this.updateRepositorySelectionAfterRepositoriesChanged()
       this.emitUpdate()
     })
@@ -8134,6 +8163,86 @@ export class AppStore extends TypedBaseStore<IAppState> {
     }
 
     return addedRepositories
+  }
+
+  private flushPendingWorkspacePathRenames(): void {
+    if (this.pendingWorkspacePathRenames.length === 0) return
+
+    const pending = this.pendingWorkspacePathRenames
+    this.pendingWorkspacePathRenames = []
+    for (const { src, dest } of pending) {
+      this._syncRepositoryPathsAfterWorkspaceRename(src, dest, false).catch(e => {
+        log.error('Failed syncing pending renamed workspace path', e)
+      })
+    }
+  }
+
+  public async _syncRepositoryPathsAfterWorkspaceRename(
+    src: string,
+    dest: string,
+    queueIfRepositoriesNotLoaded: boolean = true
+  ): Promise<void> {
+    const affectedRepositories = this.repositories.filter(
+      (repository): repository is Repository =>
+        repository instanceof Repository && isSameOrChildPath(repository.path, src)
+    )
+
+    if (affectedRepositories.length === 0) {
+      if (queueIfRepositoriesNotLoaded && this.repositories.length === 0) {
+        this.pendingWorkspacePathRenames.push({ src, dest })
+      }
+      return
+    }
+
+    let updatedSelectedRepository: Repository | null = null
+
+    for (const repository of affectedRepositories) {
+      const nextPath = replacePathPrefix(repository.path, src, dest)
+      if (normalizeComparablePath(nextPath) === normalizeComparablePath(repository.path)) {
+        continue
+      }
+
+      const repositoryType = await getRepositoryType(nextPath).catch(e => {
+        log.error('Could not determine renamed repository type', e)
+        return { kind: 'missing' } as RepositoryType
+      })
+
+      let updatedRepository: Repository
+      if (repositoryType.kind === 'regular') {
+        updatedRepository = await this.repositoriesStore.updateRepositoryPath(
+          repository,
+          repositoryType.topLevelWorkingDirectory,
+          repositoryType.gitDir
+        )
+      } else if (repositoryType.kind === 'unsafe') {
+        updatedRepository = await this.repositoriesStore.updateRepositoryPath(
+          repository,
+          nextPath,
+          undefined,
+          true
+        )
+      } else {
+        updatedRepository = await this.repositoriesStore.updateRepositoryPath(
+          repository,
+          nextPath,
+          repository.gitDir,
+          true
+        )
+      }
+
+      this.gitStoreCache.remove(repository)
+
+      if (
+        this.selectedRepository instanceof Repository &&
+        this.selectedRepository.id === repository.id
+      ) {
+        updatedSelectedRepository = updatedRepository
+      }
+    }
+
+    if (updatedSelectedRepository) {
+      await this._selectRepository(updatedSelectedRepository)
+    }
   }
 
   public async _relocateRepository(repository: Repository): Promise<void> {

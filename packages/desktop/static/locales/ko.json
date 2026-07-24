@@ -1464,7 +1464,13 @@
         "This repository is currently only available on your local machine. By publishing it on GitHub you can share it, and collaborate with others.": "이 저장소는 현재 로컬 컴퓨터에만 있습니다. GitHub에 게시하면 다른 사람과 공유하고 협업할 수 있습니다.",
         "Always available in the toolbar or": "도구 모음에서 항상 사용할 수 있거나",
         "Always available in the toolbar when there are remote changes or": "원격 변경 사항이 있을 때 도구 모음에서 항상 사용할 수 있거나",
-        "Always available in the toolbar when there are local commits waiting to be pushed or": "푸시 대기 중인 로컬 커밋이 있을 때 도구 모음에서 항상 사용할 수 있거나"
+        "Always available in the toolbar when there are local commits waiting to be pushed or": "푸시 대기 중인 로컬 커밋이 있을 때 도구 모음에서 항상 사용할 수 있거나",
+        "Switch Repository?": "리포지토리를 전환할까요?",
+        "Switch repository?": "리포지토리를 전환할까요?",
+        "Are you sure you want to switch to this repository?": "이 Git 리포지토리로 전환하시겠습니까?",
+        "Repository:": "리포지토리:",
+        "Also switch notes workspace to this repository": "노트 작업 공간도 이 리포지토리로 전환",
+        "Switch": "전환"
       }
     },
     "menu": {

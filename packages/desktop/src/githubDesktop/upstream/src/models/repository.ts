@@ -157,6 +157,17 @@ export function nameOf(repository: Repository) {
   return gitHubRepository !== null ? gitHubRepository.fullName : repository.name
 }
 
+export function localFolderNameOf(repository: Repository) {
+  return getBaseName(repository.path)
+}
+
+export function displayNameOf(repository: Repository) {
+  const title = repository.alias ?? repository.name
+  const localFolderName = localFolderNameOf(repository)
+
+  return title === localFolderName ? title : `${title}(${localFolderName})`
+}
+
 /**
  * Get the GitHub html URL for a repository, if it has one.
  * Will return the parent GitHub repository's URL if it has one.

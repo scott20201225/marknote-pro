@@ -428,6 +428,18 @@ const dispatcher = new Dispatcher(
   commitStatusStore
 )
 
+ipcRenderer.on('marknotepro-workspace-path-renamed', (_event, payload) => {
+  const { src, dest } = payload ?? {}
+  if (!src || !dest || src === dest) return
+
+  dispatcher.syncRepositoryPathsAfterWorkspaceRename(src, dest).catch(error => {
+    sendNonFatalException(
+      'markNoteWorkspaceRename',
+      error instanceof Error ? error : new Error(String(error))
+    )
+  })
+})
+
 dispatcher.registerErrorHandler(defaultErrorHandler)
 dispatcher.registerErrorHandler(upstreamAlreadyExistsHandler)
 dispatcher.registerErrorHandler(externalEditorErrorHandler)

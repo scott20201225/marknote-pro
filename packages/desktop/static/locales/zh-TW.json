@@ -1493,7 +1493,13 @@
         "This repository is currently only available on your local machine. By publishing it on GitHub you can share it, and collaborate with others.": "此存放庫目前只存在於你的本機。將它發佈到 GitHub 後，你就可以分享它並與他人協作。",
         "Always available in the toolbar or": "工具列中隨時可用，或",
         "Always available in the toolbar when there are remote changes or": "當有遠端變更時，工具列中隨時可用，或",
-        "Always available in the toolbar when there are local commits waiting to be pushed or": "當有本地提交等待推送時，工具列中隨時可用，或"
+        "Always available in the toolbar when there are local commits waiting to be pushed or": "當有本地提交等待推送時，工具列中隨時可用，或",
+        "Switch Repository?": "確認切換倉庫？",
+        "Switch repository?": "確認切換倉庫？",
+        "Are you sure you want to switch to this repository?": "確認切換到這個 Git 倉庫嗎？",
+        "Repository:": "倉庫：",
+        "Also switch notes workspace to this repository": "同時切換筆記工作區到該倉庫",
+        "Switch": "切換"
       }
     },
     "menu": {

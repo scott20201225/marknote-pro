@@ -1,6 +1,6 @@
 import * as React from 'react'
 
-import { Repository } from '../../models/repository'
+import { Repository, displayNameOf } from '../../models/repository'
 import { Octicon, iconForRepository } from '../octicons'
 import * as octicons from '../octicons/octicons.generated'
 import { Repositoryish } from './group-repositories'
@@ -44,6 +44,8 @@ export class RepositoryListItem extends React.Component<
 
     const alias: string | null =
       repository instanceof Repository ? repository.alias : null
+    const title =
+      repository instanceof Repository ? displayNameOf(repository) : repository.name
 
     let prefix: string | null = null
     if (this.props.needsDisambiguation && gitHubRepo) {
@@ -71,7 +73,7 @@ export class RepositoryListItem extends React.Component<
         <div className={classNames(classNameList)}>
           {prefix ? <span className="prefix">{prefix}</span> : null}
           <HighlightText
-            text={alias ?? repository.name}
+            text={title}
             highlight={this.props.matches.title}
           />
         </div>
@@ -90,12 +92,13 @@ export class RepositoryListItem extends React.Component<
     const gitHubRepo = repo instanceof Repository ? repo.gitHubRepository : null
     const alias = repo instanceof Repository ? repo.alias : null
     const realName = gitHubRepo ? gitHubRepo.fullName : repo.name
+    const title = repo instanceof Repository ? displayNameOf(repo) : repo.name
 
     return (
       <>
         <div>
-          <strong>{realName}</strong>
-          {alias && <> ({alias})</>}
+          <strong>{title}</strong>
+          {alias && title !== realName && <> ({realName})</>}
         </div>
         <div>{repo.path}</div>
       </>
@@ -109,6 +112,9 @@ export class RepositoryListItem extends React.Component<
     ) {
       return (
         nextProps.repository.id !== this.props.repository.id ||
+        nextProps.repository.path !== this.props.repository.path ||
+        nextProps.repository.name !== this.props.repository.name ||
+        nextProps.repository.alias !== this.props.repository.alias ||
         nextProps.matches !== this.props.matches
       )
     } else {
