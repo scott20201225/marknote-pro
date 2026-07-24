@@ -3,7 +3,8 @@ import '../lib/logging/renderer/install'
 import * as React from 'react'
 import * as ReactDOM from 'react-dom'
 import * as Path from 'path'
-import { resolveEmbeddedGitDir } from 'dugite'
+import * as Fs from 'fs'
+import { resolveEmbeddedGitDir, resolveGitExecPath } from 'dugite'
 import { App } from './app'
 import {
   Dispatcher,
@@ -93,18 +94,90 @@ if (shellNeedsPatching(process)) {
 
 enableSourceMaps()
 
-// Tell dugite where to find the git environment,
-// see https://github.com/desktop/dugite/pull/85
-process.env['LOCAL_GIT_DIRECTORY'] =
-  process.env.MARKNOTEPRO_GITHUB_DESKTOP_GIT_DIR ||
-  resolveEmbeddedGitDir() ||
-  Path.resolve(__dirname, 'git')
+const getPackagedEmbeddedGitDir = (): string | null => {
+  const resourcesPath = process.resourcesPath
+  if (!resourcesPath) return null
 
-// Ensure that dugite infers the GIT_EXEC_PATH
-// based on the LOCAL_GIT_DIRECTORY env variable
-// instead of just blindly trusting what's set in
-// the current environment. See https://git.io/JJ7KF
-delete process.env.GIT_EXEC_PATH
+  const gitDir = Path.join(resourcesPath, 'embedded-git')
+  return Fs.existsSync(gitDir) ? gitDir : null
+}
+
+const getWin32GitSubfolder = (): string => {
+  if (process.arch === 'arm64') return 'clangarm64'
+  if (process.arch === 'x64') return 'mingw64'
+  return 'mingw32'
+}
+
+const getGitPathEntries = (gitDir: string, gitExecPath: string): string[] => {
+  if (process.platform === 'win32') {
+    const win32GitSubfolder = getWin32GitSubfolder()
+    return [
+      Path.join(gitDir, 'cmd'),
+      Path.join(gitDir, win32GitSubfolder, 'bin'),
+      Path.join(gitDir, win32GitSubfolder, 'usr', 'bin'),
+      gitExecPath,
+    ]
+  }
+
+  return [Path.join(gitDir, 'bin'), gitExecPath]
+}
+
+const prependPathEntries = (entries: string[]): void => {
+  const currentPath = process.env.PATH ?? process.env.Path ?? ''
+  const currentEntries = currentPath.split(Path.delimiter).filter(Boolean)
+  const normalizedExisting = new Set(
+    currentEntries.map(entry => Path.normalize(entry))
+  )
+  const nextEntries = entries.filter(
+    entry => Fs.existsSync(entry) && !normalizedExisting.has(Path.normalize(entry))
+  )
+
+  if (!nextEntries.length) return
+
+  const nextPath = [...nextEntries, ...currentEntries].join(Path.delimiter)
+  process.env.PATH = nextPath
+  if (process.platform === 'win32') {
+    process.env.Path = nextPath
+  }
+}
+
+const configureMarkNoteProGitEnvironment = (): void => {
+  const gitDir =
+    process.env.MARKNOTEPRO_GITHUB_DESKTOP_GIT_DIR ||
+    getPackagedEmbeddedGitDir() ||
+    resolveEmbeddedGitDir() ||
+    Path.resolve(__dirname, 'git')
+  const gitExecPath = resolveGitExecPath(gitDir)
+
+  process.env.MARKNOTEPRO_GITHUB_DESKTOP_GIT_DIR = gitDir
+  process.env.LOCAL_GIT_DIRECTORY = gitDir
+  process.env.GIT_EXEC_PATH = gitExecPath
+
+  const gitConfigSystem = Path.join(gitDir, 'etc', 'gitconfig')
+  if (process.platform !== 'win32' && Fs.existsSync(gitConfigSystem)) {
+    process.env.GIT_CONFIG_SYSTEM = gitConfigSystem
+  }
+
+  const gitTemplateDir = Path.join(gitDir, 'share', 'git-core', 'templates')
+  if (
+    (process.platform === 'darwin' || process.platform === 'linux') &&
+    Fs.existsSync(gitTemplateDir)
+  ) {
+    process.env.GIT_TEMPLATE_DIR = gitTemplateDir
+  }
+
+  if (process.platform === 'linux') {
+    process.env.PREFIX = gitDir
+    const sslCABundle = Path.join(gitDir, 'ssl', 'cacert.pem')
+    if (!process.env.GIT_SSL_CAINFO && Fs.existsSync(sslCABundle)) {
+      process.env.GIT_SSL_CAINFO = sslCABundle
+    }
+  }
+
+  prependPathEntries(getGitPathEntries(gitDir, gitExecPath))
+}
+
+configureMarkNoteProGitEnvironment()
 
 const startTime = performance.now()
 

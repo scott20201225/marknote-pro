@@ -17,7 +17,7 @@ import {
 } from 'electron'
 import keytar from 'keytar'
 import log from 'electron-log'
-import { resolveEmbeddedGitDir } from 'dugite'
+import { resolveEmbeddedGitDir, resolveGitExecPath } from 'dugite'
 import { parseAppURL } from '../../githubDesktop/upstream/src/lib/parse-app-url'
 import type { URLActionType } from '../../githubDesktop/upstream/src/lib/parse-app-url'
 import { buildDefaultMenu } from '../../githubDesktop/upstream/src/main-process/menu/build-default-menu'
@@ -538,7 +538,72 @@ const isChildPath = (parentPath: string, candidatePath: string): boolean => {
   return !!relativePath && !relativePath.startsWith('..') && !path.isAbsolute(relativePath)
 }
 
+const prependPathEntries = (entries: string[]): void => {
+  const currentPath = process.env.PATH ?? process.env.Path ?? ''
+  const currentEntries = currentPath.split(path.delimiter).filter(Boolean)
+  const normalizedExisting = new Set(currentEntries.map(entry => path.normalize(entry)))
+  const nextEntries = entries.filter(entry => fs.existsSync(entry) && !normalizedExisting.has(path.normalize(entry)))
+
+  if (!nextEntries.length) return
+
+  const nextPath = [...nextEntries, ...currentEntries].join(path.delimiter)
+  process.env.PATH = nextPath
+  if (process.platform === 'win32') {
+    process.env.Path = nextPath
+  }
+}
+
+const getWin32GitSubfolder = (): string => {
+  if (process.arch === 'arm64') return 'clangarm64'
+  if (process.arch === 'x64') return 'mingw64'
+  return 'mingw32'
+}
+
+const getGitPathEntries = (gitDir: string, gitExecPath: string): string[] => {
+  if (process.platform === 'win32') {
+    const win32GitSubfolder = getWin32GitSubfolder()
+    return [
+      path.join(gitDir, 'cmd'),
+      path.join(gitDir, win32GitSubfolder, 'bin'),
+      path.join(gitDir, win32GitSubfolder, 'usr', 'bin'),
+      gitExecPath
+    ]
+  }
+
+  return [path.join(gitDir, 'bin'), gitExecPath]
+}
+
+const configureGitProcessEnvironment = (gitDir: string): void => {
+  const gitExecPath = resolveGitExecPath(gitDir)
+
+  process.env.MARKNOTEPRO_GITHUB_DESKTOP_GIT_DIR = gitDir
+  process.env.LOCAL_GIT_DIRECTORY = gitDir
+  process.env.GIT_EXEC_PATH = gitExecPath
+
+  const gitConfigSystem = path.join(gitDir, 'etc', 'gitconfig')
+  if (process.platform !== 'win32' && fs.existsSync(gitConfigSystem)) {
+    process.env.GIT_CONFIG_SYSTEM = gitConfigSystem
+  }
+
+  const gitTemplateDir = path.join(gitDir, 'share', 'git-core', 'templates')
+  if ((process.platform === 'darwin' || process.platform === 'linux') && fs.existsSync(gitTemplateDir)) {
+    process.env.GIT_TEMPLATE_DIR = gitTemplateDir
+  }
+
+  if (process.platform === 'linux') {
+    process.env.PREFIX = gitDir
+    const sslCABundle = path.join(gitDir, 'ssl', 'cacert.pem')
+    if (!process.env.GIT_SSL_CAINFO && fs.existsSync(sslCABundle)) {
+      process.env.GIT_SSL_CAINFO = sslCABundle
+    }
+  }
+
+  prependPathEntries(getGitPathEntries(gitDir, gitExecPath))
+}
+
 const getOrCreateView = (win: BrowserWindow): GitHubDesktopViewEntry => {
+  configureGitHubDesktopGitEnvironment()
+
   const existing = views.get(win.id)
   if (existing) return existing
 
@@ -621,16 +686,19 @@ const getPackagedEmbeddedGitDir = (): string | null => {
 }
 
 const configureGitHubDesktopGitEnvironment = (): void => {
-  if (process.env.MARKNOTEPRO_GITHUB_DESKTOP_GIT_DIR) return
+  if (process.env.MARKNOTEPRO_GITHUB_DESKTOP_GIT_DIR) {
+    configureGitProcessEnvironment(process.env.MARKNOTEPRO_GITHUB_DESKTOP_GIT_DIR)
+    return
+  }
 
   const packagedGitDir = getPackagedEmbeddedGitDir()
   if (packagedGitDir) {
-    process.env.MARKNOTEPRO_GITHUB_DESKTOP_GIT_DIR = packagedGitDir
+    configureGitProcessEnvironment(packagedGitDir)
     return
   }
 
   try {
-    process.env.MARKNOTEPRO_GITHUB_DESKTOP_GIT_DIR = resolveEmbeddedGitDir()
+    configureGitProcessEnvironment(resolveEmbeddedGitDir())
   } catch (err) {
     log.error('Failed to resolve GitHub Desktop embedded Git directory', err)
   }
