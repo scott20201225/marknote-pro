@@ -43,6 +43,7 @@ export type ExceptionKinds =
   | 'NoSuggestedActionsProvided'
   | 'NoSuggestedActionsProvided'
   | 'resizeObserverLoopCompleted'
+  | 'markNoteWorkspaceRename'
 
 export function sendNonFatalException(kind: ExceptionKinds, error: Error) {
   if (getHasOptedOutOfStats()) {

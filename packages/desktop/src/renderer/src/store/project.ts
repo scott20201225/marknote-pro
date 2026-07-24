@@ -75,8 +75,9 @@ const createProjectRoot = (pathname: string): ProjectTree | null => {
 
 const isSameOrDescendantPath = (pathname: string, basePath: string): boolean => {
   return (
-    window.fileUtils.isSamePathSync(pathname, basePath) ||
-    window.fileUtils.isChildOfDirectory(basePath, pathname)
+    isProjectPathMatch(pathname, basePath) ||
+    window.fileUtils.isChildOfDirectory(basePath, pathname) ||
+    isWindowsChildPath(pathname, basePath)
   )
 }
 
@@ -89,6 +90,21 @@ const replacePathPrefix = (pathname: string, src: string, dest: string): string 
 
 const getBasename = (pathname: string): string => {
   return window.path.basename(pathname) || pathname
+}
+
+const isProjectPathMatch = (a: string, b: string): boolean => {
+  if (window.fileUtils.isSamePathSync(a, b)) return true
+  if (window.electron.process.platform !== 'win32') return false
+  return window.path.normalize(a).toLowerCase() === window.path.normalize(b).toLowerCase()
+}
+
+const isWindowsChildPath = (pathname: string, basePath: string): boolean => {
+  if (window.electron.process.platform !== 'win32') return false
+  const relativePath = window.path.relative(
+    window.path.normalize(basePath).toLowerCase(),
+    window.path.normalize(pathname).toLowerCase()
+  )
+  return !!relativePath && !relativePath.startsWith('..') && !window.path.isAbsolute(relativePath)
 }
 
 interface BufferedProjectState {
@@ -139,7 +155,7 @@ const findFolderNodeByPath = (
   pathname: string
 ): ProjectTree | null => {
   if (!node) return null
-  if (window.fileUtils.isSamePathSync(node.pathname, pathname)) return node
+  if (isProjectPathMatch(node.pathname, pathname)) return node
 
   for (const child of getFolders(node)) {
     const match = findFolderNodeByPath(child as ProjectTree, pathname)
@@ -156,7 +172,7 @@ const findFileNodeByPath = (
   if (!node) return null
 
   const match = getFiles(node).find((child) =>
-    window.fileUtils.isSamePathSync(child.pathname, pathname)
+    isProjectPathMatch(child.pathname, pathname)
   )
   if (match) return match
 
@@ -176,7 +192,7 @@ const takeFolderNode = (
 
   const folders = getFolders(node)
   const index = folders.findIndex((child) =>
-    window.fileUtils.isSamePathSync(child.pathname, pathname)
+    isProjectPathMatch(child.pathname, pathname)
   )
   if (index >= 0) {
     return folders.splice(index, 1)[0] as ProjectTree
@@ -198,7 +214,7 @@ const takeFileNode = (
 
   const files = getFiles(node)
   const index = files.findIndex((child) =>
-    window.fileUtils.isSamePathSync(child.pathname, pathname)
+    isProjectPathMatch(child.pathname, pathname)
   )
   if (index >= 0) {
     return files.splice(index, 1)[0] as TreeFileNode
@@ -215,7 +231,7 @@ const takeFileNode = (
 const remapFolderNodePaths = (node: ProjectTree, src: string, dest: string): void => {
   ensureFolderArrays(node)
   const nextPath = replacePathPrefix(node.pathname, src, dest)
-  if (!window.fileUtils.isSamePathSync(nextPath, node.pathname)) {
+  if (!isProjectPathMatch(nextPath, node.pathname)) {
     node.pathname = nextPath
     node.name = getBasename(nextPath)
   }
@@ -223,7 +239,7 @@ const remapFolderNodePaths = (node: ProjectTree, src: string, dest: string): voi
   getFolders(node).forEach((child) => remapFolderNodePaths(child as ProjectTree, src, dest))
   getFiles(node).forEach((child) => {
     const nextFilePath = replacePathPrefix(child.pathname, src, dest)
-    if (!window.fileUtils.isSamePathSync(nextFilePath, child.pathname)) {
+    if (!isProjectPathMatch(nextFilePath, child.pathname)) {
       child.pathname = nextFilePath
       child.name = getBasename(nextFilePath)
     }
@@ -232,10 +248,61 @@ const remapFolderNodePaths = (node: ProjectTree, src: string, dest: string): voi
 
 const remapFileNodePath = (node: TreeFileNode, src: string, dest: string): void => {
   const nextPath = replacePathPrefix(node.pathname, src, dest)
-  if (!window.fileUtils.isSamePathSync(nextPath, node.pathname)) {
+  if (!isProjectPathMatch(nextPath, node.pathname)) {
     node.pathname = nextPath
     node.name = getBasename(nextPath)
   }
+}
+
+const placeRenamedNodeInTree = (
+  tree: ProjectTree,
+  src: string,
+  dest: string,
+  kind: NoteNodeKind
+): boolean => {
+  if (isProjectPathMatch(tree.pathname, src)) {
+    remapFolderNodePaths(tree, src, dest)
+    return true
+  }
+
+  const parentPath = window.path.dirname(dest)
+  const parentNode = findFolderNodeByPath(tree, parentPath)
+  if (!parentNode) return false
+  ensureFolderArrays(parentNode)
+
+  if (kind === 'document') {
+    const renamedFile = takeFileNode(tree, src) ?? findFileNodeByPath(tree, dest)
+    if (!renamedFile) return false
+
+    remapFileNodePath(renamedFile, src, dest)
+    const existingIndex = parentNode.files.findIndex(
+      (file) =>
+        file !== renamedFile && isProjectPathMatch(file.pathname, renamedFile.pathname)
+    )
+    if (existingIndex >= 0) {
+      parentNode.files.splice(existingIndex, 1)
+    }
+    if (!parentNode.files.includes(renamedFile)) {
+      parentNode.files.push(renamedFile)
+    }
+    return true
+  }
+
+  const renamedFolder = takeFolderNode(tree, src) ?? findFolderNodeByPath(tree, dest)
+  if (!renamedFolder) return false
+
+  remapFolderNodePaths(renamedFolder, src, dest)
+  const existingIndex = parentNode.folders.findIndex(
+    (folder) =>
+      folder !== renamedFolder && isProjectPathMatch(folder.pathname, renamedFolder.pathname)
+  )
+  if (existingIndex >= 0) {
+    parentNode.folders.splice(existingIndex, 1)
+  }
+  if (!parentNode.folders.includes(renamedFolder)) {
+    parentNode.folders.push(renamedFolder)
+  }
+  return true
 }
 
 const normalizeComparableNoteName = (
@@ -283,7 +350,7 @@ const hasNoteDisplayNameConflict = (
   if (!candidateName) return false
 
   const matches = (node: NoteLikeNameCandidate): boolean => {
-    if (excludePath && window.fileUtils.isSamePathSync(node.pathname, excludePath)) {
+    if (excludePath && isProjectPathMatch(node.pathname, excludePath)) {
       return false
     }
     return normalizeComparableNoteName(node, rootPath) === candidateName
@@ -1045,9 +1112,23 @@ export const useProjectStore = defineStore('project', () => {
     }
     if (!storedName) return
     const dest = dirname + PATH_SEPARATOR + storedName
+    const isRootRename = !!projectTree.value && isProjectPathMatch(src, projectTree.value.pathname)
     rename(src, dest).then(() => {
       if (projectTree.value) {
-        remapFolderNodePaths(projectTree.value, src, dest)
+        const placed = placeRenamedNodeInTree(
+          projectTree.value,
+          src,
+          dest,
+          activeItem.value?.isFile ? 'document' : kind
+        )
+        if (!placed) {
+          remapFolderNodePaths(projectTree.value, src, dest)
+        }
+        resortTree(
+          projectTree.value,
+          String(preferencesStore.fileSortBy),
+          String(preferencesStore.fileSortOrder)
+        )
       }
 
       if (preferencesStore.defaultDirectoryToOpen) {
@@ -1083,6 +1164,9 @@ export const useProjectStore = defineStore('project', () => {
 
       renameCache.value = null
       syncPathReferencesAfterMove(src, dest)
+      if (isRootRename) {
+        window.electron.ipcRenderer.send('mt::github-desktop::workspace-path-renamed', { src, dest })
+      }
     })
   }
 

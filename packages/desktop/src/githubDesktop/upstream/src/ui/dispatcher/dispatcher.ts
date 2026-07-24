@@ -182,6 +182,13 @@ export class Dispatcher {
     return this.appStore._addRepositories(paths)
   }
 
+  public syncRepositoryPathsAfterWorkspaceRename(
+    src: string,
+    dest: string
+  ): Promise<void> {
+    return this.appStore._syncRepositoryPathsAfterWorkspaceRename(src, dest)
+  }
+
   /**
    * Add a tutorial repository.
    *

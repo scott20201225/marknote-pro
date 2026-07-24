@@ -1464,7 +1464,13 @@
         "This repository is currently only available on your local machine. By publishing it on GitHub you can share it, and collaborate with others.": "Bu depo su anda yalnizca yerel makinenizde bulunuyor. GitHubda yayinlayarak paylasabilir ve baskalariyla birlikte calisabilirsiniz.",
         "Always available in the toolbar or": "Arac cubugunda her zaman kullanilabilir veya",
         "Always available in the toolbar when there are remote changes or": "Uzak degisiklikler oldugunda arac cubugunda her zaman kullanilabilir veya",
-        "Always available in the toolbar when there are local commits waiting to be pushed or": "Gonderilmeyi bekleyen yerel commitler oldugunda arac cubugunda her zaman kullanilabilir veya"
+        "Always available in the toolbar when there are local commits waiting to be pushed or": "Gonderilmeyi bekleyen yerel commitler oldugunda arac cubugunda her zaman kullanilabilir veya",
+        "Switch Repository?": "Depo değiştirilsin mi?",
+        "Switch repository?": "Depo değiştirilsin mi?",
+        "Are you sure you want to switch to this repository?": "Bu Git deposuna geçmek istiyor musunuz?",
+        "Repository:": "Depo:",
+        "Also switch notes workspace to this repository": "Not çalışma alanını da bu depoya geçir",
+        "Switch": "Değiştir"
       }
     },
     "menu": {

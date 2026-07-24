@@ -47,7 +47,13 @@ interface GitHubDesktopViewEntry {
   currentLocalePayload: GitHubDesktopLocalePayload | null
 }
 
+interface WorkspacePathRenamePayload {
+  src: string
+  dest: string
+}
+
 const views = new Map<number, GitHubDesktopViewEntry>()
+const pendingWorkspacePathRenames = new Map<number, WorkspacePathRenamePayload[]>()
 const pendingURLActions: URLActionType[] = []
 let protocolsRegistered = false
 let protocolHandlersRegistered = false
@@ -538,6 +544,57 @@ const isChildPath = (parentPath: string, candidatePath: string): boolean => {
   return !!relativePath && !relativePath.startsWith('..') && !path.isAbsolute(relativePath)
 }
 
+const normalizeComparablePath = (pathname: string): string => {
+  const normalized = path.normalize(pathname)
+  return process.platform === 'win32' ? normalized.toLowerCase() : normalized
+}
+
+const isSameOrChildPath = (pathname: string, basePath: string): boolean => {
+  const normalizedPathname = normalizeComparablePath(pathname)
+  const normalizedBasePath = normalizeComparablePath(basePath)
+  if (normalizedPathname === normalizedBasePath) return true
+
+  const relativePath = path.relative(normalizedBasePath, normalizedPathname)
+  return !!relativePath && !relativePath.startsWith('..') && !path.isAbsolute(relativePath)
+}
+
+const replacePathPrefix = (pathname: string, src: string, dest: string): string => {
+  if (!isSameOrChildPath(pathname, src)) return pathname
+  if (normalizeComparablePath(pathname) === normalizeComparablePath(src)) return path.normalize(dest)
+  return path.join(dest, path.relative(src, pathname))
+}
+
+const sendWorkspacePathRename = (
+  win: BrowserWindow,
+  payload: WorkspacePathRenamePayload
+): void => {
+  const entry = views.get(win.id)
+  if (!entry?.loaded) {
+    const pending = pendingWorkspacePathRenames.get(win.id) ?? []
+    pending.push(payload)
+    pendingWorkspacePathRenames.set(win.id, pending)
+    return
+  }
+
+  if (entry.currentRepositoryPath && isSameOrChildPath(entry.currentRepositoryPath, payload.src)) {
+    entry.currentRepositoryPath = replacePathPrefix(entry.currentRepositoryPath, payload.src, payload.dest)
+  }
+  entry.view.webContents.send('marknotepro-workspace-path-renamed', payload)
+}
+
+const flushWorkspacePathRenames = (win: BrowserWindow, entry: GitHubDesktopViewEntry): void => {
+  const pending = pendingWorkspacePathRenames.get(win.id)
+  if (!pending?.length) return
+
+  pendingWorkspacePathRenames.delete(win.id)
+  for (const payload of pending) {
+    if (entry.currentRepositoryPath && isSameOrChildPath(entry.currentRepositoryPath, payload.src)) {
+      entry.currentRepositoryPath = replacePathPrefix(entry.currentRepositoryPath, payload.src, payload.dest)
+    }
+    entry.view.webContents.send('marknotepro-workspace-path-renamed', payload)
+  }
+}
+
 const prependPathEntries = (entries: string[]): void => {
   const currentPath = process.env.PATH ?? process.env.Path ?? ''
   const currentEntries = currentPath.split(path.delimiter).filter(Boolean)
@@ -634,6 +691,7 @@ const getOrCreateView = (win: BrowserWindow): GitHubDesktopViewEntry => {
 
   win.on('closed', () => {
     views.delete(win.id)
+    pendingWorkspacePathRenames.delete(win.id)
   })
 
   return entry
@@ -659,6 +717,7 @@ const showGitHubDesktop = async (win: BrowserWindow, bounds: Rectangle): Promise
       entry.view.webContents.send('marknotepro-locale-updated', entry.currentLocalePayload)
       entry.view.webContents.send('app-menu', getLocalizedAppMenu(entry.currentLocalePayload.language))
     }
+    flushWorkspacePathRenames(win, entry)
   }
 }
 
@@ -864,6 +923,12 @@ const registerGitHubDesktopViewHandlers = (): void => {
     entry?.view.setBounds(normalizeBounds(bounds))
   })
 
+  ipcMain.on('mt::github-desktop::workspace-path-renamed', (event, payload: WorkspacePathRenamePayload) => {
+    const win = getWindowFromSender(event)
+    if (!win || !payload?.src || !payload?.dest || payload.src === payload.dest) return
+    sendWorkspacePathRename(win, payload)
+  })
+
   ipcMain.on('mt::github-desktop::theme-update', (event, payload: GitHubDesktopThemePayload) => {
     const win = getWindowFromSender(event)
     if (!win) return
@@ -896,6 +961,12 @@ const registerGitHubDesktopViewHandlers = (): void => {
   ipcMain.on('mt::github-desktop::switch-to-note', (event) => {
     const win = getWindowFromSender(event)
     win?.webContents.send('mt::github-desktop::switch-to-note')
+  })
+
+  ipcMain.on('mt::github-desktop::workspace-selected-silent', (event, workspacePath: string) => {
+    const win = getWindowFromSender(event)
+    if (!win || !workspacePath) return
+    win.webContents.send('mt::github-desktop::workspace-selected-silent', workspacePath)
   })
 }
 

@@ -29,6 +29,7 @@ import {
 import { MenuEvent, isTestMenuEvent } from '../main-process/menu'
 import {
   Repository,
+  displayNameOf,
   getGitHubHtmlUrl,
   getNonForkGitHubRepository,
   isRepositoryWithGitHubRepository,
@@ -95,6 +96,7 @@ import { Acknowledgements } from './acknowledgements'
 import { UntrustedCertificate } from './untrusted-certificate'
 import { NoRepositoriesView } from './no-repositories'
 import { ConfirmRemoveRepository } from './remove-repository'
+import { ConfirmRepositorySwitch } from './confirm-repository-switch'
 import { TermsAndConditions } from './terms-and-conditions'
 import { PushBranchCommits } from './branches'
 import { CLIInstalled } from './cli-installed'
@@ -2017,6 +2019,15 @@ export class App extends React.Component<IAppProps, IAppState> {
             onDismissed={onPopupDismissedFn}
           />
         )
+      case PopupType.ConfirmRepositorySwitch:
+        return (
+          <ConfirmRepositorySwitch
+            key="confirm-repository-switch"
+            repository={popup.repository}
+            onConfirmation={this.onConfirmRepositorySwitch}
+            onDismissed={onPopupDismissedFn}
+          />
+        )
       case PopupType.TermsAndConditions:
         return (
           <TermsAndConditions
@@ -3481,9 +3492,10 @@ export class App extends React.Component<IAppProps, IAppState> {
     let icon: OcticonSymbol
     let title: string
     if (repository) {
-      const alias = repository instanceof Repository ? repository.alias : null
       icon = iconForRepository(repository)
-      title = alias ?? repository.name
+      title = repository instanceof Repository
+        ? displayNameOf(repository)
+        : repository.name
     } else if (this.state.repositories.length > 0) {
       icon = octicons.repo
       title = __DARWIN__ ? 'Select a Repository' : 'Select a repository'
@@ -4069,8 +4081,36 @@ export class App extends React.Component<IAppProps, IAppState> {
   }
 
   private onSelectionChanged = (repository: Repository | CloningRepository) => {
-    this.props.dispatcher.selectRepository(repository)
+    const selectedRepository = this.getRepository()
+    const isAlreadySelected =
+      selectedRepository !== null &&
+      selectedRepository.id === repository.id &&
+      selectedRepository.constructor === repository.constructor
+
     this.props.dispatcher.closeFoldout(FoldoutType.Repository)
+
+    if (isAlreadySelected) {
+      return
+    }
+
+    this.props.dispatcher.showPopup({
+      type: PopupType.ConfirmRepositorySwitch,
+      repository,
+    })
+  }
+
+  private onConfirmRepositorySwitch = async (
+    repository: Repository | CloningRepository,
+    switchNoteWorkspace: boolean
+  ) => {
+    await this.props.dispatcher.selectRepository(repository)
+
+    if (switchNoteWorkspace && repository instanceof Repository) {
+      ipcRenderer.send(
+        'mt::github-desktop::workspace-selected-silent',
+        repository.path
+      )
+    }
   }
 
   private onViewCommitOnGitHub = async (SHA: string, filePath?: string) => {

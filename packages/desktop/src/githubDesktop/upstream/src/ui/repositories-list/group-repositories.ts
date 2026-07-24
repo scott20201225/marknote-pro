@@ -2,6 +2,7 @@ import {
   Repository,
   ILocalRepositoryState,
   nameOf,
+  displayNameOf,
   isRepositoryWithGitHubRepository,
   RepositoryWithGitHubRepository,
 } from '../../models/repository'
@@ -115,10 +116,10 @@ export function groupRepositories(
     }))
 }
 
-// Returns the display title for a repository, which is either the alias
-// (if available) or the name.
+// Returns the display title for a repository, including the local folder name
+// when it differs from the Git repository name.
 const getDisplayTitle = (r: Repositoryish) =>
-  r instanceof Repository && r.alias != null ? r.alias : r.name
+  r instanceof Repository ? displayNameOf(r) : r.name
 
 const toSortedListItems = (
   group: RepositoryListGroup,

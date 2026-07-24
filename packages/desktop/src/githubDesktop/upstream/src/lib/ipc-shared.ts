@@ -88,7 +88,12 @@ export type RequestChannels = {
   'install-windows-cli': () => void
   'uninstall-windows-cli': () => void
   'mt::github-desktop::switch-to-note': () => void
+  'mt::github-desktop::workspace-selected-silent': (workspacePath: string) => void
   'mt::github-desktop::selected-repository-path': (path: string | null) => void
+  'marknotepro-workspace-path-renamed': (payload: {
+    src: string
+    dest: string
+  }) => void
   'marknotepro-theme-updated': (payload: {
     theme: string
     isDark: boolean
