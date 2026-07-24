@@ -1,5 +1,6 @@
 <template>
-  <div class="github-desktop-shell">
+  <div class="github-desktop-shell" :class="{ 'is-osx': isOsx }">
+    <div v-if="isOsx" class="github-desktop-title-drag-region" />
     <div
       ref="surfaceRef"
       class="github-desktop-surface"
@@ -13,6 +14,7 @@ import { storeToRefs } from 'pinia'
 import { ElMessage } from 'element-plus'
 import { usePreferencesStore } from '@/store/preferences'
 import bus from '@/bus'
+import { isOsx } from '@/util'
 import type { GitHubDesktopLocalePayload, GitHubDesktopThemePayload } from '@shared/types/ipc'
 
 const surfaceRef = ref<HTMLDivElement | null>(null)
@@ -174,5 +176,21 @@ onBeforeUnmount(() => {
   inset: 0;
   min-width: 0;
   min-height: 0;
+}
+
+.github-desktop-shell.is-osx .github-desktop-surface {
+  top: var(--titleBarHeight);
+}
+
+.github-desktop-title-drag-region {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: var(--titleBarHeight);
+  z-index: 2;
+  user-select: none;
+  -webkit-app-region: drag;
+  app-region: drag;
 }
 </style>
