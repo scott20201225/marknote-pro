@@ -102,6 +102,20 @@ The logo is retired from the screenshot area. Below are real product shots taken
 
 <table>
   <tr>
+    <td align="center" colspan="2">
+      <img src="docs/assets/screenshots/git-workspace-overview.png" alt="Integrated Git workspace in MarkNotePro" width="100%">
+      <br>
+      <sub>Integrated Git workspace for local note versioning and remote synchronization</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" colspan="2">
+      <img src="docs/assets/screenshots/git-workspace-demo.gif" alt="Switching between notes and Git operations in MarkNotePro" width="100%">
+      <br>
+      <sub>Switch between notes and Git operations without leaving MarkNotePro</sub>
+    </td>
+  </tr>
+  <tr>
     <td align="center">
       <img src="docs/assets/screenshots/warning-callouts.png" alt="Five warning callout styles" width="100%">
       <br>
@@ -164,6 +178,8 @@ The logo is retired from the screenshot area. Below are real product shots taken
 - Various [themes](https://github.com/scott20201225/marknote-pro/tree/main/docs): **Cadmium Light**, **Material Dark** etc.
 - Various writing modes: **Source Code mode**, **Typewriter mode**, **Focus mode**.
 - Paste images directly from clipboard.
+- Integrated Git workspace inspired by GitHub Desktop: clone or add repositories, review changes and history, commit, branch, fetch, pull and push without leaving MarkNotePro.
+- Switch note workspaces from the selected Git repository, making local notes easier to version, sync and restore across machines.
 
 ## Download and Installation
 
@@ -213,12 +229,6 @@ MarkNotePro is in development, please make sure to read the [Contributing Guide]
 MarkNotePro is built on top of MarkText and is a local-first open-source note app under active refinement. Feedback, issues, and suggestions are always welcome to help us improve the local note experience.
 
 MarkNotePro 基于 MarkText 开发，是一个持续打磨中的本地笔记开源工具。欢迎反馈问题与建议，帮助我们把体验做得更好。
-
-QQ Group: `871505001`
-
-<p align="center">
-  <img src="docs/assets/community/qq-group-qrcode.jpg" alt="MarkNotePro QQ group QR code" width="360">
-</p>
 
 ## Contributors
 
