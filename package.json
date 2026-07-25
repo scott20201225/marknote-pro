@@ -1,6 +1,6 @@
 {
   "name": "marknotepro-monorepo",
-  "version": "0.20.0-scott.59",
+  "version": "0.20.0-scott.60",
   "description": "MarkNotePro monorepo root",
   "private": true,
   "homepage": "https://github.com/scott20201225/marknote-pro",
@@ -38,12 +38,6 @@
     "check": "pnpm lint && pnpm typecheck",
     "gen-third-party": "tsx scripts/generateThirdPartyLicense.ts",
     "validate-licenses": "tsx scripts/validateLicenses.ts"
-  },
-  "pnpm": {
-    "overrides": {
-      "postcss": "8.5.15",
-      "esbuild@>=0.27.0 <0.28.1": "0.28.1"
-    }
   },
   "devDependencies": {
     "@babel/eslint-parser": "^7.29.7",

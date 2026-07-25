@@ -544,6 +544,13 @@ const isChildPath = (parentPath: string, candidatePath: string): boolean => {
   return !!relativePath && !relativePath.startsWith('..') && !path.isAbsolute(relativePath)
 }
 
+const isWorkspacePathRenamePayload = (payload: unknown): payload is WorkspacePathRenamePayload => {
+  if (!payload || typeof payload !== 'object') return false
+
+  const { src, dest } = payload as Partial<WorkspacePathRenamePayload>
+  return typeof src === 'string' && !!src && typeof dest === 'string' && !!dest
+}
+
 const normalizeComparablePath = (pathname: string): string => {
   const normalized = path.normalize(pathname)
   return process.platform === 'win32' ? normalized.toLowerCase() : normalized
@@ -568,8 +575,14 @@ const sendWorkspacePathRename = (
   win: BrowserWindow,
   payload: WorkspacePathRenamePayload
 ): void => {
+  if (!isWorkspacePathRenamePayload(payload) || normalizeComparablePath(payload.src) === normalizeComparablePath(payload.dest)) {
+    return
+  }
+
   const entry = views.get(win.id)
-  if (!entry?.loaded) {
+  if (!entry || entry.view.webContents.isDestroyed()) return
+
+  if (!entry.loaded) {
     const pending = pendingWorkspacePathRenames.get(win.id) ?? []
     pending.push(payload)
     pendingWorkspacePathRenames.set(win.id, pending)
@@ -583,11 +596,17 @@ const sendWorkspacePathRename = (
 }
 
 const flushWorkspacePathRenames = (win: BrowserWindow, entry: GitHubDesktopViewEntry): void => {
+  if (entry.view.webContents.isDestroyed()) return
+
   const pending = pendingWorkspacePathRenames.get(win.id)
   if (!pending?.length) return
 
   pendingWorkspacePathRenames.delete(win.id)
   for (const payload of pending) {
+    if (!isWorkspacePathRenamePayload(payload) || normalizeComparablePath(payload.src) === normalizeComparablePath(payload.dest)) {
+      continue
+    }
+
     if (entry.currentRepositoryPath && isSameOrChildPath(entry.currentRepositoryPath, payload.src)) {
       entry.currentRepositoryPath = replacePathPrefix(entry.currentRepositoryPath, payload.src, payload.dest)
     }
@@ -925,7 +944,7 @@ const registerGitHubDesktopViewHandlers = (): void => {
 
   ipcMain.on('mt::github-desktop::workspace-path-renamed', (event, payload: WorkspacePathRenamePayload) => {
     const win = getWindowFromSender(event)
-    if (!win || !payload?.src || !payload?.dest || payload.src === payload.dest) return
+    if (!win || !isWorkspacePathRenamePayload(payload)) return
     sendWorkspacePathRename(win, payload)
   })
 
