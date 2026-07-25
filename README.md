@@ -66,17 +66,18 @@ MarkNotePro 和 MarkTextPro 是两个相互独立、但能力互补的产品。
 - MarkTextPro GitHub：[https://github.com/scott20201225/marktext-pro](https://github.com/scott20201225/marktext-pro)
 - MarkTextPro Releases：[https://github.com/scott20201225/marktext-pro/releases/latest](https://github.com/scott20201225/marktext-pro/releases/latest)
 
+两者都集成 Git 工作区，都可以用于版本管理、远程同步和多设备协作；选择时更应该看你需要“结构化笔记工具”还是“自由文件编辑管理器”。
+
 选择建议：
 
 | 使用场景 | 推荐产品 |
 | --- | --- |
-| 你要长期维护个人笔记、知识库、项目资料，并希望结构稳定 | MarkNotePro |
-| 你希望在分区组 / 分区 / 笔记结构下，通过 Git 同步长期笔记工作区 | MarkNotePro |
-| 你希望使用分区组、分区、笔记这种清晰的笔记层级 | MarkNotePro |
-| 你希望普通 Markdown 文件夹通过 Git 同步，但不需要笔记分区体系 | MarkTextPro |
-| 你只是想自由打开任意文件夹或外部 Markdown 文件 | MarkTextPro |
-| 你经常编辑项目 README、技术文档、临时 Markdown 文件 | MarkTextPro |
-| 你不想被笔记体系限制，只需要一个带 Git 的 Markdown 文件管理器 | MarkTextPro |
+| 你希望像管理笔记本一样管理长期笔记、知识库、项目资料 | MarkNotePro |
+| 你接受并需要分区组、分区、笔记这种固定笔记层级 | MarkNotePro |
+| 你希望侧边栏只呈现笔记体系，减少普通文件夹带来的干扰 | MarkNotePro |
+| 你主要编辑外部 Markdown 文件、项目 README、技术文档或临时文件 | MarkTextPro |
+| 你希望保留真实文件夹结构，不希望被笔记层级约束 | MarkTextPro |
+| 你需要一个更自由的本地 Markdown 文件编辑管理器 | MarkTextPro |
 
 ## 核心能力
 
