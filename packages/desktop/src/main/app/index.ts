@@ -24,6 +24,7 @@ import { onInternalChannel } from '../utils/internalIpc'
 import { WindowType } from '../windows/base'
 import EditorWindow from '../windows/editor'
 import SettingWindow from '../windows/setting'
+import { zoomIn, zoomOut } from '../windows/utils'
 import { setLanguage } from '../i18n'
 import { getNativeThemeSource, isDarkApplicationTheme } from './nativeTheme'
 import type Accessor from './accessor'
@@ -826,6 +827,15 @@ class App {
 
     ipcMain.on('mt::open-setting-window', () => {
       this._openSettingsWindow()
+    })
+
+    ipcMain.on('mt::window-zoom-delta', (event, direction: 'in' | 'out') => {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      if (direction === 'in') {
+        zoomIn(win)
+      } else if (direction === 'out') {
+        zoomOut(win)
+      }
     })
 
     ipcMain.on('mt::make-screenshot', (e) => {

@@ -127,7 +127,6 @@ linux:
       StartupWMClass: 'marknotepro'
       Keywords: 'marknotepro;'
   target:
-    - AppImage
     - snap
     - deb
     - rpm

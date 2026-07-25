@@ -38,6 +38,13 @@ import {
 } from '../../githubDesktop/i18n/locale'
 import { SUPPORTED_LANGUAGES } from '../../shared/i18n'
 import type { GitHubDesktopLocalePayload, GitHubDesktopThemePayload } from '../../shared/types/ipc'
+import {
+  handleWindowZoomShortcut,
+  setWindowZoomFactor,
+  shouldIgnoreZoomChanged,
+  zoomIn,
+  zoomOut
+} from '../windows/utils'
 
 interface GitHubDesktopViewEntry {
   view: BrowserView
@@ -532,6 +539,45 @@ const getGitHubDesktopIndexPath = (): string => {
   return path.join(__dirname, '..', 'githubDesktop', 'out', 'index.html')
 }
 
+const installGitHubDesktopZoomBridge = async (entry: GitHubDesktopViewEntry): Promise<void> => {
+  if (entry.view.webContents.isDestroyed()) return
+
+  try {
+    await entry.view.webContents.executeJavaScript(`
+      (() => {
+        if (window.__marknoteproZoomBridgeInstalled) return
+        window.__marknoteproZoomBridgeInstalled = true
+
+        const { ipcRenderer } = require('electron')
+        let lastGestureScale = 1
+        const isMac = process.platform === 'darwin'
+        const hasZoomModifier = event => isMac ? event.metaKey : event.ctrlKey
+        const zoom = direction => ipcRenderer.send('mt::github-desktop::zoom-delta', direction)
+
+        window.addEventListener('wheel', event => {
+          if (!hasZoomModifier(event) && !event.ctrlKey) return
+          event.preventDefault()
+          zoom(event.deltaY < 0 ? 'in' : 'out')
+        }, { capture: true, passive: false })
+
+        window.addEventListener('gesturestart', event => {
+          lastGestureScale = event.scale || 1
+        })
+        window.addEventListener('gesturechange', event => {
+          const scale = event.scale || 1
+          const diff = scale - lastGestureScale
+          if (Math.abs(diff) < 0.03) return
+          event.preventDefault()
+          zoom(diff > 0 ? 'in' : 'out')
+          lastGestureScale = scale
+        })
+      })()
+    `)
+  } catch (error) {
+    log.warn('Failed to install GitHub Desktop zoom bridge:', error)
+  }
+}
+
 const normalizeBounds = (bounds: Rectangle): Rectangle => ({
   x: Math.max(0, Math.floor(bounds.x || 0)),
   y: Math.max(0, Math.floor(bounds.y || 0)),
@@ -698,6 +744,17 @@ const getOrCreateView = (win: BrowserWindow): GitHubDesktopViewEntry => {
   view.webContents.on('did-fail-load', (_event, code, description, url) => {
     log.error(`GitHub Desktop failed to load: ${code}; ${description}; ${url}`)
   })
+  view.webContents.on('zoom-changed', (_event, zoomDirection) => {
+    if (shouldIgnoreZoomChanged(view.webContents)) return
+    if (zoomDirection === 'in') {
+      zoomIn(win)
+    } else if (zoomDirection === 'out') {
+      zoomOut(win)
+    }
+  })
+  view.webContents.on('before-input-event', (event, input) => {
+    handleWindowZoomShortcut(win, event, input)
+  })
 
   const entry = {
     view,
@@ -724,10 +781,15 @@ const showGitHubDesktop = async (win: BrowserWindow, bounds: Rectangle): Promise
 
   entry.view.setBounds(normalizeBounds(bounds))
   entry.view.setAutoResize({ width: true, height: true })
+  setWindowZoomFactor(win, win.webContents.getZoomFactor(), {
+    animated: false,
+    notifyRenderer: false
+  })
 
   if (!entry.loaded) {
     entry.loaded = true
     await entry.view.webContents.loadFile(getGitHubDesktopIndexPath())
+    await installGitHubDesktopZoomBridge(entry)
     flushURLActions(entry)
     if (entry.currentThemePayload) {
       entry.view.webContents.send('marknotepro-theme-updated', entry.currentThemePayload)
@@ -1043,8 +1105,24 @@ const registerGitHubDesktopRendererHandlers = (): void => {
   ipcMain.on('install-windows-cli', () => undefined)
   ipcMain.on('uninstall-windows-cli', () => undefined)
   ipcMain.on('set-native-theme-source', () => undefined)
+  ipcMain.on('mt::github-desktop::zoom-delta', (event, direction: 'in' | 'out') => {
+    const win = getWindowFromSender(event)
+    if (!win) return
+    if (direction === 'in') {
+      zoomIn(win)
+    } else if (direction === 'out') {
+      zoomOut(win)
+    }
+  })
   ipcMain.on('set-window-zoom-factor', (event, zoomFactor: number) => {
-    event.sender.setZoomFactor(zoomFactor)
+    const win = getWindowFromSender(event)
+    let nextZoom = zoomFactor
+    if (win) {
+      nextZoom = setWindowZoomFactor(win, zoomFactor) ?? zoomFactor
+    } else {
+      event.sender.setZoomFactor(zoomFactor)
+    }
+    event.sender.send('zoom-factor-changed', nextZoom)
   })
   ipcMain.on('focus-window', (event) => {
     getWindowFromSender(event)?.focus()

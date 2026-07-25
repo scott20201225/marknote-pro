@@ -6,7 +6,14 @@ import windowStateKeeper from 'electron-window-state'
 import { isChildOfDirectory, isSamePathSync } from 'common/filesystem/paths'
 import BaseWindow, { WindowLifecycle, WindowType } from './base'
 import type Accessor from '../app/accessor'
-import { ensureWindowPosition, zoomIn, zoomOut } from './utils'
+import {
+  ensureWindowPosition,
+  handleWindowZoomShortcut,
+  setWindowZoomFactor,
+  shouldIgnoreZoomChanged,
+  zoomIn,
+  zoomOut
+} from './utils'
 import { TITLE_BAR_HEIGHT, editorWinOptions, isLinux, isOsx, isWindows } from '../config'
 import { showEditorContextMenu } from '../contextMenu/editor'
 import { loadMarkdownFile } from '../filesystem/markdown'
@@ -174,10 +181,17 @@ class EditorWindow extends BaseWindow {
     win.webContents.on('context-menu', (event, params) => {
       showEditorContextMenu(win!, event, params, preferences.getItem('spellcheckerEnabled'))
     })
+    win.webContents.on('before-input-event', (event, input) => {
+      handleWindowZoomShortcut(win, event, input)
+    })
 
     win.webContents.once('did-finish-load', () => {
       this.lifecycle = WindowLifecycle.READY
       this.emit('window-ready')
+      setWindowZoomFactor(win!, preferences.getItem<number>('zoom'), {
+        animated: false,
+        notifyRenderer: false
+      })
 
       // Restore and focus window
       this.bringToFront()
@@ -202,6 +216,7 @@ class EditorWindow extends BaseWindow {
 
       // Listen on default system mouse zoom event (e.g. Ctrl+MouseWheel on Linux/Windows).
       win!.webContents.on('zoom-changed', (_event, zoomDirection) => {
+        if (shouldIgnoreZoomChanged(win!.webContents)) return
         if (zoomDirection === 'in') {
           zoomIn(win!)
         } else if (zoomDirection === 'out') {

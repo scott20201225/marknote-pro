@@ -19,7 +19,8 @@ import type { GitHubDesktopLocalePayload, GitHubDesktopThemePayload } from '@sha
 
 const surfaceRef = ref<HTMLDivElement | null>(null)
 const preferencesStore = usePreferencesStore()
-const { language, theme } = storeToRefs(preferencesStore)
+const { language, theme, zoom } = storeToRefs(preferencesStore)
+let boundsSyncAnimationFrame = 0
 
 const GITHUB_DESKTOP_THEME_VARIABLES = [
   'themeColor',
@@ -50,14 +51,21 @@ const GITHUB_DESKTOP_THEME_VARIABLES = [
   'buttonPrimaryFontColor'
 ] as const
 
+const getCurrentWindowZoomFactor = (): number => {
+  const currentZoom = window.electron.webFrame.getZoomFactor()
+  if (typeof currentZoom === 'number' && currentZoom > 0) return currentZoom
+  return typeof zoom.value === 'number' && zoom.value > 0 ? zoom.value : 1
+}
+
 const getBounds = () => {
   const rect = surfaceRef.value?.getBoundingClientRect()
   if (!rect) return null
+  const zoomFactor = getCurrentWindowZoomFactor()
   return {
-    x: rect.left,
-    y: rect.top,
-    width: rect.width,
-    height: rect.height
+    x: rect.left * zoomFactor,
+    y: rect.top * zoomFactor,
+    width: rect.width * zoomFactor,
+    height: rect.height * zoomFactor
   }
 }
 
@@ -65,6 +73,24 @@ const syncBounds = (): void => {
   const bounds = getBounds()
   if (!bounds) return
   window.electron.ipcRenderer.send('mt::github-desktop::set-bounds', bounds)
+}
+
+const syncBoundsDuringZoom = (duration = 220): void => {
+  if (boundsSyncAnimationFrame) {
+    window.cancelAnimationFrame(boundsSyncAnimationFrame)
+  }
+
+  const startedAt = window.performance.now()
+  const step = (): void => {
+    syncBounds()
+    if (window.performance.now() - startedAt < duration) {
+      boundsSyncAnimationFrame = window.requestAnimationFrame(step)
+    } else {
+      boundsSyncAnimationFrame = 0
+    }
+  }
+
+  boundsSyncAnimationFrame = window.requestAnimationFrame(step)
 }
 
 const showGitHubDesktop = async(): Promise<void> => {
@@ -156,6 +182,12 @@ watch(theme, () => {
   syncGitHubDesktopTheme()
 })
 
+watch(zoom, () => {
+  void nextTick(() => {
+    syncBoundsDuringZoom()
+  })
+})
+
 watch(language, (locale) => {
   syncGitHubDesktopLocale(locale)
 })
@@ -169,6 +201,10 @@ const handleLanguageChanged = (locale?: unknown): void => {
 }
 
 onBeforeUnmount(() => {
+  if (boundsSyncAnimationFrame) {
+    window.cancelAnimationFrame(boundsSyncAnimationFrame)
+    boundsSyncAnimationFrame = 0
+  }
   window.removeEventListener('resize', syncBounds)
   bus.off('language-changed', handleLanguageChanged)
   window.electron.ipcRenderer.removeAllListeners('mt::github-desktop::switch-to-note')

@@ -80,6 +80,7 @@ const clipboardAPI = {
 }
 
 const webFrameAPI = {
+  getZoomFactor: (): number => webFrame.getZoomFactor(),
   setZoomFactor: (factor: number): void => {
     if (typeof factor === 'number' && factor > 0) webFrame.setZoomFactor(factor)
   },
