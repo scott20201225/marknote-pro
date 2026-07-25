@@ -13,7 +13,15 @@
 - 若仍报错，在终端执行：
 
   ```
+  sudo xattr -r -d com.apple.quarantine /Applications/MarkNotePro.app
+  ```
+
+  回车并输入管理员密码。
+
+- 若默认路径命令仍不成功，说明软件可能没有安装在默认位置。此时在终端执行：
+
+  ```
   sudo xattr -r -d com.apple.quarantine 
   ```
 
-  注意命令最后保留一个空格，然后将软件从 `Applications` 文件夹拖入终端窗口补全路径，回车并输入管理员密码。
+  注意命令最后保留一个空格，然后将 MarkNotePro 从 `Applications` 文件夹拖入终端窗口补全路径，回车并输入管理员密码。
