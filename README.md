@@ -71,8 +71,9 @@ MarkNotePro 和 MarkTextPro 是两个相互独立、但能力互补的产品。
 | 使用场景 | 推荐产品 |
 | --- | --- |
 | 你要长期维护个人笔记、知识库、项目资料，并希望结构稳定 | MarkNotePro |
-| 你希望笔记目录通过 Git 同步到远程仓库，多台电脑保持一致 | MarkNotePro |
+| 你希望在分区组 / 分区 / 笔记结构下，通过 Git 同步长期笔记工作区 | MarkNotePro |
 | 你希望使用分区组、分区、笔记这种清晰的笔记层级 | MarkNotePro |
+| 你希望普通 Markdown 文件夹通过 Git 同步，但不需要笔记分区体系 | MarkTextPro |
 | 你只是想自由打开任意文件夹或外部 Markdown 文件 | MarkTextPro |
 | 你经常编辑项目 README、技术文档、临时 Markdown 文件 | MarkTextPro |
 | 你不想被笔记体系限制，只需要一个带 Git 的 Markdown 文件管理器 | MarkTextPro |
