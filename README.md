@@ -3,23 +3,20 @@
 <h1 align="center">MarkNotePro</h1>
 
 <div align="center">
-  <strong>:high_brightness: Local-first note app :crescent_moon:</strong><br>
-  A simple and elegant open-source local note app built for organization, speed, and usability.<br>
-  <sub>Available for Linux, macOS and Windows.</sub>
+  <strong>集成 Git 的本地 Markdown 笔记工具</strong><br>
+  用本地目录管理笔记，用 Markdown 保存内容，用 Git 做版本管理、同步和恢复。<br>
+  <sub>支持 Linux、macOS、Windows。</sub>
 </div>
 
 <br>
 
 <div align="center">
-  <!-- License -->
   <a href="LICENSE">
     <img src="https://img.shields.io/github/license/scott20201225/marknote-pro.svg" alt="LICENSE">
   </a>
-  <!-- Downloads total -->
   <a href="https://github.com/scott20201225/marknote-pro/releases">
     <img src="https://img.shields.io/github/downloads/scott20201225/marknote-pro/total.svg" alt="total download">
   </a>
-  <!-- Downloads latest release -->
   <a href="https://github.com/scott20201225/marknote-pro/releases/latest">
     <img src="https://img.shields.io/github/downloads/scott20201225/marknote-pro/latest/total.svg" alt="latest download">
   </a>
@@ -27,213 +24,188 @@
 
 <div align="center">
   <h3>
-    <a href="https://github.com/scott20201225/marknote-pro">
-      Repository
-    </a>
+    <a href="#产品定位">产品定位</a>
     <span> | </span>
-    <a href="https://github.com/scott20201225/marknote-pro#features">
-      Features
-    </a>
+    <a href="#核心能力">核心能力</a>
     <span> | </span>
-    <a href="https://github.com/scott20201225/marknote-pro#download-and-installation">
-      Downloads
-    </a>
+    <a href="#笔记工作区模型">工作区模型</a>
     <span> | </span>
-    <a href="https://github.com/scott20201225/marknote-pro#development">
-      Development
-    </a>
+    <a href="#git-联动">Git 联动</a>
     <span> | </span>
-    <a href="https://github.com/scott20201225/marknote-pro#contribution">
-      Contribution
-    </a>
+    <a href="#截图与演示">截图与演示</a>
+    <span> | </span>
+    <a href="#下载安装">下载安装</a>
   </h3>
 </div>
 
-<div align="center">
-  <sub>Translations:</sub>
-  <a href="docs/i18n/README-zh_cn.md#readme">
-    <span>:cn:</span>
-  </a>
-  <a href="docs/i18n/README-zh_tw.md#readme">
-    <span>:taiwan:</span>
-  </a>
-  <a href="docs/i18n/README-jp.md#readme">
-    <span>:jp:</span>
-  </a>
-  <a href="docs/i18n/README-fr.md#readme">
-    <span>:fr:</span>
-  </a>
-  <a href="docs/i18n/README-tr.md#readme">
-    <span>:tr:</span>
-  </a>
-  <a href="docs/i18n/README-es.md#readme">
-    <span>:es:</span>
-  </a>
-  <a href="docs/i18n/README-pt.md#readme">
-    <span>:portugal:</span>
-  </a>
-  <a href="docs/i18n/README-kr.md#readme">
-    <span>:kr:</span>
-  </a>
-  <a href="docs/i18n/README-bn.md#readme">
-    <span>:bangladesh:</span>
-  </a>
-</div>
+## 产品定位
 
-<div align="center">
-  <sub>
-    Based on MarkText and further developed as MarkNotePro. See the
-    <a href="LICENSE">license</a>
-    and repository history for attribution details.
-  </sub>
-</div>
+MarkNotePro 是一款本地优先的 Markdown 笔记工具。它不是一个松散的外部文件编辑器，而是围绕“笔记工作区”建立的个人知识管理客户端：左侧负责笔记结构，右侧负责 Markdown 编辑，Git 区负责版本管理和远程同步。
 
-<br />
+它适合这些场景：
 
-> MarkNotePro is built on top of MarkText and is a local-first open-source note app for local note organization that is still being carefully refined. We value every bug report, suggestion, and real-world experience. If you notice rough edges or have ideas while using it, we'd be glad to hear from you and keep improving MarkNotePro together.
->
-> MarkNotePro 基于 MarkText 开发，是一个持续打磨中的本地笔记开源工具。我们珍惜每一条问题反馈、使用建议和体验感受，欢迎你在使用过程中把遇到的问题与想法告诉我们，一起让 MarkNotePro 变得更稳定、更顺手。
+- 把个人笔记、项目资料、长期知识库放在一个本地目录中管理。
+- 使用 Markdown 文件保存内容，避免被专有格式锁定。
+- 通过 GitHub、Gitee、Coding 或其它 Git 服务同步笔记目录。
+- 在多台电脑之间同步、回滚、查看历史版本。
+- 希望笔记结构清晰，不希望普通文件夹和笔记体系互相污染。
 
-## Screenshot
+## 核心能力
 
-The logo is retired from the screenshot area. Below are real product shots taken from the current MarkNotePro build.
+- **本地笔记工作区**：首次使用必须选择工作区，所有笔记围绕这个根目录组织。
+- **分区组 / 分区 / 笔记**：用类似 OneNote 的结构管理 Markdown 笔记，减少普通文件夹式管理的混乱。
+- **Tree / List 双模式**：既可以使用纯树结构，也可以使用“分区树 + 笔记列表”的方式快速定位笔记。
+- **Markdown 所见即所得编辑**：支持标题、列表、任务、表格、引用、代码块、数学公式、Mermaid 等常用 Markdown 能力。
+- **表格增强**：支持表格批量编辑、复制粘贴、与 Excel 互操作等高频办公能力。
+- **本地附件目录**：插入本地图片时可复制到工作区附件目录，并使用相对路径引用，方便同步到其它电脑。
+- **集成 Git 工作区**：内置 Git 操作界面，支持仓库添加、克隆、变更查看、提交、分支、拉取、推送等操作。
+- **笔记工作区与 Git 仓库联动**：可以从 Git 仓库切换笔记工作区，也可以在笔记根目录重命名后同步更新 Git 仓库路径。
 
-[Open the full feature showcase image](docs/assets/screenshots/showcase-overview.png)
+## 笔记工作区模型
+
+MarkNotePro 的重点是“稳定的笔记结构”。根目录代表一个笔记工作区，根目录自身不折叠；根目录下展示分区组，分区组下可以继续包含子分区组或分区，分区下保存 Markdown 笔记。
+
+```mermaid
+flowchart TD
+  Root["笔记工作区根目录"] --> Group["分区组"]
+  Group --> SubGroup["子分区组"]
+  Group --> Area["分区"]
+  SubGroup --> Area2["分区"]
+  Area --> Note["Markdown 笔记"]
+  Area2 --> Note2["Markdown 笔记"]
+  Root --> Attach["Attachments 附件目录"]
+
+  Attach -. "真实存在，但不显示在侧边栏" .-> Hidden["图片与附件资源"]
+```
+
+工作区规则：
+
+- 根目录用于承载整个笔记工作区，不作为普通笔记节点折叠。
+- 分区组用于组织分区或子分区组。
+- 分区用于保存笔记，笔记文件使用 Markdown 格式。
+- 附件目录用于保存插入的本地图片等资源，界面中默认隐藏。
+- 删除分区组、分区、笔记时会同步关闭相关已打开标签，避免编辑器继续指向旧路径。
+- 重命名或移动笔记结构时，会同步更新已打开笔记的路径指向。
+
+## Git 联动
+
+MarkNotePro 把 Git 作为笔记工作区的版本管理能力，而不是额外割裂的工具。你可以在笔记区写作，也可以切换到 Git 区完成提交、拉取、推送和历史查看。
+
+```mermaid
+flowchart LR
+  Note["笔记区"] -- "点击 Git 按钮" --> Git["Git 区"]
+  Git -- "点击笔记按钮" --> Note
+  Git -- "选择仓库" --> Confirm{"确认切换仓库？"}
+  Confirm -- "确认，并勾选切换笔记工作区" --> Workspace["将笔记工作区切换到当前仓库或子目录"]
+  Confirm -- "确认，但不切换笔记工作区" --> GitOnly["仅切换 Git 仓库"]
+  Workspace --> Reload["关闭已打开笔记并重载工作区"]
+  Note -- "重命名根目录" --> Sync["同步更新受管 Git 仓库路径"]
+  Sync --> Git
+```
+
+联动关系：
+
+- Git 区可以选择仓库，切换前会确认，避免误点。
+- 默认可以勾选“切换笔记工作区”，让笔记工作区跟随当前 Git 仓库。
+- 也可以取消勾选，只切换 Git 仓库，保留当前笔记工作区。
+- 从 Git 区可以把当前仓库根目录或仓库子目录设置为笔记工作区。
+- 如果笔记根目录重命名，MarkNotePro 会同步更新受管 Git 仓库路径，避免 Git 区找不到仓库。
+- 允许 Git 仓库和笔记工作区不是同一个目录，适合更复杂的本地目录规划。
+
+## 截图与演示
+
+[查看完整功能展示图](docs/assets/screenshots/showcase-overview.png)
 
 <table>
   <tr>
     <td align="center" colspan="2">
-      <img src="docs/assets/screenshots/git-workspace-overview.png" alt="Integrated Git workspace in MarkNotePro" width="100%">
+      <img src="docs/assets/screenshots/git-workspace-demo.gif" alt="MarkNotePro Git 操作演示" width="100%">
       <br>
-      <sub>Integrated Git workspace for local note versioning and remote synchronization</sub>
+      <sub>在笔记区和 Git 区之间切换，完成仓库操作与工作区联动</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="docs/assets/screenshots/warning-callouts.png" alt="五种警告块样式" width="100%">
+      <br>
+      <sub>五种警告块样式</sub>
+    </td>
+    <td align="center">
+      <img src="docs/assets/screenshots/paragraph-menu-warning.png" alt="段落菜单与警告块" width="100%">
+      <br>
+      <sub>段落菜单与警告块</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="docs/assets/screenshots/task-status-bulk-action.png" alt="任务状态批量编辑" width="100%">
+      <br>
+      <sub>任务状态批量编辑</sub>
+    </td>
+    <td align="center">
+      <img src="docs/assets/screenshots/list-indent-context-menu.png" alt="列表缩进菜单" width="100%">
+      <br>
+      <sub>列表缩进菜单</sub>
     </td>
   </tr>
   <tr>
     <td align="center" colspan="2">
-      <img src="docs/assets/screenshots/git-workspace-demo.gif" alt="Switching between notes and Git operations in MarkNotePro" width="100%">
+      <img src="docs/assets/screenshots/insert-palette.png" alt="插入面板" width="100%">
       <br>
-      <sub>Switch between notes and Git operations without leaving MarkNotePro</sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
-      <img src="docs/assets/screenshots/warning-callouts.png" alt="Five warning callout styles" width="100%">
-      <br>
-      <sub>Five warning callout styles</sub>
-    </td>
-    <td align="center">
-      <img src="docs/assets/screenshots/paragraph-menu-warning.png" alt="Paragraph menu and warning callouts" width="100%">
-      <br>
-      <sub>Paragraph menu and warning callouts</sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
-      <img src="docs/assets/screenshots/task-status-bulk-action.png" alt="Bulk task status editing" width="100%">
-      <br>
-      <sub>Bulk task status editing</sub>
-    </td>
-    <td align="center">
-      <img src="docs/assets/screenshots/list-indent-context-menu.png" alt="List indent and outdent context menu" width="100%">
-      <br>
-      <sub>List indent and outdent context menu</sub>
+      <sub>插入面板</sub>
     </td>
   </tr>
   <tr>
     <td align="center" colspan="2">
-      <img src="docs/assets/screenshots/insert-palette.png" alt="Inline insert palette" width="100%">
+      <img src="docs/assets/screenshots/table-toolkit-overview.png" alt="表格工具能力" width="100%">
       <br>
-      <sub>Inline insert palette</sub>
+      <sub>表格工具能力</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="docs/assets/screenshots/table-copy-paste.gif" alt="表格复制粘贴" width="100%">
+      <br>
+      <sub>表格复制粘贴</sub>
+    </td>
+    <td align="center">
+      <img src="docs/assets/screenshots/excel-table-interoperability.gif" alt="Excel 与 MarkNotePro 表格互操作" width="100%">
+      <br>
+      <sub>Excel 与 MarkNotePro 表格互操作</sub>
     </td>
   </tr>
   <tr>
     <td align="center" colspan="2">
-      <img src="docs/assets/screenshots/table-toolkit-overview.png" alt="Table editing toolkit overview" width="100%">
+      <img src="docs/assets/screenshots/git-workspace-overview.png" alt="MarkNotePro Git 工作区截图" width="100%">
       <br>
-      <sub>Table editing toolkit overview</sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
-      <img src="docs/assets/screenshots/table-copy-paste.gif" alt="Copy and paste between MarkNotePro tables" width="100%">
-      <br>
-      <sub>Copy and paste between MarkNotePro tables</sub>
-    </td>
-    <td align="center">
-      <img src="docs/assets/screenshots/excel-table-interoperability.gif" alt="Copy and paste between Excel and MarkNotePro tables" width="100%">
-      <br>
-      <sub>Excel and MarkNotePro table interoperability</sub>
+      <sub>集成 Git 工作区：查看变更、历史、分支并提交同步</sub>
     </td>
   </tr>
 </table>
 
-## Features
-
-- Local-first note workspace with group, area, and note organization for structured personal knowledge management.
-- Realtime preview (WYSIWYG) and a clean and simple interface to keep local note-taking focused and distraction-free.
-- Markdown file compatibility based on [CommonMark Spec](https://spec.commonmark.org), [GitHub Flavored Markdown Spec](https://github.github.com/gfm/) and selective support for [Pandoc markdown](https://pandoc.org/MANUAL.html#pandocs-markdown).
-- Markdown syntax extensions such as math expressions (KaTeX), front matter and emojis.
-- Support paragraphs and inline style shortcuts to improve note-writing efficiency.
-- Output **HTML** and **PDF** files.
-- Various [themes](https://github.com/scott20201225/marknote-pro/tree/main/docs): **Cadmium Light**, **Material Dark** etc.
-- Various writing modes: **Source Code mode**, **Typewriter mode**, **Focus mode**.
-- Paste images directly from clipboard.
-- Integrated Git workspace inspired by GitHub Desktop: clone or add repositories, review changes and history, commit, branch, fetch, pull and push without leaving MarkNotePro.
-- Switch note workspaces from the selected Git repository, making local notes easier to version, sync and restore across machines.
-
-## Download and Installation
+## 下载安装
 
 ![platform](https://img.shields.io/static/v1.svg?label=Platform&message=Linux%20x64%20|%20macOS%20x64%2Farm64%20|%20Windows%20x64%2Farm64&style=for-the-badge)
 
-| ![](https://raw.githubusercontent.com/wiki/ryanoasis/nerd-fonts/screenshots/v1.0.x/mac-pass-sm.png)                                                                                         | ![](https://raw.githubusercontent.com/wiki/ryanoasis/nerd-fonts/screenshots/v1.0.x/windows-pass-sm.png)                                                                                         | ![](https://raw.githubusercontent.com/wiki/ryanoasis/nerd-fonts/screenshots/v1.0.x/linux-pass-sm.png)                                                                                                       |
-|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
-| [![Download for macOS](https://img.shields.io/badge/macOS-Download-blue)](https://github.com/scott20201225/marknote-pro/releases/latest) | [![Download for Windows](https://img.shields.io/badge/Windows-Download-blue)](https://github.com/scott20201225/marknote-pro/releases/latest) | [![Download for Linux](https://img.shields.io/badge/Linux-Download-blue)](https://github.com/scott20201225/marknote-pro/releases/latest) |
+请从 [Release 页面](https://github.com/scott20201225/marknote-pro/releases/latest) 下载对应系统版本：
 
-Want to see new features of the latest version? Please refer to [CHANGELOG](https://github.com/scott20201225/marknote-pro/tree/main/docs).
+- macOS：`marknotepro-mac-(arm64|x64)-%version%.dmg`
+- Windows：`marknotepro-win-(x64|arm64)-%version%-setup.exe`
+- Linux：提供 `deb`、`rpm`、`snap`、`tar.gz` 等构建，具体以 Release 页面为准。
 
-#### macOS
+## 开发
 
-Requires macOS 11 (Big Sur) or later. Universal builds aren't published — pick the matching `arm64` or `x64` installer.
+```bash
+pnpm install
+pnpm --filter marknotepro dev
+```
 
-You can download the latest `marknotepro-mac-(arm64|x64)-%version%.dmg` from the [release page](https://github.com/scott20201225/marknote-pro/releases/latest).
+构建桌面端：
 
-#### Windows
+```bash
+pnpm --filter marknotepro build
+```
 
-Requires Windows 10 or 11. Both x64 and arm64 installers are published — pick the architecture that matches your machine.
+## 许可
 
-Simply download and install MarkNotePro via the setup wizard (`marknotepro-win-(x64|arm64)-%version%-setup.exe`) and choose whether to install per-user or machine wide.
-
-#### Linux
-
-Please follow the [Linux installation instructions](https://github.com/scott20201225/marknote-pro/tree/main/docs).
-
-#### Other
-
-All binaries for Linux, macOS and Windows can be downloaded from the [release page](https://github.com/scott20201225/marknote-pro/releases/latest). If a version is unavailable for your system, then please open an [issue](https://github.com/scott20201225/marknote-pro/issues).
-
-## Development
-
-If you wish to build MarkNotePro yourself, please check out our [build instructions](https://github.com/scott20201225/marknote-pro/tree/main/docs).
-
-- [User documentation](https://github.com/scott20201225/marknote-pro/tree/main/docs)
-- [Developer documentation](https://github.com/scott20201225/marknote-pro/tree/main/docs)
-
-If you have any questions regarding MarkNotePro, you are welcome to write an issue. When doing so please use the default format found when opening an issue. Of course, if you submit a PR directly, it will be greatly appreciated.
-
-## Contribution
-
-MarkNotePro is in development, please make sure to read the [Contributing Guide](.github/CONTRIBUTING.md) before making a pull request. Want to add some features to MarkNotePro? Please open an issue first and describe the use case.
-
-## Community
-
-MarkNotePro is built on top of MarkText and is a local-first open-source note app under active refinement. Feedback, issues, and suggestions are always welcome to help us improve the local note experience.
-
-MarkNotePro 基于 MarkText 开发，是一个持续打磨中的本地笔记开源工具。欢迎反馈问题与建议，帮助我们把体验做得更好。
-
-## Contributors
-
-Thank you to all the people who have already contributed to MarkNotePro [[contributors](https://github.com/scott20201225/marknote-pro/graphs/contributors)].
-
-## License
-
-[**MIT**](LICENSE).
+[MIT](LICENSE)
