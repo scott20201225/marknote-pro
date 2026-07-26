@@ -184,7 +184,6 @@ jobs:
             dist/*.dmg
             dist/*.blockmap
             dist/*.yml
-            dist/*.AppImage
             dist/*.snap
             dist/*.deb
             dist/*.rpm

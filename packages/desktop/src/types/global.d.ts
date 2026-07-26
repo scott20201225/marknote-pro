@@ -55,6 +55,7 @@ declare global {
   }
 
   interface ElectronWebFrameAPI {
+    getZoomFactor(): number
     setZoomFactor(factor: number): void
     setZoomLevel(level: number): void
   }

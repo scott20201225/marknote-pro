@@ -1,6 +1,6 @@
 {
   "name": "marknotepro",
-  "version": "0.20.0-scott.60",
+  "version": "0.20.0-scott.61",
   "description": "MarkNotePro",
   "main": "./out/main/index.js",
   "author": {
@@ -35,7 +35,7 @@
     "build:mac:arm64": "pnpm build:github-desktop && tsx ../../scripts/minify-locales.ts && electron-rebuild && electron-vite build && electron-builder --mac --arm64 --publish never",
     "build:linux": "pnpm build:github-desktop && tsx ../../scripts/minify-locales.ts && electron-rebuild && electron-vite build && electron-builder --linux snap deb rpm tar.gz --x64 --publish never",
     "build:linux:x64": "pnpm build:github-desktop && tsx ../../scripts/minify-locales.ts && electron-rebuild && electron-vite build && electron-builder --linux snap deb rpm tar.gz --x64 --publish never",
-    "build:linux:arm64": "pnpm build:github-desktop && tsx ../../scripts/minify-locales.ts && electron-rebuild && electron-vite build && electron-builder --linux AppImage tar.gz --arm64 --publish never",
+    "build:linux:arm64": "pnpm build:github-desktop && tsx ../../scripts/minify-locales.ts && electron-rebuild && electron-vite build && electron-builder --linux tar.gz --arm64 --publish never",
     "perf:inspect": "cross-env PERF_TESTING=true electron-vite preview -- --inspect=5858",
     "perf:inspect-brk": "cross-env PERF_TESTING=true electron-vite preview -- --inspect-brk=5858",
     "test": "vitest run",
