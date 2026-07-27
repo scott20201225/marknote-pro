@@ -37,7 +37,11 @@ import {
   normalizeMenuLabel
 } from '../../githubDesktop/i18n/locale'
 import { SUPPORTED_LANGUAGES } from '../../shared/i18n'
-import type { GitHubDesktopLocalePayload, GitHubDesktopThemePayload } from '../../shared/types/ipc'
+import type {
+  GitHubDesktopLocalePayload,
+  GitHubDesktopShowOptions,
+  GitHubDesktopThemePayload
+} from '../../shared/types/ipc'
 import {
   handleWindowZoomShortcut,
   setWindowZoomFactor,
@@ -71,6 +75,8 @@ let currentMenuLabels: MenuLabelsEvent = {
   askForConfirmationOnRepositoryRemoval: false
 }
 let githubDesktopMenu = buildDefaultMenu(currentMenuLabels)
+const GITHUB_DESKTOP_THEME_CHANNEL = 'marknotepro-theme-updated'
+const GITHUB_DESKTOP_LOCALE_CHANNEL = 'marknotepro-locale-updated'
 
 const githubDesktopProtocols = [
   'x-github-client',
@@ -585,6 +591,52 @@ const normalizeBounds = (bounds: Rectangle): Rectangle => ({
   height: Math.max(1, Math.floor(bounds.height || 1))
 })
 
+const normalizeShowOptions = (options: GitHubDesktopShowOptions | Rectangle): GitHubDesktopShowOptions => {
+  if ('bounds' in options) return options
+  return { bounds: options }
+}
+
+const getShowZoomFactor = (win: BrowserWindow, options: GitHubDesktopShowOptions): number => {
+  const zoomFactor = options.zoomFactor
+  return typeof zoomFactor === 'number' && zoomFactor > 0
+    ? zoomFactor
+    : win.webContents.getZoomFactor()
+}
+
+const sendGitHubDesktopTheme = (
+  entry: GitHubDesktopViewEntry,
+  payload: GitHubDesktopThemePayload
+): void => {
+  if (!entry.view.webContents.isDestroyed()) {
+    entry.view.webContents.send(GITHUB_DESKTOP_THEME_CHANNEL, payload)
+  }
+}
+
+const sendGitHubDesktopLocale = (
+  entry: GitHubDesktopViewEntry,
+  payload: GitHubDesktopLocalePayload
+): void => {
+  if (!entry.view.webContents.isDestroyed()) {
+    entry.view.webContents.send(GITHUB_DESKTOP_LOCALE_CHANNEL, payload)
+    entry.view.webContents.send('app-menu', getLocalizedAppMenu(payload.language))
+  }
+}
+
+const replayGitHubDesktopState = (entry: GitHubDesktopViewEntry): void => {
+  const sendState = (): void => {
+    if (entry.currentThemePayload) {
+      sendGitHubDesktopTheme(entry, entry.currentThemePayload)
+    }
+    if (entry.currentLocalePayload) {
+      sendGitHubDesktopLocale(entry, entry.currentLocalePayload)
+    }
+  }
+
+  sendState()
+  setTimeout(sendState, 100)
+  setTimeout(sendState, 400)
+}
+
 const isChildPath = (parentPath: string, candidatePath: string): boolean => {
   const relativePath = path.relative(path.resolve(parentPath), path.resolve(candidatePath))
   return !!relativePath && !relativePath.startsWith('..') && !path.isAbsolute(relativePath)
@@ -773,15 +825,26 @@ const getOrCreateView = (win: BrowserWindow): GitHubDesktopViewEntry => {
   return entry
 }
 
-const showGitHubDesktop = async (win: BrowserWindow, bounds: Rectangle): Promise<void> => {
+const showGitHubDesktop = async (
+  win: BrowserWindow,
+  rawOptions: GitHubDesktopShowOptions | Rectangle
+): Promise<void> => {
+  const options = normalizeShowOptions(rawOptions)
   const entry = getOrCreateView(win)
+  if (options.themePayload) {
+    entry.currentThemePayload = options.themePayload
+  }
+  if (options.localePayload?.language) {
+    entry.currentLocalePayload = getGitHubDesktopLocalePayload(options.localePayload.language)
+  }
+
   if (!win.getBrowserViews().includes(entry.view)) {
     win.addBrowserView(entry.view)
   }
 
-  entry.view.setBounds(normalizeBounds(bounds))
+  entry.view.setBounds(normalizeBounds(options.bounds))
   entry.view.setAutoResize({ width: true, height: true })
-  setWindowZoomFactor(win, win.webContents.getZoomFactor(), {
+  setWindowZoomFactor(win, getShowZoomFactor(win, options), {
     animated: false,
     notifyRenderer: false
   })
@@ -791,14 +854,10 @@ const showGitHubDesktop = async (win: BrowserWindow, bounds: Rectangle): Promise
     await entry.view.webContents.loadFile(getGitHubDesktopIndexPath())
     await installGitHubDesktopZoomBridge(entry)
     flushURLActions(entry)
-    if (entry.currentThemePayload) {
-      entry.view.webContents.send('marknotepro-theme-updated', entry.currentThemePayload)
-    }
-    if (entry.currentLocalePayload) {
-      entry.view.webContents.send('marknotepro-locale-updated', entry.currentLocalePayload)
-      entry.view.webContents.send('app-menu', getLocalizedAppMenu(entry.currentLocalePayload.language))
-    }
+    replayGitHubDesktopState(entry)
     flushWorkspacePathRenames(win, entry)
+  } else {
+    replayGitHubDesktopState(entry)
   }
 }
 
@@ -920,10 +979,10 @@ const registerGitHubDesktopProtocolHandlers = (): void => {
 }
 
 const registerGitHubDesktopViewHandlers = (): void => {
-  ipcMain.handle('mt::github-desktop::show', async (event, bounds: Rectangle) => {
+  ipcMain.handle('mt::github-desktop::show', async (event, options: GitHubDesktopShowOptions | Rectangle) => {
     const win = getWindowFromSender(event)
     if (!win) return
-    await showGitHubDesktop(win, bounds)
+    await showGitHubDesktop(win, options)
   })
 
   ipcMain.handle('mt::github-desktop::get-selected-repository-path', (event) => {
@@ -1017,7 +1076,7 @@ const registerGitHubDesktopViewHandlers = (): void => {
     if (!entry) return
     entry.currentThemePayload = payload
     if (entry.loaded) {
-      entry.view.webContents.send('marknotepro-theme-updated', payload)
+      sendGitHubDesktopTheme(entry, payload)
     }
   })
 
@@ -1029,8 +1088,7 @@ const registerGitHubDesktopViewHandlers = (): void => {
     const localizedPayload = getGitHubDesktopLocalePayload(payload.language)
     entry.currentLocalePayload = localizedPayload
     if (entry.loaded) {
-      entry.view.webContents.send('marknotepro-locale-updated', localizedPayload)
-      entry.view.webContents.send('app-menu', getLocalizedAppMenu(localizedPayload.language))
+      sendGitHubDesktopLocale(entry, localizedPayload)
     }
   })
 

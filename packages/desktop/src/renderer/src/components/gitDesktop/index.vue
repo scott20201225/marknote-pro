@@ -15,7 +15,11 @@ import { ElMessage } from 'element-plus'
 import { usePreferencesStore } from '@/store/preferences'
 import bus from '@/bus'
 import { isOsx } from '@/util'
-import type { GitHubDesktopLocalePayload, GitHubDesktopThemePayload } from '@shared/types/ipc'
+import type {
+  GitHubDesktopLocalePayload,
+  GitHubDesktopShowOptions,
+  GitHubDesktopThemePayload
+} from '@shared/types/ipc'
 
 const surfaceRef = ref<HTMLDivElement | null>(null)
 const preferencesStore = usePreferencesStore()
@@ -55,6 +59,10 @@ const getCurrentWindowZoomFactor = (): number => {
   const currentZoom = window.electron.webFrame.getZoomFactor()
   if (typeof currentZoom === 'number' && currentZoom > 0) return currentZoom
   return typeof zoom.value === 'number' && zoom.value > 0 ? zoom.value : 1
+}
+
+const getPreferredWindowZoomFactor = (): number => {
+  return typeof zoom.value === 'number' && zoom.value > 0 ? zoom.value : getCurrentWindowZoomFactor()
 }
 
 const getBounds = () => {
@@ -97,7 +105,13 @@ const showGitHubDesktop = async(): Promise<void> => {
   await nextTick()
   const bounds = getBounds()
   if (!bounds) return
-  await window.electron.ipcRenderer.invoke('mt::github-desktop::show', bounds)
+  const options: GitHubDesktopShowOptions = {
+    bounds,
+    zoomFactor: getPreferredWindowZoomFactor(),
+    themePayload: readGitHubDesktopThemePayload(),
+    localePayload: readGitHubDesktopLocalePayload()
+  }
+  await window.electron.ipcRenderer.invoke('mt::github-desktop::show', options)
 }
 
 const readGitHubDesktopThemePayload = (): GitHubDesktopThemePayload => {
