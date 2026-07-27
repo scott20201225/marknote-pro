@@ -172,18 +172,6 @@ flowchart LR
   </tr>
   <tr>
     <td align="center">
-      <img src="docs/assets/screenshots/product-compare-note.png" alt="MarkNotePro 结构化笔记视图" width="100%">
-      <br>
-      <sub>同一个项目在 MarkNotePro 中：只展示符合笔记标准的目录和 Markdown 笔记</sub>
-    </td>
-    <td align="center">
-      <img src="docs/assets/screenshots/product-compare-text.png" alt="MarkTextPro 真实文件系统视图" width="100%">
-      <br>
-      <sub>同一个项目在 MarkTextPro 中：展示完整真实文件系统结构</sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
       <img src="docs/assets/screenshots/warning-callouts.png" alt="五种警告块样式" width="100%">
       <br>
       <sub>五种警告块样式</sub>
