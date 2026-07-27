@@ -68,6 +68,23 @@ MarkNotePro 和 MarkTextPro 是两个相互独立、但能力互补的产品。
 
 两者都集成 Git 工作区，都可以用于版本管理、远程同步和多设备协作；选择时更应该看你需要“结构化笔记工具”还是“自由文件编辑管理器”。
 
+下面是同一个项目在两个产品里的展示差异：MarkNotePro 只会展示符合笔记标准的目录和 Markdown 笔记，收敛为分区组 / 分区 / 笔记视图；MarkTextPro 则展示真实文件系统结构，更适合完整项目目录和外部文件管理。
+
+<table>
+  <tr>
+    <td align="center">
+      <img src="docs/assets/screenshots/product-compare-note.png" alt="MarkNotePro 结构化笔记视图" width="100%">
+      <br>
+      <sub>MarkNotePro：只展示符合笔记标准的目录和 Markdown 笔记</sub>
+    </td>
+    <td align="center">
+      <img src="docs/assets/screenshots/product-compare-text.png" alt="MarkTextPro 真实文件系统视图" width="100%">
+      <br>
+      <sub>MarkTextPro：展示完整真实文件系统结构</sub>
+    </td>
+  </tr>
+</table>
+
 选择建议：
 
 | 使用场景 | 推荐产品 |
@@ -151,6 +168,18 @@ flowchart LR
       <img src="docs/assets/screenshots/git-workspace-demo.gif" alt="MarkNotePro Git 操作演示" width="100%">
       <br>
       <sub>在笔记区和 Git 区之间切换，完成仓库操作与工作区联动</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="docs/assets/screenshots/product-compare-note.png" alt="MarkNotePro 结构化笔记视图" width="100%">
+      <br>
+      <sub>同一个项目在 MarkNotePro 中：只展示符合笔记标准的目录和 Markdown 笔记</sub>
+    </td>
+    <td align="center">
+      <img src="docs/assets/screenshots/product-compare-text.png" alt="MarkTextPro 真实文件系统视图" width="100%">
+      <br>
+      <sub>同一个项目在 MarkTextPro 中：展示完整真实文件系统结构</sub>
     </td>
   </tr>
   <tr>

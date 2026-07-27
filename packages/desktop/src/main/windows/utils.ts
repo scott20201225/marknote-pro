@@ -14,17 +14,22 @@ const ZOOM_STEP = 0.125
 const PROGRAMMATIC_ZOOM_EVENT_SUPPRESS_MS = 220
 const ZOOM_REQUEST_DEDUPE_MS = 35
 const ZOOM_ANIMATION_DURATION_MS = 140
-const ZOOM_ANIMATION_FRAME_MS = 16
+const ZOOM_ANIMATION_FRAME_MS = process.platform === 'win32' ? 24 : 16
+const ZOOM_RENDERER_NOTIFY_DEBOUNCE_MS = 180
 const programmaticZoomUntil = new WeakMap<WebContents, number>()
 const zoomAnimationState = new WeakMap<WebContents, {
   target: number
-  timers: NodeJS.Timeout[]
+  start: number
+  startedAt: number
+  timer?: NodeJS.Timeout
 }>()
 const lastZoomRequestAt = new Map<number, number>()
+const pendingZoomRendererNotification = new Map<number, NodeJS.Timeout>()
 
 interface SetZoomOptions {
   animated?: boolean
   notifyRenderer?: boolean
+  deferRendererNotification?: boolean
 }
 
 const clampZoomFactor = (zoomFactor: number): number => {
@@ -38,14 +43,47 @@ const getEffectiveZoomFactor = (webContents: WebContents): number => {
 const cancelZoomAnimation = (webContents: WebContents): void => {
   const animation = zoomAnimationState.get(webContents)
   if (!animation) return
-  for (const timer of animation.timers) {
-    clearTimeout(timer)
+  if (animation.timer) {
+    clearTimeout(animation.timer)
   }
   zoomAnimationState.delete(webContents)
 }
 
 const setProgrammaticZoomSuppression = (webContents: WebContents): void => {
   programmaticZoomUntil.set(webContents, Date.now() + PROGRAMMATIC_ZOOM_EVENT_SUPPRESS_MS)
+}
+
+const easeOutCubic = (progress: number): number => {
+  return 1 - Math.pow(1 - progress, 3)
+}
+
+const runZoomAnimationFrame = (webContents: WebContents): void => {
+  const animation = zoomAnimationState.get(webContents)
+  if (!animation) return
+
+  if (webContents.isDestroyed()) {
+    cancelZoomAnimation(webContents)
+    return
+  }
+
+  const elapsed = Date.now() - animation.startedAt
+  const progress = Math.min(1, elapsed / ZOOM_ANIMATION_DURATION_MS)
+  const nextZoom = animation.start + (animation.target - animation.start) * easeOutCubic(progress)
+  setProgrammaticZoomSuppression(webContents)
+  webContents.setZoomFactor(progress >= 1 ? animation.target : nextZoom)
+
+  if (progress >= 1) {
+    zoomAnimationState.delete(webContents)
+    return
+  }
+
+  animation.timer = setTimeout(() => runZoomAnimationFrame(webContents), ZOOM_ANIMATION_FRAME_MS)
+}
+
+const scheduleZoomAnimationFrame = (webContents: WebContents): void => {
+  const animation = zoomAnimationState.get(webContents)
+  if (!animation) return
+  animation.timer = setTimeout(() => runZoomAnimationFrame(webContents), ZOOM_ANIMATION_FRAME_MS)
 }
 
 const setWebContentsZoomFactor = (
@@ -67,33 +105,49 @@ const setWebContentsZoomFactor = (
     return true
   }
 
-  const startZoom = webContents.getZoomFactor()
-  const steps = Math.max(2, Math.round(ZOOM_ANIMATION_DURATION_MS / ZOOM_ANIMATION_FRAME_MS))
-  const timers: NodeJS.Timeout[] = []
-  zoomAnimationState.set(webContents, { target: zoomFactor, timers })
-  setProgrammaticZoomSuppression(webContents)
-
-  for (let step = 1; step <= steps; step++) {
-    const timer = setTimeout(() => {
-      if (webContents.isDestroyed()) {
-        cancelZoomAnimation(webContents)
-        return
-      }
-
-      const progress = step / steps
-      const easedProgress = 1 - Math.pow(1 - progress, 3)
-      const nextZoom = startZoom + (zoomFactor - startZoom) * easedProgress
-      setProgrammaticZoomSuppression(webContents)
-      webContents.setZoomFactor(step === steps ? zoomFactor : nextZoom)
-
-      if (step === steps) {
-        zoomAnimationState.delete(webContents)
-      }
-    }, step * ZOOM_ANIMATION_FRAME_MS)
-    timers.push(timer)
+  const currentAnimation = zoomAnimationState.get(webContents)
+  if (currentAnimation?.timer) {
+    clearTimeout(currentAnimation.timer)
   }
 
+  zoomAnimationState.set(webContents, {
+    target: zoomFactor,
+    start: webContents.getZoomFactor(),
+    startedAt: Date.now()
+  })
+  setProgrammaticZoomSuppression(webContents)
+  scheduleZoomAnimationFrame(webContents)
+
   return true
+}
+
+const notifyRendererWindowZoom = (
+  win: BrowserWindow,
+  zoomFactor: number,
+  deferred: boolean
+): void => {
+  const existingTimer = pendingZoomRendererNotification.get(win.id)
+  if (existingTimer) {
+    clearTimeout(existingTimer)
+    pendingZoomRendererNotification.delete(win.id)
+  }
+
+  const sendZoom = (): void => {
+    pendingZoomRendererNotification.delete(win.id)
+    if (!win.isDestroyed()) {
+      win.webContents.send('mt::window-zoom', zoomFactor)
+    }
+  }
+
+  if (!deferred) {
+    sendZoom()
+    return
+  }
+
+  pendingZoomRendererNotification.set(
+    win.id,
+    setTimeout(sendZoom, ZOOM_RENDERER_NOTIFY_DEBOUNCE_MS)
+  )
 }
 
 export const shouldIgnoreZoomChanged = (webContents: WebContents): boolean => {
@@ -137,7 +191,11 @@ export const setWindowZoomFactor = (
   if (!win || win.isDestroyed()) return undefined
 
   const nextZoom = clampZoomFactor(zoomFactor)
-  const { animated = true, notifyRenderer = true } = options
+  const {
+    animated = true,
+    notifyRenderer = true,
+    deferRendererNotification = animated
+  } = options
   const { webContents } = win
   let changed = false
 
@@ -147,7 +205,7 @@ export const setWindowZoomFactor = (
   }
 
   if (changed && notifyRenderer) {
-    webContents.send('mt::window-zoom', nextZoom)
+    notifyRendererWindowZoom(win, nextZoom, deferRendererNotification)
   }
   return nextZoom
 }
