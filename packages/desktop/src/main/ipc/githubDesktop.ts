@@ -13,7 +13,8 @@ import {
   type IpcMainEvent,
   type IpcMainInvokeEvent,
   type OpenDialogOptions,
-  type Rectangle
+  type Rectangle,
+  type WebContents
 } from 'electron'
 import keytar from 'keytar'
 import log from 'electron-log'
@@ -56,6 +57,7 @@ interface GitHubDesktopViewEntry {
   currentRepositoryPath: string | null
   currentThemePayload: GitHubDesktopThemePayload | null
   currentLocalePayload: GitHubDesktopLocalePayload | null
+  currentZoomFactor: number | null
 }
 
 interface WorkspacePathRenamePayload {
@@ -530,6 +532,14 @@ const getWindowFromSender = (
   return null
 }
 
+const getEntryFromWebContents = (webContents: WebContents): GitHubDesktopViewEntry | null => {
+  for (const entry of views.values()) {
+    if (entry.view.webContents.id === webContents.id) return entry
+  }
+
+  return null
+}
+
 const getGitHubDesktopIndexPath = (): string => {
   const devPath = path.join(process.cwd(), 'src', 'githubDesktop', 'out', 'index.html')
   if (fs.existsSync(devPath)) return devPath
@@ -622,8 +632,22 @@ const sendGitHubDesktopLocale = (
   }
 }
 
+const applyGitHubDesktopZoom = (
+  entry: GitHubDesktopViewEntry,
+  zoomFactor = entry.currentZoomFactor
+): void => {
+  if (typeof zoomFactor !== 'number' || zoomFactor <= 0 || entry.view.webContents.isDestroyed()) {
+    return
+  }
+
+  entry.currentZoomFactor = zoomFactor
+  entry.view.webContents.setZoomFactor(zoomFactor)
+  entry.view.webContents.send('zoom-factor-changed', zoomFactor)
+}
+
 const replayGitHubDesktopState = (entry: GitHubDesktopViewEntry): void => {
   const sendState = (): void => {
+    applyGitHubDesktopZoom(entry)
     if (entry.currentThemePayload) {
       sendGitHubDesktopTheme(entry, entry.currentThemePayload)
     }
@@ -813,7 +837,8 @@ const getOrCreateView = (win: BrowserWindow): GitHubDesktopViewEntry => {
     loaded: false,
     currentRepositoryPath: null,
     currentThemePayload: null,
-    currentLocalePayload: null
+    currentLocalePayload: null,
+    currentZoomFactor: null
   }
   views.set(win.id, entry)
 
@@ -837,6 +862,7 @@ const showGitHubDesktop = async (
   if (options.localePayload?.language) {
     entry.currentLocalePayload = getGitHubDesktopLocalePayload(options.localePayload.language)
   }
+  entry.currentZoomFactor = getShowZoomFactor(win, options)
 
   if (!win.getBrowserViews().includes(entry.view)) {
     win.addBrowserView(entry.view)
@@ -844,14 +870,16 @@ const showGitHubDesktop = async (
 
   entry.view.setBounds(normalizeBounds(options.bounds))
   entry.view.setAutoResize({ width: true, height: true })
-  setWindowZoomFactor(win, getShowZoomFactor(win, options), {
+  setWindowZoomFactor(win, entry.currentZoomFactor, {
     animated: false,
     notifyRenderer: false
   })
+  applyGitHubDesktopZoom(entry)
 
   if (!entry.loaded) {
     entry.loaded = true
     await entry.view.webContents.loadFile(getGitHubDesktopIndexPath())
+    applyGitHubDesktopZoom(entry)
     await installGitHubDesktopZoomBridge(entry)
     flushURLActions(entry)
     replayGitHubDesktopState(entry)
@@ -1119,7 +1147,10 @@ const registerGitHubDesktopRendererHandlers = (): void => {
     }
   })
 
-  ipcMain.on('renderer-ready', () => undefined)
+  ipcMain.on('renderer-ready', (event) => {
+    const entry = getEntryFromWebContents(event.sender)
+    if (entry) replayGitHubDesktopState(entry)
+  })
   ipcMain.on('update-menu-state', (event, items: Array<{ id: string; state: Partial<Electron.MenuItem> }>) => {
     let changed = false
     for (const item of items) {
@@ -1180,6 +1211,10 @@ const registerGitHubDesktopRendererHandlers = (): void => {
     } else {
       event.sender.setZoomFactor(zoomFactor)
     }
+    const entry = getEntryFromWebContents(event.sender)
+    if (entry) {
+      entry.currentZoomFactor = nextZoom
+    }
     event.sender.send('zoom-factor-changed', nextZoom)
   })
   ipcMain.on('focus-window', (event) => {
@@ -1235,7 +1270,10 @@ const registerGitHubDesktopRendererHandlers = (): void => {
     const win = getWindowFromSender(event)
     return win ? getWindowState(win) : 'normal'
   })
-  ipcMain.handle('get-current-window-zoom-factor', (event) => event.sender.getZoomFactor())
+  ipcMain.handle('get-current-window-zoom-factor', (event) => {
+    const entry = getEntryFromWebContents(event.sender)
+    return entry?.currentZoomFactor ?? event.sender.getZoomFactor()
+  })
   ipcMain.handle('is-window-focused', (event) => !!getWindowFromSender(event)?.isFocused())
   ipcMain.handle('is-window-maximized', (event) => !!getWindowFromSender(event)?.isMaximized())
   ipcMain.handle('get-apple-action-on-double-click', () =>
