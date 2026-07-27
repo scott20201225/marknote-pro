@@ -61,6 +61,13 @@ export interface GitHubDesktopLocalePayload {
   internalText?: Record<string, string>
 }
 
+export interface GitHubDesktopShowOptions {
+  bounds: { x: number; y: number; width: number; height: number }
+  zoomFactor?: number
+  themePayload?: GitHubDesktopThemePayload
+  localePayload?: GitHubDesktopLocalePayload
+}
+
 // =================================================================
 // Invoke channels (renderer → main, returns Promise<T>)
 // =================================================================
@@ -73,7 +80,7 @@ export interface IpcInvokeChannels {
   'mt::cmd::exists': { args: [name: string]; ret: boolean }
   'mt::fonts::list': { args: []; ret: string[] }
   'mt::github-desktop::show': {
-    args: [bounds: { x: number; y: number; width: number; height: number }]
+    args: [options: GitHubDesktopShowOptions]
     ret: void
   }
   'mt::github-desktop::get-selected-repository-path': { args: []; ret: string | null }
