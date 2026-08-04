@@ -15,11 +15,7 @@ import {
 } from 'electron'
 import log from 'electron-log'
 import { isDirectory, isFile, exists } from 'common/filesystem'
-import {
-  MARKDOWN_EXTENSIONS,
-  isDangerousExecutableFile,
-  isMarkdownFile
-} from 'common/filesystem/paths'
+import { MARKDOWN_EXTENSIONS, isMarkdownFile } from 'common/filesystem/paths'
 import { checkUpdates, userSetting } from './marknotepro'
 import { COMMANDS } from '../../commands'
 import type { CommandManager } from '../../commands'
@@ -27,6 +23,11 @@ import { EXTENSION_HASN, PANDOC_EXTENSIONS, URL_REG, isOsx } from '../../config'
 import { normalizeAndResolvePath, writeFile } from '../../filesystem'
 import { writeMarkdownFile } from '../../filesystem/markdown'
 import { getPath, getRecommendTitleFromMarkdownString } from '../../utils'
+import {
+  normalizeLinkUrlCandidate,
+  openLocalLinkWithApplication,
+  resolveLocalLinkTarget
+} from '../../utils/linkOpenWith'
 import pandoc from '../../utils/pandoc'
 import { t } from '../../i18n'
 import type { ExportType, UnsavedFile } from '@shared/types/files'
@@ -886,7 +887,7 @@ ipcMain.on('mt::format-link-click', async (e, { data, dirname }: FormatLinkPaylo
   }
 
   const rawUrl = data.href || data.text!
-  const urlCandidate = rawUrl.replace(/^<(.+)>$/, '$1') // Replace any <> CommonMark #489
+  const urlCandidate = normalizeLinkUrlCandidate(rawUrl) // Replace any <> CommonMark #489
   if (urlCandidate === rawUrl) {
     // No <> found, no spaces should be allowed
     if (/\s/.test(rawUrl)) {
@@ -903,19 +904,15 @@ ipcMain.on('mt::format-link-click', async (e, { data, dirname }: FormatLinkPaylo
   if (URL_REG.test(urlCandidate)) {
     shell.openExternal(urlCandidate)
     return
-  } else if (/^[a-z0-9]+:\/\//i.test(urlCandidate)) {
+  } else if (/^[a-z0-9]+:\/\//i.test(urlCandidate) && !/^file:\/\//i.test(urlCandidate)) {
     // Prevent other URLs.
     return
   }
 
-  let pathname = urlCandidate
-  if (dirname && !path.isAbsolute(urlCandidate)) {
-    pathname = path.join(dirname, urlCandidate)
-  }
+  const localTarget = resolveLocalLinkTarget(urlCandidate, dirname)
+  let pathname = localTarget?.pathname ?? ''
 
   if (pathname) {
-    // decodeURIComponent() CommonMark #503, allow percent encoded path names to open files. https://github.com/scott20201225/marknote-pro/issues/57
-    pathname = path.normalize(decodeURIComponent(pathname))
     if (isMarkdownFile(pathname)) {
       const innerWin = BrowserWindow.fromWebContents(e.sender)
       if (innerWin) {
@@ -924,22 +921,12 @@ ipcMain.on('mt::format-link-click', async (e, { data, dirname }: FormatLinkPaylo
     } else {
       // A link in an untrusted document could point at a co-located script or
       // executable; opening it via the OS shell would run code silently (#3575).
-      if (isDangerousExecutableFile(pathname)) {
-        const { response } = await dialog.showMessageBox(win, {
-          type: 'warning',
-          buttons: [t('dialog.cancel'), t('dialog.openAnyway')],
-          defaultId: 0,
-          cancelId: 0,
-          noLink: true,
-          title: t('dialog.unsafeFileTitle'),
-          message: t('dialog.unsafeFileMessage'),
-          detail: t('dialog.unsafeFileDetail', { name: path.basename(pathname) })
-        })
-        if (response !== 1) {
-          return
-        }
+      const openedWithApplication = localTarget
+        ? await openLocalLinkWithApplication(win, localTarget)
+        : false
+      if (!openedWithApplication) {
+        shell.openPath(pathname)
       }
-      shell.openPath(pathname)
     }
   }
 })

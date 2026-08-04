@@ -207,6 +207,14 @@
     "type": "boolean",
     "default": false
   },
+  "linkOpenWithByExtension": {
+    "description": "Editor--Remembered external applications for opening local non-markdown links by file extension.--internal",
+    "type": "object",
+    "additionalProperties": {
+      "type": "string"
+    },
+    "default": {}
+  },
   "autoCheck": {
     "description": "Editor--Whether to automatically check related task.",
     "type": "boolean",

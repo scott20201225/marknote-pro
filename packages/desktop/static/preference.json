@@ -40,6 +40,7 @@
   "imageRelativeDirectoryBase": "file",
   "imageRelativeDirectoryName": "assets",
   "hideLinkPopup": false,
+  "linkOpenWithByExtension": {},
   "autoCheck": false,
 
   "preferLooseListItem": true,

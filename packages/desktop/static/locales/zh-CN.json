@@ -246,7 +246,8 @@
       "showInFolder": "在系统文件夹中显示"
     },
     "copyAsExcel": "复制为 Excel",
-    "tableBatchEdit": "批量编辑"
+    "tableBatchEdit": "批量编辑",
+    "openWith": "打开方式..."
   },
   "search": {
     "searchPlaceholder": "搜索",
@@ -951,7 +952,8 @@
     "unsafeFileTitle": "潜在不安全的文件",
     "unsafeFileMessage": "此链接将打开一个可执行代码的文件",
     "unsafeFileDetail": "“{name}”是可执行文件或脚本文件。打开它可能会在你的计算机上运行程序。请仅在信任此文档时继续。",
-    "openAnyway": "仍然打开"
+    "openAnyway": "仍然打开",
+    "selectOpenWithApplication": "选择打开程序"
   },
   "error": {
     "configSchemaViolation": "配置架构违规",

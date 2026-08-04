@@ -241,7 +241,8 @@
       "showInFolder": "Mostrar na pasta"
     },
     "copyAsExcel": "Copiar como Excel",
-    "tableBatchEdit": "Editar em lote"
+    "tableBatchEdit": "Editar em lote",
+    "openWith": "Abrir com..."
   },
   "search": {
     "searchPlaceholder": "Pesquisar",
@@ -924,7 +925,8 @@
     "unsafeFileTitle": "Arquivo potencialmente inseguro",
     "unsafeFileMessage": "Este link abre um arquivo que pode executar código",
     "unsafeFileDetail": "\"{name}\" é um arquivo executável ou de script. Abri-lo pode executar programas no seu computador. Continue apenas se confiar neste documento.",
-    "openAnyway": "Abrir mesmo assim"
+    "openAnyway": "Abrir mesmo assim",
+    "selectOpenWithApplication": "Selecionar aplicativo"
   },
   "error": {
     "configSchemaViolation": "Violação do esquema de configuração",
