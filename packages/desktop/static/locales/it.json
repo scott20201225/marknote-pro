@@ -241,7 +241,8 @@
       "showInFolder": "Show in folder"
     },
     "copyAsExcel": "Copia come Excel",
-    "tableBatchEdit": "Modifica in blocco"
+    "tableBatchEdit": "Modifica in blocco",
+    "openWith": "Apri con..."
   },
   "search": {
     "searchPlaceholder": "Search",
@@ -924,7 +925,8 @@
     "unsafeFileTitle": "Potentially unsafe file",
     "unsafeFileMessage": "This link opens a file that can run code",
     "unsafeFileDetail": "\"{name}\" is an executable or script file. Opening it may run programs on your computer. Only continue if you trust this document.",
-    "openAnyway": "Open Anyway"
+    "openAnyway": "Open Anyway",
+    "selectOpenWithApplication": "Seleziona applicazione"
   },
   "error": {
     "configSchemaViolation": "Configuration schema violation",

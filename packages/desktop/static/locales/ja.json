@@ -241,7 +241,8 @@
       "showInFolder": "フォルダで表示"
     },
     "copyAsExcel": "Excelとしてコピー",
-    "tableBatchEdit": "一括編集"
+    "tableBatchEdit": "一括編集",
+    "openWith": "このアプリで開く..."
   },
   "search": {
     "searchPlaceholder": "検索",
@@ -924,7 +925,8 @@
     "unsafeFileTitle": "安全でない可能性のあるファイル",
     "unsafeFileMessage": "このリンクはコードを実行できるファイルを開きます",
     "unsafeFileDetail": "「{name}」は実行可能ファイルまたはスクリプトファイルです。開くとコンピューター上でプログラムが実行される可能性があります。この文書を信頼できる場合のみ続行してください。",
-    "openAnyway": "それでも開く"
+    "openAnyway": "それでも開く",
+    "selectOpenWithApplication": "開くアプリを選択"
   },
   "error": {
     "configSchemaViolation": "設定スキーマ違反",

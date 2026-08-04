@@ -22,6 +22,13 @@ import {
 import spellcheckMenuBuilder from './spellcheck'
 import { getCopyMenuAvailability, type EditorContextState } from './state'
 import { t } from '../../i18n'
+import { isMarkdownFile } from 'common/filesystem/paths'
+import {
+  canOpenLocalLinkWithApplication,
+  openLocalLinkWithApplication,
+  resolveLocalLinkTarget,
+  type LocalLinkTarget
+} from '../../utils/linkOpenWith'
 
 // Electron's ContextMenuParams shape we rely on. Kept narrow — the renderer
 // supplies the full surface so we only annotate the fields we use.
@@ -29,6 +36,8 @@ interface ContextMenuParams {
   isEditable: boolean
   hasImageContents?: boolean
   selectionText: string
+  linkText?: string
+  linkURL?: string
   inputFieldType?: string
   editFlags: {
     canCut: boolean
@@ -42,6 +51,12 @@ interface ContextMenuParams {
   // the params (not the event); the renderer passes them through unchanged.
   x: number
   y: number
+}
+
+interface EditorLinkContext {
+  href?: string
+  text?: string
+  dirname?: string
 }
 
 // Electron `webContents.on('context-menu', (event, params) => ...)` provides
@@ -81,6 +96,42 @@ const getEditorContextState = async (win: BrowserWindow): Promise<EditorContextS
   } catch {
     return null
   }
+}
+
+const getEditorLinkContext = async (
+  win: BrowserWindow,
+  params: ContextMenuParams
+): Promise<EditorLinkContext | null> => {
+  try {
+    return (await win.webContents.executeJavaScript(
+      `window.__MARKNOTEPRO_GET_LINK_CONTEXT__?.(${JSON.stringify(params.x)}, ${JSON.stringify(params.y)}) ?? null`,
+      true
+    )) as EditorLinkContext | null
+  } catch {
+    return null
+  }
+}
+
+const getLocalLinkOpenWithTarget = (
+  linkContext: EditorLinkContext | null
+): LocalLinkTarget | null => {
+  if (!linkContext) return null
+  const target = resolveLocalLinkTarget(
+    linkContext.href || linkContext.text || '',
+    linkContext.dirname
+  )
+  if (!canOpenLocalLinkWithApplication(target)) return null
+  if (isMarkdownFile(target.pathname)) return null
+  return target
+}
+
+const getLocalLinkOpenWithTargetFromParams = (
+  params: ContextMenuParams
+): LocalLinkTarget | null => {
+  const target = resolveLocalLinkTarget(params.linkURL || params.linkText || '')
+  if (!canOpenLocalLinkWithApplication(target)) return null
+  if (isMarkdownFile(target.pathname)) return null
+  return target
 }
 
 const getParagraphContextState = (): ParagraphContextState => {
@@ -198,6 +249,9 @@ const popupEditorContextMenu = async (
 
   // NOTE: We have to get the word suggestions from this event because `webFrame.getWordSuggestions` and
   //       `webFrame.isWordMisspelled` doesn't work on Windows (Electron#28684).
+  const linkOpenWithTarget =
+    getLocalLinkOpenWithTargetFromParams(params) ||
+    getLocalLinkOpenWithTarget(await getEditorLinkContext(win, params))
 
   // Make sure that the request comes from a contenteditable inside the editor container.
   if (isInsideEditor(params) && !hasImageContents) {
@@ -228,6 +282,15 @@ const popupEditorContextMenu = async (
     }
 
     const contextItems = getContextItems(selectionText, editorContextState)
+    if (linkOpenWithTarget) {
+      contextItems.push(SEPARATOR, {
+        label: t('contextMenu.openWith'),
+        id: 'contextOpenLocalLinkWithMenuItem',
+        click: () => {
+          void openLocalLinkWithApplication(win, linkOpenWithTarget, { chooseApplication: true })
+        }
+      })
+    }
     contextItems.forEach((item) => {
       if (!item.id) {
         return
@@ -251,6 +314,18 @@ const popupEditorContextMenu = async (
     // (event, params) shape.
     // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     event
+    menu.popup({ window: win, x: params.x, y: params.y })
+  } else if (linkOpenWithTarget) {
+    const menu = new Menu()
+    menu.append(
+      new MenuItem({
+        label: t('contextMenu.openWith'),
+        id: 'contextOpenLocalLinkWithMenuItem',
+        click: () => {
+          void openLocalLinkWithApplication(win, linkOpenWithTarget, { chooseApplication: true })
+        }
+      })
+    )
     menu.popup({ window: win, x: params.x, y: params.y })
   }
 }
