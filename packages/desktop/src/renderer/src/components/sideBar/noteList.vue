@@ -325,6 +325,27 @@ onBeforeUnmount(() => {
   gap: 6px;
 }
 
+.note-list-main > input.rename {
+  flex: 1;
+  min-width: 0;
+  height: 22px;
+  box-sizing: border-box;
+  padding: 0 8px;
+  outline: none;
+  border: 1px solid var(--floatBorderColor);
+  border-radius: 3px;
+  color: var(--sideBarTitleColor) !important;
+  background-color: var(--inputBgColor) !important;
+  -webkit-text-fill-color: var(--sideBarTitleColor);
+  caret-color: var(--themeColor);
+  font: inherit;
+}
+
+.note-list-main > input.rename::selection {
+  color: var(--sideBarTitleColor);
+  background-color: var(--themeColor);
+}
+
 .note-list-name {
   flex: 1;
   min-width: 0;

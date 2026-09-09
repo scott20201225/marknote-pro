@@ -15,6 +15,7 @@ import {
     isInputEvent,
     isKeyboardEvent,
     isMouseEvent,
+    normalizeUnicodeText,
 } from '../../utils';
 
 // import logger from './utils/logger'
@@ -366,7 +367,8 @@ class Content extends TreeNode {
 
     set text(text) {
         const oldText = this._text;
-        this._text = text;
+        const normalizedText = normalizeUnicodeText(text);
+        this._text = normalizedText;
         const { path } = this;
         if (this.blockName === 'language-input') {
             path.pop();
@@ -374,8 +376,8 @@ class Content extends TreeNode {
         }
 
         // dispatch change to modify json state
-        if (oldText !== text) {
-            const diffs = diff(oldText, text);
+        if (oldText !== normalizedText) {
+            const diffs = diff(oldText, normalizedText);
 
             this.jsonState.editOperation(path, diffToTextOp(diffs));
         }

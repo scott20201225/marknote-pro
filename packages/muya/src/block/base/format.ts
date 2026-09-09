@@ -27,7 +27,14 @@ import { generator, tokenizer } from '../../inlineRenderer/lexer';
 import Selection, { getCursorReference } from '../../selection';
 import { getTextContent } from '../../selection/dom';
 import { isListItemState } from '../../state/types';
-import { conflict, isHTMLElement, isMouseEvent } from '../../utils';
+import {
+    conflict,
+    getDeletionCaretOffset,
+    isHTMLElement,
+    isMouseEvent,
+    normalizeUnicodeOffset,
+    normalizeUnicodeText,
+} from '../../utils';
 import { correctImageSrc, encodeImageSrc, getImageInfo } from '../../utils/image';
 import logger from '../../utils/logger';
 
@@ -614,10 +621,26 @@ class Format extends Content {
 
         const { domNode } = this;
         const { start, end } = this.getCursor()!;
-        const textContent = getTextContent(domNode!, [
+        const rawTextContent = getTextContent(domNode!, [
             CLASS_NAMES.MU_MATH_RENDER,
             CLASS_NAMES.MU_RUBY_RENDER,
         ]);
+        const textContent = normalizeUnicodeText(rawTextContent);
+        if (textContent !== rawTextContent) {
+            const deletionCaret = getDeletionCaretOffset(
+                this.text,
+                textContent,
+                inputType,
+            );
+            if (deletionCaret != null) {
+                start.offset = deletionCaret;
+                end.offset = deletionCaret;
+            }
+            else {
+                start.offset = normalizeUnicodeOffset(rawTextContent, start.offset);
+                end.offset = normalizeUnicodeOffset(rawTextContent, end.offset);
+            }
+        }
         const isInInlineMath = !!this._checkCursorInTokenType(
             textContent,
             start.offset,

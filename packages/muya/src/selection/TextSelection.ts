@@ -183,8 +183,8 @@ class TextSelection {
         const anchorPath = anchorBlock.path;
         const focusPath = focusBlock.path;
 
-        const aOffset = getOffsetOfParagraph(anchorNode, anchorDomNode) + anchorOffset;
-        const fOffset = getOffsetOfParagraph(focusNode, focusDomNode) + focusOffset;
+        const aOffset = getOffsetOfParagraph(anchorNode, anchorDomNode, anchorOffset);
+        const fOffset = getOffsetOfParagraph(focusNode, focusDomNode, focusOffset);
         const anchor = { offset: aOffset };
         const focus = { offset: fOffset };
 
