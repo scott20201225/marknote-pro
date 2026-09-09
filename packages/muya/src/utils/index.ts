@@ -58,6 +58,83 @@ export function snakeToCamel(name: string) {
 export function firstWordOfInfo(info: string): string {
     return info.match(/\S*/)?.[0] ?? '';
 }
+
+/**
+ * Remove unpaired UTF-16 surrogate code units from text.
+ *
+ * Chromium can briefly expose the remaining half of an emoji after a
+ * Backspace in a contenteditable tree. JavaScript can hold that string, but
+ * `ot-text-unicode` rejects it because it cannot convert an unpaired surrogate
+ * into a Unicode code-point offset.
+ */
+export function normalizeUnicodeText(text: string): string {
+    let result = '';
+
+    for (let i = 0; i < text.length; i++) {
+        const code = text.charCodeAt(i);
+
+        if (code >= 0xD800 && code <= 0xDBFF) {
+            const next = text.charCodeAt(i + 1);
+            if (next >= 0xDC00 && next <= 0xDFFF) {
+                result += text[i] + text[i + 1];
+                i++;
+            }
+            continue;
+        }
+
+        if (code >= 0xDC00 && code <= 0xDFFF)
+            continue;
+
+        result += text[i];
+    }
+
+    return result;
+}
+
+/**
+ * Map a UTF-16 DOM offset onto text after unpaired surrogates are removed.
+ * Keeping this conversion next to `normalizeUnicodeText` prevents selection
+ * offsets from pointing past the normalized text after an emoji Backspace.
+ */
+export function normalizeUnicodeOffset(text: string, offset: number): number {
+    if (!Number.isFinite(offset) || offset <= 0)
+        return 0;
+
+    return normalizeUnicodeText(text.slice(0, Math.min(offset, text.length))).length;
+}
+
+/**
+ * Recover the caret position for a browser-reported deletion.
+ *
+ * Some contenteditable implementations report offset 0 after deleting the
+ * first UTF-16 code unit of an emoji. The normalized before/after text still
+ * contains enough information: the first differing position is the caret
+ * after the deletion.
+ */
+export function getDeletionCaretOffset(
+    before: string,
+    after: string,
+    inputType: string,
+): number | null {
+    if (
+        before === after
+        || (inputType !== 'deleteContentBackward'
+            && inputType !== 'deleteContentForward')
+    ) {
+        return null;
+    }
+
+    let offset = 0;
+    while (
+        offset < before.length
+        && offset < after.length
+        && before[offset] === after[offset]
+    ) {
+        offset++;
+    }
+
+    return offset;
+}
 /**
  *  Are two arrays have intersection
  */
@@ -222,8 +299,12 @@ export function getParagraphReference(ele: HTMLElement, id: string) {
     };
 }
 
-function visibleLength(str: string) {
-    return [...new Intl.Segmenter().segment(str)].length;
+// `ot-text-unicode` uses Unicode code-point offsets, not grapheme-cluster
+// offsets. A single visible grapheme can contain several code points (for
+// example, a family emoji), so Intl.Segmenter would make later edits land at
+// the wrong position.
+function unicodeLength(str: string) {
+    return Array.from(str).length;
 }
 
 export type TDiff = (string | number | { d: string });
@@ -236,17 +317,22 @@ export function diffToTextOp(diffs: Diff[]) {
     const op: TDiff[] = [];
 
     for (const diff of diffs) {
+        const text = normalizeUnicodeText(diff[1]);
+
         switch (diff[0]) {
             case -1:
-                op.push({ d: diff[1] });
+                if (text)
+                    appendTextOp(op, { d: text });
                 break;
 
             case 0:
-                op.push(visibleLength(diff[1]));
+                if (text)
+                    appendTextOp(op, unicodeLength(text));
                 break;
 
             case 1:
-                op.push(diff[1]);
+                if (text)
+                    appendTextOp(op, text);
                 break;
 
             default:
@@ -261,6 +347,26 @@ export function diffToTextOp(diffs: Diff[]) {
     }
 
     return op;
+}
+
+function appendTextOp(op: TDiff[], component: TDiff) {
+    const previous = op[op.length - 1];
+
+    if (typeof previous === 'number' && typeof component === 'number') {
+        op[op.length - 1] = previous + component;
+    }
+    else if (typeof previous === 'string' && typeof component === 'string') {
+        op[op.length - 1] = previous + component;
+    }
+    else if (
+        typeof previous === 'object'
+        && typeof component === 'object'
+    ) {
+        previous.d += component.d;
+    }
+    else {
+        op.push(component);
+    }
 }
 
 // If the next block is header, put cursor after the `#{1,6} *`

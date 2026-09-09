@@ -81,26 +81,56 @@ export function getTextContent(node: Node, blackList: string[] = []) {
     return text;
 }
 
-export function getOffsetOfParagraph(node: Node, paragraph: HTMLElement): number {
-    let offset = 0;
-    let preSibling: Node | null = node;
+const OFFSET_BLACKLIST = [
+    CLASS_NAMES.MU_MATH_RENDER,
+    CLASS_NAMES.MU_RUBY_RENDER,
+];
 
-    if (node === paragraph)
+function getTextLengthForOffset(node: Node): number {
+    if (
+        isElement(node)
+        && node.nodeName === 'IMG'
+    ) {
+        const imageWrapper = node.closest(`.${CLASS_NAMES.MU_INLINE_IMAGE}`);
+        if (imageWrapper)
+            return imageWrapper.getAttribute('data-raw')?.length ?? 0;
+    }
+
+    return getTextContent(node, OFFSET_BLACKLIST).length;
+}
+
+export function getOffsetOfParagraph(
+    node: Node,
+    paragraph: HTMLElement,
+    nodeOffset?: number,
+): number {
+    let offset = 0;
+    let current: Node | null = node;
+
+    while (current && current !== paragraph) {
+        let preSibling = current.previousSibling;
+        while (preSibling) {
+            offset += getTextLengthForOffset(preSibling);
+            preSibling = preSibling.previousSibling;
+        }
+
+        current = current.parentNode;
+    }
+
+    if (nodeOffset == null || current !== paragraph)
         return offset;
 
-    do {
-        preSibling = preSibling.previousSibling;
-        if (preSibling) {
-            offset += getTextContent(preSibling, [
-                CLASS_NAMES.MU_MATH_RENDER,
-                CLASS_NAMES.MU_RUBY_RENDER,
-            ]).length;
-        }
-    } while (preSibling);
+    if (node.nodeType === Node.TEXT_NODE) {
+        return offset + Math.min(Math.max(nodeOffset, 0), node.textContent?.length ?? 0);
+    }
 
-    return node === paragraph || node.parentNode === paragraph
-        ? offset
-        : offset + getOffsetOfParagraph(node.parentNode!, paragraph);
+    const childCount = node.childNodes.length;
+    const end = Math.min(Math.max(nodeOffset, 0), childCount);
+    for (let i = 0; i < end; i++) {
+        offset += getTextLengthForOffset(node.childNodes[i]);
+    }
+
+    return offset;
 }
 
 export function getNodeAndOffset(
@@ -121,10 +151,7 @@ export function getNodeAndOffset(
 
     for (i = 0; i < len; i++) {
         const child = childNodes[i];
-        const textContent = getTextContent(child, [
-            CLASS_NAMES.MU_MATH_RENDER,
-            CLASS_NAMES.MU_RUBY_RENDER,
-        ]);
+        const textContent = getTextContent(child, OFFSET_BLACKLIST);
         const textLength = textContent.length;
 
         // Fix #1460 - put the cursor at the next text node or element if it can be put at the last of /^\n$/ or the next text node/element.

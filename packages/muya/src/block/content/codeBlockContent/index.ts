@@ -9,7 +9,14 @@ import type {
 import type Code from '../../commonMark/codeBlock/code';
 import type HTMLPreview from '../../commonMark/html/htmlPreview';
 import { HTML_TAGS, VOID_HTML_TAGS } from '../../../config';
-import { adjustOffset, escapeHTML, firstWordOfInfo } from '../../../utils';
+import {
+    adjustOffset,
+    escapeHTML,
+    firstWordOfInfo,
+    getDeletionCaretOffset,
+    normalizeUnicodeOffset,
+    normalizeUnicodeText,
+} from '../../../utils';
 import { computeLineCount, repositionLineNumberSpans, syncLineNumbersSpans } from '../../../utils/codeBlockLineNumbers';
 import { getHighlightHtml, MARKER_HASH } from '../../../utils/highlightHTML';
 import prism, { loadedLanguages, transformAliasToOrigin, walkTokens } from '../../../utils/prism/index';
@@ -234,8 +241,28 @@ class CodeBlockContent extends Content {
         if (this.isComposed)
             return;
 
-        const textContent = this.domNode!.textContent!;
+        const rawTextContent = this.domNode!.textContent!;
+        const textContent = normalizeUnicodeText(rawTextContent);
         const { start, end } = this.getCursor()!;
+        if (textContent !== rawTextContent) {
+            const inputType
+                = 'inputType' in event && typeof event.inputType === 'string'
+                    ? event.inputType
+                    : '';
+            const deletionCaret = getDeletionCaretOffset(
+                this.text,
+                textContent,
+                inputType,
+            );
+            if (deletionCaret != null) {
+                start.offset = deletionCaret;
+                end.offset = deletionCaret;
+            }
+            else {
+                start.offset = normalizeUnicodeOffset(rawTextContent, start.offset);
+                end.offset = normalizeUnicodeOffset(rawTextContent, end.offset);
+            }
+        }
         const { needRender, text } = this.autoPair(
             event,
             textContent,
