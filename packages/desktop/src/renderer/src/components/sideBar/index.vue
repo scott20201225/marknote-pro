@@ -40,7 +40,6 @@
         :tabs="tabs"
       />
       <side-bar-search v-show="rightColumn === 'search'" />
-      <toc v-show="rightColumn === 'toc'" />
     </div>
     <div
       v-show="rightColumn"
@@ -59,7 +58,6 @@ import { useEditorStore } from '@/store/editor'
 import { sideBarIcons, sideBarBottomIcons } from './help'
 import Tree from './tree.vue'
 import SideBarSearch from './search.vue'
-import Toc from './toc.vue'
 import { storeToRefs } from 'pinia'
 import type { TabDescriptor } from './types'
 

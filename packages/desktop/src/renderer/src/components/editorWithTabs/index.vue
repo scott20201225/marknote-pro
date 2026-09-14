@@ -4,18 +4,34 @@
     :style="{ 'max-width': `calc(100vw - ${effectiveSideBarWidth}px)` }"
   >
     <div class="container">
-      <editor
-        :markdown="markdown"
-        :cursor="cursor"
-        :text-direction="textDirection"
-        :platform="platform"
-      />
-      <source-code
-        v-if="sourceCode"
-        :markdown="markdown"
-        :muya-index-cursor="muyaIndexCursor"
-        :text-direction="textDirection"
-      />
+      <div class="document-toc-rail">
+        <button
+          class="document-toc-toggle"
+          :class="{ active: showDocumentToc }"
+          type="button"
+          :title="t('sideBar.icons.toc')"
+          @click="layoutStore.TOGGLE_DOCUMENT_TOC()"
+        >
+          <el-icon :size="18">
+            <Memo />
+          </el-icon>
+        </button>
+      </div>
+      <toc v-if="showDocumentToc" class="document-toc-panel" />
+      <div class="editor-content">
+        <editor
+          :markdown="markdown"
+          :cursor="cursor"
+          :text-direction="textDirection"
+          :platform="platform"
+        />
+        <source-code
+          v-if="sourceCode"
+          :markdown="markdown"
+          :muya-index-cursor="muyaIndexCursor"
+          :text-direction="textDirection"
+        />
+      </div>
     </div>
     <tab-notifications />
   </div>
@@ -24,9 +40,12 @@
 <script setup lang="ts">
 import { useLayoutStore } from '@/store/layout'
 import { storeToRefs } from 'pinia'
+import { Memo } from '@element-plus/icons-vue'
+import { useI18n } from 'vue-i18n'
 import Editor from './editor.vue'
 import SourceCode from './sourceCode.vue'
 import TabNotifications from './notifications.vue'
+import Toc from '../sideBar/toc.vue'
 
 defineProps<{
   markdown: string
@@ -40,7 +59,9 @@ defineProps<{
   platform: string
 }>()
 
-const { effectiveSideBarWidth } = storeToRefs(useLayoutStore())
+const { t } = useI18n()
+const layoutStore = useLayoutStore()
+const { effectiveSideBarWidth, showDocumentToc } = storeToRefs(layoutStore)
 </script>
 
 <style scoped>
@@ -55,7 +76,56 @@ const { effectiveSideBarWidth } = storeToRefs(useLayoutStore())
   background: var(--editorBgColor);
   & > .container {
     flex: 1;
+    display: flex;
     overflow: hidden;
   }
+}
+
+.document-toc-rail {
+  display: flex;
+  flex: 0 0 45px;
+  align-items: flex-start;
+  padding-top: 12px;
+  box-sizing: border-box;
+  background: var(--editorBgColor);
+  border-right: 1px solid var(--itemBgColor);
+}
+
+.document-toc-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 45px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-left: 2px solid transparent;
+  background: transparent;
+  color: var(--sideBarIconColor);
+  cursor: pointer;
+}
+
+.document-toc-toggle:hover,
+.document-toc-toggle.active {
+  color: var(--themeColor);
+  background: var(--floatHoverColor);
+}
+
+.document-toc-toggle.active {
+  border-left-color: var(--themeColor);
+}
+
+.document-toc-panel {
+  flex: 0 0 260px;
+  width: 260px;
+  overflow: hidden;
+  border-right: 1px solid var(--itemBgColor);
+}
+
+.editor-content {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 </style>

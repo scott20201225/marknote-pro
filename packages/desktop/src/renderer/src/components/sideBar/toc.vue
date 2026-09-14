@@ -1,7 +1,7 @@
 <template>
   <div
-    class="side-bar-toc"
-    :class="[{ 'side-bar-toc-overflow': !wordWrapInToc, 'side-bar-toc-wordwrap': wordWrapInToc }]"
+    class="document-toc"
+    :class="[{ 'document-toc-overflow': !wordWrapInToc, 'document-toc-wordwrap': wordWrapInToc }]"
   >
     <div class="title">
       {{ t('sideBar.toc.title') }}
@@ -92,54 +92,58 @@ const handleClick = (data: { slug?: unknown }): void => {
 </script>
 
 <style>
-.side-bar-toc {
-  height: calc(100% - 35px);
+.document-toc {
+  height: 100%;
+  min-width: 0;
   margin: 0;
   padding: 0;
   list-style: none;
   display: flex;
   flex-direction: column;
+  background: var(--editorBgColor);
+  color: var(--editorColor);
 }
 
-.side-bar-toc .title {
-  color: var(--sideBarTitleColor);
+.document-toc .title {
+  color: var(--editorColor);
   font-weight: 600;
   font-size: 16px;
-  margin: 37px 0 10px 0;
-  padding-left: 25px;
+  margin: 0;
+  padding: 16px 16px 10px;
 }
 
-.side-bar-toc .el-tree-node {
+.document-toc .el-tree-node {
   margin-top: 8px;
 }
 
-.side-bar-toc .el-tree {
+.document-toc .el-tree {
   background: transparent;
-  color: var(--sideBarColor);
+  color: var(--editorColor);
+  padding: 0 8px 14px;
 }
 
-.side-bar-toc .el-tree-node:focus > .el-tree-node__content {
-  background-color: var(--sideBarItemHoverBgColor);
+.document-toc .el-tree-node:focus > .el-tree-node__content {
+  background-color: var(--floatHoverColor);
 }
 
-.side-bar-toc .el-tree-node__content:hover {
-  background: var(--sideBarItemHoverBgColor);
+.document-toc .el-tree-node__content:hover {
+  background: var(--floatHoverColor);
 }
 
-.side-bar-toc > li {
+.document-toc > li {
   font-size: 14px;
   margin-bottom: 15px;
   cursor: pointer;
 }
-.side-bar-toc-overflow {
+.document-toc-overflow {
   overflow: auto;
 }
-.side-bar-toc-wordwrap {
+.document-toc-wordwrap {
   overflow-x: hidden;
   overflow-y: auto;
 }
 
-.side-bar-toc-wordwrap .el-tree-node__content {
+.document-toc-wordwrap .el-tree-node__content {
   white-space: normal;
   height: auto;
   min-height: 26px;

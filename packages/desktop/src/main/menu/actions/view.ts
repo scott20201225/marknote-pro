@@ -52,7 +52,7 @@ export const toggleSourceCodeMode = (win: Win): void => {
 }
 
 export const showTableOfContents = (win: Win): void => {
-  setLayout(win, 'rightColumn', 'toc')
+  toggleLayout(win, 'toc')
 }
 
 export const toggleTypewriterMode = (win: Win): void => {
