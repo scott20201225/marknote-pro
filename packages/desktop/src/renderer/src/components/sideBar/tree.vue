@@ -19,7 +19,10 @@
             @click="selectRoot"
             @contextmenu.prevent.stop="handleRootContextMenu"
           >
-            <span class="default-cursor text-overflow">
+            <span
+              class="default-cursor text-overflow"
+              @dblclick.stop="toggleRootFromDoubleClick"
+            >
               <input
                 v-if="renameCache === projectTree.pathname"
                 ref="renameInput"
@@ -27,7 +30,8 @@
                 type="text"
                 class="rename root-rename-input"
                 @click.stop
-                @keypress.enter="renameRoot"
+                @keydown.enter.prevent="renameRootFromKeyboard"
+                @blur="renameRootOnBlur"
               />
               <template v-else>{{ projectDisplayName }}</template>
             </span>
@@ -67,7 +71,8 @@
             type="text"
             class="new-input"
             :style="{ 'margin-left': `${depth * 5 + 15}px` }"
-            @keypress.enter="handleInputEnter"
+          @keydown.enter.prevent="handleInputEnterFromKeyboard"
+          @blur="handleInputBlur"
           />
           <file v-for="file of visibleRootFiles" :key="file.id" :file="file" :depth="depth" />
           <div
@@ -146,6 +151,7 @@ const TREE_SPLIT_MIN_WIDTH = TREE_PANEL_MIN_WIDTH + 45
 const createName = ref('')
 const input = ref<HTMLInputElement | null>(null)
 const renameInput = ref<HTMLInputElement | null>(null)
+let skipNextBlur = false
 const newName = ref('')
 
 const projectStore = useProjectStore()
@@ -254,6 +260,12 @@ const toggleNoteNavigationMode = (): void => {
   layoutStore.SET_NOTE_NAVIGATION_MODE('tree-list')
 }
 
+const toggleRootFromDoubleClick = (event: MouseEvent): void => {
+  const target = event.target as HTMLElement | null
+  if (target?.closest('input')) return
+  toggleDirectories()
+}
+
 const handleSplitDragStart = (event: MouseEvent): void => {
   let startX = event.clientX
   let startWidth = sideBarWidth.value
@@ -325,6 +337,16 @@ const handleInputEnter = (): void => {
   projectStore.CREATE_FILE_DIRECTORY(createName.value)
 }
 
+const handleInputEnterFromKeyboard = (): void => {
+  skipNextBlur = true
+  handleInputEnter()
+  window.setTimeout(() => { skipNextBlur = false }, 0)
+}
+
+const handleInputBlur = (): void => {
+  if (!skipNextBlur) handleInputEnter()
+}
+
 const focusRootRenameInput = (): void => {
   if (!props.projectTree || renameCache.value !== props.projectTree.pathname) return
   nextTick(() => {
@@ -339,6 +361,16 @@ const renameRoot = (): void => {
   if (newName.value) {
     projectStore.RENAME_IN_SIDEBAR(newName.value)
   }
+}
+
+const renameRootFromKeyboard = (): void => {
+  skipNextBlur = true
+  renameRoot()
+  window.setTimeout(() => { skipNextBlur = false }, 0)
+}
+
+const renameRootOnBlur = (): void => {
+  if (!skipNextBlur) renameRoot()
 }
 
 onMounted(() => {

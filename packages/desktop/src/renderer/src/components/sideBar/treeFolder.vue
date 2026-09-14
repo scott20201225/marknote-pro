@@ -9,6 +9,7 @@
       ]"
       :title="folder.pathname"
       @click="folderNameClick"
+      @dblclick="folderNameDoubleClick"
     >
       <el-icon
         v-if="showCollapseArrow"
@@ -29,7 +30,8 @@
         type="text"
         class="rename"
         @click.stop="noop"
-        @keypress.enter="rename"
+        @keydown.enter.prevent="renameFromKeyboard"
+        @blur="renameOnBlur"
       />
       <span v-else class="text-overflow">{{ displayName }}</span>
       <button
@@ -60,7 +62,8 @@
         :placeholder="createPlaceholder"
         class="new-input"
         :style="{ 'margin-left': `${depth * 5 + 15}px` }"
-        @keypress.enter="handleInputEnter"
+        @keydown.enter.prevent="handleInputEnterFromKeyboard"
+        @blur="handleInputBlur"
       />
       <File v-for="file of visibleFiles" :key="file.id" :file="file" :depth="depth + 1" />
     </div>
@@ -105,6 +108,7 @@ const newName = ref('')
 const folderEl = ref<HTMLDivElement | null>(null)
 const renameInput = ref<HTMLInputElement | null>(null)
 const input = ref<HTMLInputElement | null>(null)
+let skipNextBlur = false
 
 const isCollapsed = computed<boolean>({
   get: () => !!props.folder.isCollapsed,
@@ -190,6 +194,16 @@ const handleInputEnter = (): void => {
   projectStore.CREATE_FILE_DIRECTORY(createName.value)
 }
 
+const handleInputEnterFromKeyboard = (): void => {
+  skipNextBlur = true
+  handleInputEnter()
+  window.setTimeout(() => { skipNextBlur = false }, 0)
+}
+
+const handleInputBlur = (): void => {
+  if (!skipNextBlur) handleInputEnter()
+}
+
 const toggleCollapsed = (): void => {
   isCollapsed.value = !isCollapsed.value
 }
@@ -197,9 +211,12 @@ const toggleCollapsed = (): void => {
 const folderNameClick = (): void => {
   projectStore.CHANGE_ACTIVE_ITEM(props.folder)
   projectStore.SELECT_NOTE_PATH(props.folder.pathname)
-  if (props.noteNavigationMode !== 'tree-list') {
-    toggleCollapsed()
-  }
+}
+
+const folderNameDoubleClick = (event: MouseEvent): void => {
+  const target = event.target as HTMLElement | null
+  if (target?.closest('.icon-arrow, input, button')) return
+  toggleCollapsed()
 }
 
 const showFolderActionMenu = (event: MouseEvent): void => {
@@ -233,6 +250,16 @@ const rename = (): void => {
   if (newName.value) {
     projectStore.RENAME_IN_SIDEBAR(newName.value)
   }
+}
+
+const renameFromKeyboard = (): void => {
+  skipNextBlur = true
+  rename()
+  window.setTimeout(() => { skipNextBlur = false }, 0)
+}
+
+const renameOnBlur = (): void => {
+  if (!skipNextBlur) rename()
 }
 
 onMounted(() => {
