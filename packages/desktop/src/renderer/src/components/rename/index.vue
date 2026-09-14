@@ -15,7 +15,8 @@
               v-model="tempName"
               type="text"
               class="search"
-              @keyup.enter="confirm"
+              @keydown.enter.prevent="confirmFromKeyboard"
+              @blur="confirmOnBlur"
             >
             <el-icon
               :size="16"
@@ -40,6 +41,7 @@ import { Check } from '@element-plus/icons-vue'
 const showRename = ref(false)
 const tempName = ref('')
 const search = ref<HTMLInputElement | null>(null)
+let skipNextBlur = false
 
 const editorStore = useEditorStore()
 
@@ -56,8 +58,19 @@ const handleRename = () => {
 }
 
 const confirm = () => {
+  if (!showRename.value) return
   editorStore.RENAME(tempName.value)
   showRename.value = false
+}
+
+const confirmFromKeyboard = (): void => {
+  skipNextBlur = true
+  confirm()
+  window.setTimeout(() => { skipNextBlur = false }, 0)
+}
+
+const confirmOnBlur = (): void => {
+  if (!skipNextBlur) confirm()
 }
 
 onMounted(() => {

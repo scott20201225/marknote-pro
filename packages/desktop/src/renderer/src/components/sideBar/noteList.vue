@@ -27,7 +27,8 @@
         :placeholder="t('sideBar.tree.documentNamePlaceholder')"
         type="text"
         class="note-list-create-input"
-        @keypress.enter="createDocument"
+        @keydown.enter.prevent="createDocumentFromKeyboard"
+        @blur="createDocumentOnBlur"
       />
       <template v-if="visibleFiles.length">
         <div
@@ -48,7 +49,8 @@
               type="text"
               class="rename"
               @click.stop="noop"
-              @keypress.enter="rename"
+              @keydown.enter.prevent="renameFromKeyboard"
+              @blur="renameOnBlur"
             />
             <span v-else class="note-list-name text-overflow">{{
               getNoteDisplayName(file, rootPath)
@@ -105,6 +107,7 @@ const createInput = ref<HTMLInputElement | null>(null)
 const createName = ref('')
 const newName = ref('')
 const renameInputs = new Map<string, HTMLInputElement>()
+let skipNextBlur = false
 
 const rootPath = computed<string | null>(() => props.projectTree?.pathname ?? null)
 const selectedFolder = computed(() => {
@@ -182,10 +185,30 @@ const rename = (): void => {
   }
 }
 
+const renameFromKeyboard = (): void => {
+  skipNextBlur = true
+  rename()
+  window.setTimeout(() => { skipNextBlur = false }, 0)
+}
+
+const renameOnBlur = (): void => {
+  if (!skipNextBlur) rename()
+}
+
 const createDocument = (): void => {
   if (createName.value) {
     projectStore.CREATE_FILE_DIRECTORY(createName.value)
   }
+}
+
+const createDocumentFromKeyboard = (): void => {
+  skipNextBlur = true
+  createDocument()
+  window.setTimeout(() => { skipNextBlur = false }, 0)
+}
+
+const createDocumentOnBlur = (): void => {
+  if (!skipNextBlur) createDocument()
 }
 
 const selectListTarget = (): void => {

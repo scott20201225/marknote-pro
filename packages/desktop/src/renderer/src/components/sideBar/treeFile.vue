@@ -17,7 +17,8 @@
       type="text"
       class="rename"
       @click.stop="noop"
-      @keypress.enter="rename"
+      @keydown.enter.prevent="renameFromKeyboard"
+      @blur="renameOnBlur"
     >
     <span
       v-else
@@ -66,6 +67,7 @@ const { renameCache } = storeToRefs(projectStore)
 const { activeItem } = storeToRefs(projectStore)
 const { clipboard } = storeToRefs(projectStore)
 const { currentFile, tabs } = storeToRefs(editorStore)
+let skipNextBlur = false
 const rootPath = computed<string | null>(() => projectStore.projectTree?.pathname ?? null)
 const displayName = computed<string>(() => getNoteDisplayName(props.file, rootPath.value))
 
@@ -99,6 +101,16 @@ const rename = (): void => {
   if (newName.value) {
     projectStore.RENAME_IN_SIDEBAR(newName.value)
   }
+}
+
+const renameFromKeyboard = (): void => {
+  skipNextBlur = true
+  rename()
+  window.setTimeout(() => { skipNextBlur = false }, 0)
+}
+
+const renameOnBlur = (): void => {
+  if (!skipNextBlur) rename()
 }
 
 const showFileActionMenu = (event: MouseEvent): void => {
