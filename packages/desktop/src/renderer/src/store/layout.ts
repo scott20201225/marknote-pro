@@ -10,6 +10,7 @@ interface LayoutPartial {
   sideBarWidth?: number | string
   noteNavigationMode?: 'tree' | 'tree-list'
   noteListWidth?: number | string
+  showDocumentToc?: boolean
 }
 
 interface SetLayoutOptions {
@@ -33,6 +34,7 @@ interface BufferedLayout {
   sideBarWidth: number
   noteNavigationMode: 'tree' | 'tree-list'
   noteListWidth: number
+  showDocumentToc: boolean
 }
 
 const createBufferedLayoutState = (state: unknown): BufferedLayout | null => {
@@ -43,17 +45,19 @@ const createBufferedLayoutState = (state: unknown): BufferedLayout | null => {
   // not coerce to 'files' here — RESTORE_BUFFERED_STATE then routes through
   // SET_LAYOUT which only assigns when the key is defined.
   return {
-    rightColumn: s.rightColumn,
+    rightColumn: s.rightColumn === 'toc' ? 'files' : s.rightColumn,
     showSideBar: true,
     sideBarWidth: normalizeSideBarWidth(s.sideBarWidth),
     noteNavigationMode: s.noteNavigationMode === 'tree-list' ? 'tree-list' : 'tree',
-    noteListWidth: normalizeNoteListWidth(s.noteListWidth)
+    noteListWidth: normalizeNoteListWidth(s.noteListWidth),
+    showDocumentToc: s.showDocumentToc === true
   }
 }
 
 const initialWidth = localStorage.getItem('side-bar-width')
 const initialSideBarWidth = normalizeSideBarWidth(initialWidth)
 const initialNoteListWidth = normalizeNoteListWidth(localStorage.getItem('note-list-width'))
+const initialDocumentTocVisible = localStorage.getItem('document-toc-visible') === 'true'
 
 export const useLayoutStore = defineStore('layout', () => {
   const preferencesStore = usePreferencesStore()
@@ -64,6 +68,7 @@ export const useLayoutStore = defineStore('layout', () => {
     preferencesStore.noteNavigationMode === 'tree-list' ? 'tree-list' : 'tree'
   )
   const noteListWidth = ref<number>(initialNoteListWidth)
+  const showDocumentToc = ref<boolean>(initialDocumentTocVisible)
 
   watch(
     () => [preferencesStore.preferenceLoaded, preferencesStore.noteNavigationMode] as const,
@@ -100,11 +105,14 @@ export const useLayoutStore = defineStore('layout', () => {
     // Match the pre-migration `Object.assign(this, layout)` semantics: assign
     // each known field as-is except sidebar visibility, which is now fixed to
     // visible. `SET_SIDE_BAR_WIDTH` owns sideBarWidth normalization.
-    if (layout.rightColumn !== undefined) rightColumn.value = layout.rightColumn
+    if (layout.rightColumn !== undefined) {
+      rightColumn.value = layout.rightColumn === 'toc' ? 'files' : layout.rightColumn
+    }
     showSideBar.value = true
     if (layout.sideBarWidth !== undefined) sideBarWidth.value = layout.sideBarWidth as number
     if (layout.noteNavigationMode !== undefined) noteNavigationMode.value = layout.noteNavigationMode
     if (layout.noteListWidth !== undefined) noteListWidth.value = layout.noteListWidth as number
+    if (layout.showDocumentToc !== undefined) showDocumentToc.value = layout.showDocumentToc
     if (scheduleBufferUpdate) {
       debouncedSendBufferedState()
     }
@@ -116,7 +124,8 @@ export const useLayoutStore = defineStore('layout', () => {
       showSideBar: true,
       sideBarWidth: sideBarWidth.value,
       noteNavigationMode: noteNavigationMode.value,
-      noteListWidth: noteListWidth.value
+      noteListWidth: noteListWidth.value,
+      showDocumentToc: showDocumentToc.value
     })
   }
 
@@ -128,7 +137,8 @@ export const useLayoutStore = defineStore('layout', () => {
     SET_LAYOUT(
       {
         rightColumn: layout.rightColumn,
-        noteListWidth: layout.noteListWidth
+        noteListWidth: layout.noteListWidth,
+        showDocumentToc: layout.showDocumentToc
       },
       { scheduleBufferUpdate: false }
     )
@@ -137,7 +147,7 @@ export const useLayoutStore = defineStore('layout', () => {
   }
 
   function TOGGLE_LAYOUT_ENTRY(entryName: string): void {
-    void entryName
+    if (entryName === 'toc') TOGGLE_DOCUMENT_TOC()
   }
 
   function SET_SIDE_BAR_WIDTH(
@@ -208,12 +218,19 @@ export const useLayoutStore = defineStore('layout', () => {
     }
   }
 
+  function TOGGLE_DOCUMENT_TOC(): void {
+    showDocumentToc.value = !showDocumentToc.value
+    localStorage.setItem('document-toc-visible', String(showDocumentToc.value))
+    debouncedSendBufferedState()
+  }
+
   return {
     rightColumn,
     showSideBar,
     sideBarWidth,
     noteNavigationMode,
     noteListWidth,
+    showDocumentToc,
     effectiveSideBarWidth,
     SET_LAYOUT,
     CREATE_BUFFERED_STATE,
@@ -224,6 +241,7 @@ export const useLayoutStore = defineStore('layout', () => {
     DISPATCH_LAYOUT_MENU_ITEMS,
     CHANGE_SIDE_BAR_WIDTH,
     SET_NOTE_NAVIGATION_MODE,
-    SET_NOTE_LIST_WIDTH
+    SET_NOTE_LIST_WIDTH,
+    TOGGLE_DOCUMENT_TOC
   }
 })
