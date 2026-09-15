@@ -4,11 +4,15 @@
     :style="{ 'max-width': `calc(100vw - ${effectiveSideBarWidth}px)` }"
   >
     <div class="container">
-      <toc v-if="showDocumentToc" class="document-toc-panel" />
+      <toc
+        v-if="showDocumentToc"
+        class="document-toc-panel"
+        @close="layoutStore.TOGGLE_DOCUMENT_TOC()"
+      />
       <div class="editor-content">
         <button
+          v-if="!showDocumentToc"
           class="document-toc-toggle"
-          :class="{ active: showDocumentToc }"
           type="button"
           :title="t('sideBar.icons.toc')"
           @click="layoutStore.TOGGLE_DOCUMENT_TOC()"
@@ -87,24 +91,18 @@ const { effectiveSideBarWidth, showDocumentToc } = storeToRefs(layoutStore)
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
   padding: 0;
-  border: 1px solid var(--editorColor10);
-  border-radius: 4px;
-  background: var(--editorBgColor);
+  border: 0;
+  background: transparent;
   color: var(--editorColor);
   cursor: pointer;
 }
 
-.document-toc-toggle:hover,
-.document-toc-toggle.active {
+.document-toc-toggle:hover {
   color: var(--themeColor);
   background: var(--floatHoverColor);
-}
-
-.document-toc-toggle.active {
-  border-color: var(--themeColor);
 }
 
 .document-toc-panel {
