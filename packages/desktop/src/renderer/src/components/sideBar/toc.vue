@@ -122,6 +122,11 @@ const handleClick = (data: { slug?: unknown }): void => {
   padding: 0 8px 14px;
 }
 
+.document-toc .el-tree-node__label,
+.document-toc .el-tree-node__expand-icon {
+  color: var(--editorColor);
+}
+
 .document-toc .el-tree-node:focus > .el-tree-node__content {
   background-color: var(--floatHoverColor);
 }
