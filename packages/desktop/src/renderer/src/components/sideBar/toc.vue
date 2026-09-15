@@ -149,6 +149,9 @@ const handleClick = (data: { slug?: unknown }): void => {
 }
 
 .document-toc .el-tree {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   background: transparent;
   color: var(--editorColor);
   padding: 0 8px 14px;
