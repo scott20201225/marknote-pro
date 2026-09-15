@@ -4,7 +4,8 @@
     :style="{ 'max-width': `calc(100vw - ${effectiveSideBarWidth}px)` }"
   >
     <div class="container">
-      <div class="document-toc-rail">
+      <toc v-if="showDocumentToc" class="document-toc-panel" />
+      <div class="editor-content">
         <button
           class="document-toc-toggle"
           :class="{ active: showDocumentToc }"
@@ -16,9 +17,6 @@
             <Memo />
           </el-icon>
         </button>
-      </div>
-      <toc v-if="showDocumentToc" class="document-toc-panel" />
-      <div class="editor-content">
         <editor
           :markdown="markdown"
           :cursor="cursor"
@@ -81,27 +79,21 @@ const { effectiveSideBarWidth, showDocumentToc } = storeToRefs(layoutStore)
   }
 }
 
-.document-toc-rail {
-  display: flex;
-  flex: 0 0 45px;
-  align-items: flex-start;
-  padding-top: 12px;
-  box-sizing: border-box;
-  background: var(--editorBgColor);
-  border-right: 1px solid var(--itemBgColor);
-}
-
 .document-toc-toggle {
+  position: absolute;
+  z-index: 2;
+  top: 12px;
+  left: 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 45px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   padding: 0;
-  border: none;
-  border-left: 2px solid transparent;
-  background: transparent;
-  color: var(--sideBarIconColor);
+  border: 1px solid var(--editorColor10);
+  border-radius: 4px;
+  background: var(--editorBgColor);
+  color: var(--editorColor);
   cursor: pointer;
 }
 
@@ -112,7 +104,7 @@ const { effectiveSideBarWidth, showDocumentToc } = storeToRefs(layoutStore)
 }
 
 .document-toc-toggle.active {
-  border-left-color: var(--themeColor);
+  border-color: var(--themeColor);
 }
 
 .document-toc-panel {
