@@ -4,7 +4,17 @@
     :class="[{ 'document-toc-overflow': !wordWrapInToc, 'document-toc-wordwrap': wordWrapInToc }]"
   >
     <div class="title">
-      {{ t('sideBar.toc.title') }}
+      <span>{{ t('sideBar.toc.title') }}</span>
+      <button
+        class="document-toc-close"
+        type="button"
+        :title="t('sideBar.icons.toc')"
+        @click="emit('close')"
+      >
+        <el-icon :size="18">
+          <DArrowLeft />
+        </el-icon>
+      </button>
     </div>
     <el-tree
       v-if="keyedToc.length"
@@ -30,9 +40,10 @@ import { deriveKeyedToc, type KeyedTocNode } from '@/util/tocKeys'
 import bus from '../../bus'
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
-import { ArrowRight } from '@element-plus/icons-vue'
+import { ArrowRight, DArrowLeft } from '@element-plus/icons-vue'
 
 const { t } = useI18n()
+const emit = defineEmits<{ close: [] }>()
 
 const editorStore = useEditorStore()
 const preferencesStore = usePreferencesStore()
@@ -105,11 +116,32 @@ const handleClick = (data: { slug?: unknown }): void => {
 }
 
 .document-toc .title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   color: var(--editorColor);
   font-weight: 600;
   font-size: 16px;
   margin: 0;
   padding: 16px 16px 10px;
+}
+
+.document-toc-close {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--editorColor);
+  cursor: pointer;
+}
+
+.document-toc-close:hover {
+  color: var(--themeColor);
+  background: var(--floatHoverColor);
 }
 
 .document-toc .el-tree-node {
