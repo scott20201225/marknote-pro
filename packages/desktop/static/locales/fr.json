@@ -649,7 +649,12 @@
         "neverDetected": "Jamais détecté",
         "neverSuccessful": "Jamais réussi"
       },
-      "defaultBehavior": "Comportement par défaut après avoir collé ou glissé une image dans MarkNotePro"
+      "defaultBehavior": "Comportement par défaut après avoir collé ou glissé une image dans MarkNotePro",
+      "screenshotSaveMethod": "Mode d'enregistrement des captures",
+      "screenshotSaveMethods": {
+        "attachment": "Enregistrer comme pièce jointe",
+        "base64": "Intégrer en Base64"
+      }
     },
     "markdown": {
       "title": "Markdown",

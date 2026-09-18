@@ -649,7 +649,12 @@
         "pleaseInstall": "Lütfen yükleyin",
         "scriptPath": "Betik yolu"
       },
-      "defaultBehavior": "Görseli MarkNotePro'e yapıştırdıktan veya sürükledikten sonraki varsayılan davranış"
+      "defaultBehavior": "Görseli MarkNotePro'e yapıştırdıktan veya sürükledikten sonraki varsayılan davranış",
+      "screenshotSaveMethod": "Ekran görüntüsü kaydetme yöntemi",
+      "screenshotSaveMethods": {
+        "attachment": "Görsel eki olarak kaydet",
+        "base64": "Base64 olarak göm"
+      }
     },
     "markdown": {
       "title": "Markdown",

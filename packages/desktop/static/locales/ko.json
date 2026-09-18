@@ -649,7 +649,12 @@
         "neverDetected": "감지된 적 없음",
         "neverSuccessful": "성공한 적 없음"
       },
-      "defaultBehavior": "이미지를 MarkNotePro에 붙여넣거나 드래그한 후의 기본 동작"
+      "defaultBehavior": "이미지를 MarkNotePro에 붙여넣거나 드래그한 후의 기본 동작",
+      "screenshotSaveMethod": "스크린샷 저장 방식",
+      "screenshotSaveMethods": {
+        "attachment": "이미지 첨부",
+        "base64": "Base64 포함"
+      }
     },
     "markdown": {
       "title": "마크다운",

@@ -6,6 +6,7 @@ import type { Listener } from './event/types';
 import type { ILocale } from './i18n/types';
 import type { IIndexCursor } from './selection/offsetCursor';
 import type { IHistorySelection, IPublicCursorInput } from './selection/types';
+import { SelectionDirection } from './selection/types';
 import type { ITocItem } from './state/getTOC';
 import type { TAdmonitionType } from './state/admonition';
 import type { IBlockQuoteState, IBulletListState, IOrderListState, ITableState, ITaskListState, TState } from './state/types';
@@ -523,9 +524,14 @@ export class Muya {
             return null;
 
         const sp = this.editor.scrollPage!;
+        const direction = selection.getSelection()?.direction;
         const anchorOut = anchorLeaf.outMostBlock;
         const focusOut = focusLeaf.outMostBlock;
-        const forward = anchorOut && focusOut ? sp.offset(anchorOut) <= sp.offset(focusOut) : true;
+        const forward = direction === SelectionDirection.BACKWARD
+            ? false
+            : direction === SelectionDirection.FORWARD
+                ? true
+                : anchorOut && focusOut ? sp.offset(anchorOut) <= sp.offset(focusOut) : true;
 
         return {
             first: forward ? anchorLeaf : focusLeaf,

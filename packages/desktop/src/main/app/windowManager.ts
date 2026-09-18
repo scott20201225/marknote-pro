@@ -498,11 +498,6 @@ class WindowManager extends TypedEmitter<WindowManagerEvents> {
       }
     })
 
-    onInternalChannel('broadcast-user-data-changed', (userData: Record<string, unknown>) => {
-      for (const { browserWindow } of this._windows.values()) {
-        browserWindow?.webContents.send('mt::user-preference', userData)
-      }
-    })
   }
 }
 

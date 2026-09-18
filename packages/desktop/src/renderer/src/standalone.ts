@@ -254,9 +254,6 @@ export const installStandaloneBridge = (): void => {
     onError: () => () => {},
     onCancelled: () => () => {}
   }
-  window.uploader = {
-    uploadImage: async() => undefined
-  }
   window.fonts = {
     list: async() => []
   }

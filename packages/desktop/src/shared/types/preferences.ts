@@ -49,9 +49,7 @@ export interface IUserPreferences {
   spellcheckerEnabled?: boolean
   spellcheckerNoUnderline?: boolean
   spellcheckerLanguage?: string
-  imageInsertAction?: 'upload' | 'folder' | 'path'
-  imagePreferRelativePath?: boolean
-  imageFolderPath?: string
+  screenshotSaveMethod?: 'attachment' | 'base64'
   screenshotFolderPath?: string
   imageBed?: { selected?: string; [key: string]: unknown }
   imageBedAlias?: { [key: string]: unknown }

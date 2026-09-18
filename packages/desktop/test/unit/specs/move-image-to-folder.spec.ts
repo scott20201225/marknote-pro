@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import path from 'path'
-import { copyImageToFolder } from '@/util/fileSystem'
+import { copyImageToFolder, dataUriToImageFile, imagePathToDataUri } from '@/util/fileSystem'
 
 // copyImageToFolder relies on the preload contextBridge surface (window.path,
 // window.fileUtils). Stub them with the real node `path` and in-memory fakes so
@@ -11,6 +11,7 @@ const writeFile = vi.fn(() => Promise.resolve())
 const md5File = vi.fn(() => Promise.resolve('hash-from-file'))
 const md5Data = vi.fn(() => Promise.resolve('hash-from-bytes'))
 const pathExists = vi.fn(() => Promise.resolve(false))
+const readFile = vi.fn(() => Promise.resolve(new Uint8Array([1, 2, 3])))
 
 const win = window as unknown as {
   path: typeof path
@@ -23,6 +24,7 @@ beforeEach(() => {
   md5File.mockClear()
   md5Data.mockClear()
   pathExists.mockClear()
+  readFile.mockClear()
   win.path = path
   win.fileUtils = {
     ensureDir: vi.fn(() => Promise.resolve()),
@@ -32,6 +34,7 @@ beforeEach(() => {
     md5File,
     md5Data,
     pathExists,
+    readFile,
     isSamePathSync: vi.fn((a: string, b: string) => path.normalize(a) === path.normalize(b))
   }
 })
@@ -45,6 +48,24 @@ describe('copyImageToFolder relative-directory persistence', () => {
     const result = await copyImageToFolder(docPath, file, assetsDir, true, docPath)
     expect(result).toBe('assets/pic-hash-from-bytes.png')
     expect(path.isAbsolute(result)).toBe(false)
+  })
+
+  it('decodes a clipboard data URI into a PNG attachment file', async() => {
+    const image = dataUriToImageFile('data:image/png;base64,AQID')
+    expect(image).not.toBeNull()
+    expect(image!.name).toBe('screenshot.png')
+    expect(image!.type).toBe('image/png')
+
+    const result = await copyImageToFolder(docPath, image!, assetsDir, true, docPath)
+    expect(result).toBe('assets/screenshot-hash-from-bytes.png')
+    expect((writeFile.mock.calls[0] as unknown[])[0] as string)
+      .toBe(path.join(assetsDir, 'screenshot-hash-from-bytes.png'))
+  })
+
+  it('converts a captured screenshot path to a Base64 data URI', async() => {
+    const result = await imagePathToDataUri('/tmp/2026-09-18-10-20-30-screenshot.png')
+    expect(result).toBe('data:image/png;base64,AQID')
+    expect(readFile).toHaveBeenCalledWith('/tmp/2026-09-18-10-20-30-screenshot.png')
   })
 
   it('returns a relative path for a local path string when isRelative is set', async() => {
@@ -87,14 +108,7 @@ describe('copyImageToFolder relative-directory persistence', () => {
     expect(result).toBe('assets/already-hash-from-file.png')
   })
 
-  // Item 114: editor.vue imageInsertAction='path'. The string-path branch
-  // (typeof image==='string' → destImagePath = image, verbatim, no copy) lives
-  // in editor.vue:917-920 and is not importable. The automatable slice is its
-  // binary fallback (editor.vue:926-932): a saved-on-disk tab with
-  // preferRelative routes a File through copyImageToFolder(null, file, relDir,
-  // true, currentPathname). pathname is null there because a File needs no
-  // source dir — assert that path stays portable and never dereferences null.
-  it('routes a binary File through the relative branch with a null pathname (path-action fallback)', async() => {
+  it('handles a binary File with a null source pathname', async() => {
     const file = new File([new Uint8Array([4, 5, 6])], 'pasted.png', { type: 'image/png' })
     const result = await copyImageToFolder(
       null as unknown as string,

@@ -677,7 +677,12 @@
         "neverDetected": "從未偵測",
         "neverSuccessful": "從未成功"
       },
-      "defaultBehavior": "貼上或拖曳圖片到 MarkNotePro 後的預設行為"
+      "defaultBehavior": "貼上或拖曳圖片到 MarkNotePro 後的預設行為",
+      "screenshotSaveMethod": "螢幕截圖儲存方式",
+      "screenshotSaveMethods": {
+        "attachment": "圖片附件",
+        "base64": "Base64 內嵌"
+      }
     },
     "markdown": {
       "title": "PicGo 設定",

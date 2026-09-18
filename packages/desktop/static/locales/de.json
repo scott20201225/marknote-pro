@@ -649,7 +649,12 @@
         "neverDetected": "Nie erkannt",
         "neverSuccessful": "Nie erfolgreich"
       },
-      "defaultBehavior": "Standardverhalten nach dem Einfügen oder Ziehen eines Bildes in MarkNotePro"
+      "defaultBehavior": "Standardverhalten nach dem Einfügen oder Ziehen eines Bildes in MarkNotePro",
+      "screenshotSaveMethod": "Speichermethode für Bildschirmfotos",
+      "screenshotSaveMethods": {
+        "attachment": "Als Bildanhang speichern",
+        "base64": "Als Base64 einbetten"
+      }
     },
     "markdown": {
       "title": "Markdown",
