@@ -2,40 +2,59 @@
   <div class="pref-image">
     <h4>{{ t('preferences.image.title') }}</h4>
     <section class="image-ctrl">
-      <div>{{ t('preferences.image.defaultBehavior') }}</div>
+      <div>{{ t('preferences.image.screenshotSaveMethod') }}</div>
       <CurSelect
-        :value="imageInsertAction"
-        :options="imageActions"
-        :on-change="(value) => onSelectChange('imageInsertAction', value)"
+        :value="screenshotSaveMethod"
+        :options="screenshotSaveMethods"
+        :on-change="(value) => onSelectChange('screenshotSaveMethod', value)"
       />
     </section>
-    <Separator />
-    <FolderSetting v-if="imageInsertAction === 'folder' || imageInsertAction === 'path'" />
-    <Uploader v-if="imageInsertAction === 'upload'" />
+    <section class="image-ctrl image-folder">
+      <div>{{ t('preferences.image.folderSetting.globalFolder') }}</div>
+      <div class="attachment-path">{{ attachmentDirectory }}</div>
+      <el-button
+        size="mini"
+        :disabled="!workspaceRootPath"
+        @click="openAttachmentDirectory"
+      >
+        {{ t('preferences.image.folderSetting.showInFolder') }}
+      </el-button>
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
 import { usePreferencesStore } from '@/store/preferences'
-import type { PreferencesState } from '@/store/preferences'
-import Separator from '../common/separator/index.vue'
-import Uploader from './components/uploader/index.vue'
+import { NOTE_ATTACHMENTS_DIRECTORY } from '@/util/fileSystem'
 import CurSelect from '../common/select/index.vue'
-import FolderSetting from './components/folderSetting/index.vue'
-import { getImageActions } from './config'
+import type { PreferencesState } from '@/store/preferences'
+import { getScreenshotSaveMethods } from './config'
 
 const { t } = useI18n()
 
 const preferenceStore = usePreferencesStore()
 
-const { imageInsertAction } = storeToRefs(preferenceStore)
+const { screenshotSaveMethod, lastOpenedFolder, defaultDirectoryToOpen } = storeToRefs(preferenceStore)
 
-const imageActions = getImageActions()
+const screenshotSaveMethods = getScreenshotSaveMethods()
+const attachmentDirectory = `${NOTE_ATTACHMENTS_DIRECTORY}/`
+const workspaceRootPath = computed<string>(() =>
+  lastOpenedFolder.value || defaultDirectoryToOpen.value || ''
+)
 
 const onSelectChange = (type: keyof PreferencesState, value: unknown): void => {
   preferenceStore.SET_SINGLE_PREFERENCE({ type, value })
+}
+
+const openAttachmentDirectory = async(): Promise<void> => {
+  const rootPath = workspaceRootPath.value
+  if (!rootPath) return
+  const attachmentPath = window.path.join(rootPath, NOTE_ATTACHMENTS_DIRECTORY)
+  await window.fileUtils.ensureDir(attachmentPath)
+  await window.electron.shell.openPath(attachmentPath)
 }
 </script>
 
@@ -49,6 +68,10 @@ const onSelectChange = (type: keyof PreferencesState, value: unknown): void => {
       display: block;
       margin: 20px 0;
     }
+  }
+  & .attachment-path {
+    margin: 10px 0;
+    color: var(--editorColor);
   }
 }
 </style>

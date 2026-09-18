@@ -7,7 +7,7 @@ import type Parent from './parent';
 import diff from 'fast-diff';
 import TreeNode from '../../block/base/treeNode';
 import { ScrollPage } from '../../block/scrollPage';
-import { BACK_HASH, BRACKET_HASH, EVENT_KEYS, isFirefox } from '../../config';
+import { BACK_HASH, BRACKET_HASH, EVENT_KEYS, isFirefox, isOsx } from '../../config';
 import Selection from '../../selection';
 import {
     adjustOffset,
@@ -733,6 +733,15 @@ class Content extends TreeNode {
         if (this.muya.ui.handleContentKeydown(event))
             return;
 
+        if (
+            event.key === EVENT_KEYS.Backspace
+            && !this.isComposed
+            && (event.altKey || (isOsx && event.metaKey))
+        ) {
+            this._deleteCurrentLine(event);
+            return;
+        }
+
         if (this._wrapSelectionWithAutoPair(event))
             return;
 
@@ -772,6 +781,66 @@ class Content extends TreeNode {
                 break;
         }
     };
+
+    // Delete the physical line for multi-line content (code/table cells), or
+    // the current structural line elsewhere (paragraph/list item/quote item).
+    // This keeps list and quote containers valid instead of treating their
+    // rendered text as a flat DOM string.
+    private _deleteCurrentLine(event: KeyboardEvent): void {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const cursor = this.getCursor();
+        if (cursor == null)
+            return;
+
+        const cursorOffset = cursor.start.offset;
+        if (
+            this.text.includes('\n')
+            || this.blockName === 'table.cell.content'
+            || this.blockName === 'codeblock.content'
+            || this.blockName === 'language-input'
+        ) {
+            const lineStart = this.text.lastIndexOf('\n', Math.max(0, cursorOffset - 1)) + 1;
+            const nextLineBreak = this.text.indexOf('\n', cursorOffset);
+            const lineEnd = nextLineBreak === -1 ? this.text.length : nextLineBreak + 1;
+            this.text = this.text.substring(0, lineStart) + this.text.substring(lineEnd);
+            this.setCursor(lineStart, lineStart, true);
+            return;
+        }
+
+        const listItem = this.closestBlock('task-list-item') ?? this.closestBlock('list-item');
+        const target = listItem?.isParent() ? listItem : this.parent;
+        if (target == null)
+            return;
+
+        const nextContent = this.nextContentInContext();
+        const previousContent = this.previousContentInContext();
+        let emptyAncestor = target.parent;
+        target.remove('user');
+
+        // Removing the last list/quote item should also remove its now-empty
+        // container, all the way up until the document root.
+        while (emptyAncestor && !emptyAncestor.isScrollPage && emptyAncestor.children.length === 0) {
+            const parent = emptyAncestor.parent;
+            emptyAncestor.remove('user');
+            emptyAncestor = parent;
+        }
+
+        const cursorBlock = nextContent?.parent != null ? nextContent : previousContent?.parent != null ? previousContent : null;
+        if (cursorBlock) {
+            const offset = cursorBlock === previousContent ? cursorBlock.text.length : 0;
+            cursorBlock.setCursor(offset, offset, true);
+            return;
+        }
+
+        const paragraph = ScrollPage.loadBlock('paragraph').create(this.muya, {
+            name: 'paragraph',
+            text: '',
+        });
+        this.scrollPage?.append(paragraph, 'user');
+        paragraph.firstContentInDescendant()?.setCursor(0, 0, true);
+    }
 
     private _wrapSelectionWithAutoPair(event: KeyboardEvent) {
         if (

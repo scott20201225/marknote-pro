@@ -160,10 +160,6 @@ declare global {
     onCancelled(handler: (payload: unknown) => void): () => void
   }
 
-  interface UploaderAPI {
-    uploadImage(req: unknown): Promise<unknown>
-  }
-
   interface FontsAPI {
     list(): Promise<string[]>
   }
@@ -185,7 +181,6 @@ declare global {
     commandExists: CommandExistsAPI
     i18nUtils: I18nUtilsAPI
     ripgrep: RipgrepAPI
-    uploader: UploaderAPI
     fonts: FontsAPI
     process: ProcessShim
     rgPath: string

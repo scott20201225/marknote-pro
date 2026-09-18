@@ -649,7 +649,12 @@
         "pleaseInstall": "Please install",
         "scriptPath": "Script path"
       },
-      "defaultBehavior": "The default behavior after pasting or dragging the image to MarkNotePro"
+      "defaultBehavior": "The default behavior after pasting or dragging the image to MarkNotePro",
+      "screenshotSaveMethod": "Metodo di salvataggio degli screenshot",
+      "screenshotSaveMethods": {
+        "attachment": "Salva come allegato",
+        "base64": "Incorpora come Base64"
+      }
     },
     "markdown": {
       "title": "Markdown",

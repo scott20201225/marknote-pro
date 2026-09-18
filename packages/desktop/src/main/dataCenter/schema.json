@@ -1,22 +1,6 @@
 {
-  "imageFolderPath": {
-    "description": "The image folder to store local images.",
-    "type": "string"
-  },
   "screenshotFolderPath": {
     "description": "The place to store screen capture images.",
-    "type": "string"
-  },
-  "webImages": {
-    "description": "Images from web which you used in MarkNotePro",
-    "type": "array"
-  },
-  "cloudImages": {
-    "description": "Images which you upload to cloud",
-    "type": "array"
-  },
-  "currentUploader": {
-    "description": "The current image uploader",
     "type": "string"
   }
 }

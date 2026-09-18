@@ -337,25 +337,10 @@
     "pattern": "^[a-z]{2,3}(?:[-](?:[0-9]|[a-zA-Z]){2,}){0,2}$",
     "default": "en-US"
   },
-  "imageInsertAction": {
-    "description": "Image--The default behavior after insert image from local folder",
-    "enum": ["upload", "folder", "path"],
-    "default": "path"
-  },
-  "imagePreferRelativeDirectory": {
-    "description": "Image--Whether to prefer the relative image directory.",
-    "type": "boolean",
-    "default": false
-  },
-  "imageRelativeDirectoryBase": {
-    "description": "Image--Where relative images are copied.",
-    "enum": ["file", "folder"],
-    "default": "file"
-  },
-  "imageRelativeDirectoryName": {
-    "description": "Image--The relative image folder name.",
-    "type": "string",
-    "default": "assets"
+  "screenshotSaveMethod": {
+    "description": "Image--How screenshots and clipboard image data are saved.",
+    "enum": ["attachment", "base64"],
+    "default": "attachment"
   },
   "sourceCodeModeEnabled": {
     "description": "View--Whether the source-code mode is enabled by default.--internal",

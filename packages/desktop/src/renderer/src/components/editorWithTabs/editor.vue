@@ -160,7 +160,7 @@ import Printer from '@/services/printService'
 import { SpellcheckerLanguageCommand } from '@/commands'
 import { SpellChecker } from '@/spellchecker'
 import { isOsx, animatedScrollTo } from '@/util'
-import { copyImageToFolder, uploadImage } from '@/util/fileSystem'
+import { copyImageToFolder, dataUriToImageFile, imagePathToDataUri } from '@/util/fileSystem'
 import { guessClipboardFilePath } from '@/util/clipboard'
 import { getCssForOptions, getHtmlToc, type PdfCssOptions, type HtmlTocOptions } from '@/util/pdf'
 import { patchMuyaSoftBreakIme } from '@/util/softBreakIme'
@@ -290,11 +290,7 @@ const {
   autoCheck,
   editorLineWidth,
   wrapCodeBlocks,
-  imageInsertAction,
-  imagePreferRelativeDirectory,
-  imageRelativeDirectoryBase,
-  imageRelativeDirectoryName,
-  imageFolderPath,
+  screenshotSaveMethod,
   theme,
   sequenceTheme,
   hideScrollbar,
@@ -980,46 +976,31 @@ const imageAction = async (
 ): Promise<string> => {
   // TODO(Refactor): Refactor this method.
   if (!currentFile.value) return ''
-  const { filename, pathname: currentPathname } = currentFile.value
+  const { pathname: currentPathname } = currentFile.value
 
-  // Figure out the current working directory.
-  // Save an image relative to the file, otherwise use the project root when available.
-  const isTabSavedOnDisk = !!currentPathname
-  let relativeBasePath: string | null = isTabSavedOnDisk
-    ? window.path.dirname(currentPathname)
-    : null
-  if (isTabSavedOnDisk && imageRelativeDirectoryBase.value !== 'file' && projectTree.value) {
-    const { pathname: rootPath } = projectTree.value as { pathname?: string }
-    if (rootPath && window.fileUtils.isChildOfDirectory(rootPath, currentPathname)) {
-      // Save assets relative to root directory.
-      relativeBasePath = rootPath
-    }
-  }
-
-  const getResolvedImagePath = (imagePath: string) => {
-    const replacement = isTabSavedOnDisk
-      ? filename.replace(/\.[^/.]+$/, '') // Filename w/o extension
-      : ''
-    return imagePath.replace(/\${filename}/g, replacement)
-  }
-
-  const resolvedGlobalImageFolderPath = getResolvedImagePath(imageFolderPath.value)
-  const resolvedImageRelativeDirectoryName = getResolvedImagePath(imageRelativeDirectoryName.value) // assets/
-  const resolvedImageRelativeFullDirectoryPath = relativeBasePath
-    ? window.path.join(relativeBasePath, resolvedImageRelativeDirectoryName)
-    : null // /root/dir/assets
   const workspaceRootPath = projectTree.value?.pathname ?? null
   const attachmentDirectoryPath = workspaceRootPath
     ? window.path.join(workspaceRootPath, NOTE_ATTACHMENTS_DIRECTORY)
     : null
-  const isAbsoluteLocalImage = typeof image === 'string' && window.path.isAbsolute(image)
-  const shouldPersistToAttachments = image instanceof File || isAbsoluteLocalImage
+  const clipboardScreenshot = typeof image === 'string' ? dataUriToImageFile(image) : null
+  if (clipboardScreenshot && screenshotSaveMethod.value === 'base64') return image
+
+  const isAppScreenshot = typeof image === 'string' &&
+    /^\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}-screenshot\.png$/i.test(window.path.basename(image))
+  if (isAppScreenshot && screenshotSaveMethod.value === 'base64') {
+    const dataUri = await imagePathToDataUri(image)
+    if (dataUri) return dataUri
+  }
+
+  const attachmentImage = clipboardScreenshot ?? image
+  const isAbsoluteLocalImage = typeof attachmentImage === 'string' && window.path.isAbsolute(attachmentImage)
+  const shouldPersistToAttachments = attachmentImage instanceof File || isAbsoluteLocalImage
   let destImagePath = ''
 
   if (currentPathname && attachmentDirectoryPath && shouldPersistToAttachments) {
     destImagePath = await copyImageToFolder(
       currentPathname,
-      image,
+      attachmentImage,
       attachmentDirectoryPath,
       true,
       currentPathname
@@ -1035,77 +1016,9 @@ const imageAction = async (
     return destImagePath
   }
 
-  switch (imageInsertAction.value) {
-    case 'upload': {
-      try {
-        // Pass the full preferences state object to avoid dereferencing non-existent .value
-        destImagePath = (await uploadImage(
-          currentPathname,
-          image,
-          preferencesStore.$state as unknown as import('@/util/fileSystem').UploadImagePreferences
-        )) as string
-      } catch (err) {
-        notice.notify({
-          title: 'Upload Image',
-          type: 'warning',
-          message: err as string
-        })
-        destImagePath = (await copyImageToFolder(
-          currentPathname,
-          image,
-          resolvedGlobalImageFolderPath
-        )) as string
-      }
-      break
-    }
-    case 'folder': {
-      if (isTabSavedOnDisk && imagePreferRelativeDirectory.value) {
-        // `image` may be a path string (paste/drag/image-selector) — pass
-        // `currentPathname` so copyImageToFolder can resolve relative paths
-        // via `path.dirname(pathname)` instead of crashing on `dirname(null)`.
-        destImagePath = (await copyImageToFolder(
-          currentPathname,
-          image,
-          resolvedImageRelativeFullDirectoryPath as string,
-          true,
-          currentPathname
-        )) as string
-      } else {
-        destImagePath = (await copyImageToFolder(
-          currentPathname,
-          image,
-          resolvedGlobalImageFolderPath
-        )) as string
-      }
-      break
-    }
-    case 'path': {
-      if (typeof image === 'string') {
-        // Input is a local path.
-        destImagePath = image
-      } else {
-        // Save and move image to image folder if input is binary.
-
-        // Respect user preferences if tab exists on disk.
-        if (isTabSavedOnDisk && imagePreferRelativeDirectory.value) {
-          destImagePath = (await copyImageToFolder(
-            null as unknown as string,
-            image,
-            resolvedImageRelativeFullDirectoryPath as string,
-            true,
-            currentPathname
-          )) as string
-        } else {
-          destImagePath = (await copyImageToFolder(
-            currentPathname,
-            image,
-            resolvedGlobalImageFolderPath
-          )) as string
-        }
-      }
-      break
-    }
-  }
+  // Existing Markdown links remain links. New local image data is handled by
+  // the attachment branch above instead of the retired folder/upload settings.
+  destImagePath = typeof image === 'string' ? image : ''
 
   if (id && sourceCode.value) {
     bus.emit('image-action', {
@@ -1848,10 +1761,9 @@ const handleModalOpening = () => {
   }
 }
 
-// macOS Edit → Screenshot. The main process captures the region, saves it to a
-// PNG, and hands us the path. `document.execCommand('paste')` no longer fires in
-// Electron 42 Chromium, so insert the saved image at the cursor through the
-// engine (routing via `imageAction` → upload/folder/path).
+// macOS Edit → Screenshot. The main process captures the region and hands the
+// temporary PNG path to the engine. imageAction applies the screenshot save
+// method, either embedding Base64 or copying it to the workspace attachments.
 const handleScreenShot = (filePath?: unknown) => {
   if (editor.value && typeof filePath === 'string' && filePath) {
     editor.value.pasteImage(filePath)

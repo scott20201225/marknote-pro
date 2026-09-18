@@ -649,7 +649,12 @@
         "neverDetected": "検出されたことがない",
         "neverSuccessful": "成功したことがない"
       },
-      "defaultBehavior": "MarkNoteProに画像を貼り付けまたはドラッグした後のデフォルト動作"
+      "defaultBehavior": "MarkNoteProに画像を貼り付けまたはドラッグした後のデフォルト動作",
+      "screenshotSaveMethod": "スクリーンショットの保存方法",
+      "screenshotSaveMethods": {
+        "attachment": "画像添付",
+        "base64": "Base64 埋め込み"
+      }
     },
     "markdown": {
       "title": "Markdown",

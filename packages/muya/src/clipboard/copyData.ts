@@ -3,6 +3,7 @@ import type Parent from '../block/base/parent';
 import type TreeNode from '../block/base/treeNode';
 import type { Muya } from '../muya';
 import type { ISelection } from '../selection/types';
+import { SelectionDirection } from '../selection/types';
 import type { TState } from '../state/types';
 import type { Nullable } from '../types';
 import type Clipboard from './index';
@@ -114,7 +115,15 @@ function resolveSelectionOrder(
     if (anchorOutMostBlockOffset == null || focusOutMostBlockOffset == null)
         return null;
 
-    const anchorFirst = anchorOutMostBlockOffset <= focusOutMostBlockOffset;
+    // Prefer the browser selection direction. In particular, list items share
+    // their list as the outmost block, so its offset cannot distinguish a
+    // backward selection's endpoints. Falling back to outmost offsets only
+    // preserves compatibility for a directionless synthetic selection.
+    const anchorFirst = selection.direction === SelectionDirection.BACKWARD
+        ? false
+        : selection.direction === SelectionDirection.FORWARD
+            ? true
+            : anchorOutMostBlockOffset < focusOutMostBlockOffset;
 
     return {
         anchorBlock,

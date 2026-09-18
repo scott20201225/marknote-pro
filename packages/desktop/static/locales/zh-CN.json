@@ -676,7 +676,12 @@
         "pleaseInstall": "请安装",
         "scriptPath": "脚本路径"
       },
-      "defaultBehavior": "粘贴或拖拽图片到 MarkNotePro 后的默认行为"
+      "defaultBehavior": "粘贴或拖拽图片到 MarkNotePro 后的默认行为",
+      "screenshotSaveMethod": "截图保存方式",
+      "screenshotSaveMethods": {
+        "attachment": "图片附件",
+        "base64": "Base64 嵌入"
+      }
     },
     "markdown": {
       "title": "Markdown",
