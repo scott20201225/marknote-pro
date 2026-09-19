@@ -138,6 +138,19 @@ const TOGGLEABLE_BLOCK_LABELS = new Set([
     'thematic-break',
 ]);
 
+// Blocks whose content leaves sit on inner nodes (table cells, the code node),
+// so a paragraph command at such a caret acts on the block as a whole. As in
+// muyajs, such a block is never converted into another type, and never
+// replaced just because its first leaf is empty.
+const WHOLE_BLOCK_NAMES = new Set([
+    'table',
+    'code-block',
+    'html-block',
+    'math-block',
+    'diagram',
+    'frontmatter',
+]);
+
 // Options consumed by the markdown→state lexer (markdownToState / lexBlock).
 // Changing any of these re-classifies block structure (e.g. ```math ⇄ code
 // block under GitLab compatibility, front matter, footnote definitions), which
@@ -721,10 +734,13 @@ export class Muya {
         return content?.outMostBlock ?? null;
     }
 
+    // The caret leaf's own block. For a table cell or code leaf that is the
+    // whole table or code-like block: the cell and the inner code node are not
+    // blocks in the document state, so nothing may be inserted beside them.
     private _immediateBlockAtCursor(): Parent | null {
         const content = this.editor.activeContentBlock ?? this.editor.selection.anchorBlock;
 
-        return content?.parent ?? null;
+        return content?.getAnchor() ?? null;
     }
 
     private _activeFormatBlock(): Format | null {
@@ -1260,7 +1276,7 @@ export class Muya {
         const block = outMost
             ? this._outmostBlockAtCursor()
             : this._immediateBlockAtCursor();
-        if (!block)
+        if (!block || (location === 'before' && block.blockName === 'frontmatter'))
             return;
 
         const state = deepClone(emptyStates.paragraph);
@@ -1330,7 +1346,7 @@ export class Muya {
         // An empty block is disposable, so replace it in place; a block with
         // real content is kept and the table goes directly below it. The picker
         // passes `replace` to always consume its trigger block.
-        if (replace || this._blockLeadingText(block).trim() === '')
+        if (replace || (!WHOLE_BLOCK_NAMES.has(block.blockName) && this._blockLeadingText(block).trim() === ''))
             block.replaceWith(newTable);
         else
             block.parent!.insertAfter(newTable, block);
@@ -1910,7 +1926,7 @@ export class Muya {
      */
     private _convertOrInsertBelow(label: string) {
         const immediate = this._immediateBlockAtCursor();
-        if (!immediate)
+        if (!immediate || WHOLE_BLOCK_NAMES.has(immediate.blockName))
             return;
 
         const leadingText = this._blockLeadingText(immediate);
@@ -2030,7 +2046,7 @@ export class Muya {
      */
     private _convertLeafToParagraph() {
         const leaf = this._immediateBlockAtCursor();
-        if (!leaf || leaf.blockName === 'paragraph')
+        if (!leaf || leaf.blockName === 'paragraph' || WHOLE_BLOCK_NAMES.has(leaf.blockName))
             return;
 
         this._withPreservedOffset(() => replaceBlockByLabel({
