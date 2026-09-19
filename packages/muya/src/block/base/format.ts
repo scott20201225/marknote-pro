@@ -118,7 +118,7 @@ function getOffset(offset: number, token: Token) {
         case 'inline_code':
 
         case 'inline_math': {
-            const markerLen = type === 'strong' || type === 'del' ? 2 : 1;
+            const markerLen = token.marker.length;
             return markeredOffset(dis, len, markerLen, markerLen);
         }
 
@@ -232,6 +232,7 @@ class Format extends Content {
         text: string,
         offset: number,
         type: Token['type'],
+        includeEnd = false,
     ): Nullable<Token> {
         const tokens = tokenizer(text, {
             hasBeginRules: false,
@@ -248,7 +249,7 @@ class Format extends Content {
                 if (
                     token.type === type
                     && offset > token.range.start
-                    && offset < token.range.end
+                    && (offset < token.range.end || (includeEnd && offset === token.range.end))
                 ) {
                     result = token;
                     break;
@@ -646,6 +647,7 @@ class Format extends Content {
             textContent,
             start.offset,
             'inline_math',
+            true,
         );
         const isInInlineCode = !!this._checkCursorInTokenType(
             textContent,

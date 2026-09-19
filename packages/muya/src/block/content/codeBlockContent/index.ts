@@ -8,12 +8,13 @@ import type {
 } from '../../../state/types';
 import type Code from '../../commonMark/codeBlock/code';
 import type HTMLPreview from '../../commonMark/html/htmlPreview';
-import { HTML_TAGS, VOID_HTML_TAGS } from '../../../config';
+import { CLASS_NAMES, EVENT_KEYS, HTML_TAGS, VOID_HTML_TAGS } from '../../../config';
 import {
     adjustOffset,
     escapeHTML,
     firstWordOfInfo,
     getDeletionCaretOffset,
+    isKeyboardEvent,
     normalizeUnicodeOffset,
     normalizeUnicodeText,
 } from '../../../utils';
@@ -176,7 +177,7 @@ class CodeBlockContent extends Content {
         // transform alias to original language
         const fullLengthLang = transformAliasToOrigin([lang])[0];
         const domNode = this.domNode!;
-        const code = escapeHTML(getHighlightHtml(text, highlights, true, true))
+        const code = escapeHTML(getHighlightHtml(text, highlights, true))
             .replace(new RegExp(MARKER_HASH['<'], 'g'), '<')
             .replace(new RegExp(MARKER_HASH['>'], 'g'), '>')
             .replace(new RegExp(MARKER_HASH['"'], 'g'), '"')
@@ -196,6 +197,15 @@ class CodeBlockContent extends Content {
         }
         else {
             domNode.innerHTML = code;
+        }
+
+        // A final newline needs an explicit line box so the caret and line
+        // number for the trailing empty line have a stable visual position.
+        if (text.endsWith('\n')) {
+            const trailingBreak = document.createElement('span');
+            trailingBreak.classList.add(CLASS_NAMES.MU_TRAILING_BREAK);
+            trailingBreak.appendChild(document.createElement('br'));
+            domNode.appendChild(trailingBreak);
         }
 
         this._updateLineNumbers(text);
@@ -332,6 +342,22 @@ class CodeBlockContent extends Content {
             offset += tabSize;
 
         this.setCursor(offset, offset, true);
+    }
+
+    // Empty code rows have no caret geometry for the base handler to measure.
+    // A newline on the caret's side proves ArrowUp/ArrowDown stays in this block.
+    override arrowHandler(event: Event): void {
+        if (isKeyboardEvent(event)) {
+            const { start, end } = this.getCursor()!;
+            if (
+                (event.key === EVENT_KEYS.ArrowUp && this.text.slice(0, start.offset).includes('\n'))
+                || (event.key === EVENT_KEYS.ArrowDown && this.text.slice(end.offset).includes('\n'))
+            ) {
+                return;
+            }
+        }
+
+        super.arrowHandler(event);
     }
 
     override tabHandler(event: KeyboardEvent): void {
