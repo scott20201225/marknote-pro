@@ -128,11 +128,11 @@ describe('code-block line-numbers gutter', () => {
             expect(muya.domNode.querySelectorAll('.mu-line-numbers-rows').length).toBe(0);
         });
 
-        it('defaults to off (option omitted behaves like false)', () => {
+        it('defaults to on when the option is omitted', () => {
             const muya = bootMuya(THREE_LINE_FENCE);
             const pre = muya.domNode.querySelector<HTMLElement>('pre.mu-code-block');
-            expect(pre!.classList.contains('mu-line-numbers')).toBe(false);
-            expect(muya.domNode.querySelectorAll('.mu-line-numbers-rows').length).toBe(0);
+            expect(pre!.classList.contains('mu-line-numbers')).toBe(true);
+            expect(muya.domNode.querySelectorAll('.mu-line-numbers-rows').length).toBe(1);
         });
     });
 

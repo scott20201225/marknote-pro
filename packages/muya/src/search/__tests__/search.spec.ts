@@ -181,4 +181,20 @@ describe('search.replace() — replace all across multiple blocks', () => {
         search.search('foo');
         expect(search.matches.length).toBe(0);
     });
+
+    it('expands regex capture groups independently for every replaced match', async () => {
+        const muya = bootMuya('foo-1 bar-2\n');
+        placeCursorOnFirstBlock(muya);
+
+        const search = muya.editor.searchModule;
+        search.search('([a-z]+)-(\\d+)', { isRegexp: true });
+        expect(search.matches.length).toBe(2);
+
+        // Escaped $1 and $3 (which has no capture group) stay literal per match.
+        search.replace('$2:$1:\\$1:$3', { isSingle: false, isRegexp: true });
+
+        await vi.waitFor(() => {
+            expect(muya.getMarkdown()).toContain('1:foo:\\$1:$3 2:bar:\\$1:$3');
+        });
+    });
 });

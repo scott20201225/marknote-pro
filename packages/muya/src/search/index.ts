@@ -66,7 +66,7 @@ export class Search {
         }
     }
 
-    private _innerReplace(matches: IMatch[], value: string) {
+    private _innerReplace(matches: IMatch[], value: string | ((match: IMatch) => string)) {
         if (!matches.length)
             return;
 
@@ -86,7 +86,7 @@ export class Search {
             }
 
             tempText += block.text.substring(lastEnd, start);
-            tempText += value;
+            tempText += typeof value === 'function' ? value(match) : value;
             lastEnd = end;
         }
 
@@ -100,17 +100,12 @@ export class Search {
         const value = this._value;
 
         if (matches.length) {
-            if (isRegexp)
-                replaceValue = buildRegexValue(matches[index], replaceValue);
+            const matchesToReplace = isSingle ? [matches[index]] : matches;
+            const replacement = isRegexp
+                ? (match: IMatch) => buildRegexValue(match, replaceValue)
+                : replaceValue;
 
-            if (isSingle) {
-                // replace one
-                this._innerReplace([matches[index]], replaceValue);
-            }
-            else {
-                // replace all
-                this._innerReplace(matches, replaceValue);
-            }
+            this._innerReplace(matchesToReplace, replacement);
             const highlightIndex = index < matches.length - 1 ? index : index - 1;
 
             this.search(value, {
