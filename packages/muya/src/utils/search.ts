@@ -4,7 +4,7 @@ import execAll from 'execall';
 export function matchString(text: string, value: string, options: ISearchOption) {
     const { isCaseSensitive, isWholeWord, isRegexp } = options;
 
-    const SPECIAL_CHAR_REG = /[[\]\\^$.|?*+()/]/g;
+    const SPECIAL_CHAR_REG = /[[\]\\^$.|?*+(){}/]/g;
 
     let SEARCH_REG = null;
     let regStr = value;
