@@ -13,8 +13,12 @@ vi.hoisted(() => {
   w.window ??= {}
   w.window.path ??= {
     sep: '/',
-    resolve: (...parts: string[]) =>
-      parts.join('/').replace(/\/\.\//g, '/').replace(/\/{2,}/g, '/')
+      join: (...parts: string[]) => {
+        const [base, child] = parts
+        return `${base.replace(/\/+$/, '')}/${child.replace(/^\.\//, '')}`
+      },
+      resolve: (...parts: string[]) =>
+        parts.join('/').replace(/\/\.\//g, '/').replace(/\/{2,}/g, '/')
   }
   w.window.DIRNAME = '/docs'
 })
@@ -42,5 +46,12 @@ describe('resolveLocalLinkHref — document directory', () => {
     expect(decodeURIComponent(url.pathname)).toBe('/home/me/C# 100%25 what?/notes.md')
     expect(url.hash).toBe('')
     expect(url.search).toBe('')
+  })
+
+  it('keeps the host of a UNC document directory', () => {
+    window.DIRNAME = '//server/share/docs'
+    const url = new URL(resolveLocalLinkHref('./notes.md'))
+    expect(url.host).toBe('server')
+    expect(url.pathname).toBe('/share/docs/notes.md')
   })
 })
