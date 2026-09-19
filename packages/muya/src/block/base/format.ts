@@ -29,6 +29,7 @@ import { getTextContent } from '../../selection/dom';
 import { isListItemState } from '../../state/types';
 import {
     conflict,
+    escapeHTML,
     getDeletionCaretOffset,
     isHTMLElement,
     isMouseEvent,
@@ -397,7 +398,7 @@ class Format extends Content {
                 if (value && attr === 'src')
                     value = correctImageSrc(value);
 
-                imageText += `${attr}="${value}" `;
+                imageText += `${attr}="${escapeHTML(String(value))}" `;
             }
             imageText = imageText.trim();
             imageText += ' />';
@@ -428,7 +429,7 @@ class Format extends Content {
             if (value && attr === 'src')
                 value = correctImageSrc(value);
 
-            imageText += `${attr}="${value}" `;
+            imageText += `${attr}="${escapeHTML(String(value))}" `;
         }
         imageText = imageText.trim();
         imageText += ' />';
