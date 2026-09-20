@@ -27,6 +27,7 @@ interface TreeFile {
   isDirectory: false
   isFile: true
   isMarkdown: boolean
+  isDrawing?: boolean
 }
 
 type AddFileInput = Omit<TreeFile, 'id'>
@@ -39,12 +40,15 @@ const isPathMatch = (a: string, b: string): boolean => {
   return window.path.normalize(a).toLowerCase() === window.path.normalize(b).toLowerCase()
 }
 
-const makeFileComparator = (sortBy: string, sortOrder: string) =>
+const makeFileComparator =
+  (sortBy: string, sortOrder: string) =>
   (a: TreeFile, b: TreeFile): number => {
     let result: number
     if (sortBy === 'created') {
-      const aTime = a.birthTime instanceof Date ? a.birthTime.getTime() : safeTime(Number(a.birthTime))
-      const bTime = b.birthTime instanceof Date ? b.birthTime.getTime() : safeTime(Number(b.birthTime))
+      const aTime =
+        a.birthTime instanceof Date ? a.birthTime.getTime() : safeTime(Number(a.birthTime))
+      const bTime =
+        b.birthTime instanceof Date ? b.birthTime.getTime() : safeTime(Number(b.birthTime))
       result = aTime - bTime
     } else if (sortBy === 'modified') {
       result = safeTime(a.mtimeMs) - safeTime(b.mtimeMs)
@@ -72,7 +76,12 @@ const getSubdirectoriesFromRoot = (rootPath: string, pathname: string): string[]
 /**
  * Add a new file to the tree list.
  */
-export const addFile = (tree: TreeFolder, file: AddFileInput, sortBy: string = 'title', sortOrder: string = 'asc'): void => {
+export const addFile = (
+  tree: TreeFolder,
+  file: AddFileInput,
+  sortBy: string = 'title',
+  sortOrder: string = 'asc'
+): void => {
   const { pathname, name } = file
   const dirname = window.path.dirname(pathname)
   const subDirectories = getSubdirectoriesFromRoot(tree.pathname, dirname)
@@ -118,6 +127,7 @@ export const addFile = (tree: TreeFolder, file: AddFileInput, sortBy: string = '
     existingFile.birthTime = file.birthTime
     existingFile.mtimeMs = file.mtimeMs
     existingFile.isMarkdown = file.isMarkdown
+    existingFile.isDrawing = file.isDrawing
   } else {
     // Remove file content from object.
     const fileCopy: TreeFile = {
@@ -127,6 +137,7 @@ export const addFile = (tree: TreeFolder, file: AddFileInput, sortBy: string = '
       isDirectory: file.isDirectory,
       isFile: file.isFile,
       isMarkdown: file.isMarkdown,
+      isDrawing: file.isDrawing,
       name: file.name,
       pathname: file.pathname
     }

@@ -7,6 +7,10 @@ export const newFile = (_menuItem?: MenuItemArg, _browserWindow?: BrowserWindowA
   bus.emit('SIDEBAR::new', 'file')
 }
 
+export const newDrawing = (_menuItem?: MenuItemArg, _browserWindow?: BrowserWindowArg): void => {
+  bus.emit('SIDEBAR::new', 'drawing')
+}
+
 export const newDirectory = (_menuItem?: MenuItemArg, _browserWindow?: BrowserWindowArg): void => {
   bus.emit('SIDEBAR::new', 'directory')
 }

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import type { BrowserWindow as IBrowserWindow } from 'electron'
 import log from 'electron-log'
 import { TypedEmitter } from '@shared/types/typedEmitter'
@@ -12,6 +12,8 @@ import type Preference from '../preferences'
 import { WindowType } from '../windows/base'
 import type { WindowTypeValue } from '../windows/base'
 import type EditorWindow from '../windows/editor'
+import { isChildOfDirectory } from '../../common/filesystem/paths'
+import { hideDrawioView, isDrawioFile, openDrawioFile } from '../drawio'
 
 class WindowActivityList {
   // Oldest             Newest
@@ -76,10 +78,7 @@ interface AppMenuLike {
 }
 
 interface EditorBufferStoreLike {
-  handleClose(
-    restoreBufferId: string | undefined,
-    windows: { id: number; win: BaseWindow }[]
-  ): void
+  handleClose(restoreBufferId: string | undefined, windows: { id: number; win: BaseWindow }[]): void
 }
 
 class WindowManager extends TypedEmitter<WindowManagerEvents> {
@@ -396,6 +395,16 @@ class WindowManager extends TypedEmitter<WindowManagerEvents> {
         log.error(`Cannot find window id "${win.id}" to open file.`)
         return
       }
+      if (isDrawioFile(filePath)) {
+        const workspaceRoot = editor.openedRootDirectory
+        if (workspaceRoot && isChildOfDirectory(workspaceRoot, filePath)) {
+          void openDrawioFile(filePath, win)
+        } else {
+          void shell.openPath(filePath)
+        }
+        return
+      }
+      hideDrawioView(win)
       editor.openTab(filePath, options, true)
     })
 
@@ -497,7 +506,6 @@ class WindowManager extends TypedEmitter<WindowManagerEvents> {
         }
       }
     })
-
   }
 }
 
