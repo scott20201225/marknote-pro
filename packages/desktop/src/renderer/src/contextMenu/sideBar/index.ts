@@ -1,6 +1,7 @@
 import {
   SEPARATOR,
   getNewFile,
+  getNewDrawing,
   getNewDirectory,
   getNewGroup,
   getNewArea,
@@ -56,6 +57,7 @@ export const showContextMenu = (
 
   if (kind === 'root') {
     contextItems = [
+      getNewDrawing(),
       getNewGroup(),
       getRENAME(),
       SEPARATOR,
@@ -83,6 +85,7 @@ export const showContextMenu = (
     ]
   } else if (kind === 'area') {
     contextItems = [
+      getNewDrawing(),
       getNewDocument(),
       SEPARATOR,
       getExpandAll(),
@@ -110,6 +113,7 @@ export const showContextMenu = (
   } else {
     contextItems = [
       getNewFile(),
+      getNewDrawing(),
       getNewDirectory(),
       SEPARATOR,
       getCOPY(),
@@ -144,7 +148,14 @@ export const showNoteListContextMenu = (
   let contextItems: ContextMenuItem[]
 
   if (kind === 'root') {
-    contextItems = [getNewGroup(), SEPARATOR, getRENAME(), SEPARATOR, getShowInFolder()]
+    contextItems = [
+      getNewDrawing(),
+      getNewGroup(),
+      SEPARATOR,
+      getRENAME(),
+      SEPARATOR,
+      getShowInFolder()
+    ]
   } else if (kind === 'group') {
     contextItems = [
       getNewArea(),
@@ -156,7 +167,19 @@ export const showNoteListContextMenu = (
       SEPARATOR,
       getShowInFolder()
     ]
-  } else if (kind === 'area' || kind === 'document') {
+  } else if (kind === 'area') {
+    contextItems = [
+      getNewDrawing(),
+      getNewDocument(),
+      SEPARATOR,
+      getMOVE_TO(),
+      SEPARATOR,
+      getRENAME(),
+      getDELETE(),
+      SEPARATOR,
+      getShowInFolder()
+    ]
+  } else if (kind === 'document') {
     contextItems = [
       getNewDocument(),
       SEPARATOR,

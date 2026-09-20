@@ -188,7 +188,9 @@ const rename = (): void => {
 const renameFromKeyboard = (): void => {
   skipNextBlur = true
   rename()
-  window.setTimeout(() => { skipNextBlur = false }, 0)
+  window.setTimeout(() => {
+    skipNextBlur = false
+  }, 0)
 }
 
 const renameOnBlur = (): void => {
@@ -204,7 +206,9 @@ const createDocument = (): void => {
 const createDocumentFromKeyboard = (): void => {
   skipNextBlur = true
   createDocument()
-  window.setTimeout(() => { skipNextBlur = false }, 0)
+  window.setTimeout(() => {
+    skipNextBlur = false
+  }, 0)
 }
 
 const createDocumentOnBlur = (): void => {
@@ -221,6 +225,10 @@ const handleFileClick = (file: TreeFileNode): void => {
   const { pathname } = file
   projectStore.SELECT_NOTE_PATH(window.path.dirname(pathname))
   projectStore.CHANGE_ACTIVE_ITEM(file)
+  if (file.isDrawing || /\.drawio$/i.test(pathname)) {
+    void window.electron.ipcRenderer.invoke('mt::drawio::open', pathname)
+    return
+  }
   const openedTab = tabs.value.find((tab) =>
     window.fileUtils.isSamePathSync(tab.pathname, pathname)
   )

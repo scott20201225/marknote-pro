@@ -156,6 +156,8 @@ class EditorWindow extends BaseWindow {
     }
 
     let win: BrowserWindow | null = (this.browserWindow = new BrowserWindow(winOptions))
+    ;(win as BrowserWindow & { __marknoteWorkspaceRoot?: string }).__marknoteWorkspaceRoot =
+      rootDirectory ?? undefined
 
     // Give every editor window a stable id for session buffer persistence.
     // We cant use win.id as it might collide with same IDs from closed windows
@@ -429,6 +431,9 @@ class EditorWindow extends BaseWindow {
       preferences.setItems({ lastOpenedFolder: pathname })
       appMenu.addRecentlyUsedDocument(pathname)
       this._openedRootDirectory = pathname
+      ;(
+        browserWindow as BrowserWindow & { __marknoteWorkspaceRoot?: string }
+      ).__marknoteWorkspaceRoot = pathname
       ipcMain.emit('watcher-watch-directory', browserWindow, pathname)
       browserWindow!.webContents.send('mt::open-directory', pathname)
     } else {

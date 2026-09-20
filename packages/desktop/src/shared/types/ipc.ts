@@ -68,6 +68,18 @@ export interface GitHubDesktopShowOptions {
   localePayload?: GitHubDesktopLocalePayload
 }
 
+export interface DrawioBounds {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+export interface DrawioConfiguration {
+  language: string
+  dark: boolean
+}
+
 // =================================================================
 // Invoke channels (renderer → main, returns Promise<T>)
 // =================================================================
@@ -78,17 +90,34 @@ export interface IpcInvokeChannels {
   'mt::clipboard::guess-file-path': { args: []; ret: string | null }
   'mt::clipboard::read-text': { args: []; ret: string }
   'mt::cmd::exists': { args: [name: string]; ret: boolean }
+  'mt::drawio::close': { args: []; ret: void }
+  'mt::drawio::configure': { args: [configuration: DrawioConfiguration]; ret: void }
+  'mt::drawio::open': { args: [pathname: string]; ret: void }
+  'mt::drawio::save': { args: [xml: string]; ret: void }
+  'mt::drawio::show': { args: [bounds: DrawioBounds]; ret: void }
   'mt::fonts::list': { args: []; ret: string[] }
   'mt::github-desktop::show': {
     args: [options: GitHubDesktopShowOptions]
     ret: void
   }
   'mt::github-desktop::get-selected-repository-path': { args: []; ret: string | null }
-  'mt::github-desktop::select-workspace-directory': { args: [defaultPath: string]; ret: string | null }
+  'mt::github-desktop::select-workspace-directory': {
+    args: [defaultPath: string]
+    ret: string | null
+  }
   'mt::github-desktop::choose-workspace-from-current-repository': { args: []; ret: string | null }
-  'mt::github-desktop::keytar-delete-password': { args: [service: string, account: string]; ret: boolean }
-  'mt::github-desktop::keytar-get-password': { args: [service: string, account: string]; ret: string | null }
-  'mt::github-desktop::keytar-set-password': { args: [service: string, account: string, password: string]; ret: boolean }
+  'mt::github-desktop::keytar-delete-password': {
+    args: [service: string, account: string]
+    ret: boolean
+  }
+  'mt::github-desktop::keytar-get-password': {
+    args: [service: string, account: string]
+    ret: string | null
+  }
+  'mt::github-desktop::keytar-set-password': {
+    args: [service: string, account: string, password: string]
+    ret: boolean
+  }
   'mt::fs-trash-item': { args: [pathname: string]; ret: void }
   'mt::fs::copy': { args: [src: string, dest: string]; ret: void }
   'mt::fs::empty-dir': { args: [path: string]; ret: void }
@@ -173,7 +202,9 @@ export interface IpcSendChannels {
   'mt::get-current-language': []
   'mt::handle-renderer-error': [error: unknown]
   'mt::github-desktop::hide': []
-  'mt::github-desktop::set-bounds': [bounds: { x: number; y: number; width: number; height: number }]
+  'mt::github-desktop::set-bounds': [
+    bounds: { x: number; y: number; width: number; height: number }
+  ]
   'mt::github-desktop::switch-to-note': []
   'mt::github-desktop::workspace-selected': [workspacePath: string]
   'mt::github-desktop::workspace-selected-silent': [workspacePath: string]
@@ -245,6 +276,8 @@ export interface IpcSendChannels {
   'mt::window-tab-closed': [pathname: string]
   'mt::window-toggle-always-on-top': []
   'mt::window-zoom-delta': [direction: 'in' | 'out']
+  'mt::drawio::hide': []
+  'mt::drawio::set-bounds': [bounds: DrawioBounds]
   'mt::window::drop': [payload: unknown]
   'screen-capture': [payload: unknown]
   'set-image-folder-path': [path: string]
@@ -285,6 +318,11 @@ export interface IpcMainEventChannels {
   'mt::ask-for-close': []
   'mt::bootstrap-editor': [config: BootstrapEditorConfig]
   'mt::cm-copy-as-excel': []
+  'mt::drawio::init': [payload: { filePath: string; frameUrl: string; xml: string; title: string }]
+  'mt::drawio::configure': [payload: { frameUrl: string; xml: string }]
+  'mt::drawio::opened': [payload: { filePath: string; title: string }]
+  'mt::drawio::closed': []
+  'mt::drawio::request-exit': []
   'mt::cm-copy-as-html': []
   'mt::cm-copy-as-rich': []
   'mt::cm-insert-paragraph': [direction: 'before' | 'after']

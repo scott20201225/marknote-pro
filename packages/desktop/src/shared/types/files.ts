@@ -88,6 +88,9 @@ export interface IFileState {
   // Muya block tree; only populated for the actively edited tab.
   blocks?: unknown
   isMixedLineEndings?: boolean
+  // Draw.io documents are real editor tabs, but their XML must never be
+  // handed to Muya as Markdown.
+  isDrawing?: boolean
 }
 
 /**

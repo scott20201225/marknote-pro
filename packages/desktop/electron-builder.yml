@@ -62,6 +62,12 @@ extraResources:
     to: embedded-git
     filter:
       - '**/*'
+  # Draw.io Web 编辑器资源来自同级的 drawio fork。开发期也可通过
+  # MARKNOTEPRO_DRAWIO_WEBAPP 指向任意本地 Web 资源目录。
+  - from: ../../../drawio/src/main/webapp
+    to: drawio
+    filter:
+      - '**/*'
 npmRebuild: false
 electronLanguages: # Keep Chromium/AppKit locales for the UI languages MarkText supports
   # Values must cover both spellings: "xx-YY" .pak files on Windows/Linux and

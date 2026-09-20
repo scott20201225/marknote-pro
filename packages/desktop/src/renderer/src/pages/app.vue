@@ -44,9 +44,9 @@
           </el-icon>
         </button>
       </div>
-      <recent v-if="!hasCurrentFile && init" />
+      <recent v-if="!hasCurrentFile && init && !drawioFile" />
       <editor-with-tabs
-        v-if="hasCurrentFile && init"
+        v-if="hasCurrentFile && init && !drawioFile"
         :markdown="markdown"
         :cursor="cursor"
         :muya-index-cursor="muyaIndexCursor"
@@ -54,6 +54,7 @@
         :text-direction="textDirection"
         :platform="platform"
       />
+      <drawio v-if="init && drawioFile" />
       <command-palette />
       <about-dialog />
       <export-setting-dialog />
@@ -82,6 +83,7 @@ import MoveNodeDialog from '@/components/moveNode/index.vue'
 import Rename from '@/components/rename/index.vue'
 import ImportModal from '@/components/import/index.vue'
 import GitDesktop from '@/components/gitDesktop/index.vue'
+import Drawio from '@/components/drawio/index.vue'
 import bus from '@/bus'
 import { DEFAULT_STYLE } from '@/config'
 import { useLayoutStore } from '@/store/layout'
@@ -112,6 +114,7 @@ const tabScrollState = ref({
   canRight: false
 })
 const workbench = ref<'note' | 'git'>('note')
+const drawioFile = ref<{ filePath: string; title: string } | null>(null)
 const lastGestureScale = ref(1)
 
 const { windowActive, platform, init } = storeToRefs(mainStore)
@@ -136,7 +139,7 @@ const muyaIndexCursor = computed<Record<string, unknown> | undefined>(
 )
 
 const hasCurrentFile = computed<boolean>(() => {
-  return currentFile.value?.markdown !== undefined
+  return currentFile.value?.markdown !== undefined && !currentFile.value?.isDrawing
 })
 
 const workspaceSelectionRequired = computed<boolean>(() => {
@@ -191,6 +194,19 @@ const handleWorkbenchSwitch = (event: Event): void => {
   const target = (event as CustomEvent).detail
   if (target === 'note' || target === 'git') {
     workbench.value = target
+    if (target !== 'note') drawioFile.value = null
+  }
+}
+
+const openDrawio = (_event: unknown, payload: { filePath: string; title: string }): void => {
+  editorStore.OPEN_DRAWIO_TAB(payload)
+  drawioFile.value = payload
+}
+
+const closeDrawio = (): void => {
+  drawioFile.value = null
+  if (currentFile.value?.isDrawing) {
+    editorStore.FORCE_CLOSE_TAB(currentFile.value)
   }
 }
 
@@ -207,6 +223,17 @@ watch(customCss, (value, oldValue) => {
       customCss: value
     })
   }
+})
+
+watch(currentFile, (file) => {
+  if (file?.isDrawing) {
+    if (drawioFile.value?.filePath !== file.pathname) {
+      void window.electron.ipcRenderer.invoke('mt::drawio::open', file.pathname)
+    }
+    return
+  }
+
+  if (drawioFile.value) drawioFile.value = null
 })
 
 watch(
@@ -264,6 +291,8 @@ const setupDragDropHandler = (): void => {
 }
 onMounted(() => {
   window.addEventListener('marknotepro:switch-workbench', handleWorkbenchSwitch)
+  window.electron.ipcRenderer.on('mt::drawio::opened', openDrawio)
+  window.electron.ipcRenderer.on('mt::drawio::closed', closeDrawio)
   window.addEventListener('wheel', handleWindowZoomWheel, { capture: true, passive: false })
   window.addEventListener('gesturestart', handleWindowZoomGestureStart)
   window.addEventListener('gesturechange', handleWindowZoomGestureChange)
@@ -336,6 +365,8 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('marknotepro:switch-workbench', handleWorkbenchSwitch)
+  window.electron.ipcRenderer.removeAllListeners('mt::drawio::opened')
+  window.electron.ipcRenderer.removeAllListeners('mt::drawio::closed')
   window.removeEventListener('wheel', handleWindowZoomWheel, true)
   window.removeEventListener('gesturestart', handleWindowZoomGestureStart)
   window.removeEventListener('gesturechange', handleWindowZoomGestureChange)
