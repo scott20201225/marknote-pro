@@ -133,6 +133,13 @@ class Preference extends TypedEmitter<PreferenceEvents> {
       const userSettingKeys = Object.keys(userSetting)
       const defaultSettingKeys = Object.keys(defaultSettings)
 
+      // Heading numbering is now per-document state. Remove the legacy global
+      // preference even when users upgrade from a build that kept it in schema.
+      if (Object.hasOwn(userSetting, 'titleNumbering')) {
+        delete userSetting.titleNumbering
+        this.store.delete('titleNumbering')
+      }
+
       if (requiresUpdate) {
         // TODO(fxha): For performance reasons, we should try to replace 'electron-store' because
         //   it does multiple blocking I/O calls when changing entries. There is no transaction or

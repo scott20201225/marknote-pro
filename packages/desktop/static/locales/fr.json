@@ -223,9 +223,9 @@
     "addToDictionary": "Ajouter au dictionnaire",
     "editDictionary": "Modifier le dictionnaire...",
     "sideBar": {
-    "newFile": "Nouveau fichier",
-    "newDrawing": "Nouveau dessin",
-    "newDirectory": "Nouveau dossier",
+      "newFile": "Nouveau fichier",
+      "newDrawing": "Nouveau dessin",
+      "newDirectory": "Nouveau dossier",
       "copy": "Copier",
       "cut": "Couper",
       "paste": "Coller",
@@ -283,6 +283,8 @@
       "files": "Fichiers",
       "search": "Rechercher",
       "toc": "Table des matières",
+      "headingNumbering": "Afficher la numérotation des titres",
+      "headingNumberingIncludeTopLevel": "Numéroter le titre de niveau supérieur",
       "settings": "Paramètres",
       "git": "Git"
     }

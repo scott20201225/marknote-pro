@@ -22,6 +22,7 @@ import { useLayoutStore } from './layout'
 import { useMainStore } from '.'
 import { t } from '../i18n'
 import { debouncedSendBufferedState, sendBufferedState } from './bufferedState'
+import { addHeadingNumbersToToc } from '../util/titleNumbering'
 import type {
   BootstrapEditorConfig,
   IFileState,
@@ -42,6 +43,11 @@ interface TocItem extends ListItem {
   content?: string
   lvl: number | null
 }
+
+const getDisplayToc = (toc: TocItem[], file: IFileState | null): TocItem[] =>
+  addHeadingNumbersToToc(toc, file?.showHeadingNumbers === true, {
+    includeTopLevel: file?.headingNumberingIncludesTopLevel === true
+  })
 
 type TocTreeNode = TreeNode<TocItem>
 
@@ -357,6 +363,8 @@ export const useEditorStore = defineStore('editor', {
       const oldNotifications = tab.notifications
       // Preserve scroll across external reload so the editor stays put.
       const oldScrollTop = tab.scrollTop
+      const oldShowHeadingNumbers = tab.showHeadingNumbers
+      const oldHeadingNumberingIncludesTopLevel = tab.headingNumberingIncludesTopLevel
       let oldHistory: IFileState['history'] | null = null
       const histIndex = tab.history.index
       if (histIndex >= 0 && tab.history.stack.length >= 1) {
@@ -379,6 +387,8 @@ export const useEditorStore = defineStore('editor', {
       tab.id = oldId
       tab.notifications = oldNotifications
       tab.scrollTop = oldScrollTop
+      tab.showHeadingNumbers = oldShowHeadingNumbers
+      tab.headingNumberingIncludesTopLevel = oldHeadingNumberingIncludesTopLevel
       if (oldHistory) {
         tab.history = oldHistory
       }
@@ -821,7 +831,9 @@ export const useEditorStore = defineStore('editor', {
         if (!window.fileUtils.isSamePathSync(nextPath, tab.pathname)) {
           tab.pathname = nextPath
           tab.filename = window.path.basename(nextPath)
-          tab.notifications = tab.notifications.filter((item) => item.exclusiveType !== 'file_changed')
+          tab.notifications = tab.notifications.filter(
+            (item) => item.exclusiveType !== 'file_changed'
+          )
         }
       })
       if (this.currentFile != null) {
@@ -830,7 +842,9 @@ export const useEditorStore = defineStore('editor', {
           this.currentFile.pathname = nextCurrentPath
           this.currentFile.filename = window.path.basename(nextCurrentPath)
         }
-        window.DIRNAME = this.currentFile.pathname ? window.path.dirname(this.currentFile.pathname) : ''
+        window.DIRNAME = this.currentFile.pathname
+          ? window.path.dirname(this.currentFile.pathname)
+          : ''
       }
       debouncedSendBufferedState()
     },
@@ -1164,7 +1178,11 @@ export const useEditorStore = defineStore('editor', {
 
       if (this.currentFile == null && this.tabs.length > 0) {
         this.currentFile = this.tabs[tabIndex] ?? this.tabs[tabIndex - 1] ?? this.tabs[0] ?? null
-        if (this.currentFile && !this.currentFile.isDrawing && typeof this.currentFile.markdown === 'string') {
+        if (
+          this.currentFile &&
+          !this.currentFile.isDrawing &&
+          typeof this.currentFile.markdown === 'string'
+        ) {
           const { id, markdown, cursor, history, pathname, scrollTop, blocks, muyaIndexCursor } =
             this.currentFile
           window.DIRNAME = pathname ? window.path.dirname(pathname) : ''
@@ -1450,8 +1468,25 @@ export const useEditorStore = defineStore('editor', {
      * @param toc Flat list of headings returned by `muya.getTOC()`.
      */
     UPDATE_TOC(toc: TocItem[]): void {
-      this.listToc = toc ?? []
-      this.toc = listToTree<TocItem>(toc ?? [])
+      const displayToc = getDisplayToc(toc ?? [], this.currentFile)
+      this.listToc = displayToc
+      this.toc = listToTree<TocItem>(displayToc)
+    },
+
+    TOGGLE_HEADING_NUMBERING(): void {
+      const file = this.currentFile
+      if (!file || file.isDrawing) return
+      file.showHeadingNumbers = !file.showHeadingNumbers
+      bus.emit('heading-numbering-display-changed')
+      debouncedSendBufferedState()
+    },
+
+    TOGGLE_HEADING_NUMBERING_TOP_LEVEL(): void {
+      const file = this.currentFile
+      if (!file || file.isDrawing || !file.showHeadingNumbers) return
+      file.headingNumberingIncludesTopLevel = !file.headingNumberingIncludesTopLevel
+      bus.emit('heading-numbering-display-changed')
+      debouncedSendBufferedState()
     },
 
     // Content change from realtime preview editor and source code editor
@@ -1498,9 +1533,10 @@ export const useEditorStore = defineStore('editor', {
       if (blocks) tab.blocks = blocks
 
       // Only update TOC if it's the current file
-      if (id === this.currentFile?.id && toc && !equal(toc, this.listToc)) {
-        this.listToc = toc
-        this.toc = listToTree<TocItem>(toc)
+      const displayToc = toc ? getDisplayToc(toc, this.currentFile) : undefined
+      if (id === this.currentFile?.id && displayToc && !equal(displayToc, this.listToc)) {
+        this.listToc = displayToc
+        this.toc = listToTree<TocItem>(displayToc)
       }
 
       const lastEditIndex = tab.history.lastEditIndex
@@ -2105,6 +2141,8 @@ interface BufferedTabState {
   wordCount: IFileState['wordCount']
   muyaIndexCursor: unknown
   scrollTop: number
+  showHeadingNumbers: boolean
+  headingNumberingIncludesTopLevel: boolean
 }
 
 const createBufferedTabState = (tab: Partial<IFileState> & { id: string }): BufferedTabState => {
@@ -2124,7 +2162,9 @@ const createBufferedTabState = (tab: Partial<IFileState> & { id: string }): Buff
     cursor: toSerializableValue(tab.cursor, defaultFileState.cursor),
     wordCount: toSerializableValue(tab.wordCount, defaultFileState.wordCount),
     muyaIndexCursor: toSerializableValue(tab.muyaIndexCursor, defaultFileState.muyaIndexCursor),
-    scrollTop: tab.scrollTop ?? defaultFileState.scrollTop
+    scrollTop: tab.scrollTop ?? defaultFileState.scrollTop,
+    showHeadingNumbers: tab.showHeadingNumbers === true,
+    headingNumberingIncludesTopLevel: tab.headingNumberingIncludesTopLevel === true
   }
 }
 

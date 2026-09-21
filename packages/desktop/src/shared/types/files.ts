@@ -91,6 +91,9 @@ export interface IFileState {
   // Draw.io documents are real editor tabs, but their XML must never be
   // handed to Muya as Markdown.
   isDrawing?: boolean
+  // Per-tab display options. These are never written into the Markdown file.
+  showHeadingNumbers: boolean
+  headingNumberingIncludesTopLevel: boolean
 }
 
 /**

@@ -45,7 +45,9 @@ const defaultFileStateWithoutId = {
   },
   scrollTop: 0,
   muyaIndexCursor: null,
-  notifications: []
+  notifications: [],
+  showHeadingNumbers: false,
+  headingNumberingIncludesTopLevel: false
 } satisfies Omit<IFileState, 'id'>
 
 /**
@@ -84,7 +86,9 @@ const documentStateKeys = [
   'scrollTop',
   'muyaIndexCursor',
   'notifications',
-  'isDrawing'
+  'isDrawing',
+  'showHeadingNumbers',
+  'headingNumberingIncludesTopLevel'
 ] as const satisfies ReadonlyArray<keyof IFileState>
 
 export const getBlankFileState = (
