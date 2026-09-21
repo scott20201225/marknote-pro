@@ -8,7 +8,6 @@ import log from 'electron-log'
 import type { DrawioConfiguration } from '../../shared/types/ipc'
 
 const DRAWIO_EXTENSION = '.drawio'
-const DRAWIO_RESOURCE_ENV = 'MARKNOTEPRO_DRAWIO_WEBAPP'
 const EMPTY_DRAWIO =
   '<mxfile host="MarkNotePro"><diagram id="page-1" name="Page-1"><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/></root></mxGraphModel></diagram></mxfile>'
 
@@ -42,13 +41,11 @@ const normalizeDrawioPath = (pathname: string): string => {
 
 const findDrawioWebapp = (): string | null => {
   const candidates = [
-    process.env[DRAWIO_RESOURCE_ENV],
     path.join(process.resourcesPath, 'drawio'),
-    path.resolve(process.cwd(), '../../../drawio/src/main/webapp'),
-    path.resolve(process.cwd(), '../../drawio/src/main/webapp'),
-    path.resolve(process.cwd(), '../drawio/src/main/webapp'),
-    path.resolve(__dirname, '../../../../../drawio/src/main/webapp')
-  ].filter((candidate): candidate is string => !!candidate)
+    path.resolve(process.cwd(), 'src/drawioWebApp/drawio'),
+    path.resolve(__dirname, '../drawioWebApp/drawio'),
+    path.resolve(__dirname, '../../src/drawioWebApp/drawio')
+  ]
   return candidates.find((candidate) => fs.existsSync(path.join(candidate, 'index.html'))) ?? null
 }
 
@@ -63,7 +60,7 @@ const getDrawioFrameUrl = (configuration: DrawioConfiguration): string => {
   const webapp = findDrawioWebapp()
   if (!webapp) {
     throw new Error(
-      `找不到 Draw.io Web 引擎。请设置 ${DRAWIO_RESOURCE_ENV}，或将 drawio 放在 MarkNotePro 同级目录。`
+      '找不到 Draw.io Web 引擎。请确认 MarkNotePro 项目中的 packages/desktop/src/drawioWebApp 资源完整。'
     )
   }
   const url = new URL(pathToFileURL(path.join(webapp, 'index.html')).toString())
