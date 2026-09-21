@@ -308,6 +308,7 @@ defineExpose({
   min-width: 0;
   height: 28px;
   user-select: none;
+  background: var(--editorBgColor);
   box-shadow: 0px 0px 9px 2px rgba(0, 0, 0, 0.1);
   overflow: hidden;
 }
@@ -317,6 +318,7 @@ defineExpose({
   min-width: 0;
   height: 28px;
   box-sizing: border-box;
+  background: var(--editorBgColor);
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;

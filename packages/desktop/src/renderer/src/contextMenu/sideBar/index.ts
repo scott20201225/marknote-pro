@@ -101,6 +101,7 @@ export const showContextMenu = (
   } else if (kind === 'document') {
     contextItems = [
       getNewDocument(),
+      getNewDrawing(),
       SEPARATOR,
       getCOPY(),
       getMOVE_TO(),
@@ -182,6 +183,7 @@ export const showNoteListContextMenu = (
   } else if (kind === 'document') {
     contextItems = [
       getNewDocument(),
+      getNewDrawing(),
       SEPARATOR,
       getMOVE_TO(),
       SEPARATOR,

@@ -5,13 +5,6 @@
     :class="[{ active: currentFile?.id === file.id, unsaved: !file.isSaved }]"
     @click="selectFile(file)"
   >
-    <el-icon
-      class="close-icon"
-      :size="10"
-      @click.stop="removeFileInTab(file)"
-    >
-      <Close />
-    </el-icon>
     <span class="name">{{ displayName }}</span>
   </div>
 </template>
@@ -20,7 +13,6 @@
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useEditorStore } from '@/store/editor'
-import { Close } from '@element-plus/icons-vue'
 import type { TabDescriptor } from './types'
 
 const props = defineProps<{
@@ -38,14 +30,6 @@ const selectFile = (file: TabDescriptor): void => {
   }
 }
 
-const removeFileInTab = (file: TabDescriptor): void => {
-  const { isSaved } = file
-  if (isSaved) {
-    editorStore.FORCE_CLOSE_TAB(file)
-  } else {
-    editorStore.CLOSE_UNSAVED_TAB(file)
-  }
-}
 </script>
 
 <style scoped>
@@ -54,19 +38,9 @@ const removeFileInTab = (file: TabDescriptor): void => {
   user-select: none;
   height: 28px;
   line-height: 28px;
-  padding-left: 35px;
+  padding-left: 12px;
   position: relative;
   color: var(--sideBarColor);
-  & > .close-icon {
-    display: none;
-    position: absolute;
-    top: 9px;
-    left: 10px;
-    cursor: pointer;
-  }
-  &:hover > .close-icon {
-    display: inline-flex;
-  }
   &:hover {
     background: var(--sideBarItemHoverBgColor);
   }
@@ -88,8 +62,5 @@ const removeFileInTab = (file: TabDescriptor): void => {
   position: absolute;
   top: 11px;
   left: 12px;
-}
-.unsaved.opened-file:hover::before {
-  content: none;
 }
 </style>

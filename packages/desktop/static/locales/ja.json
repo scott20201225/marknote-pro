@@ -223,8 +223,9 @@
     "addToDictionary": "辞書に追加",
     "editDictionary": "辞書を編集...",
     "sideBar": {
-      "newFile": "新しいファイル",
-      "newDirectory": "新しいフォルダ",
+    "newFile": "新しいファイル",
+    "newDrawing": "新規図面",
+    "newDirectory": "新しいフォルダ",
       "copy": "コピー",
       "cut": "切り取り",
       "paste": "貼り付け",

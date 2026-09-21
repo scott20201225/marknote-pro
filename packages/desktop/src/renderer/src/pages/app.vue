@@ -1,6 +1,6 @@
 <template>
   <git-desktop v-if="workbench === 'git'" />
-  <div v-else class="editor-container">
+  <div v-else class="editor-container" :class="{ 'drawio-open': !!drawioFile }">
     <side-bar v-if="init" />
 
     <div class="editor-middle">
@@ -9,7 +9,7 @@
         :pathname="pathname"
         :filename="filename"
         :active="windowActive"
-        :word-count="wordCount"
+        :word-count="drawioFile ? null : wordCount"
         :platform="platform"
         :is-saved="isSaved"
       />
@@ -425,7 +425,13 @@ onBeforeUnmount(() => {
   height: 28px;
   user-select: none;
   overflow: hidden;
+  background: var(--editorBgColor);
   box-shadow: 0px 0px 9px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* BrowserView cannot paint behind the native title row. */
+.editor-container.drawio-open .editor-middle {
+  background: var(--editorBgColor);
 }
 
 .editor-tab-shell.has-tab-scroll-controls {

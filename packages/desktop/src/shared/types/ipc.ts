@@ -78,6 +78,8 @@ export interface DrawioBounds {
 export interface DrawioConfiguration {
   language: string
   dark: boolean
+  theme: string
+  colors: Record<string, string>
 }
 
 export interface DrawioExportPayload {
