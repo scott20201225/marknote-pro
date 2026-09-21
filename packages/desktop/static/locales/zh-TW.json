@@ -227,10 +227,10 @@
       "newFile": "新建筆記",
       "newDirectory": "新建分區組/分區",
       "newGroup": "新建分區組",
-    "newArea": "新建分區",
-    "newDocument": "新建筆記",
-    "newDrawing": "新增繪圖",
-    "expandAll": "全部展開",
+      "newArea": "新建分區",
+      "newDocument": "新建筆記",
+      "newDrawing": "新增繪圖",
+      "expandAll": "全部展開",
       "collapseAll": "全部折疊",
       "copy": "複製",
       "cut": "剪下",
@@ -308,6 +308,8 @@
       "files": "筆記",
       "search": "搜尋",
       "toc": "目錄",
+      "headingNumbering": "顯示標題編號",
+      "headingNumberingIncludeTopLevel": "最高層標題參與編號",
       "settings": "設定",
       "git": "Git"
     }

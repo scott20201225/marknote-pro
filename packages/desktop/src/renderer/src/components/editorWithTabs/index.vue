@@ -10,17 +10,22 @@
         @close="layoutStore.TOGGLE_DOCUMENT_TOC()"
       />
       <div class="editor-content">
-        <button
-          v-if="!showDocumentToc"
-          class="document-toc-toggle"
-          type="button"
-          :title="t('sideBar.icons.toc')"
-          @click="layoutStore.TOGGLE_DOCUMENT_TOC()"
-        >
-          <el-icon :size="18">
-            <Memo />
-          </el-icon>
-        </button>
+        <div class="document-editor-controls">
+          <button
+            v-if="!showDocumentToc"
+            class="document-editor-control"
+            type="button"
+            :title="t('sideBar.icons.toc')"
+            @click="layoutStore.TOGGLE_DOCUMENT_TOC()"
+          >
+            <el-icon :size="18">
+              <Memo />
+            </el-icon>
+          </button>
+          <div v-if="hasMarkdownFile" class="document-heading-controls">
+            <heading-numbering-controls />
+          </div>
+        </div>
         <editor
           :markdown="markdown"
           :cursor="cursor"
@@ -40,7 +45,9 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useLayoutStore } from '@/store/layout'
+import { useEditorStore } from '@/store/editor'
 import { storeToRefs } from 'pinia'
 import { Memo } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
@@ -48,6 +55,7 @@ import Editor from './editor.vue'
 import SourceCode from './sourceCode.vue'
 import TabNotifications from './notifications.vue'
 import Toc from '../sideBar/toc.vue'
+import HeadingNumberingControls from './headingNumberingControls.vue'
 
 defineProps<{
   markdown: string
@@ -63,7 +71,11 @@ defineProps<{
 
 const { t } = useI18n()
 const layoutStore = useLayoutStore()
+const editorStore = useEditorStore()
 const { effectiveSideBarWidth, showDocumentToc } = storeToRefs(layoutStore)
+const { currentFile } = storeToRefs(editorStore)
+const hasMarkdownFile = computed(() => !!currentFile.value && !currentFile.value.isDrawing)
+
 </script>
 
 <style scoped>
@@ -83,11 +95,23 @@ const { effectiveSideBarWidth, showDocumentToc } = storeToRefs(layoutStore)
   }
 }
 
-.document-toc-toggle {
+.document-editor-controls {
   position: absolute;
   z-index: 2;
   top: 12px;
   left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.document-heading-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+:deep(.document-editor-control) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -100,7 +124,8 @@ const { effectiveSideBarWidth, showDocumentToc } = storeToRefs(layoutStore)
   cursor: pointer;
 }
 
-.document-toc-toggle:hover {
+:deep(.document-editor-control:hover),
+:deep(.document-editor-control.active) {
   color: var(--themeColor);
   background: var(--floatHoverColor);
 }

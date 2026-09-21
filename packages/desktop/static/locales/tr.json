@@ -223,9 +223,9 @@
     "addToDictionary": "Sözlüğe Ekle",
     "editDictionary": "Sözlüğü Düzenle...",
     "sideBar": {
-    "newFile": "Yeni Dosya",
-    "newDrawing": "Yeni çizim",
-    "newDirectory": "Yeni Klasör",
+      "newFile": "Yeni Dosya",
+      "newDrawing": "Yeni çizim",
+      "newDirectory": "Yeni Klasör",
       "copy": "Kopyala",
       "cut": "Kes",
       "paste": "Yapıştır",
@@ -283,6 +283,8 @@
       "files": "Dosyalar",
       "search": "Ara",
       "toc": "İçindekiler",
+      "headingNumbering": "Başlık numaralarını göster",
+      "headingNumberingIncludeTopLevel": "En üst düzey başlığı numaralandır",
       "settings": "Ayarlar",
       "git": "Git"
     }

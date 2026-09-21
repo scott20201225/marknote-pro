@@ -226,10 +226,10 @@
       "newFile": "新建笔记",
       "newDirectory": "新建分区组/分区",
       "newGroup": "新建分区组",
-    "newArea": "新建分区",
-    "newDocument": "新建笔记",
-    "newDrawing": "新建绘图",
-    "expandAll": "全部展开",
+      "newArea": "新建分区",
+      "newDocument": "新建笔记",
+      "newDrawing": "新建绘图",
+      "expandAll": "全部展开",
       "collapseAll": "全部折叠",
       "copy": "复制",
       "cut": "剪切",
@@ -307,6 +307,8 @@
       "files": "笔记",
       "search": "搜索",
       "toc": "目录",
+      "headingNumbering": "显示标题序号",
+      "headingNumberingIncludeTopLevel": "最高级标题参与编号",
       "git": "Git",
       "settings": "设置"
     }

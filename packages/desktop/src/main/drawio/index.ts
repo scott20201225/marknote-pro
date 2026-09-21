@@ -107,6 +107,12 @@ const exportExtensions: Record<string, string> = {
   drawio: 'drawio'
 }
 
+// Draw.io's canvas exporter normalizes JPEG to the internal protocol format
+// `jpg`. Keep the public menu format as `jpeg`, but accept that protocol alias
+// at the host boundary so the native save flow is reached.
+const normalizeDrawioExportFormat = (format: string): string =>
+  format.toLowerCase() === 'jpg' ? 'jpeg' : format
+
 const getExportBuffer = (data: string): Buffer => {
   const dataUrl = /^data:[^,]*;base64,(.*)$/s.exec(data)
   return dataUrl ? Buffer.from(dataUrl[1], 'base64') : Buffer.from(data, 'utf8')
@@ -162,19 +168,22 @@ const saveDrawioExport = async (
   entry: DrawioViewEntry,
   payload: DrawioExportPayload
 ): Promise<void> => {
-  if (!payload || !Object.prototype.hasOwnProperty.call(exportExtensions, payload.format)) {
+  const format =
+    payload && typeof payload.format === 'string' ? normalizeDrawioExportFormat(payload.format) : ''
+  if (!Object.prototype.hasOwnProperty.call(exportExtensions, format)) {
     throw new Error('不支持的 Draw.io 导出格式')
   }
   const data = typeof payload.data === 'string' ? payload.data : payload.xml
   if (typeof data !== 'string' || !data.length) throw new Error('Draw.io 未返回可导出的内容')
 
-  const filename = getExportFilename(entry, payload)
+  const filename = getExportFilename(entry, { ...payload, format })
   const result = await dialog.showSaveDialog(owner, {
     title: '导出 Draw.io 绘图',
     defaultPath: path.join(path.dirname(entry.filePath ?? app.getPath('documents')), filename),
-    filters: [{ name: payload.format.toUpperCase(), extensions: [exportExtensions[payload.format]] }]
+    filters: [{ name: format.toUpperCase(), extensions: [exportExtensions[format]] }]
   })
-  if (!result.canceled && result.filePath) await fsPromises.writeFile(result.filePath, getExportBuffer(data))
+  if (!result.canceled && result.filePath)
+    await fsPromises.writeFile(result.filePath, getExportBuffer(data))
 }
 
 const readDiagram = async (filePath: string): Promise<string> => {

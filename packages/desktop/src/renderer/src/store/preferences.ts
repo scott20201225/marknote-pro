@@ -211,8 +211,7 @@ export const usePreferencesStore = defineStore('preferences', {
     // Edit modes of the current window (not part of persistent settings)
     typewriter: false, // typewriter mode
     focus: false,
-    sourceCode: false, // source code mode
-
+    sourceCode: false // source code mode
   }),
 
   getters: {

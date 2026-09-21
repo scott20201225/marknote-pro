@@ -226,10 +226,10 @@
       "newFile": "New Note",
       "newDirectory": "New Group/Area",
       "newGroup": "New Group",
-    "newArea": "New Area",
-    "newDocument": "New Note",
-    "newDrawing": "New Drawing",
-    "expandAll": "Expand All",
+      "newArea": "New Area",
+      "newDocument": "New Note",
+      "newDrawing": "New Drawing",
+      "expandAll": "Expand All",
       "collapseAll": "Collapse All",
       "copy": "Copy",
       "cut": "Cut",
@@ -307,6 +307,8 @@
       "files": "Notes",
       "search": "Search",
       "toc": "Table of Contents",
+      "headingNumbering": "Show heading numbering",
+      "headingNumberingIncludeTopLevel": "Number the top-level heading",
       "git": "Git",
       "settings": "Settings"
     }
