@@ -8,6 +8,7 @@ import { registerWindowHandlers } from './window'
 import { registerCmdHandlers } from './cmd'
 import { registerI18nHandlers } from './i18n'
 import { registerGitHubDesktopHandlers } from './githubDesktop'
+import { registerDrawioHandlers } from '../drawio'
 
 export const registerSandboxIpcHandlers = (): void => {
   registerBootInfo()
@@ -20,4 +21,5 @@ export const registerSandboxIpcHandlers = (): void => {
   registerCmdHandlers()
   registerI18nHandlers()
   registerGitHubDesktopHandlers()
+  registerDrawioHandlers()
 }

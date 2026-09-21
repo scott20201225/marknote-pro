@@ -21,6 +21,9 @@ const EVENT_NAME = {
   file: 'mt::update-file' as const
 }
 
+const isDrawioFile = (pathname: string): boolean =>
+  path.extname(pathname).toLowerCase() === '.drawio'
+
 type WatchType = 'dir' | 'file'
 
 interface IgnoreEntry {
@@ -38,7 +41,7 @@ interface WatcherEntry {
   close: () => void
 }
 
-const add = async(
+const add = async (
   win: BrowserWindow,
   pathname: string,
   type: WatchType,
@@ -51,6 +54,7 @@ const add = async(
   const birthTime = stats.birthtime
   const mtimeMs = stats.mtimeMs
   const isMarkdown = hasMarkdownExtension(pathname)
+  const isDrawing = isDrawioFile(pathname)
   const file: {
     pathname: string
     name: string
@@ -59,6 +63,7 @@ const add = async(
     birthTime: Date
     mtimeMs: number
     isMarkdown: boolean
+    isDrawing: boolean
     data?: Awaited<ReturnType<typeof loadMarkdownFile>>
   } = {
     pathname,
@@ -67,7 +72,8 @@ const add = async(
     isDirectory: false,
     birthTime,
     mtimeMs,
-    isMarkdown
+    isMarkdown,
+    isDrawing
   }
   if (isMarkdown) {
     // HACK: But this should be removed completely in #1034/#1035.
@@ -91,10 +97,9 @@ const add = async(
         return
       }
     }
-    win.webContents.send(EVENT_NAME[type], {
-      type: 'add',
-      change: file
-    })
+  }
+  if (isMarkdown || isDrawing) {
+    win.webContents.send(EVENT_NAME[type], { type: 'add', change: file })
   }
 }
 
@@ -106,7 +111,7 @@ const unlink = (win: BrowserWindow, pathname: string, type: WatchType): void => 
   })
 }
 
-const change = async(
+const change = async (
   win: BrowserWindow,
   pathname: string,
   type: WatchType,
@@ -130,10 +135,17 @@ const change = async(
   }
 
   const isMarkdown = hasMarkdownExtension(pathname)
+  const isDrawing = isDrawioFile(pathname)
   if (isMarkdown) {
     try {
       const [data, stats] = await Promise.all([
-        loadMarkdownFile(pathname, endOfLine, autoGuessEncoding, trimTrailingNewline, autoNormalizeLineEndings),
+        loadMarkdownFile(
+          pathname,
+          endOfLine,
+          autoGuessEncoding,
+          trimTrailingNewline,
+          autoNormalizeLineEndings
+        ),
         fsPromises.stat(pathname)
       ])
       const file = { pathname, data, mtimeMs: stats.mtimeMs }
@@ -149,6 +161,16 @@ const change = async(
           message: err instanceof Error ? err.message : String(err)
         })
       }
+    }
+  } else if (isDrawing) {
+    try {
+      const stats = await fsPromises.stat(pathname)
+      win.webContents.send('mt::update-object-tree', {
+        type: 'change',
+        change: { pathname, mtimeMs: stats.mtimeMs }
+      })
+    } catch {
+      // File may have been deleted between the event and the stat; ignore.
     }
   }
 }
@@ -220,7 +242,9 @@ class Watcher {
         if (fileInfo.isDirectory()) {
           return false
         }
-        return !hasMarkdownExtension(pathname)
+        // 工作区除 Markdown 外还承载独立的 Draw.io 源文件；必须让它们
+        // 通过初始扫描和后续文件事件，才能在树与列表中被建立节点。
+        return !hasMarkdownExtension(pathname) && !isDrawioFile(pathname)
       },
       ignoreInitial: type === 'file',
       persistent: true,
@@ -235,11 +259,11 @@ class Watcher {
       // ~1s late (GH#3955).
       ...(type === 'file'
         ? {
-          awaitWriteFinish: {
-            stabilityThreshold: WATCHER_STABILITY_THRESHOLD,
-            pollInterval: WATCHER_STABILITY_POLL_INTERVAL
+            awaitWriteFinish: {
+              stabilityThreshold: WATCHER_STABILITY_THRESHOLD,
+              pollInterval: WATCHER_STABILITY_POLL_INTERVAL
+            }
           }
-        }
         : {}),
 
       usePolling
@@ -252,7 +276,7 @@ class Watcher {
     let renameTimer: NodeJS.Timeout | null = null
 
     watcher
-      .on('add', async(pathname: string) => {
+      .on('add', async (pathname: string) => {
         if (!(await this._shouldIgnoreEvent(win.id, pathname, type, usePolling))) {
           const { _preferences } = this
           const eol = _preferences.getPreferredEol() as LineEnding
@@ -272,7 +296,7 @@ class Watcher {
           )
         }
       })
-      .on('change', async(pathname: string) => {
+      .on('change', async (pathname: string) => {
         if (!(await this._shouldIgnoreEvent(win.id, pathname, type, usePolling))) {
           const { _preferences } = this
           const eol = _preferences.getPreferredEol() as LineEnding
@@ -296,9 +320,7 @@ class Watcher {
       .on('addDir', (pathname: string) => addDir(win, pathname, type))
       .on('unlinkDir', (pathname: string) => unlinkDir(win, pathname, type))
       .on('raw', (event: string, subpath: string, details: unknown) => {
-        if (
-          globalThis.MARKNOTEPRO_DEBUG_VERBOSE >= 3
-        ) {
+        if (globalThis.MARKNOTEPRO_DEBUG_VERBOSE >= 3) {
           console.log('watcher: ', event, subpath, details)
         }
 
@@ -307,7 +329,7 @@ class Watcher {
           if (renameTimer) {
             clearTimeout(renameTimer)
           }
-          renameTimer = setTimeout(async() => {
+          renameTimer = setTimeout(async () => {
             renameTimer = null
             if (disposed) {
               return
@@ -438,9 +460,7 @@ class Watcher {
             try {
               const fileInfo = await fsPromises.stat(pathname)
               if (fileInfo.mtime.getTime() - start.getTime() < duration) {
-                if (
-                  globalThis.MARKNOTEPRO_DEBUG_VERBOSE >= 3
-                ) {
+                if (globalThis.MARKNOTEPRO_DEBUG_VERBOSE >= 3) {
                   console.log(
                     `Ignoring file event after "stat": current="${currentTime.toISOString()}", start="${start.toISOString()}", file="${fileInfo.mtime.toISOString()}".`
                   )

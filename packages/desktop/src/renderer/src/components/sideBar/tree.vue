@@ -19,10 +19,7 @@
             @click="selectRoot"
             @contextmenu.prevent.stop="handleRootContextMenu"
           >
-            <span
-              class="default-cursor text-overflow"
-              @dblclick.stop="toggleRootFromDoubleClick"
-            >
+            <span class="default-cursor text-overflow" @dblclick.stop="toggleRootFromDoubleClick">
               <input
                 v-if="renameCache === projectTree.pathname"
                 ref="renameInput"
@@ -71,8 +68,8 @@
             type="text"
             class="new-input"
             :style="{ 'margin-left': `${depth * 5 + 15}px` }"
-          @keydown.enter.prevent="handleInputEnterFromKeyboard"
-          @blur="handleInputBlur"
+            @keydown.enter.prevent="handleInputEnterFromKeyboard"
+            @blur="handleInputBlur"
           />
           <file v-for="file of visibleRootFiles" :key="file.id" :file="file" :depth="depth" />
           <div
@@ -215,8 +212,10 @@ const visibleRootFolders = computed<TreeFolderNode[]>(() => {
   return getVisibleNoteFolders(props.projectTree, rootPath.value) as TreeFolderNode[]
 })
 const visibleRootFiles = computed<TreeFileNode[]>(() => {
-  if (noteNavigationMode.value === 'tree-list') return []
-  return getVisibleNoteFiles(props.projectTree, rootPath.value) as TreeFileNode[]
+  const files = getVisibleNoteFiles(props.projectTree, rootPath.value) as TreeFileNode[]
+  // Tree/list mode reserves the tree for folders only. Both Markdown and
+  // Draw.io files are shown once, in the list panel.
+  return noteNavigationMode.value === 'tree-list' ? [] : files
 })
 const noteNavigationToggleIcon = computed(() => {
   return noteNavigationMode.value === 'tree-list' ? DArrowLeft : DArrowRight
@@ -340,7 +339,9 @@ const handleInputEnter = (): void => {
 const handleInputEnterFromKeyboard = (): void => {
   skipNextBlur = true
   handleInputEnter()
-  window.setTimeout(() => { skipNextBlur = false }, 0)
+  window.setTimeout(() => {
+    skipNextBlur = false
+  }, 0)
 }
 
 const handleInputBlur = (): void => {
@@ -366,7 +367,9 @@ const renameRoot = (): void => {
 const renameRootFromKeyboard = (): void => {
   skipNextBlur = true
   renameRoot()
-  window.setTimeout(() => { skipNextBlur = false }, 0)
+  window.setTimeout(() => {
+    skipNextBlur = false
+  }, 0)
 }
 
 const renameRootOnBlur = (): void => {

@@ -10,6 +10,7 @@ import paragraph from './paragraph'
 import format from './format'
 import language from './language'
 import theme from './theme'
+import drawioFile from './drawioFile'
 import type Keybindings from '../../keyboard/shortcutHandler'
 import type Preference from '../../preferences'
 
@@ -35,11 +36,24 @@ export const configSettingMenu = (keybindings: Keybindings): MenuItemConstructor
  * @param preferences The preference instance.
  * @param recentlyUsedFiles The recently used files.
  */
-export default function(
+export default function (
   keybindings: Keybindings,
   preferences: Preference,
-  recentlyUsedFiles: string[] = []
+  recentlyUsedFiles: string[] = [],
+  options: { drawioMode?: boolean; drawioAutoSave?: boolean } = {}
 ): MenuItemConstructorOptions[] {
+  if (options.drawioMode) {
+    return [
+      // macOS reserves the first top-level entry for the application menu.
+      // Without this placeholder it consumes the Draw.io File menu instead.
+      ...(process.platform === 'darwin' ? [marknotepro(keybindings)] : []),
+      drawioFile(keybindings, options.drawioAutoSave ?? true),
+      theme(preferences),
+      language(preferences),
+      help()
+    ]
+  }
+
   return [
     ...(process.platform === 'darwin' ? [marknotepro(keybindings)] : []),
     file(keybindings, preferences, recentlyUsedFiles),

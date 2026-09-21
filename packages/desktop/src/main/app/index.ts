@@ -24,6 +24,7 @@ import { onInternalChannel } from '../utils/internalIpc'
 import { WindowType } from '../windows/base'
 import EditorWindow from '../windows/editor'
 import SettingWindow from '../windows/setting'
+import { isDrawioFile, openDrawioFile } from '../drawio'
 import { zoomIn, zoomOut } from '../windows/utils'
 import { setLanguage } from '../i18n'
 import { getNativeThemeSource, isDarkApplicationTheme } from './nativeTheme'
@@ -53,6 +54,16 @@ interface BufferedEditorState {
   project?: unknown
   layout?: unknown
   [key: string]: unknown
+}
+
+const normalizeOpenPath = (pathname: string): PathInfo | null => {
+  const markdownPath = normalizeMarkdownPath(pathname)
+  if (markdownPath) return markdownPath as PathInfo
+  if (isDrawioFile(pathname) && fs.existsSync(pathname)) {
+    const resolved = normalizeAndResolvePath(pathname)
+    return resolved ? { isDir: false, path: resolved } : null
+  }
+  return null
 }
 
 class App {
@@ -103,7 +114,7 @@ class App {
           continue
         }
 
-        const info = normalizeMarkdownPath(path.resolve(workingDirectory, pathname))
+        const info = normalizeOpenPath(path.resolve(workingDirectory, pathname))
         if (info) {
           buf.push(info as PathInfo)
         }
@@ -216,7 +227,7 @@ class App {
           continue
         }
 
-        const info = normalizeMarkdownPath(pathname)
+        const info = normalizeOpenPath(pathname)
         if (info) {
           _openFilesCache.push(info as PathInfo)
         }
@@ -225,7 +236,7 @@ class App {
 
     if (_openFilesCache.length === 0) {
       if (defaultDirectoryToOpen) {
-        const info = normalizeMarkdownPath(defaultDirectoryToOpen)
+        const info = normalizeOpenPath(defaultDirectoryToOpen)
         if (info) {
           _openFilesCache.unshift(info as PathInfo)
         }
@@ -410,7 +421,7 @@ class App {
 
   openFile = (event: Electron.Event, pathname: string): void => {
     event.preventDefault()
-    const info = normalizeMarkdownPath(pathname)
+    const info = normalizeOpenPath(pathname)
     if (info) {
       this._openFilesCache.push(info as PathInfo)
 
@@ -559,6 +570,14 @@ class App {
         directorySet.add(path)
       } else {
         fileSet.add(path)
+      }
+    }
+
+    for (const pathname of [...fileSet]) {
+      if (isDrawioFile(pathname)) {
+        fileSet.delete(pathname)
+        const activeEditor = _windowManager.getActiveEditor()
+        void openDrawioFile(pathname, activeEditor?.browserWindow)
       }
     }
 
@@ -779,7 +798,7 @@ class App {
         if (openInSameWindow || !openFolderInNewWindow) {
           const editor = this._windowManager.get(windowId) as EditorWindow | undefined
           if (editor) {
-            editor.openFolder(pathname, forceReload)
+            editor.openFolder(pathname, Boolean(forceReload))
             return
           }
         }

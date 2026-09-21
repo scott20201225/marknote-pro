@@ -149,7 +149,7 @@ export const usePreferencesStore = defineStore('preferences', {
     lineHeight: 1.6,
     codeFontSize: 14,
     codeFontFamily: 'DejaVu Sans Mono',
-    codeBlockLineNumbers: false,
+    codeBlockLineNumbers: true,
     trimUnnecessaryCodeBlockEmptyLines: true,
     wrapCodeBlocks: false,
     editorLineWidth: '',

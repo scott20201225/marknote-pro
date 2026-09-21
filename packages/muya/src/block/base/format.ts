@@ -29,6 +29,7 @@ import { getTextContent } from '../../selection/dom';
 import { isListItemState } from '../../state/types';
 import {
     conflict,
+    escapeHTML,
     getDeletionCaretOffset,
     isHTMLElement,
     isMouseEvent,
@@ -117,7 +118,7 @@ function getOffset(offset: number, token: Token) {
         case 'inline_code':
 
         case 'inline_math': {
-            const markerLen = type === 'strong' || type === 'del' ? 2 : 1;
+            const markerLen = token.marker.length;
             return markeredOffset(dis, len, markerLen, markerLen);
         }
 
@@ -231,6 +232,7 @@ class Format extends Content {
         text: string,
         offset: number,
         type: Token['type'],
+        includeEnd = false,
     ): Nullable<Token> {
         const tokens = tokenizer(text, {
             hasBeginRules: false,
@@ -247,7 +249,7 @@ class Format extends Content {
                 if (
                     token.type === type
                     && offset > token.range.start
-                    && offset < token.range.end
+                    && (offset < token.range.end || (includeEnd && offset === token.range.end))
                 ) {
                     result = token;
                     break;
@@ -397,7 +399,7 @@ class Format extends Content {
                 if (value && attr === 'src')
                     value = correctImageSrc(value);
 
-                imageText += `${attr}="${value}" `;
+                imageText += `${attr}="${escapeHTML(String(value))}" `;
             }
             imageText = imageText.trim();
             imageText += ' />';
@@ -428,7 +430,7 @@ class Format extends Content {
             if (value && attr === 'src')
                 value = correctImageSrc(value);
 
-            imageText += `${attr}="${value}" `;
+            imageText += `${attr}="${escapeHTML(String(value))}" `;
         }
         imageText = imageText.trim();
         imageText += ' />';
@@ -645,6 +647,7 @@ class Format extends Content {
             textContent,
             start.offset,
             'inline_math',
+            true,
         );
         const isInInlineCode = !!this._checkCursorInTokenType(
             textContent,
@@ -1512,12 +1515,15 @@ class Format extends Content {
         this.text = text + nextBlock.text;
         this.setCursor(start.offset, end.offset, true);
 
-        // When the merge crosses a list-item boundary, blocks that followed the
-        // next paragraph inside its item (e.g. a nested sublist) must travel up
-        // with the merged text. Left behind they become the sole child of the
-        // now-empty item and serialize with a doubled bullet (#1845).
-        const paragraph = this.parent;
-        if (paragraph && paragraphBlock.parent !== paragraph.parent) {
+        // Blocks after the merged paragraph in a list item (e.g. a nested
+        // sublist) move up with it, or they would serialize with a doubled
+        // bullet (#1845). Other containers keep them (#5423). From a table cell
+        // they go after the table, since a row holds only cells (#5386).
+        const hostBlock = this.getAnchor();
+        const nextContainer = paragraphBlock.parent;
+        const nextContainerIsListItem = nextContainer?.blockName === 'list-item'
+            || nextContainer?.blockName === 'task-list-item';
+        if (hostBlock && nextContainer !== hostBlock.parent && nextContainerIsListItem) {
             const trailing: TreeNode[] = [];
             let sibling = paragraphBlock.next;
             while (sibling) {
@@ -1525,9 +1531,9 @@ class Format extends Content {
                 sibling = sibling.next;
             }
 
-            let anchor: Parent = paragraph;
+            let anchor: Parent = hostBlock;
             for (const block of trailing) {
-                block.insertInto(paragraph.parent!, anchor.next as Nullable<Parent>);
+                block.insertInto(hostBlock.parent!, anchor.next as Nullable<Parent>);
                 anchor = block as Parent;
             }
         }

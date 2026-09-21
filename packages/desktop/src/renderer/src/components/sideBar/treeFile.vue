@@ -5,7 +5,10 @@
     class="side-bar-file"
     :style="{ 'padding-left': `${depth * 6 + 10}px`, opacity: file.isMarkdown ? 1 : 0.75 }"
     :class="[
-      { current: currentFile?.pathname === file.pathname, active: activeItem?.pathname === file.pathname }
+      {
+        current: currentFile?.pathname === file.pathname,
+        active: activeItem?.pathname === file.pathname
+      }
     ]"
     @click="handleFileClick"
   >
@@ -19,11 +22,8 @@
       @click.stop="noop"
       @keydown.enter.prevent="renameFromKeyboard"
       @blur="renameOnBlur"
-    >
-    <span
-      v-else
-      class="file-name"
-    >{{ displayName }}</span>
+    />
+    <span v-else class="file-name">{{ displayName }}</span>
     <button
       class="file-action-button"
       type="button"
@@ -73,7 +73,12 @@ const displayName = computed<string>(() => getNoteDisplayName(props.file, rootPa
 
 // from fileMixins
 const handleFileClick = (): void => {
-  const { isMarkdown, pathname } = props.file
+  const { isMarkdown, isDrawing, pathname } = props.file
+  if (isDrawing || /\.drawio$/i.test(pathname)) {
+    projectStore.CHANGE_ACTIVE_ITEM(props.file)
+    void window.electron.ipcRenderer.invoke('mt::drawio::open', pathname)
+    return
+  }
   if (!isMarkdown) return
   const openedTab = tabs.value.find((f) => window.fileUtils.isSamePathSync(f.pathname, pathname))
   if (openedTab) {
@@ -106,7 +111,9 @@ const rename = (): void => {
 const renameFromKeyboard = (): void => {
   skipNextBlur = true
   rename()
-  window.setTimeout(() => { skipNextBlur = false }, 0)
+  window.setTimeout(() => {
+    skipNextBlur = false
+  }, 0)
 }
 
 const renameOnBlur = (): void => {
@@ -117,10 +124,15 @@ const showFileActionMenu = (event: MouseEvent): void => {
   projectStore.CHANGE_ACTIVE_ITEM(props.file)
   const target = event.currentTarget as HTMLElement | null
   const rect = target?.getBoundingClientRect()
-  showContextMenu({
-    clientX: rect ? rect.left + rect.width / 2 : event.clientX,
-    clientY: rect ? rect.bottom : event.clientY
-  }, props.file, rootPath.value, !!clipboard.value)
+  showContextMenu(
+    {
+      clientX: rect ? rect.left + rect.width / 2 : event.clientX,
+      clientY: rect ? rect.bottom : event.clientY
+    },
+    props.file,
+    rootPath.value,
+    !!clipboard.value
+  )
 }
 
 onMounted(() => {

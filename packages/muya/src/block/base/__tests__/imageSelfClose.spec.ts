@@ -73,4 +73,22 @@ describe('#2505 — aligned/edited images emit a self-closing <img/> (JSX-safe)'
         expect(block.text).toMatch(/<img\b[^>]*\/>/);
         expect(block.text).not.toMatch(/<img\b[^>]*[^/]>/);
     });
+
+    it('escapes edited image attributes before writing the HTML tag', () => {
+        const muya = bootMuya('<img src="https://example.com/a.png" alt="a">\n');
+        const block = firstBlock(muya);
+        const imageEl = muya.domNode.querySelector<HTMLElement>('[data-raw]');
+        expect(imageEl).not.toBeNull();
+
+        const imageInfo = getImageInfo(imageEl!);
+        block.replaceImage(imageInfo, {
+            alt: '" onerror="alert(1)',
+            src: 'https://example.com/b.png',
+            title: 'a&b',
+        });
+
+        expect(block.text).toContain('alt="&quot; onerror=&quot;alert(1)"');
+        expect(block.text).toContain('title="a&amp;b"');
+        expect(block.text).not.toContain('onerror="alert(1)');
+    });
 });

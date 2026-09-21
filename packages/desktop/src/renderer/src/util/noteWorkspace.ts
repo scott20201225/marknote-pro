@@ -2,13 +2,7 @@ export const NOTE_GROUP_PREFIX = 'GROUP_'
 export const NOTE_AREA_PREFIX = 'AREA_'
 export const NOTE_ATTACHMENTS_DIRECTORY = 'Attachments'
 
-export type NoteNodeKind =
-  | 'root'
-  | 'group'
-  | 'area'
-  | 'document'
-  | 'otherFolder'
-  | 'otherFile'
+export type NoteNodeKind = 'root' | 'group' | 'area' | 'document' | 'otherFolder' | 'otherFile'
 
 interface NoteNodeLike {
   pathname: string
@@ -16,6 +10,7 @@ interface NoteNodeLike {
   isDirectory?: boolean
   isFile?: boolean
   isMarkdown?: boolean
+  isDrawing?: boolean
   folders?: NoteNodeLike[]
   files?: NoteNodeLike[]
 }
@@ -49,6 +44,7 @@ const isNoteGroupName = (name: string): boolean => name.startsWith(NOTE_GROUP_PR
 const isNoteAreaName = (name: string): boolean => name.startsWith(NOTE_AREA_PREFIX)
 
 const isMarkdownFileName = (name: string): boolean => /\.md$/i.test(name)
+const isDrawingFileName = (name: string): boolean => /\.drawio$/i.test(name)
 
 const stripNotePrefix = (name: string): string => {
   if (isNoteGroupName(name)) return name.slice(NOTE_GROUP_PREFIX.length)
@@ -60,8 +56,12 @@ const stripMarkdownExtension = (name: string): string => {
   return name.replace(/\.md$/i, '')
 }
 
+const stripDrawingExtension = (name: string): string => {
+  return name.replace(/\.drawio$/i, '')
+}
+
 const normalizeNotePathPart = (part: string): string => {
-  return stripMarkdownExtension(stripNotePrefix(part))
+  return stripDrawingExtension(stripMarkdownExtension(stripNotePrefix(part)))
 }
 
 const getRelativeParts = (rootPath: string, pathname: string): string[] => {
@@ -111,11 +111,13 @@ export const isValidNoteFilePath = (
 ): boolean => {
   if (!pathname || !rootPath) return false
   const name = window.path.basename(pathname)
-  if (!isMarkdownFileName(name)) return false
+  const isDrawing = isDrawingFileName(name)
+  if (!isMarkdownFileName(name) && !isDrawing) return false
 
   const parentPath = window.path.dirname(pathname)
   const parentName = window.path.basename(parentPath)
-  return isNoteAreaName(parentName) && isValidNoteDirectoryPath(parentPath, rootPath)
+  if (!isValidNoteDirectoryPath(parentPath, rootPath)) return false
+  return isDrawing || isNoteAreaName(parentName)
 }
 
 export const getNoteNodeKind = (
@@ -158,7 +160,7 @@ export const getNoteDisplayName = (
     case 'area':
       return stripNotePrefix(node.name)
     case 'document':
-      return stripMarkdownExtension(node.name)
+      return stripDrawingExtension(stripMarkdownExtension(node.name))
     default:
       return node.name
   }
@@ -224,7 +226,13 @@ export const getVisibleNoteFiles = (
   if (!node?.files?.length) return []
 
   const kind = getNoteNodeKind(node, rootPath)
-  if (kind === 'root' || kind === 'group') return []
+  if (kind === 'root' || kind === 'group') {
+    return node.files.filter(
+      (child) =>
+        (child.isDrawing || isDrawingFileName(child.name)) &&
+        getNoteNodeKind(child, rootPath) === 'document'
+    )
+  }
 
   return node.files.filter((child) => getNoteNodeKind(child, rootPath) === 'document')
 }

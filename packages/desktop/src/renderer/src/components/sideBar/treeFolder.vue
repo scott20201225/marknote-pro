@@ -129,8 +129,10 @@ const visibleFolders = computed<TreeFolderNode[]>(() => {
   return getVisibleNoteFolders(props.folder, rootPath.value) as TreeFolderNode[]
 })
 const visibleFiles = computed<TreeFileNode[]>(() => {
-  if (props.noteNavigationMode === 'tree-list') return []
-  return getVisibleNoteFiles(props.folder, rootPath.value) as TreeFileNode[]
+  const files = getVisibleNoteFiles(props.folder, rootPath.value) as TreeFileNode[]
+  // Tree/list mode reserves the tree for folders only. Both Markdown and
+  // Draw.io files are shown once, in the list panel.
+  return props.noteNavigationMode === 'tree-list' ? [] : files
 })
 const createPlaceholder = computed<string>(() => {
   switch ((createCache.value as { type?: string }).type) {
@@ -140,6 +142,8 @@ const createPlaceholder = computed<string>(() => {
       return t('sideBar.tree.areaNamePlaceholder')
     case 'document':
     case 'file':
+      return t('sideBar.tree.documentNamePlaceholder')
+    case 'drawing':
       return t('sideBar.tree.documentNamePlaceholder')
     default:
       return t('sideBar.tree.documentNamePlaceholder')
@@ -154,7 +158,9 @@ const createCacheType = computed<string | undefined>(() => {
 const isCreatingNoteInListMode = computed<boolean>(() => {
   return (
     props.noteNavigationMode === 'tree-list' &&
-    (createCacheType.value === 'document' || createCacheType.value === 'file')
+    (createCacheType.value === 'document' ||
+      createCacheType.value === 'file' ||
+      createCacheType.value === 'drawing')
   )
 })
 const showTreeCreateInput = computed<boolean>(() => {
@@ -197,7 +203,9 @@ const handleInputEnter = (): void => {
 const handleInputEnterFromKeyboard = (): void => {
   skipNextBlur = true
   handleInputEnter()
-  window.setTimeout(() => { skipNextBlur = false }, 0)
+  window.setTimeout(() => {
+    skipNextBlur = false
+  }, 0)
 }
 
 const handleInputBlur = (): void => {
@@ -255,7 +263,9 @@ const rename = (): void => {
 const renameFromKeyboard = (): void => {
   skipNextBlur = true
   rename()
-  window.setTimeout(() => { skipNextBlur = false }, 0)
+  window.setTimeout(() => {
+    skipNextBlur = false
+  }, 0)
 }
 
 const renameOnBlur = (): void => {

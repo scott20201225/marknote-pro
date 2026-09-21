@@ -15,13 +15,14 @@ import {
 } from 'electron'
 import log from 'electron-log'
 import { isDirectory, isFile, exists } from 'common/filesystem'
-import { MARKDOWN_EXTENSIONS, isMarkdownFile } from 'common/filesystem/paths'
+import { MARKDOWN_EXTENSIONS, isMarkdownFile, isChildOfDirectory } from 'common/filesystem/paths'
 import { checkUpdates, userSetting } from './marknotepro'
 import { COMMANDS } from '../../commands'
 import type { CommandManager } from '../../commands'
 import { EXTENSION_HASN, PANDOC_EXTENSIONS, URL_REG, isOsx } from '../../config'
 import { normalizeAndResolvePath, writeFile } from '../../filesystem'
 import { writeMarkdownFile } from '../../filesystem/markdown'
+import { createDrawioFile, isDrawioFile, openDrawioFile } from '../../drawio'
 import { getPath, getRecommendTitleFromMarkdownString } from '../../utils'
 import {
   normalizeLinkUrlCandidate,
@@ -918,6 +919,19 @@ ipcMain.on('mt::format-link-click', async (e, { data, dirname }: FormatLinkPaylo
       if (innerWin) {
         openFileOrFolder(innerWin, pathname)
       }
+    } else if (isDrawioFile(pathname)) {
+      const workspaceRoot = (win as BrowserWindow & { __marknoteWorkspaceRoot?: string })
+        .__marknoteWorkspaceRoot
+      if (workspaceRoot && isChildOfDirectory(workspaceRoot, pathname)) {
+        void openDrawioFile(pathname, win)
+        return
+      }
+
+      // 绘图文件位于工作区之外时，保持原有外部打开逻辑。
+      const openedWithApplication = localTarget
+        ? await openLocalLinkWithApplication(win, localTarget)
+        : false
+      if (!openedWithApplication) shell.openPath(pathname)
     } else {
       // A link in an untrusted document could point at a co-located script or
       // executable; opening it via the OS shell would run code silently (#3575).
@@ -1016,8 +1030,16 @@ export const openFile = async (win: BrowserWindow | null): Promise<void> => {
   })
 
   if (Array.isArray(filePaths) && filePaths.length > 0) {
-    ipcMain.emit('app-open-files-by-id', win.id, filePaths)
+    const markdownFiles = filePaths.filter((filePath) => !isDrawioFile(filePath))
+    if (markdownFiles.length) ipcMain.emit('app-open-files-by-id', win.id, markdownFiles)
+    for (const filePath of filePaths.filter(isDrawioFile)) {
+      void openDrawioFile(filePath, win)
+    }
   }
+}
+
+export const newDrawioFile = (win: Win): void => {
+  void createDrawioFile(win)
 }
 
 export const openFolder = async (win: BrowserWindow | null): Promise<void> => {
@@ -1035,7 +1057,9 @@ export const openFolder = async (win: BrowserWindow | null): Promise<void> => {
 
 export const openFileOrFolder = (win: BrowserWindow, pathname: string): void => {
   const resolvedPath = normalizeAndResolvePath(pathname)
-  if (isFile(resolvedPath)) {
+  if (isDrawioFile(resolvedPath)) {
+    void openDrawioFile(resolvedPath, win)
+  } else if (isFile(resolvedPath)) {
     ipcMain.emit('app-open-file-by-id', win.id, resolvedPath)
   } else if (isDirectory(resolvedPath)) {
     ipcMain.emit('app-open-directory-by-id', win.id, resolvedPath)
