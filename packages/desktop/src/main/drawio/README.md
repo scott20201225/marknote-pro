@@ -49,4 +49,4 @@ save/autosave -> 主进程写入 XML
 exit -> 保存后隐藏内嵌视图并回到笔记界面
 ```
 
-生产打包会将同级 `drawio/src/main/webapp` 复制到应用资源目录 `drawio`，因此完整 Draw.io Web 引擎会增加安装包体积。当前阶段先验证功能闭环，暂不复制资源到 MarkNotePro Git 仓库。
+生产打包会将 MarkNotePro 适配版 Draw.io fork 的 `src/main/webapp` 复制到应用资源目录 `drawio`，因此完整 Draw.io Web 引擎会增加安装包体积。GitHub Release 会在构建开始时检出发布工作流中固定的 Draw.io 提交，再执行资源校验；如果引擎缺失，构建会直接失败，不会生成缺少绘图引擎的安装包。
