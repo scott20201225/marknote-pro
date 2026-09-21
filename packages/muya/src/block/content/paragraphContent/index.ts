@@ -42,7 +42,7 @@ const debug = logger('paragraph:content');
 
 const HTML_BLOCK_REG = /^<([a-z\d-]+)(?=\s|>)[^<>]*>$/i;
 const CODE_BLOCK_REG = /(^ {0,3}`{3,})([^` ]*)/;
-const MATH_BLOCK_REG = /^\$\$/;
+const MATH_BLOCK_REG = /^\$\$[ \t]*$/;
 // eslint-disable-next-line regexp/no-super-linear-backtracking
 const TABLE_BLOCK_REG = /^\|.*?(\\*)\|.*?(\\*)\|/;
 const FOOTNOTE_DEFINITION_REG = /^\[\^[^^[\]\s]*\]:/;
@@ -1112,8 +1112,10 @@ class ParagraphContent extends Format {
             // so `meta` resolves without `as any`.
             const listAsList = list as TListBlock;
 
+            // The nested child list only exists to carry the SIBLING LIST
+            // ITEMS that stay indented below the outdented item.
             if (
-                (listItem.next || list.next)
+                listItem.next
                 && newListItem.lastChild!.blockName !== list.blockName
             ) {
                 const state = {
@@ -1146,10 +1148,12 @@ class ParagraphContent extends Format {
                 const offset = listParent.offset(list);
                 listParent.forEachAt(offset + 1, undefined, (node) => {
                     if (node.isParent()) {
-                        (newListItem.lastChild as Parent).append(
-                            node.clone() as Parent,
-                            'user',
-                        );
+                        // Blocks that followed the nested list are the list
+                        // item's own trailing content (paragraphs etc.), not
+                        // list items — putting them inside a list block
+                        // corrupts the state and the next composed op crashes
+                        // ot-json1 (#4899). Append them to the item itself.
+                        newListItem.append(node.clone() as Parent, 'user');
                     }
                     node.remove();
                 });

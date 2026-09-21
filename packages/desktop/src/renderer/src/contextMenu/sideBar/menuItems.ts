@@ -16,6 +16,14 @@ export const getNewFile = () => ({
   }
 })
 
+export const getNewDrawing = () => ({
+  label: t('contextMenu.sideBar.newDrawing'),
+  id: 'newDrawingMenuItem',
+  click(_menuItem: unknown, _browserWindow: unknown) {
+    contextMenu.newDrawing()
+  }
+})
+
 export const getNewDirectory = () => ({
   label: t('contextMenu.sideBar.newDirectory'),
   id: 'newDirectoryMenuItem',

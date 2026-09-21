@@ -126,3 +126,22 @@ describe('matchString — search option matrix', () => {
         });
     });
 });
+
+describe('matchString — zero-width regex and grapheme safety', () => {
+    it('advances past zero-width matches instead of looping forever', () => {
+        const matches = matchString('abc', '\\b', { isRegexp: true });
+        expect(matches.map(match => match.index)).toEqual([0, 3]);
+    });
+
+    it('keeps a surrogate-pair emoji as one regex match', () => {
+        const matches = matchString('abc🙂', '[^a-z]', { isRegexp: true });
+        expect(matches.map(match => match.match)).toEqual(['🙂']);
+    });
+
+    it('keeps a ZWJ emoji sequence as one regex match', () => {
+        const family = '🧑‍🧑‍🧒‍🧒';
+        const matches = matchString(family, '.', { isRegexp: true });
+        expect(matches).toHaveLength(1);
+        expect(matches[0].match).toBe(family);
+    });
+});

@@ -843,7 +843,7 @@ export const useEditorStore = defineStore('editor', {
           currentFile
         // Must run while `currentFile` still points at the outgoing tab, so its
         // flushed edit is attributed to that tab and not lost on switch (#2938).
-        if (oldCurrentFile) {
+        if (oldCurrentFile && !oldCurrentFile.isDrawing) {
           this.flushActiveEditor()
         }
         window.DIRNAME = pathname ? window.path.dirname(pathname) : ''
@@ -855,22 +855,49 @@ export const useEditorStore = defineStore('editor', {
           this.updateTabIdToIndex()
         }
 
-        bus.emit('file-changed', {
-          id,
-          markdown,
-          cursor,
-          muyaIndexCursor,
-          renderCursor: true,
-          history,
-          scrollTop,
-          blocks
-        })
+        if (!currentFile.isDrawing) {
+          bus.emit('file-changed', {
+            id,
+            markdown,
+            cursor,
+            muyaIndexCursor,
+            renderCursor: true,
+            history,
+            scrollTop,
+            blocks
+          })
+        }
       }
 
       this.UPDATE_LINE_ENDING_MENU()
       if (didUpdateCurrentFile) {
         debouncedSendBufferedState()
       }
+    },
+
+    /**
+     * Open a Draw.io document through the same tab model as Markdown files.
+     * The blank markdown field is deliberate: Draw.io owns the XML in its
+     * BrowserView and Muya must never render that XML as a document.
+     */
+    OPEN_DRAWIO_TAB({ filePath, title }: { filePath: string; title?: string }): void {
+      const existingTab = this.tabs.find((tab) =>
+        window.fileUtils.isSamePathSync(tab.pathname, filePath)
+      )
+      if (existingTab) {
+        existingTab.isDrawing = true
+        this.UPDATE_CURRENT_FILE(existingTab)
+        return
+      }
+
+      const drawingTab = createDocumentState({
+        pathname: filePath,
+        filename: title || window.path.basename(filePath),
+        markdown: '',
+        isSaved: true,
+        isDrawing: true
+      })
+      this.UPDATE_CURRENT_FILE(drawingTab)
     },
 
     // This events are only used during window creation.
@@ -1047,7 +1074,7 @@ export const useEditorStore = defineStore('editor', {
         const fileState: IFileState | null =
           this.tabs[index] ?? this.tabs[index - 1] ?? this.tabs[0] ?? null
         this.currentFile = fileState
-        if (fileState && typeof fileState.markdown === 'string') {
+        if (fileState && !fileState.isDrawing && typeof fileState.markdown === 'string') {
           const { id, markdown, cursor, history, pathname, scrollTop, blocks, muyaIndexCursor } =
             fileState
           window.DIRNAME = pathname ? window.path.dirname(pathname) : ''
@@ -1137,7 +1164,7 @@ export const useEditorStore = defineStore('editor', {
 
       if (this.currentFile == null && this.tabs.length > 0) {
         this.currentFile = this.tabs[tabIndex] ?? this.tabs[tabIndex - 1] ?? this.tabs[0] ?? null
-        if (this.currentFile && typeof this.currentFile.markdown === 'string') {
+        if (this.currentFile && !this.currentFile.isDrawing && typeof this.currentFile.markdown === 'string') {
           const { id, markdown, cursor, history, pathname, scrollTop, blocks, muyaIndexCursor } =
             this.currentFile
           window.DIRNAME = pathname ? window.path.dirname(pathname) : ''

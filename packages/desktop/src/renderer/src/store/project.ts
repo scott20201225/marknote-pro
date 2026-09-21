@@ -92,6 +92,8 @@ const getBasename = (pathname: string): string => {
   return window.path.basename(pathname) || pathname
 }
 
+const isDrawingPath = (pathname: string): boolean => /\.drawio$/i.test(pathname)
+
 const isProjectPathMatch = (a: string, b: string): boolean => {
   if (window.fileUtils.isSamePathSync(a, b)) return true
   if (window.electron.process.platform !== 'win32') return false
@@ -171,9 +173,7 @@ const findFileNodeByPath = (
 ): TreeFileNode | null => {
   if (!node) return null
 
-  const match = getFiles(node).find((child) =>
-    isProjectPathMatch(child.pathname, pathname)
-  )
+  const match = getFiles(node).find((child) => isProjectPathMatch(child.pathname, pathname))
   if (match) return match
 
   for (const child of getFolders(node)) {
@@ -191,9 +191,7 @@ const takeFolderNode = (
   if (!node) return null
 
   const folders = getFolders(node)
-  const index = folders.findIndex((child) =>
-    isProjectPathMatch(child.pathname, pathname)
-  )
+  const index = folders.findIndex((child) => isProjectPathMatch(child.pathname, pathname))
   if (index >= 0) {
     return folders.splice(index, 1)[0] as ProjectTree
   }
@@ -213,9 +211,7 @@ const takeFileNode = (
   if (!node) return null
 
   const files = getFiles(node)
-  const index = files.findIndex((child) =>
-    isProjectPathMatch(child.pathname, pathname)
-  )
+  const index = files.findIndex((child) => isProjectPathMatch(child.pathname, pathname))
   if (index >= 0) {
     return files.splice(index, 1)[0] as TreeFileNode
   }
@@ -276,8 +272,7 @@ const placeRenamedNodeInTree = (
 
     remapFileNodePath(renamedFile, src, dest)
     const existingIndex = parentNode.files.findIndex(
-      (file) =>
-        file !== renamedFile && isProjectPathMatch(file.pathname, renamedFile.pathname)
+      (file) => file !== renamedFile && isProjectPathMatch(file.pathname, renamedFile.pathname)
     )
     if (existingIndex >= 0) {
       parentNode.files.splice(existingIndex, 1)
@@ -510,7 +505,8 @@ export const useProjectStore = defineStore('project', () => {
         mtimeMs: stat.mtimeMs ?? Date.now(),
         isDirectory: false,
         isFile: true,
-        isMarkdown: true
+        isMarkdown: !isDrawingPath(dest),
+        isDrawing: isDrawingPath(dest)
       },
       String(preferencesStore.fileSortBy),
       String(preferencesStore.fileSortOrder)
@@ -1020,10 +1016,15 @@ export const useProjectStore = defineStore('project', () => {
   async function CREATE_FILE_DIRECTORY(name: string): Promise<void> {
     const cache = createCache.value as CreateCacheEntry
     const { dirname, type } = cache
+    const inputName = name.trim()
+    if (!inputName) {
+      createCache.value = {}
+      return
+    }
     const rootPath = projectTree.value?.pathname ?? null
     const parentNode = findFolderNodeByPath(projectTree.value, dirname)
     let fileType: FileCreateType = 'directory'
-    let storedName = name.trim()
+    let storedName = inputName
 
     if (type === 'group') {
       storedName = toStoredNoteName(name, 'group')
@@ -1038,13 +1039,14 @@ export const useProjectStore = defineStore('project', () => {
       if (!window.fileUtils.hasMarkdownExtension(storedName)) {
         storedName += '.md'
       }
+    } else if (type === 'drawing') {
+      fileType = 'file'
+      storedName = name.trim()
+      if (!storedName.toLowerCase().endsWith('.drawio')) {
+        storedName += '.drawio'
+      }
     } else {
       fileType = 'directory'
-    }
-
-    if (!storedName) {
-      createCache.value = {}
-      return
     }
 
     if (type === 'group' || type === 'area' || type === 'document') {
@@ -1077,8 +1079,11 @@ export const useProjectStore = defineStore('project', () => {
     create(fullName, fileType)
       .then(() => {
         createCache.value = {}
-        if (fileType === 'file') {
+        if (fileType === 'file' && type !== 'drawing') {
           newFileNameCache.value = fullName
+        }
+        if (type === 'drawing') {
+          return window.electron.ipcRenderer.invoke('mt::drawio::open', fullName)
         }
       })
       .catch((err) => {
@@ -1108,7 +1113,9 @@ export const useProjectStore = defineStore('project', () => {
         })
         return
       }
-      storedName = toStoredNoteName(name, kind)
+      storedName = isDrawingPath(src)
+        ? `${name.trim().replace(/\.drawio$/i, '')}.drawio`
+        : toStoredNoteName(name, kind)
     }
     if (!storedName) return
     const dest = dirname + PATH_SEPARATOR + storedName
@@ -1165,7 +1172,10 @@ export const useProjectStore = defineStore('project', () => {
       renameCache.value = null
       syncPathReferencesAfterMove(src, dest)
       if (isRootRename) {
-        window.electron.ipcRenderer.send('mt::github-desktop::workspace-path-renamed', { src, dest })
+        window.electron.ipcRenderer.send('mt::github-desktop::workspace-path-renamed', {
+          src,
+          dest
+        })
       }
     })
   }

@@ -36,13 +36,13 @@ describe('resolveLocalImageSrc — branch coverage', () => {
     expect(resolveLocalImageSrc('/tmp/b.png')).toBe('file:///tmp/b.png')
   })
 
-  it('(b) Windows drive image path → file:// preserving backslashes', () => {
-    expect(resolveLocalImageSrc('C:\\pics\\b.png')).toBe('file://C:\\pics\\b.png')
+  it('(b) Windows drive image path → normalized file:// URL', () => {
+    expect(resolveLocalImageSrc('C:\\pics\\b.png')).toBe('file:///C:/pics/b.png')
   })
 
-  it('(c) UNC image path → file:// preserving the \\\\host prefix', () => {
+  it('(c) UNC image path → file:// host URL', () => {
     expect(resolveLocalImageSrc('\\\\host\\share\\c.png')).toBe(
-      'file://\\\\host\\share\\c.png'
+      'file://host/share/c.png'
     )
   })
 
@@ -74,5 +74,19 @@ describe('resolveLocalImageSrc — branch coverage', () => {
 
   it('empty / falsy src is returned as-is', () => {
     expect(resolveLocalImageSrc('')).toBe('')
+  })
+
+  it('escapes URL delimiters in the document directory only', () => {
+    window.DIRNAME = '/home/me/C# 100%25 what?'
+    expect(resolveLocalImageSrc('assets/cat.png')).toBe(
+      'file:///home/me/C%23 100%2525 what%3F/assets/cat.png'
+    )
+  })
+
+  it('keeps the image path query and existing percent encoding', () => {
+    window.DIRNAME = '/home/me/C#'
+    expect(resolveLocalImageSrc('my%20cat.png?v=2')).toBe(
+      'file:///home/me/C%23/my%20cat.png?v=2'
+    )
   })
 })

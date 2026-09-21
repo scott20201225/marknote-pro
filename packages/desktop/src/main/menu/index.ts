@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import { app, Menu, ipcMain, type BrowserWindow, type MenuItemConstructorOptions } from 'electron'
+import { app, BrowserWindow, Menu, ipcMain, type MenuItemConstructorOptions } from 'electron'
 import log from 'electron-log'
 import { DEFAULT_LANGUAGE } from 'common/i18n'
 import { ensureDirSync, isDirectory2, isFile2 } from 'common/filesystem'
@@ -30,6 +30,8 @@ export type MenuTypeValue = (typeof MenuType)[keyof typeof MenuType]
 interface WindowMenuEntry {
   menu: Menu | null
   type: MenuTypeValue
+  drawioMode?: boolean
+  drawioAutoSave?: boolean
 }
 
 interface AddEditorMenuOptions {
@@ -238,6 +240,29 @@ class AppMenu {
     }
   }
 
+  /** Switch the native menu surface between the Markdown and Draw.io editors. */
+  setDrawioMenuMode(windowId: number, enabled: boolean): void {
+    const entry = this.windowMenus.get(windowId)
+    if (!entry || entry.type !== MenuType.EDITOR) return
+    if (entry.drawioMode === enabled) return
+
+    entry.drawioMode = enabled
+    if (enabled && entry.drawioAutoSave === undefined) entry.drawioAutoSave = true
+    const { menu } = this._buildEditorMenu(undefined, entry.drawioMode, entry.drawioAutoSave)
+    entry.menu = menu
+    if (this.activeWindowId === windowId) this._setApplicationMenu(menu)
+  }
+
+  setDrawioAutoSave(windowId: number, autoSave: boolean): void {
+    const entry = this.windowMenus.get(windowId)
+    if (!entry || entry.type !== MenuType.EDITOR) return
+    entry.drawioAutoSave = autoSave
+    if (!entry.drawioMode || !entry.menu) return
+    const menuItem = entry.menu.getMenuItemById('drawioAutoSaveMenuItem')
+    if (menuItem) menuItem.checked = autoSave
+    this._refreshActiveApplicationMenu(windowId)
+  }
+
   /**
    * Remove menu from the given window.
    *
@@ -310,7 +335,11 @@ class AppMenu {
       const { menu: oldMenu, type } = value
       if (type !== MenuType.EDITOR || !oldMenu) return
 
-      const { menu: newMenu } = this._buildEditorMenu(recentUsedDocuments)
+      const { menu: newMenu } = this._buildEditorMenu(
+        recentUsedDocuments,
+        value.drawioMode,
+        value.drawioAutoSave
+      )
       if (!newMenu) return
 
       // all other menu items are set automatically
@@ -341,7 +370,11 @@ class AppMenu {
       let newMenu: Menu | null = null
       if (type === MenuType.EDITOR) {
         if (!oldMenu) return
-        const { menu: rebuilt } = this._buildEditorMenu(recentUsedDocuments)
+        const { menu: rebuilt } = this._buildEditorMenu(
+          recentUsedDocuments,
+          value.drawioMode,
+          value.drawioAutoSave
+        )
         if (!rebuilt) return
 
         updateMenuItem(oldMenu, rebuilt, 'sourceCodeModeMenuItem')
@@ -441,16 +474,23 @@ class AppMenu {
     })
   }
 
-  _buildEditorMenu(recentUsedDocuments: string[] | null = null): WindowMenuEntry {
+  _buildEditorMenu(
+    recentUsedDocuments: string[] | null = null,
+    drawioMode = false,
+    drawioAutoSave = true
+  ): WindowMenuEntry {
     if (!recentUsedDocuments) {
       recentUsedDocuments = this.getRecentlyUsedDocuments()
     }
 
     const menuTemplate = prepareMenuTemplate(
-      configureMenu(this._keybindings, this._preferences, recentUsedDocuments)
+      configureMenu(this._keybindings, this._preferences, recentUsedDocuments, {
+        drawioMode,
+        drawioAutoSave
+      })
     )
     const menu = Menu.buildFromTemplate(menuTemplate)
-    return { menu, type: MenuType.EDITOR }
+    return { menu, type: MenuType.EDITOR, drawioMode, drawioAutoSave }
   }
 
   _buildSettingMenu(): WindowMenuEntry {
@@ -503,6 +543,7 @@ class AppMenu {
       this.addRecentlyUsedDocument(pathname)
     })
     ipcMain.on('mt::update-line-ending-menu', (_e, windowId: number, lineEnding: string) => {
+      if (!this.has(windowId)) return
       this.updateLineEndingMenu(windowId, lineEnding)
     })
     ipcMain.on(
@@ -534,6 +575,14 @@ class AppMenu {
       }
       updateSelectionMenus(this.getWindowMenuById(windowId), changes)
       this._refreshActiveApplicationMenu(windowId)
+    })
+    ipcMain.on('mt::drawio-menu-mode', (event, enabled: boolean) => {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      if (win) this.setDrawioMenuMode(win.id, enabled === true)
+    })
+    ipcMain.on('mt::drawio-autosave-changed', (event, enabled: boolean) => {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      if (win) this.setDrawioAutoSave(win.id, enabled === true)
     })
 
     // In source-code mode the Paragraph and Format commands act on the hidden
