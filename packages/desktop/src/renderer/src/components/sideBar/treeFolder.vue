@@ -143,6 +143,8 @@ const createPlaceholder = computed<string>(() => {
     case 'document':
     case 'file':
       return t('sideBar.tree.documentNamePlaceholder')
+    case 'drawing':
+      return t('sideBar.tree.documentNamePlaceholder')
     default:
       return t('sideBar.tree.documentNamePlaceholder')
   }
@@ -156,7 +158,9 @@ const createCacheType = computed<string | undefined>(() => {
 const isCreatingNoteInListMode = computed<boolean>(() => {
   return (
     props.noteNavigationMode === 'tree-list' &&
-    (createCacheType.value === 'document' || createCacheType.value === 'file')
+    (createCacheType.value === 'document' ||
+      createCacheType.value === 'file' ||
+      createCacheType.value === 'drawing')
   )
 })
 const showTreeCreateInput = computed<boolean>(() => {

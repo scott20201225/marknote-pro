@@ -124,7 +124,7 @@ const showCreateInput = computed<boolean>(() => {
   if (!listTarget.value) return false
   if (selectedKind.value !== 'area' && selectedKind.value !== 'document') return false
   const cache = createCache.value as { dirname?: string; type?: string }
-  if (cache.type !== 'document' && cache.type !== 'file') return false
+  if (cache.type !== 'document' && cache.type !== 'file' && cache.type !== 'drawing') return false
   return cache.dirname === listTarget.value.pathname
 })
 const listTitle = computed(() => {
