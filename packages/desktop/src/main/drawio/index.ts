@@ -79,6 +79,8 @@ const getDrawioFrameUrl = (configuration: DrawioConfiguration): string => {
   // mode to the MarkNotePro preferences instead of Draw.io local storage.
   url.searchParams.set('lang', getDrawioLanguage(configuration.language))
   url.searchParams.set('dark', configuration.dark ? '1' : '0')
+  url.searchParams.set('marknoteproTheme', configuration.theme)
+  url.searchParams.set('marknoteproThemeColors', JSON.stringify(configuration.colors))
   return url.toString()
 }
 
@@ -211,7 +213,7 @@ const getOrCreateView = (win: BrowserWindow): DrawioViewEntry => {
     xml: EMPTY_DRAWIO,
     loaded: false,
     autoSave: true,
-    configuration: { language: 'zh-CN', dark: false }
+    configuration: { language: 'zh-CN', dark: false, theme: 'light', colors: {} }
   }
   views.set(win.id, entry)
   viewOwners.set(view.webContents.id, win.id)
@@ -324,9 +326,16 @@ export const registerDrawioHandlers = (): void => {
     const owner = BrowserWindow.fromWebContents(event.sender)
     const entry = owner ? views.get(owner.id) : undefined
     if (!entry || !entry.filePath) return
+    const colors = Object.fromEntries(
+      Object.entries(configuration?.colors ?? {}).filter(
+        ([, value]) => typeof value === 'string' && value.length < 160
+      )
+    )
     entry.configuration = {
       language: typeof configuration?.language === 'string' ? configuration.language : 'zh-CN',
-      dark: configuration?.dark === true
+      dark: configuration?.dark === true,
+      theme: typeof configuration?.theme === 'string' ? configuration.theme : 'light',
+      colors
     }
     entry.view.webContents.send('mt::drawio::configure', {
       frameUrl: getDrawioFrameUrl(entry.configuration),

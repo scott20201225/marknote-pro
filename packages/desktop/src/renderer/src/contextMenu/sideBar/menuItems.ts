@@ -17,7 +17,7 @@ export const getNewFile = () => ({
 })
 
 export const getNewDrawing = () => ({
-  label: '新建绘图',
+  label: t('contextMenu.sideBar.newDrawing'),
   id: 'newDrawingMenuItem',
   click(_menuItem: unknown, _browserWindow: unknown) {
     contextMenu.newDrawing()

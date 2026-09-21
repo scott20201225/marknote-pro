@@ -223,8 +223,9 @@
     "addToDictionary": "Agregar al Diccionario",
     "editDictionary": "Editar Diccionario...",
     "sideBar": {
-      "newFile": "Nuevo Archivo",
-      "newDirectory": "Nuevo Directorio",
+    "newFile": "Nuevo Archivo",
+    "newDrawing": "Nuevo dibujo",
+    "newDirectory": "Nuevo Directorio",
       "copy": "Copiar",
       "cut": "Cortar",
       "paste": "Pegar",
