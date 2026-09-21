@@ -19,12 +19,6 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
-env:
-  # Keep the embedded engine reproducible. Update this SHA only when the
-  # MarkNotePro-compatible Draw.io fork is intentionally upgraded.
-  MARKNOTEPRO_DRAWIO_REPOSITORY: https://github.com/scott20201225/drawio.git
-  MARKNOTEPRO_DRAWIO_REF: 7142f6a305891fa82de20b81feaa3c73dabc47ed
-
 permissions:
   contents: read
 
@@ -109,18 +103,12 @@ jobs:
         with:
           ref: ${{ needs.resolve.outputs.checkout_ref }}
 
-      # The embedded Draw.io webapp is maintained in the sibling drawio fork.
-      # electron-builder expects it at ../../../drawio from packages/desktop;
-      # a normal checkout of MarkNotePro does not include that sibling repo.
-      - name: Fetch Draw.io web engine
+      - name: Verify bundled Draw.io web engine
         shell: bash
-        working-directory: ..
         run: |
-          rm -rf drawio
-          git clone --filter=blob:none "$MARKNOTEPRO_DRAWIO_REPOSITORY" drawio
-          git -C drawio checkout --detach "$MARKNOTEPRO_DRAWIO_REF"
-          test -f drawio/src/main/webapp/index.html
-          echo "Draw.io web engine: $(du -sh drawio/src/main/webapp | cut -f1)"
+          test -f packages/desktop/src/drawioWebApp/drawio/index.html
+          test -f packages/desktop/src/drawioWebApp/drawio/js/marknotepro-patches.js
+          echo "Draw.io web engine: $(du -sh packages/desktop/src/drawioWebApp/drawio | cut -f1)"
 
       - name: Enable Git long paths on Windows
         if: matrix.platform == 'windows'

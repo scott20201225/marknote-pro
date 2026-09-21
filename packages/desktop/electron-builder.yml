@@ -62,9 +62,9 @@ extraResources:
     to: embedded-git
     filter:
       - '**/*'
-  # Draw.io Web 编辑器资源来自同级的 drawio fork。开发期也可通过
-  # MARKNOTEPRO_DRAWIO_WEBAPP 指向任意本地 Web 资源目录。
-  - from: ../../../drawio/src/main/webapp
+  # Draw.io Web 编辑器资源随 MarkNotePro 源码维护，和 GitHub Desktop
+  # 位于同一 src 层级；发布构建不依赖外部仓库或同级目录。
+  - from: src/drawioWebApp/drawio
     to: drawio
     filter:
       - '**/*'
