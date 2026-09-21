@@ -80,6 +80,13 @@ export interface DrawioConfiguration {
   dark: boolean
 }
 
+export interface DrawioExportPayload {
+  format: string
+  filename?: string
+  data?: string
+  xml?: string
+}
+
 // =================================================================
 // Invoke channels (renderer → main, returns Promise<T>)
 // =================================================================
@@ -92,7 +99,11 @@ export interface IpcInvokeChannels {
   'mt::cmd::exists': { args: [name: string]; ret: boolean }
   'mt::drawio::close': { args: []; ret: void }
   'mt::drawio::configure': { args: [configuration: DrawioConfiguration]; ret: void }
+  'mt::drawio::export': { args: [payload: DrawioExportPayload]; ret: void }
   'mt::drawio::open': { args: [pathname: string]; ret: void }
+  'mt::drawio::presentation': { args: [payload: DrawioExportPayload]; ret: void }
+  'mt::drawio::print': { args: [payload: DrawioExportPayload]; ret: void }
+  'mt::drawio::preview': { args: [payload: DrawioExportPayload]; ret: void }
   'mt::drawio::save': { args: [xml: string]; ret: void }
   'mt::drawio::show': { args: [bounds: DrawioBounds]; ret: void }
   'mt::fonts::list': { args: []; ret: string[] }
@@ -277,7 +288,9 @@ export interface IpcSendChannels {
   'mt::window-toggle-always-on-top': []
   'mt::window-zoom-delta': [direction: 'in' | 'out']
   'mt::drawio::hide': []
+  'mt::drawio-menu-mode': [enabled: boolean]
   'mt::drawio::set-bounds': [bounds: DrawioBounds]
+  'mt::drawio-autosave-changed': [enabled: boolean]
   'mt::window::drop': [payload: unknown]
   'screen-capture': [payload: unknown]
   'set-image-folder-path': [path: string]
@@ -318,11 +331,15 @@ export interface IpcMainEventChannels {
   'mt::ask-for-close': []
   'mt::bootstrap-editor': [config: BootstrapEditorConfig]
   'mt::cm-copy-as-excel': []
-  'mt::drawio::init': [payload: { filePath: string; frameUrl: string; xml: string; title: string }]
+  'mt::drawio::init': [
+    payload: { filePath: string; frameUrl: string; xml: string; title: string; autoSave: boolean }
+  ]
   'mt::drawio::configure': [payload: { frameUrl: string; xml: string }]
   'mt::drawio::opened': [payload: { filePath: string; title: string }]
   'mt::drawio::closed': []
+  'mt::drawio::autosave-changed': [enabled: boolean]
   'mt::drawio::request-exit': []
+  'mt::drawio::invoke-action': [actionName: string]
   'mt::cm-copy-as-html': []
   'mt::cm-copy-as-rich': []
   'mt::cm-insert-paragraph': [direction: 'before' | 'after']

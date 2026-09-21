@@ -17,7 +17,15 @@ interface DrawioViewEntry {
   filePath: string | null
   xml: string
   loaded: boolean
+  autoSave: boolean
   configuration: DrawioConfiguration
+}
+
+interface DrawioExportPayload {
+  format: string
+  filename?: string
+  data?: string
+  xml?: string
 }
 
 const views = new Map<number, DrawioViewEntry>()
@@ -63,6 +71,10 @@ const getDrawioFrameUrl = (configuration: DrawioConfiguration): string => {
   url.searchParams.set('proto', 'json')
   url.searchParams.set('spin', '1')
   url.searchParams.set('libraries', '1')
+  // MarkNotePro owns saving and closing through the host protocol, so the
+  // embedded editor must not render a duplicate save/exit control pair.
+  url.searchParams.set('noSaveBtn', '1')
+  url.searchParams.set('noExitBtn', '1')
   // Keep the full Draw.io interface, while locking its language and colour
   // mode to the MarkNotePro preferences instead of Draw.io local storage.
   url.searchParams.set('lang', getDrawioLanguage(configuration.language))
@@ -80,8 +92,91 @@ const saveDiagram=async(xml)=>{const payload=window.__marknoteDrawioPayload;if(!
 window.electron.ipcRenderer.on('mt::drawio::init',(_event,payload)=>{window.__marknoteDrawioPayload=payload;frame.src=payload.frameUrl})
 window.electron.ipcRenderer.on('mt::drawio::configure',(_event,payload)=>{const current=window.__marknoteDrawioPayload;if(!current)return;window.__marknoteDrawioPayload={...current,...payload};frame.src=payload.frameUrl})
 window.electron.ipcRenderer.on('mt::drawio::request-exit',()=>postToDrawio({action:'exit'}))
-window.addEventListener('message',async(event)=>{if(!frame.contentWindow||event.source!==frame.contentWindow)return;let message;try{message=typeof event.data==='string'?JSON.parse(event.data):event.data}catch{return}if(!message)return;if(message.event==='init'){const payload=window.__marknoteDrawioPayload||{};postToDrawio({action:'load',xml:payload.xml||'',title:payload.title||'Draw.io',autosave:1,saveAndExit:'0',modified:'unsavedChanges',exportProtocol:true})}else if(message.event==='save'||message.event==='autosave'){try{await saveDiagram(message.xml)}catch(error){console.error(error)}}else if(message.event==='exit'){try{if(message.xml&&message.modified!==false)await saveDiagram(message.xml);await window.electron.ipcRenderer.invoke('mt::drawio::close')}catch(error){console.error(error)}}else if(message.event==='openLink'&&message.href){await window.electron.shell.openExternal(message.href)}})
+window.electron.ipcRenderer.on('mt::drawio::invoke-action',(_event,actionName)=>{if(typeof actionName==='string'&&actionName)postToDrawio({action:'invokeAction',actionName})})
+window.addEventListener('message',async(event)=>{if(!frame.contentWindow||event.source!==frame.contentWindow)return;let message;try{message=typeof event.data==='string'?JSON.parse(event.data):event.data}catch{return}if(!message)return;if(message.event==='init'){const payload=window.__marknoteDrawioPayload||{};postToDrawio({action:'load',xml:payload.xml||'',title:payload.title||'Draw.io',autosave:payload.autoSave?1:0,saveAndExit:'0',modified:'unsavedChanges',exportProtocol:true})}else if(message.event==='save'||message.event==='autosave'){try{await saveDiagram(message.xml)}catch(error){console.error(error)}}else if(message.event==='export'){try{await window.electron.ipcRenderer.invoke('mt::drawio::export',message)}catch(error){console.error(error)}}else if(message.event==='print'){try{await window.electron.ipcRenderer.invoke('mt::drawio::print',message)}catch(error){console.error(error)}}else if(message.event==='preview'){try{await window.electron.ipcRenderer.invoke('mt::drawio::preview',message)}catch(error){console.error(error)}}else if(message.event==='presentation'){try{await window.electron.ipcRenderer.invoke('mt::drawio::presentation',message)}catch(error){console.error(error)}}else if(message.event==='exit'){try{if(message.xml&&message.modified!==false)await saveDiagram(message.xml);await window.electron.ipcRenderer.invoke('mt::drawio::close')}catch(error){console.error(error)}}else if(message.event==='openLink'&&message.href){await window.electron.shell.openExternal(message.href)}})
 </script></body></html>`
+
+const exportExtensions: Record<string, string> = {
+  png: 'png',
+  jpeg: 'jpg',
+  webp: 'webp',
+  gif: 'gif',
+  svg: 'svg',
+  pdf: 'pdf',
+  html: 'html',
+  xml: 'xml',
+  drawio: 'drawio'
+}
+
+const getExportBuffer = (data: string): Buffer => {
+  const dataUrl = /^data:[^,]*;base64,(.*)$/s.exec(data)
+  return dataUrl ? Buffer.from(dataUrl[1], 'base64') : Buffer.from(data, 'utf8')
+}
+
+const getExportFilename = (entry: DrawioViewEntry, payload: DrawioExportPayload): string => {
+  const extension = exportExtensions[payload.format]
+  const baseName = path.basename(entry.filePath ?? 'drawing.drawio', DRAWIO_EXTENSION)
+  const rawCandidate = typeof payload.filename === 'string' ? path.basename(payload.filename) : ''
+  // Embedded Draw.io has no local filename and emits names such as `.png`.
+  // Fall back to the active drawing name instead of presenting `.png.png`.
+  const candidate = rawCandidate && !rawCandidate.startsWith('.') ? rawCandidate : ''
+  const name = candidate || `${baseName}.${extension}`
+  return path.extname(name).toLowerCase() === `.${extension}` ? name : `${name}.${extension}`
+}
+
+const createPrintWindow = async (svg: string): Promise<BrowserWindow> => {
+  const printWindow = new BrowserWindow({
+    show: false,
+    webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true }
+  })
+  const document = `<!doctype html><html><head><meta charset="UTF-8"><style>@page{margin:12mm}html,body{margin:0;padding:0;background:#fff}svg{display:block;max-width:100%;height:auto}</style></head><body>${svg}</body></html>`
+  await printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(document)}`)
+  return printWindow
+}
+
+const showPreviewWindow = async (owner: BrowserWindow, svg: string): Promise<void> => {
+  const previewWindow = new BrowserWindow({
+    parent: owner,
+    title: 'Draw.io 预览',
+    width: 1040,
+    height: 760,
+    webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true }
+  })
+  const document = `<!doctype html><html><head><meta charset="UTF-8"><style>html,body{height:100%;margin:0;background:#f4f4f4}body{display:grid;place-items:center;overflow:auto;padding:24px;box-sizing:border-box}svg{display:block;max-width:100%;max-height:100%;height:auto;background:#fff;box-shadow:0 1px 4px rgb(0 0 0 / 18%)}</style></head><body>${svg}</body></html>`
+  await previewWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(document)}`)
+}
+
+const showPresentationWindow = async (owner: BrowserWindow, svg: string): Promise<void> => {
+  const presentationWindow = new BrowserWindow({
+    parent: owner,
+    title: 'Draw.io 演示模式',
+    fullscreen: true,
+    backgroundColor: '#000000',
+    webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true }
+  })
+  const document = `<!doctype html><html><head><meta charset="UTF-8"><style>html,body{width:100%;height:100%;margin:0;background:#000}body{display:grid;place-items:center;overflow:hidden}svg{display:block;max-width:100%;max-height:100%;width:auto;height:auto;background:#fff}</style></head><body>${svg}<script>window.addEventListener('keydown',event=>{if(event.key==='Escape')window.close()})</script></body></html>`
+  await presentationWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(document)}`)
+}
+
+const saveDrawioExport = async (
+  owner: BrowserWindow,
+  entry: DrawioViewEntry,
+  payload: DrawioExportPayload
+): Promise<void> => {
+  if (!payload || !Object.prototype.hasOwnProperty.call(exportExtensions, payload.format)) {
+    throw new Error('不支持的 Draw.io 导出格式')
+  }
+  const data = typeof payload.data === 'string' ? payload.data : payload.xml
+  if (typeof data !== 'string' || !data.length) throw new Error('Draw.io 未返回可导出的内容')
+
+  const filename = getExportFilename(entry, payload)
+  const result = await dialog.showSaveDialog(owner, {
+    title: '导出 Draw.io 绘图',
+    defaultPath: path.join(path.dirname(entry.filePath ?? app.getPath('documents')), filename),
+    filters: [{ name: payload.format.toUpperCase(), extensions: [exportExtensions[payload.format]] }]
+  })
+  if (!result.canceled && result.filePath) await fsPromises.writeFile(result.filePath, getExportBuffer(data))
+}
 
 const readDiagram = async (filePath: string): Promise<string> => {
   if (!(await fs.pathExists(filePath))) return EMPTY_DRAWIO
@@ -115,6 +210,7 @@ const getOrCreateView = (win: BrowserWindow): DrawioViewEntry => {
     filePath: null,
     xml: EMPTY_DRAWIO,
     loaded: false,
+    autoSave: true,
     configuration: { language: 'zh-CN', dark: false }
   }
   views.set(win.id, entry)
@@ -158,6 +254,22 @@ export const hideDrawioView = (win: BrowserWindow, closeTab = false): void => {
   if (closeTab) win.webContents.send('mt::drawio::closed')
 }
 
+/** Invoke a built-in Draw.io action through the embed protocol. */
+export const invokeDrawioAction = (win: BrowserWindow, actionName: string): void => {
+  const entry = views.get(win.id)
+  if (!entry?.filePath || !actionName) return
+  entry.view.webContents.send('mt::drawio::invoke-action', actionName)
+}
+
+/** Keep the native File menu's checkbox and Draw.io's own autosave state in sync. */
+export const setDrawioAutosave = (win: BrowserWindow, enabled: boolean): void => {
+  const entry = views.get(win.id)
+  if (!entry?.filePath || entry.autoSave === enabled) return
+  entry.autoSave = enabled
+  invokeDrawioAction(win, 'autosave')
+  win.webContents.send('mt::drawio::autosave-changed', enabled)
+}
+
 export const openDrawioFile = async (
   pathname: string,
   owner?: BrowserWindow | null
@@ -174,7 +286,8 @@ export const openDrawioFile = async (
       filePath,
       frameUrl: getDrawioFrameUrl(entry.configuration),
       xml,
-      title: path.basename(filePath)
+      title: path.basename(filePath),
+      autoSave: entry.autoSave
     })
     win.webContents.send('mt::drawio::opened', { filePath, title: path.basename(filePath) })
   } catch (error) {
@@ -241,6 +354,59 @@ export const registerDrawioHandlers = (): void => {
     if (!entry?.filePath || typeof xml !== 'string') throw new Error('无效的 Draw.io 保存请求')
     await fsPromises.writeFile(entry.filePath, xml, 'utf8')
     entry.xml = xml
+  })
+  ipcMain.handle('mt::drawio::export', async (event, payload: DrawioExportPayload) => {
+    const ownerId = viewOwners.get(event.sender.id)
+    const owner = ownerId === undefined ? undefined : BrowserWindow.fromId(ownerId)
+    const entry = ownerId === undefined ? undefined : views.get(ownerId)
+    if (!owner || !entry?.filePath) throw new Error('无效的 Draw.io 导出请求')
+
+    if (payload?.format === 'pdf') {
+      const svg = typeof payload.data === 'string' ? payload.data : payload.xml
+      if (typeof svg !== 'string' || !svg.length) throw new Error('Draw.io 未返回可打印内容')
+      const filename = getExportFilename(entry, payload)
+      const result = await dialog.showSaveDialog(owner, {
+        title: '导出 Draw.io PDF',
+        defaultPath: path.join(path.dirname(entry.filePath), filename),
+        filters: [{ name: 'PDF', extensions: ['pdf'] }]
+      })
+      if (!result.canceled && result.filePath) {
+        const printWindow = await createPrintWindow(svg)
+        try {
+          const pdf = await printWindow.webContents.printToPDF({ printBackground: true })
+          await fsPromises.writeFile(result.filePath, pdf)
+        } finally {
+          if (!printWindow.isDestroyed()) printWindow.destroy()
+        }
+      }
+      return
+    }
+
+    await saveDrawioExport(owner, entry, payload)
+  })
+  ipcMain.handle('mt::drawio::print', async (event, payload: DrawioExportPayload) => {
+    const ownerId = viewOwners.get(event.sender.id)
+    const owner = ownerId === undefined ? undefined : BrowserWindow.fromId(ownerId)
+    const svg = typeof payload?.data === 'string' ? payload.data : payload?.xml
+    if (!owner || typeof svg !== 'string' || !svg.length) throw new Error('无效的 Draw.io 打印请求')
+    const printWindow = await createPrintWindow(svg)
+    printWindow.webContents.print({ printBackground: true }, () => {
+      if (!printWindow.isDestroyed()) printWindow.destroy()
+    })
+  })
+  ipcMain.handle('mt::drawio::preview', async (event, payload: DrawioExportPayload) => {
+    const ownerId = viewOwners.get(event.sender.id)
+    const owner = ownerId === undefined ? undefined : BrowserWindow.fromId(ownerId)
+    const svg = typeof payload?.data === 'string' ? payload.data : payload?.xml
+    if (!owner || typeof svg !== 'string' || !svg.length) throw new Error('无效的 Draw.io 预览请求')
+    await showPreviewWindow(owner, svg)
+  })
+  ipcMain.handle('mt::drawio::presentation', async (event, payload: DrawioExportPayload) => {
+    const ownerId = viewOwners.get(event.sender.id)
+    const owner = ownerId === undefined ? undefined : BrowserWindow.fromId(ownerId)
+    const svg = typeof payload?.data === 'string' ? payload.data : payload?.xml
+    if (!owner || typeof svg !== 'string' || !svg.length) throw new Error('无效的 Draw.io 演示请求')
+    await showPresentationWindow(owner, svg)
   })
   ipcMain.handle('mt::drawio::close', (event) => {
     const ownerId = viewOwners.get(event.sender.id)

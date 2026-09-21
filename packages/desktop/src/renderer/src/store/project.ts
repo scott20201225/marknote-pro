@@ -1016,10 +1016,15 @@ export const useProjectStore = defineStore('project', () => {
   async function CREATE_FILE_DIRECTORY(name: string): Promise<void> {
     const cache = createCache.value as CreateCacheEntry
     const { dirname, type } = cache
+    const inputName = name.trim()
+    if (!inputName) {
+      createCache.value = {}
+      return
+    }
     const rootPath = projectTree.value?.pathname ?? null
     const parentNode = findFolderNodeByPath(projectTree.value, dirname)
     let fileType: FileCreateType = 'directory'
-    let storedName = name.trim()
+    let storedName = inputName
 
     if (type === 'group') {
       storedName = toStoredNoteName(name, 'group')
@@ -1042,11 +1047,6 @@ export const useProjectStore = defineStore('project', () => {
       }
     } else {
       fileType = 'directory'
-    }
-
-    if (!storedName) {
-      createCache.value = {}
-      return
     }
 
     if (type === 'group' || type === 'area' || type === 'document') {

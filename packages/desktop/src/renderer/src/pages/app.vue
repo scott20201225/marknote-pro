@@ -226,6 +226,7 @@ watch(customCss, (value, oldValue) => {
 })
 
 watch(currentFile, (file) => {
+  window.electron.ipcRenderer.send('mt::drawio-menu-mode', !!file?.isDrawing)
   if (file?.isDrawing) {
     if (drawioFile.value?.filePath !== file.pathname) {
       void window.electron.ipcRenderer.invoke('mt::drawio::open', file.pathname)
@@ -293,6 +294,10 @@ onMounted(() => {
   window.addEventListener('marknotepro:switch-workbench', handleWorkbenchSwitch)
   window.electron.ipcRenderer.on('mt::drawio::opened', openDrawio)
   window.electron.ipcRenderer.on('mt::drawio::closed', closeDrawio)
+  window.electron.ipcRenderer.on('mt::drawio::autosave-changed', (_event, enabled) => {
+    window.electron.ipcRenderer.send('mt::drawio-autosave-changed', enabled)
+  })
+  window.electron.ipcRenderer.send('mt::drawio-menu-mode', !!currentFile.value?.isDrawing)
   window.addEventListener('wheel', handleWindowZoomWheel, { capture: true, passive: false })
   window.addEventListener('gesturestart', handleWindowZoomGestureStart)
   window.addEventListener('gesturechange', handleWindowZoomGestureChange)
@@ -367,6 +372,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('marknotepro:switch-workbench', handleWorkbenchSwitch)
   window.electron.ipcRenderer.removeAllListeners('mt::drawio::opened')
   window.electron.ipcRenderer.removeAllListeners('mt::drawio::closed')
+  window.electron.ipcRenderer.removeAllListeners('mt::drawio::autosave-changed')
   window.removeEventListener('wheel', handleWindowZoomWheel, true)
   window.removeEventListener('gesturestart', handleWindowZoomGestureStart)
   window.removeEventListener('gesturechange', handleWindowZoomGestureChange)

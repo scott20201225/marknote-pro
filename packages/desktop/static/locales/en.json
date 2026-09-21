@@ -26,6 +26,7 @@
       "exportJpeg": "Export as JPEG",
       "exportPdf": "Export as PDF",
       "import": "Import",
+      "preview": "Preview",
       "print": "Print",
       "closeTab": "Close Tab",
       "closeWindow": "Close Window",
