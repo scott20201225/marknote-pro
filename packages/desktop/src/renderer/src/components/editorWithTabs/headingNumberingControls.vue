@@ -1,10 +1,10 @@
 <template>
-  <el-tooltip content="标题序号" placement="bottom" :open-delay="400">
+  <el-tooltip :content="t('sideBar.icons.headingNumbering')" placement="bottom" :open-delay="400">
     <button
       class="document-editor-control"
       :class="{ active: showHeadingNumbers }"
       type="button"
-      aria-label="标题序号"
+      :aria-label="t('sideBar.icons.headingNumbering')"
       :aria-pressed="showHeadingNumbers"
       @click="editorStore.TOGGLE_HEADING_NUMBERING()"
     >
@@ -16,7 +16,7 @@
   </el-tooltip>
   <el-tooltip
     v-if="showHeadingNumbers"
-    content="顶级标题参与序号"
+    :content="t('sideBar.icons.headingNumberingIncludeTopLevel')"
     placement="bottom"
     :open-delay="400"
   >
@@ -24,7 +24,7 @@
       class="document-editor-control"
       :class="{ active: includesTopLevel }"
       type="button"
-      aria-label="顶级标题参与序号"
+      :aria-label="t('sideBar.icons.headingNumberingIncludeTopLevel')"
       :aria-pressed="includesTopLevel"
       @click="editorStore.TOGGLE_HEADING_NUMBERING_TOP_LEVEL()"
     >
@@ -36,8 +36,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
+import { useI18n } from 'vue-i18n'
 import { useEditorStore } from '@/store/editor'
 
+const { t } = useI18n()
 const editorStore = useEditorStore()
 const { currentFile } = storeToRefs(editorStore)
 const showHeadingNumbers = computed(() => currentFile.value?.showHeadingNumbers === true)
