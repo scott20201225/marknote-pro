@@ -459,7 +459,13 @@ class Content extends TreeNode {
 
         const previousContentBlock = this.previousContentInContext();
         const nextContentBlock = this.nextContentInContext();
-        const { start, end } = this.getCursor()!;
+        const cursor = this.getCursor();
+        // The native selection can disappear while the editor is re-rendering
+        // or changing focus. Arrow navigation is a no-op until it is restored.
+        if (!cursor)
+            return;
+
+        const { start, end } = cursor;
         const { topOffset, bottomOffset } = Selection.getCursorYOffset(
             this.domNode!,
         );
