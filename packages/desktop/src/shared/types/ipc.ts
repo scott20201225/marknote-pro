@@ -28,7 +28,8 @@ import type {
   SerializedStat,
   LineEnding,
   FileChangeDetail,
-  UnsavedFile
+  UnsavedFile,
+  UnsavedDrawioFile
 } from './files'
 import type { BufferedState as BufferedStateType } from './bufferedState'
 import type { MenuTemplate, MenuPopupPosition } from './menu'
@@ -102,11 +103,16 @@ export interface IpcInvokeChannels {
   'mt::drawio::close': { args: []; ret: void }
   'mt::drawio::configure': { args: [configuration: DrawioConfiguration]; ret: void }
   'mt::drawio::export': { args: [payload: DrawioExportPayload]; ret: void }
-  'mt::drawio::open': { args: [pathname: string]; ret: void }
+  'mt::drawio::open': {
+    args: [pathname: string, configuration?: DrawioConfiguration]
+    ret: void
+  }
   'mt::drawio::presentation': { args: [payload: DrawioExportPayload]; ret: void }
   'mt::drawio::print': { args: [payload: DrawioExportPayload]; ret: void }
   'mt::drawio::preview': { args: [payload: DrawioExportPayload]; ret: void }
   'mt::drawio::save': { args: [xml: string]; ret: void }
+  'mt::drawio::save-request': { args: [filePath: string]; ret: void }
+  'mt::drawio::close-file': { args: [filePath: string]; ret: void }
   'mt::drawio::show': { args: [bounds: DrawioBounds]; ret: void }
   'mt::fonts::list': { args: []; ret: string[] }
   'mt::github-desktop::show': {
@@ -203,7 +209,7 @@ export interface IpcSendChannels {
   'mt::check-for-update': []
   'mt::clipboard::write-text': [text: string]
   'mt::close-window': []
-  'mt::close-window-confirm': [unsavedFiles: UnsavedFile[]]
+  'mt::close-window-confirm': [unsavedFiles: UnsavedFile[], unsavedDrawioFiles?: UnsavedDrawioFile[]]
   'mt::cmd-close-window': []
   'mt::cmd-import-file': []
   'mt::cmd-new-editor-window': []
@@ -290,6 +296,7 @@ export interface IpcSendChannels {
   'mt::window-toggle-always-on-top': []
   'mt::window-zoom-delta': [direction: 'in' | 'out']
   'mt::drawio::hide': []
+  'mt::drawio::state': [payload: { modified: boolean }]
   'mt::drawio-menu-mode': [enabled: boolean]
   'mt::drawio::set-bounds': [bounds: DrawioBounds]
   'mt::drawio-autosave-changed': [enabled: boolean]
@@ -338,10 +345,21 @@ export interface IpcMainEventChannels {
   ]
   'mt::drawio::configure': [payload: { frameUrl: string; xml: string }]
   'mt::drawio::opened': [payload: { filePath: string; title: string }]
-  'mt::drawio::closed': []
+  'mt::drawio::closed': [payload?: { filePath?: string }]
   'mt::drawio::autosave-changed': [enabled: boolean]
   'mt::drawio::request-exit': []
   'mt::drawio::invoke-action': [actionName: string]
+  'mt::drawio::request-save': []
+  'mt::drawio::state': [
+    payload: {
+      filePath: string
+      modified: boolean
+      isSaved: boolean
+      isSaving: boolean
+      saveError?: string
+      lastSavedHash?: string
+    }
+  ]
   'mt::cm-copy-as-html': []
   'mt::cm-copy-as-rich': []
   'mt::cm-insert-paragraph': [direction: 'before' | 'after']

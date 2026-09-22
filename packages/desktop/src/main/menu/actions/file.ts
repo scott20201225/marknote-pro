@@ -22,7 +22,7 @@ import type { CommandManager } from '../../commands'
 import { EXTENSION_HASN, PANDOC_EXTENSIONS, URL_REG, isOsx } from '../../config'
 import { normalizeAndResolvePath, writeFile } from '../../filesystem'
 import { writeMarkdownFile } from '../../filesystem/markdown'
-import { createDrawioFile, isDrawioFile, openDrawioFile } from '../../drawio'
+import { createDrawioFile, isDrawioFile, openDrawioFile, saveDrawioDocuments } from '../../drawio'
 import { getPath, getRecommendTitleFromMarkdownString } from '../../utils'
 import {
   normalizeLinkUrlCandidate,
@@ -31,7 +31,7 @@ import {
 } from '../../utils/linkOpenWith'
 import pandoc from '../../utils/pandoc'
 import { t } from '../../i18n'
-import type { ExportType, UnsavedFile } from '@shared/types/files'
+import type { ExportType, UnsavedDrawioFile, UnsavedFile } from '@shared/types/files'
 
 type Win = BrowserWindow | null | undefined
 
@@ -506,16 +506,18 @@ const handleResponseForSave = async (
 
 const showUnsavedFilesMessage = async (
   win: BrowserWindow,
-  files: UnsavedFile[]
+  files: UnsavedFile[],
+  drawioFiles: UnsavedDrawioFile[] = []
 ): Promise<{ needSave: boolean } | null> => {
+  const allFiles = [...files, ...drawioFiles]
   const { response } = await dialog.showMessageBox(win, {
     type: 'warning',
     buttons: [t('dialog.save'), t('dialog.dontSave'), t('dialog.cancel')],
     defaultId: 0,
     message: t('dialog.saveChanges', {
-      count: files.length,
-      type: files.length === 1 ? t('dialog.file') : t('dialog.files'),
-      files: files.map((f) => f.filename).join('\n')
+      count: allFiles.length,
+      type: allFiles.length === 1 ? t('dialog.file') : t('dialog.files'),
+      files: allFiles.map((f) => f.filename).join('\n')
     }),
     detail: t('dialog.changesWillBeLost'),
     cancelId: 2,
@@ -684,20 +686,22 @@ ipcMain.on(
   }
 )
 
-ipcMain.on('mt::close-window-confirm', async (e, unsavedFiles: UnsavedFile[]) => {
+ipcMain.on(
+  'mt::close-window-confirm',
+  async (e, unsavedFiles: UnsavedFile[], unsavedDrawioFiles: UnsavedDrawioFile[] = []) => {
   const win = BrowserWindow.fromWebContents(e.sender)
   if (!win) {
     return
   }
-  const userResult = await showUnsavedFilesMessage(win, unsavedFiles)
+  const userResult = await showUnsavedFilesMessage(win, unsavedFiles, unsavedDrawioFiles)
   if (!userResult) {
     return
   }
 
   const { needSave } = userResult
   if (needSave) {
-    Promise.all(
-      unsavedFiles.map((file) =>
+    Promise.all([
+      ...unsavedFiles.map((file) =>
         handleResponseForSave(
           e,
           file.id,
@@ -707,8 +711,12 @@ ipcMain.on('mt::close-window-confirm', async (e, unsavedFiles: UnsavedFile[]) =>
           file.options,
           file.defaultPath
         )
+      ),
+      saveDrawioDocuments(
+        win,
+        unsavedDrawioFiles.map((file) => file.pathname)
       )
-    )
+    ])
       .then(() => {
         ipcMain.emit('window-close-by-id', win.id)
       })
@@ -733,7 +741,8 @@ ipcMain.on('mt::close-window-confirm', async (e, unsavedFiles: UnsavedFile[]) =>
   } else {
     ipcMain.emit('window-close-by-id', win.id)
   }
-})
+  }
+)
 
 ipcMain.on('mt::response-file-save', handleResponseForSave as Parameters<typeof ipcMain.on>[1])
 

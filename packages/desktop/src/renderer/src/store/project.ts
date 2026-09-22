@@ -28,6 +28,7 @@ import {
 } from '../util/noteWorkspace'
 import type { TreeFileNode, TreeNode } from '../components/sideBar/types'
 import type { FileChangeDetail } from '@shared/types/files'
+import { getDrawioConfiguration } from '../util/drawioConfiguration'
 
 type ProjectTree = TreeNode
 type TreeChange = FileChangeDetail
@@ -1083,7 +1084,11 @@ export const useProjectStore = defineStore('project', () => {
           newFileNameCache.value = fullName
         }
         if (type === 'drawing') {
-          return window.electron.ipcRenderer.invoke('mt::drawio::open', fullName)
+          return window.electron.ipcRenderer.invoke(
+            'mt::drawio::open',
+            fullName,
+            getDrawioConfiguration()
+          )
         }
       })
       .catch((err) => {

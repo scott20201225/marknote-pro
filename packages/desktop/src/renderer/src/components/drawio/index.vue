@@ -7,57 +7,22 @@ import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { usePreferencesStore } from '@/store/preferences'
 import { useLayoutStore } from '@/store/layout'
-import type { DrawioBounds, DrawioConfiguration } from '@shared/types/ipc'
+import type { DrawioBounds } from '@shared/types/ipc'
+import { getDrawioConfiguration } from '@/util/drawioConfiguration'
 
 const surfaceRef = ref<HTMLDivElement | null>(null)
 const preferencesStore = usePreferencesStore()
 const layoutStore = useLayoutStore()
 const { zoom } = storeToRefs(preferencesStore)
+const { preferenceLoaded } = storeToRefs(preferencesStore)
 const { rightColumn, sideBarWidth, noteNavigationMode, noteListWidth } = storeToRefs(layoutStore)
 let boundsSyncAnimationFrame = 0
 let themeObserver: MutationObserver | null = null
 let lastConfiguration = ''
-
-const DRAWIO_THEME_VARIABLES = [
-  'themeColor',
-  'themeColor10',
-  'themeColor20',
-  'themeColor30',
-  'editorColor',
-  'editorColor30',
-  'editorColor50',
-  'editorBgColor',
-  'sideBarBgColor',
-  'sideBarItemHoverBgColor',
-  'itemBgColor',
-  'floatBgColor',
-  'floatHoverColor',
-  'floatBorderColor',
-  'inputBgColor',
-  'tableBorderColor'
-] as const
-
-const readThemeColors = (): Record<string, string> => {
-  const style = window.getComputedStyle(document.documentElement)
-  const colors: Record<string, string> = {}
-
-  for (const name of DRAWIO_THEME_VARIABLES) {
-    const value = style.getPropertyValue(`--${name}`).trim()
-    if (value) colors[name] = value
-  }
-
-  return colors
-}
-
-const getConfiguration = (): DrawioConfiguration => ({
-  language: preferencesStore.language,
-  dark: document.body.classList.contains('dark'),
-  theme: preferencesStore.theme,
-  colors: readThemeColors()
-})
+let removeOpenedListener: (() => void) | null = null
 
 const syncConfiguration = (): void => {
-  const configuration = getConfiguration()
+  const configuration = getDrawioConfiguration()
   const fingerprint = JSON.stringify(configuration)
   if (fingerprint === lastConfiguration) return
   lastConfiguration = fingerprint
@@ -111,11 +76,22 @@ const syncBoundsDuringZoom = (duration = 220): void => {
 }
 
 onMounted(() => {
-  syncConfiguration()
+  // The Drawio BrowserView is mounted before the parent finishes loading
+  // persisted preferences. Do not cache the default language/theme as the
+  // first configuration; the watcher below will send the real values once
+  // preferences are ready.
+  if (preferenceLoaded.value) syncConfiguration()
   void showDrawio()
+  removeOpenedListener = window.electron.ipcRenderer.on('mt::drawio::opened', () => {
+    void showDrawio()
+  })
   window.addEventListener('resize', syncBounds)
   themeObserver = new MutationObserver(() => syncConfiguration())
   themeObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] })
+})
+
+watch(preferenceLoaded, (loaded) => {
+  if (loaded) nextTick(syncConfiguration)
 })
 
 watch(zoom, () => {
@@ -145,6 +121,8 @@ onBeforeUnmount(() => {
   themeObserver?.disconnect()
   themeObserver = null
   window.removeEventListener('resize', syncBounds)
+  removeOpenedListener?.()
+  removeOpenedListener = null
   window.electron.ipcRenderer.send('mt::drawio::hide')
 })
 </script>

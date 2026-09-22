@@ -1,6 +1,6 @@
 <template>
   <git-desktop v-if="workbench === 'git'" />
-  <div v-else class="editor-container" :class="{ 'drawio-open': !!drawioFile }">
+  <div v-else class="editor-container" :class="{ 'drawio-open': currentFile?.isDrawing === true }">
     <side-bar v-if="init" />
 
     <div class="editor-middle">
@@ -44,9 +44,9 @@
           </el-icon>
         </button>
       </div>
-      <recent v-if="!hasCurrentFile && init && !drawioFile" />
+      <recent v-if="!hasCurrentFile && init && !currentFile?.isDrawing" />
       <editor-with-tabs
-        v-if="hasCurrentFile && init && !drawioFile"
+        v-if="hasCurrentFile && init && !currentFile?.isDrawing"
         :markdown="markdown"
         :cursor="cursor"
         :muya-index-cursor="muyaIndexCursor"
@@ -54,7 +54,9 @@
         :text-direction="textDirection"
         :platform="platform"
       />
-      <drawio v-if="init && drawioFile" />
+      <!-- Keep Drawio mounted so its BrowserViews survive tab switches, but
+           never let its absolute surface cover the Markdown editor. -->
+      <drawio v-if="init" v-show="currentFile?.isDrawing === true" />
       <command-palette />
       <about-dialog />
       <export-setting-dialog />
@@ -94,6 +96,7 @@ import { useCommandCenterStore } from '@/store/commandCenter'
 import { useProjectStore } from '@/store/project'
 import { useAutoUpdatesStore } from '@/store/autoUpdates'
 import { useNotificationStore } from '@/store/notification'
+import { getDrawioConfiguration } from '@/util/drawioConfiguration'
 
 const mainStore = useMainStore()
 const editorStore = useEditorStore()
@@ -203,7 +206,8 @@ const openDrawio = (_event: unknown, payload: { filePath: string; title: string 
   drawioFile.value = payload
 }
 
-const closeDrawio = (): void => {
+const closeDrawio = (_event: unknown, payload?: { filePath?: string }): void => {
+  if (payload?.filePath && payload.filePath !== currentFile.value?.pathname) return
   drawioFile.value = null
   if (currentFile.value?.isDrawing) {
     editorStore.FORCE_CLOSE_TAB(currentFile.value)
@@ -225,16 +229,27 @@ watch(customCss, (value, oldValue) => {
   }
 })
 
-watch(currentFile, (file) => {
+watch([currentFile, () => preferencesStore.preferenceLoaded], ([file, preferenceLoaded]) => {
   window.electron.ipcRenderer.send('mt::drawio-menu-mode', !!file?.isDrawing)
   if (file?.isDrawing) {
+    // A restored drawing tab can become current before persisted preferences
+    // finish loading. Wait for them so the first frame URL is never built from
+    // the default language/theme.
+    if (!preferenceLoaded) return
     if (drawioFile.value?.filePath !== file.pathname) {
-      void window.electron.ipcRenderer.invoke('mt::drawio::open', file.pathname)
+      void window.electron.ipcRenderer.invoke(
+        'mt::drawio::open',
+        file.pathname,
+        getDrawioConfiguration()
+      )
     }
     return
   }
 
-  if (drawioFile.value) drawioFile.value = null
+  if (drawioFile.value) {
+    drawioFile.value = null
+    window.electron.ipcRenderer.send('mt::drawio::hide')
+  }
 })
 
 watch(
@@ -322,6 +337,7 @@ onMounted(() => {
   preferencesStore.LISTEN_TOGGLE_VIEW()
   editorStore.LISTEN_SCREEN_SHOT()
   editorStore.LISTEN_FOR_CLOSE()
+  editorStore.LISTEN_FOR_DRAWIO_STATE()
   editorStore.LISTEN_FOR_SAVE_AS()
   editorStore.LISTEN_FOR_MOVE_TO()
   editorStore.LISTEN_FOR_SAVE()
@@ -373,6 +389,7 @@ onBeforeUnmount(() => {
   window.electron.ipcRenderer.removeAllListeners('mt::drawio::opened')
   window.electron.ipcRenderer.removeAllListeners('mt::drawio::closed')
   window.electron.ipcRenderer.removeAllListeners('mt::drawio::autosave-changed')
+  window.electron.ipcRenderer.removeAllListeners('mt::drawio::state')
   window.removeEventListener('wheel', handleWindowZoomWheel, true)
   window.removeEventListener('gesturestart', handleWindowZoomGestureStart)
   window.removeEventListener('gesturechange', handleWindowZoomGestureChange)
