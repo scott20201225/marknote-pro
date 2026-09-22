@@ -79,6 +79,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
+import { getDrawioConfiguration } from '@/util/drawioConfiguration'
 import { MoreFilled } from '@element-plus/icons-vue'
 import { useEditorStore } from '@/store/editor'
 import { useProjectStore } from '@/store/project'
@@ -226,7 +227,11 @@ const handleFileClick = (file: TreeFileNode): void => {
   projectStore.SELECT_NOTE_PATH(window.path.dirname(pathname))
   projectStore.CHANGE_ACTIVE_ITEM(file)
   if (file.isDrawing || /\.drawio$/i.test(pathname)) {
-    void window.electron.ipcRenderer.invoke('mt::drawio::open', pathname)
+    void window.electron.ipcRenderer.invoke(
+      'mt::drawio::open',
+      pathname,
+      getDrawioConfiguration()
+    )
     return
   }
   const openedTab = tabs.value.find((tab) =>

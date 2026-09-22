@@ -49,6 +49,7 @@ import { showContextMenu } from '../../contextMenu/sideBar'
 import bus from '../../bus'
 import { getNoteDisplayName } from '../../util/noteWorkspace'
 import type { TreeFileNode } from './types'
+import { getDrawioConfiguration } from '@/util/drawioConfiguration'
 
 const props = defineProps<{
   file: TreeFileNode
@@ -76,7 +77,11 @@ const handleFileClick = (): void => {
   const { isMarkdown, isDrawing, pathname } = props.file
   if (isDrawing || /\.drawio$/i.test(pathname)) {
     projectStore.CHANGE_ACTIVE_ITEM(props.file)
-    void window.electron.ipcRenderer.invoke('mt::drawio::open', pathname)
+    void window.electron.ipcRenderer.invoke(
+      'mt::drawio::open',
+      pathname,
+      getDrawioConfiguration()
+    )
     return
   }
   if (!isMarkdown) return

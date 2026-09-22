@@ -96,6 +96,24 @@ export interface IFileState {
   headingNumberingIncludesTopLevel: boolean
 }
 
+/** Runtime state for one Draw.io tab. The XML stays inside its BrowserView. */
+export interface IDrawioState {
+  id: string
+  pathname: string
+  filename: string
+  modified: boolean
+  isSaved: boolean
+  isSaving: boolean
+  saveError?: string
+  lastSavedHash?: string
+}
+
+export interface UnsavedDrawioFile {
+  id: string
+  filename: string
+  pathname: string
+}
+
 /**
  * Per-tab notification banner. Pushed via the editor store's
  * `pushTabNotification` action; consumed by `notifications.vue`.

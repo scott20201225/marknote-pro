@@ -1,21 +1,28 @@
 import fs from 'fs-extra'
 import fsPromises from 'fs/promises'
+import crypto from 'crypto'
 import path from 'path'
 import { pathToFileURL } from 'url'
 import { app, BrowserView, BrowserWindow, dialog, ipcMain } from 'electron'
 import type { Rectangle } from 'electron'
 import log from 'electron-log'
 import type { DrawioConfiguration } from '../../shared/types/ipc'
+import { writeFile } from '../filesystem'
 
 const DRAWIO_EXTENSION = '.drawio'
 const EMPTY_DRAWIO =
   '<mxfile host="MarkNotePro"><diagram id="page-1" name="Page-1"><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/></root></mxGraphModel></diagram></mxfile>'
 
-interface DrawioViewEntry {
+interface DrawioDocumentEntry {
   view: BrowserView
-  filePath: string | null
-  xml: string
+  filePath: string
   loaded: boolean
+  saveWaiters: Array<{ resolve: () => void; reject: (error: unknown) => void }>
+}
+
+interface DrawioWindowEntry {
+  documents: Map<string, DrawioDocumentEntry>
+  activePath: string | null
   autoSave: boolean
   configuration: DrawioConfiguration
 }
@@ -27,8 +34,24 @@ interface DrawioExportPayload {
   xml?: string
 }
 
-const views = new Map<number, DrawioViewEntry>()
-const viewOwners = new Map<number, number>()
+const views = new Map<number, DrawioWindowEntry>()
+const viewOwners = new Map<number, { windowId: number; filePath: string }>()
+
+const normalizeDrawioConfiguration = (
+  configuration?: Partial<DrawioConfiguration>
+): DrawioConfiguration => {
+  const colors = Object.fromEntries(
+    Object.entries(configuration?.colors ?? {}).filter(
+      ([, value]) => typeof value === 'string' && value.length < 160
+    )
+  )
+  return {
+    language: typeof configuration?.language === 'string' ? configuration.language : 'zh-CN',
+    dark: configuration?.dark === true,
+    theme: typeof configuration?.theme === 'string' ? configuration.theme : 'light',
+    colors
+  }
+}
 
 export const isDrawioFile = (pathname: string): boolean =>
   typeof pathname === 'string' && path.extname(pathname).toLowerCase() === DRAWIO_EXTENSION
@@ -86,13 +109,17 @@ const getHostHtml = (): string => `<!doctype html>
 <style>html,body,iframe{width:100%;height:100%;margin:0;border:0;overflow:hidden}body{background:#fff}</style>
 </head><body><iframe id="drawio" title="Draw.io 绘图编辑器"></iframe><script>
 const frame=document.getElementById('drawio')
+let pendingFrameUrl=null
+let frameReady=false
 const postToDrawio=(message)=>{if(frame.contentWindow)frame.contentWindow.postMessage(JSON.stringify(message),'*')}
-const saveDiagram=async(xml)=>{const payload=window.__marknoteDrawioPayload;if(!payload||typeof xml!=='string')return;await window.electron.ipcRenderer.invoke('mt::drawio::save',xml);payload.xml=xml;postToDrawio({action:'status',messageKey:'allChangesSaved',modified:false})}
-window.electron.ipcRenderer.on('mt::drawio::init',(_event,payload)=>{window.__marknoteDrawioPayload=payload;frame.src=payload.frameUrl})
-window.electron.ipcRenderer.on('mt::drawio::configure',(_event,payload)=>{const current=window.__marknoteDrawioPayload;if(!current)return;window.__marknoteDrawioPayload={...current,...payload};frame.src=payload.frameUrl})
+const loadFrame=(url)=>{if(typeof url!=='string'||!url)return;frameReady=false;frame.src=url}
+const saveDiagram=async(xml)=>{const payload=window.__marknoteDrawioPayload;if(!payload||typeof xml!=='string')return;await window.electron.ipcRenderer.invoke('mt::drawio::save',xml);payload.xml=xml;postToDrawio({action:'status',messageKey:'allChangesSaved',modified:false});if(pendingFrameUrl){const next=pendingFrameUrl;pendingFrameUrl=null;payload.frameUrl=next;loadFrame(next)}}
+window.electron.ipcRenderer.on('mt::drawio::init',(_event,payload)=>{window.__marknoteDrawioPayload=payload;loadFrame(payload.frameUrl)})
+window.electron.ipcRenderer.on('mt::drawio::configure',(_event,payload)=>{const current=window.__marknoteDrawioPayload;if(!current)return;window.__marknoteDrawioPayload={...current,...payload};if(!frameReady){loadFrame(payload.frameUrl);return}pendingFrameUrl=payload.frameUrl;postToDrawio({action:'invokeAction',actionName:'save'})})
 window.electron.ipcRenderer.on('mt::drawio::request-exit',()=>postToDrawio({action:'exit'}))
 window.electron.ipcRenderer.on('mt::drawio::invoke-action',(_event,actionName)=>{if(typeof actionName==='string'&&actionName)postToDrawio({action:'invokeAction',actionName})})
-window.addEventListener('message',async(event)=>{if(!frame.contentWindow||event.source!==frame.contentWindow)return;let message;try{message=typeof event.data==='string'?JSON.parse(event.data):event.data}catch{return}if(!message)return;if(message.event==='init'){const payload=window.__marknoteDrawioPayload||{};postToDrawio({action:'load',xml:payload.xml||'',title:payload.title||'Draw.io',autosave:payload.autoSave?1:0,saveAndExit:'0',modified:'unsavedChanges',exportProtocol:true})}else if(message.event==='save'||message.event==='autosave'){try{await saveDiagram(message.xml)}catch(error){console.error(error)}}else if(message.event==='export'){try{await window.electron.ipcRenderer.invoke('mt::drawio::export',message)}catch(error){console.error(error)}}else if(message.event==='print'){try{await window.electron.ipcRenderer.invoke('mt::drawio::print',message)}catch(error){console.error(error)}}else if(message.event==='preview'){try{await window.electron.ipcRenderer.invoke('mt::drawio::preview',message)}catch(error){console.error(error)}}else if(message.event==='presentation'){try{await window.electron.ipcRenderer.invoke('mt::drawio::presentation',message)}catch(error){console.error(error)}}else if(message.event==='exit'){try{if(message.xml&&message.modified!==false)await saveDiagram(message.xml);await window.electron.ipcRenderer.invoke('mt::drawio::close')}catch(error){console.error(error)}}else if(message.event==='openLink'&&message.href){await window.electron.shell.openExternal(message.href)}})
+window.electron.ipcRenderer.on('mt::drawio::request-save',()=>postToDrawio({action:'invokeAction',actionName:'save'}))
+window.addEventListener('message',async(event)=>{if(!frame.contentWindow||event.source!==frame.contentWindow)return;let message;try{message=typeof event.data==='string'?JSON.parse(event.data):event.data}catch{return}if(!message)return;if(message.event==='init'){frameReady=true;const payload=window.__marknoteDrawioPayload||{};postToDrawio({action:'load',xml:payload.xml||'',title:payload.title||'Draw.io',autosave:1,saveAndExit:'0',modified:'unsavedChanges',exportProtocol:true})}else if(message.event==='save'){try{await saveDiagram(message.xml)}catch(error){console.error(error)}}else if(message.event==='autosave'){if(typeof message.xml==='string'&&window.__marknoteDrawioPayload)window.__marknoteDrawioPayload.xml=message.xml;window.electron.ipcRenderer.send('mt::drawio::state',{modified:true});if(window.__marknoteDrawioPayload?.autoSave){try{await saveDiagram(message.xml)}catch(error){console.error(error)}}}else if(message.event==='export'){try{await window.electron.ipcRenderer.invoke('mt::drawio::export',message)}catch(error){console.error(error)}}else if(message.event==='print'){try{await window.electron.ipcRenderer.invoke('mt::drawio::print',message)}catch(error){console.error(error)}}else if(message.event==='preview'){try{await window.electron.ipcRenderer.invoke('mt::drawio::preview',message)}catch(error){console.error(error)}}else if(message.event==='presentation'){try{await window.electron.ipcRenderer.invoke('mt::drawio::presentation',message)}catch(error){console.error(error)}}else if(message.event==='exit'){try{if(message.xml&&message.modified!==false)await saveDiagram(message.xml);await window.electron.ipcRenderer.invoke('mt::drawio::close')}catch(error){console.error(error)}}else if(message.event==='openLink'&&message.href){await window.electron.shell.openExternal(message.href)}})
 </script></body></html>`
 
 const exportExtensions: Record<string, string> = {
@@ -118,7 +145,7 @@ const getExportBuffer = (data: string): Buffer => {
   return dataUrl ? Buffer.from(dataUrl[1], 'base64') : Buffer.from(data, 'utf8')
 }
 
-const getExportFilename = (entry: DrawioViewEntry, payload: DrawioExportPayload): string => {
+const getExportFilename = (entry: DrawioDocumentEntry, payload: DrawioExportPayload): string => {
   const extension = exportExtensions[payload.format]
   const baseName = path.basename(entry.filePath ?? 'drawing.drawio', DRAWIO_EXTENSION)
   const rawCandidate = typeof payload.filename === 'string' ? path.basename(payload.filename) : ''
@@ -165,7 +192,7 @@ const showPresentationWindow = async (owner: BrowserWindow, svg: string): Promis
 
 const saveDrawioExport = async (
   owner: BrowserWindow,
-  entry: DrawioViewEntry,
+  entry: DrawioDocumentEntry,
   payload: DrawioExportPayload
 ): Promise<void> => {
   const format =
@@ -190,7 +217,7 @@ const readDiagram = async (filePath: string): Promise<string> => {
   if (!(await fs.pathExists(filePath))) return EMPTY_DRAWIO
   const content = await fsPromises.readFile(filePath, 'utf8')
   if (content.trim()) return content
-  await fsPromises.writeFile(filePath, EMPTY_DRAWIO, 'utf8')
+  await writeFile(filePath, EMPTY_DRAWIO, undefined, 'utf8')
   return EMPTY_DRAWIO
 }
 
@@ -201,9 +228,28 @@ const normalizeBounds = (bounds: Rectangle): Rectangle => ({
   height: Math.max(1, Math.round(bounds.height))
 })
 
-const getOrCreateView = (win: BrowserWindow): DrawioViewEntry => {
+const getOrCreateWindowEntry = (win: BrowserWindow): DrawioWindowEntry => {
   const existing = views.get(win.id)
   if (existing) return existing
+  const entry: DrawioWindowEntry = {
+    documents: new Map(),
+    activePath: null,
+    autoSave: true,
+    configuration: { language: 'zh-CN', dark: false, theme: 'light', colors: {} }
+  }
+  views.set(win.id, entry)
+  win.on('closed', () => {
+    const current = views.get(win.id)
+    if (!current) return
+    for (const document of current.documents.values()) {
+      viewOwners.delete(document.view.webContents.id)
+    }
+    views.delete(win.id)
+  })
+  return entry
+}
+
+const createDocumentEntry = (win: BrowserWindow, filePath: string): DrawioDocumentEntry => {
   const view = new BrowserView({
     webPreferences: {
       contextIsolation: true,
@@ -213,32 +259,19 @@ const getOrCreateView = (win: BrowserWindow): DrawioViewEntry => {
       preload: path.join(__dirname, '../preload/index.js')
     }
   })
-  const entry: DrawioViewEntry = {
-    view,
-    filePath: null,
-    xml: EMPTY_DRAWIO,
-    loaded: false,
-    autoSave: true,
-    configuration: { language: 'zh-CN', dark: false, theme: 'light', colors: {} }
-  }
-  views.set(win.id, entry)
-  viewOwners.set(view.webContents.id, win.id)
+  const entry: DrawioDocumentEntry = { view, filePath, loaded: false, saveWaiters: [] }
+  getOrCreateWindowEntry(win).documents.set(filePath, entry)
+  viewOwners.set(view.webContents.id, { windowId: win.id, filePath })
   view.webContents.on('did-fail-load', (_event, code, description, url) => {
     log.error(`Draw.io 加载失败: ${code} ${description} @ ${url}`)
   })
   view.webContents.on('render-process-gone', (_event, details) => {
     log.error('Draw.io 渲染进程异常退出:', details)
   })
-  win.on('closed', () => {
-    if (views.get(win.id)?.view === view) {
-      views.delete(win.id)
-      viewOwners.delete(view.webContents.id)
-    }
-  })
   return entry
 }
 
-const ensureViewLoaded = async (entry: DrawioViewEntry): Promise<void> => {
+const ensureViewLoaded = async (entry: DrawioDocumentEntry): Promise<void> => {
   if (entry.loaded) return
   entry.loaded = true
   await entry.view.webContents.loadURL(
@@ -246,58 +279,156 @@ const ensureViewLoaded = async (entry: DrawioViewEntry): Promise<void> => {
   )
 }
 
+const getActiveDocument = (win: BrowserWindow): DrawioDocumentEntry | undefined => {
+  const windowEntry = views.get(win.id)
+  return windowEntry?.activePath ? windowEntry.documents.get(windowEntry.activePath) : undefined
+}
+
 const showDrawioView = (win: BrowserWindow, bounds: Rectangle): void => {
-  const entry = views.get(win.id)
-  if (!entry?.filePath) return
+  const entry = getActiveDocument(win)
+  if (!entry) return
   if (!win.getBrowserViews().includes(entry.view)) win.addBrowserView(entry.view)
   entry.view.setBounds(normalizeBounds(bounds))
+  // Keep previously opened Drawio views attached so switching tabs does not
+  // tear down the native view. Only change the z-order to reveal the active
+  // tab; this preserves its web state and removes the visible flash.
+  win.setTopBrowserView(entry.view)
 }
 
 export const hideDrawioView = (win: BrowserWindow, closeTab = false): void => {
-  const entry = views.get(win.id)
-  if (!entry) return
-  if (win.getBrowserViews().includes(entry.view)) win.removeBrowserView(entry.view)
+  const windowEntry = views.get(win.id)
+  const entry = getActiveDocument(win)
+  if (!windowEntry || !entry) return
+  // All Drawio views may remain attached while switching between Drawio tabs,
+  // so remove every view only when the editor switches back to Markdown.
+  for (const document of windowEntry.documents.values()) {
+    if (win.getBrowserViews().includes(document.view)) win.removeBrowserView(document.view)
+  }
   // Tab changes only hide the BrowserView. The explicit Draw.io "Exit"
   // action is the sole caller that also closes the renderer tab.
-  if (closeTab) win.webContents.send('mt::drawio::closed')
+  if (closeTab) win.webContents.send('mt::drawio::closed', { filePath: entry.filePath })
 }
 
 /** Invoke a built-in Draw.io action through the embed protocol. */
 export const invokeDrawioAction = (win: BrowserWindow, actionName: string): void => {
-  const entry = views.get(win.id)
-  if (!entry?.filePath || !actionName) return
+  const entry = getActiveDocument(win)
+  if (!entry || !actionName) return
   entry.view.webContents.send('mt::drawio::invoke-action', actionName)
 }
 
 /** Keep the native File menu's checkbox and Draw.io's own autosave state in sync. */
 export const setDrawioAutosave = (win: BrowserWindow, enabled: boolean): void => {
   const entry = views.get(win.id)
-  if (!entry?.filePath || entry.autoSave === enabled) return
+  if (!entry || entry.autoSave === enabled) return
   entry.autoSave = enabled
   invokeDrawioAction(win, 'autosave')
   win.webContents.send('mt::drawio::autosave-changed', enabled)
 }
 
+const emitDrawioState = (
+  win: BrowserWindow,
+  entry: DrawioDocumentEntry,
+  state: {
+    modified: boolean
+    isSaved: boolean
+    isSaving: boolean
+    saveError?: string
+    lastSavedHash?: string
+  }
+): void => {
+  win.webContents.send('mt::drawio::state', { filePath: entry.filePath, ...state })
+}
+
+const saveDocumentXml = async (
+  win: BrowserWindow,
+  entry: DrawioDocumentEntry,
+  xml: string
+): Promise<void> => {
+  emitDrawioState(win, entry, { modified: true, isSaved: false, isSaving: true })
+  try {
+    await writeFile(entry.filePath, xml, undefined, 'utf-8')
+    const lastSavedHash = crypto.createHash('sha256').update(xml, 'utf8').digest('hex')
+    emitDrawioState(win, entry, {
+      modified: false,
+      isSaved: true,
+      isSaving: false,
+      lastSavedHash
+    })
+    const waiters = entry.saveWaiters.splice(0)
+    waiters.forEach(({ resolve }) => resolve())
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    emitDrawioState(win, entry, {
+      modified: true,
+      isSaved: false,
+      isSaving: false,
+      saveError: message
+    })
+    const waiters = entry.saveWaiters.splice(0)
+    waiters.forEach(({ reject }) => reject(error))
+    throw error
+  }
+}
+
+const requestDrawioSave = async (win: BrowserWindow, filePath: string): Promise<void> => {
+  const windowEntry = views.get(win.id)
+  const normalizedPath = normalizeDrawioPath(filePath)
+  const entry = windowEntry?.documents.get(normalizedPath)
+  if (!entry) throw new Error('找不到对应的 Draw.io 标签页')
+  emitDrawioState(win, entry, { modified: true, isSaved: false, isSaving: true })
+  await new Promise<void>((resolve, reject) => {
+    entry.saveWaiters.push({ resolve, reject })
+    entry.view.webContents.send('mt::drawio::request-save')
+  })
+}
+
+export const saveDrawioDocuments = async (win: BrowserWindow, filePaths: string[]): Promise<void> => {
+  await Promise.all(filePaths.map((filePath) => requestDrawioSave(win, filePath)))
+}
+
+const closeDrawioDocument = (win: BrowserWindow, filePath: string): void => {
+  const windowEntry = views.get(win.id)
+  const normalizedPath = normalizeDrawioPath(filePath)
+  const entry = windowEntry?.documents.get(normalizedPath)
+  if (!windowEntry || !entry) return
+  if (win.getBrowserViews().includes(entry.view)) win.removeBrowserView(entry.view)
+  viewOwners.delete(entry.view.webContents.id)
+  windowEntry.documents.delete(normalizedPath)
+  if (windowEntry.activePath === normalizedPath) windowEntry.activePath = null
+}
+
 export const openDrawioFile = async (
   pathname: string,
-  owner?: BrowserWindow | null
+  owner?: BrowserWindow | null,
+  configuration?: DrawioConfiguration
 ): Promise<void> => {
   const win = owner ?? BrowserWindow.getFocusedWindow()
   try {
     if (!win) throw new Error('请先打开 MarkNotePro 编辑窗口。')
     const filePath = normalizeDrawioPath(pathname)
-    const entry = getOrCreateView(win)
-    const [xml] = await Promise.all([readDiagram(filePath), ensureViewLoaded(entry)])
-    entry.filePath = filePath
-    entry.xml = xml
-    entry.view.webContents.send('mt::drawio::init', {
-      filePath,
-      frameUrl: getDrawioFrameUrl(entry.configuration),
-      xml,
-      title: path.basename(filePath),
-      autoSave: entry.autoSave
-    })
+    const windowEntry = getOrCreateWindowEntry(win)
+    if (configuration) {
+      windowEntry.configuration = normalizeDrawioConfiguration(configuration)
+    }
+    let entry = windowEntry.documents.get(filePath)
+    if (!entry) {
+      entry = createDocumentEntry(win, filePath)
+      const [xml] = await Promise.all([readDiagram(filePath), ensureViewLoaded(entry)])
+      entry.view.webContents.send('mt::drawio::init', {
+        filePath,
+        frameUrl: getDrawioFrameUrl(windowEntry.configuration),
+        xml,
+        title: path.basename(filePath),
+        // MarkNotePro owns the delayed auto-save timer. Draw.io still emits
+        // change snapshots, but must not write the file by itself.
+        autoSave: false
+      })
+    } else {
+      await ensureViewLoaded(entry)
+    }
+    windowEntry.activePath = filePath
     win.webContents.send('mt::drawio::opened', { filePath, title: path.basename(filePath) })
+    emitDrawioState(win, entry, { modified: false, isSaved: true, isSaving: false })
   } catch (error) {
     log.error('打开 Draw.io 文件失败:', error)
     await dialog.showErrorBox(
@@ -323,33 +454,29 @@ export const createDrawioFile = async (owner?: BrowserWindow | null): Promise<vo
   const filePath = isDrawioFile(result.filePath)
     ? result.filePath
     : `${result.filePath}${DRAWIO_EXTENSION}`
-  await fsPromises.writeFile(filePath, EMPTY_DRAWIO, 'utf8')
+  await writeFile(filePath, EMPTY_DRAWIO, undefined, 'utf8')
   await openDrawioFile(filePath, owner)
 }
 
 export const registerDrawioHandlers = (): void => {
   ipcMain.handle('mt::drawio::configure', (event, configuration: DrawioConfiguration) => {
     const owner = BrowserWindow.fromWebContents(event.sender)
-    const entry = owner ? views.get(owner.id) : undefined
-    if (!entry || !entry.filePath) return
-    const colors = Object.fromEntries(
-      Object.entries(configuration?.colors ?? {}).filter(
-        ([, value]) => typeof value === 'string' && value.length < 160
-      )
-    )
-    entry.configuration = {
-      language: typeof configuration?.language === 'string' ? configuration.language : 'zh-CN',
-      dark: configuration?.dark === true,
-      theme: typeof configuration?.theme === 'string' ? configuration.theme : 'light',
-      colors
+    if (!owner) return
+    // Cache the renderer's current preferences even before the first Drawio
+    // BrowserView exists. File-menu and restored-tab opens can then build their
+    // first frame URL from the real MarkNotePro settings.
+    const entry = getOrCreateWindowEntry(owner)
+    entry.configuration = normalizeDrawioConfiguration(configuration)
+    for (const document of entry.documents.values()) {
+      document.view.webContents.send('mt::drawio::configure', {
+        frameUrl: getDrawioFrameUrl(entry.configuration)
+      })
     }
-    entry.view.webContents.send('mt::drawio::configure', {
-      frameUrl: getDrawioFrameUrl(entry.configuration),
-      xml: entry.xml
-    })
   })
-  ipcMain.handle('mt::drawio::open', (event, pathname: string) =>
-    openDrawioFile(pathname, BrowserWindow.fromWebContents(event.sender))
+  ipcMain.handle(
+    'mt::drawio::open',
+    (event, pathname: string, configuration?: DrawioConfiguration) =>
+      openDrawioFile(pathname, BrowserWindow.fromWebContents(event.sender), configuration)
   )
   ipcMain.handle('mt::drawio::show', (event, bounds: Rectangle) => {
     const win = BrowserWindow.fromWebContents(event.sender)
@@ -363,18 +490,40 @@ export const registerDrawioHandlers = (): void => {
     const win = BrowserWindow.fromWebContents(event.sender)
     if (win) hideDrawioView(win)
   })
+  ipcMain.on('mt::drawio::state', (event, state: { modified: boolean }) => {
+    const owner = viewOwners.get(event.sender.id)
+    if (!owner) return
+    const win = BrowserWindow.fromId(owner.windowId)
+    const entry = win ? views.get(owner.windowId)?.documents.get(owner.filePath) : undefined
+    if (win && entry) {
+      emitDrawioState(win, entry, {
+        modified: state.modified === true,
+        isSaved: state.modified !== true,
+        isSaving: false
+      })
+    }
+  })
   ipcMain.handle('mt::drawio::save', async (event, xml: string) => {
-    const ownerId = viewOwners.get(event.sender.id)
-    const entry = ownerId === undefined ? undefined : views.get(ownerId)
-    if (!entry?.filePath || typeof xml !== 'string') throw new Error('无效的 Draw.io 保存请求')
-    await fsPromises.writeFile(entry.filePath, xml, 'utf8')
-    entry.xml = xml
+    const owner = viewOwners.get(event.sender.id)
+    const win = owner ? BrowserWindow.fromId(owner.windowId) : undefined
+    const entry = owner && win ? views.get(owner.windowId)?.documents.get(owner.filePath) : undefined
+    if (!win || !entry || typeof xml !== 'string') throw new Error('无效的 Draw.io 保存请求')
+    await saveDocumentXml(win, entry, xml)
+  })
+  ipcMain.handle('mt::drawio::save-request', async (event, filePath: string) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win || typeof filePath !== 'string') throw new Error('无效的 Draw.io 保存请求')
+    await requestDrawioSave(win, filePath)
+  })
+  ipcMain.handle('mt::drawio::close-file', (event, filePath: string) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (win && typeof filePath === 'string') closeDrawioDocument(win, filePath)
   })
   ipcMain.handle('mt::drawio::export', async (event, payload: DrawioExportPayload) => {
-    const ownerId = viewOwners.get(event.sender.id)
-    const owner = ownerId === undefined ? undefined : BrowserWindow.fromId(ownerId)
-    const entry = ownerId === undefined ? undefined : views.get(ownerId)
-    if (!owner || !entry?.filePath) throw new Error('无效的 Draw.io 导出请求')
+    const viewOwner = viewOwners.get(event.sender.id)
+    const owner = viewOwner === undefined ? undefined : BrowserWindow.fromId(viewOwner.windowId)
+    const entry = viewOwner && owner ? views.get(viewOwner.windowId)?.documents.get(viewOwner.filePath) : undefined
+    if (!owner || !entry) throw new Error('无效的 Draw.io 导出请求')
 
     if (payload?.format === 'pdf') {
       const svg = typeof payload.data === 'string' ? payload.data : payload.xml
@@ -400,7 +549,7 @@ export const registerDrawioHandlers = (): void => {
     await saveDrawioExport(owner, entry, payload)
   })
   ipcMain.handle('mt::drawio::print', async (event, payload: DrawioExportPayload) => {
-    const ownerId = viewOwners.get(event.sender.id)
+    const ownerId = viewOwners.get(event.sender.id)?.windowId
     const owner = ownerId === undefined ? undefined : BrowserWindow.fromId(ownerId)
     const svg = typeof payload?.data === 'string' ? payload.data : payload?.xml
     if (!owner || typeof svg !== 'string' || !svg.length) throw new Error('无效的 Draw.io 打印请求')
@@ -410,23 +559,26 @@ export const registerDrawioHandlers = (): void => {
     })
   })
   ipcMain.handle('mt::drawio::preview', async (event, payload: DrawioExportPayload) => {
-    const ownerId = viewOwners.get(event.sender.id)
+    const ownerId = viewOwners.get(event.sender.id)?.windowId
     const owner = ownerId === undefined ? undefined : BrowserWindow.fromId(ownerId)
     const svg = typeof payload?.data === 'string' ? payload.data : payload?.xml
     if (!owner || typeof svg !== 'string' || !svg.length) throw new Error('无效的 Draw.io 预览请求')
     await showPreviewWindow(owner, svg)
   })
   ipcMain.handle('mt::drawio::presentation', async (event, payload: DrawioExportPayload) => {
-    const ownerId = viewOwners.get(event.sender.id)
+    const ownerId = viewOwners.get(event.sender.id)?.windowId
     const owner = ownerId === undefined ? undefined : BrowserWindow.fromId(ownerId)
     const svg = typeof payload?.data === 'string' ? payload.data : payload?.xml
     if (!owner || typeof svg !== 'string' || !svg.length) throw new Error('无效的 Draw.io 演示请求')
     await showPresentationWindow(owner, svg)
   })
   ipcMain.handle('mt::drawio::close', (event) => {
-    const ownerId = viewOwners.get(event.sender.id)
-    if (ownerId === undefined) return
-    const win = BrowserWindow.fromId(ownerId)
-    if (win) hideDrawioView(win, true)
+    const viewOwner = viewOwners.get(event.sender.id)
+    if (!viewOwner) return
+    const win = BrowserWindow.fromId(viewOwner.windowId)
+    if (win) {
+      closeDrawioDocument(win, viewOwner.filePath)
+      win.webContents.send('mt::drawio::closed', { filePath: viewOwner.filePath })
+    }
   })
 }

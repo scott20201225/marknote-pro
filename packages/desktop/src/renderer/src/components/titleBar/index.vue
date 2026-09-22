@@ -48,16 +48,6 @@
         :class="[{ 'title-no-drag': titleBarStyle === 'custom' }]"
       >
         <div
-          class="frameless-titlebar-button frameless-titlebar-close"
-          @click.stop="handleCloseClick"
-        >
-          <div>
-            <svg width="10" height="10">
-              <path :d="windowIconClose" />
-            </svg>
-          </div>
-        </div>
-        <div
           class="frameless-titlebar-button frameless-titlebar-toggle"
           @click.stop="handleMaximizeClick"
         >
@@ -87,7 +77,7 @@
 import { usePreferencesStore } from '@/store/preferences.js'
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { storeToRefs } from 'pinia'
-import { minimizePath, restorePath, maximizePath, closePath } from '../../assets/window-controls.js'
+import { minimizePath, restorePath, maximizePath } from '../../assets/window-controls.js'
 import { isOsx as isOsxPlatform } from '@/util'
 import { shouldShowInAppTitleBar } from './visibility'
 import { useEditorStore } from '@/store/editor'
@@ -136,7 +126,6 @@ const HASH = {
 const windowIconMinimize = minimizePath
 const windowIconRestore = restorePath
 const windowIconMaximize = maximizePath
-const windowIconClose = closePath
 
 const isFullScreen = ref(false)
 const isMaximized = ref(false)
@@ -192,10 +181,6 @@ const handleWordClick = () => {
   index += 1
   if (index >= len) index = 0
   show.value = ITEMS[index]!
-}
-
-const handleCloseClick = () => {
-  window.electron.windowControl.close()
 }
 
 const handleMaximizeClick = async () => {
