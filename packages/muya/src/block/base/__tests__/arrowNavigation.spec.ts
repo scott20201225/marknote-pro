@@ -103,6 +103,25 @@ function flush(): Promise<void> {
     return new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
 }
 
+describe('content arrowHandler — missing native cursor', () => {
+    it('returns quietly when the selection disappears before arrow handling', () => {
+        const muya = bootMuya('alpha\n\nbeta\n');
+        const beta = contentByText(muya, 'beta');
+        const event = {
+            preventDefault: vi.fn(),
+            stopPropagation: vi.fn(),
+            key: 'ArrowUp',
+            shiftKey: false,
+        } as unknown as FakeArrowEvent;
+
+        vi.spyOn(beta, 'getCursor').mockReturnValue(null);
+
+        expect(() => beta.arrowHandler(event)).not.toThrow();
+        expect(event.preventDefault).not.toHaveBeenCalled();
+        expect(event.stopPropagation).not.toHaveBeenCalled();
+    });
+});
+
 describe('content arrowHandler — cross-block navigation up', () => {
     it('arrowUp at offset 0 moves the caret to the END of the previous paragraph', async () => {
         const muya = bootMuya('alpha\n\nbeta\n');
