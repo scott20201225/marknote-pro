@@ -408,6 +408,27 @@ export class MarkdownToState {
             }
 
             case 'space': {
+                // Marked groups consecutive blank lines into a `space` token.
+                // Muya used to drop it, so valid source spacing disappeared
+                // from the editable document. Convert the additional blank
+                // lines into ordinary paragraphs: they are real blocks, with a
+                // caret, and use the existing save path unchanged.
+                if (parentList.length !== 1)
+                    break;
+
+                const newlineCount = (token.raw.match(/\n/g) || []).length;
+                // At the end of a document there is no following block to
+                // contribute the normal separator. Keep every trailing empty
+                // line as an editable paragraph instead of dropping it.
+                const blankParagraphCount = tokens.length === 0
+                    ? Math.max(0, newlineCount - 1)
+                    : Math.max(0, Math.floor((newlineCount - 2) / 2));
+                for (let i = 0; i < blankParagraphCount; i++) {
+                    parentList[0].push({
+                        name: 'paragraph',
+                        text: '',
+                    });
+                }
                 break;
             }
 

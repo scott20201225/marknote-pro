@@ -101,7 +101,7 @@ export default class ExportMarkdown {
         let lastListBullet = '';
         let previousState: TState | undefined;
 
-        for (const state of states) {
+        for (const [index, state] of states.entries()) {
             if (
                 state.name !== 'order-list'
                 && state.name !== 'bullet-list'
@@ -130,7 +130,12 @@ export default class ExportMarkdown {
                 this._serializeListItemBlock(state, result, indent, listIndent);
             }
             else {
-                this._serializeSimpleBlock(state, result, indent);
+                const isTrailingEmptyParagraph = state.name === 'paragraph'
+                    && state.text === ''
+                    && states.slice(index).every(block => (
+                        block.name === 'paragraph' && block.text === ''
+                    ));
+                this._serializeSimpleBlock(state, result, indent, isTrailingEmptyParagraph);
             }
 
             previousState = state;
@@ -139,13 +144,22 @@ export default class ExportMarkdown {
         return result.join('');
     }
 
-    private _serializeSimpleBlock(state: TState, result: string[], indent: string) {
+    private _serializeSimpleBlock(
+        state: TState,
+        result: string[],
+        indent: string,
+        skipLeadingSeparator = false,
+    ) {
         switch (state.name) {
             case 'frontmatter':
                 result.push(this._serializeFrontMatter(state));
                 break;
 
             case 'paragraph':
+                if (!skipLeadingSeparator)
+                    this._insertLineBreak(result, indent);
+                result.push(this._serializeTextParagraph(state, indent));
+                break;
 
             case 'thematic-break':
                 this._insertLineBreak(result, indent);

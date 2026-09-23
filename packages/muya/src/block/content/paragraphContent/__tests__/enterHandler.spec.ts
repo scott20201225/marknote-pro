@@ -143,6 +143,22 @@ describe('enter mid-paragraph — split into two paragraphs', () => {
     });
 });
 
+describe('enter at document end — keep the editable blank paragraph', () => {
+    it('serializes the new trailing paragraph as a real newline', async () => {
+        const muya = bootMuya('tail\n');
+        const content = contentByText(muya, 'tail');
+
+        enterAt(muya, content, content.text.length);
+
+        await flush();
+        expect(muya.getState()).toEqual([
+            { name: 'paragraph', text: 'tail' },
+            { name: 'paragraph', text: '' },
+        ]);
+        expect(muya.getMarkdown()).toBe('tail\n\n');
+    });
+});
+
 describe('enter at offset 0 — all text moves to the new block', () => {
     it('leaves the first block empty and carries the whole text onto the second', async () => {
         const muya = bootMuya('hello world\n');

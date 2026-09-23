@@ -27,6 +27,40 @@ function generate(
     }).generate(markdown) as unknown as IStateLike[];
 }
 
+describe('markdownToState — editable blank lines', () => {
+    it('turns extra top-level source blank lines into ordinary paragraphs', () => {
+        const markdown = '- item\n\n\n\n\n\n\n\ntext\n';
+        const states = generate(markdown);
+
+        expect(states.map(state => state.name)).toEqual([
+            'bullet-list',
+            'paragraph',
+            'paragraph',
+            'paragraph',
+            'paragraph',
+        ]);
+        expect(states.slice(1, 4)).toEqual([
+            { name: 'paragraph', text: '' },
+            { name: 'paragraph', text: '' },
+            { name: 'paragraph', text: '' },
+        ]);
+        expect(new ExportMarkdown().generate(states as never)).toBe(markdown);
+    });
+
+    it('keeps trailing blank lines editable and preserves them on save', () => {
+        const markdown = 'tail\n\n\n\n';
+        const states = generate(markdown);
+
+        expect(states).toEqual([
+            { name: 'paragraph', text: 'tail' },
+            { name: 'paragraph', text: '' },
+            { name: 'paragraph', text: '' },
+            { name: 'paragraph', text: '' },
+        ]);
+        expect(new ExportMarkdown().generate(states as never)).toBe(markdown);
+    });
+});
+
 // Defensive regression test for marknotepro commit 23435ce6 (#1733 / PR #1835).
 // In the legacy marked fork that marknotepro shipped, the list tokenizer forgot
 // to subtract the four-character `[x] ` checkbox prefix from the indentation
