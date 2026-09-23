@@ -240,7 +240,9 @@
       "closeAllTabs": "すべてのタブを閉じる",
       "rename": "名前を変更",
       "copyPath": "パスをコピー",
-      "showInFolder": "フォルダで表示"
+      "showInFolder": "フォルダで表示",
+      "saved": "保存済み",
+      "unsaved": "保存待ち"
     },
     "copyAsExcel": "Excelとしてコピー",
     "tableBatchEdit": "一括編集",

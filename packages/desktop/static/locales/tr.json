@@ -240,7 +240,9 @@
       "closeAllTabs": "Tüm sekmeleri kapat",
       "rename": "Yeniden Adlandır",
       "copyPath": "Yolu kopyala",
-      "showInFolder": "Klasörde göster"
+      "showInFolder": "Klasörde göster",
+      "saved": "Kaydedildi",
+      "unsaved": "Kaydetme bekliyor"
     },
     "copyAsExcel": "Excel olarak kopyala",
     "tableBatchEdit": "Toplu düzenle",

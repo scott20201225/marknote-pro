@@ -245,7 +245,9 @@
       "closeAllTabs": "Close all tabs",
       "rename": "Rename",
       "copyPath": "Copy path",
-      "showInFolder": "Show in System Folder"
+      "showInFolder": "Show in System Folder",
+      "saved": "Saved",
+      "unsaved": "Pending save"
     },
     "copyAsExcel": "Copy As Excel",
     "tableBatchEdit": "Batch Edit",

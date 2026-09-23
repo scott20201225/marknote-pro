@@ -246,7 +246,9 @@
       "closeAllTabs": "關閉所有標籤頁",
       "rename": "重新命名",
       "copyPath": "複製路徑",
-      "showInFolder": "在資料夾中顯示"
+      "showInFolder": "在資料夾中顯示",
+      "saved": "已儲存",
+      "unsaved": "待儲存"
     },
     "copyAsExcel": "複製為 Excel",
     "tableBatchEdit": "批次編輯",
