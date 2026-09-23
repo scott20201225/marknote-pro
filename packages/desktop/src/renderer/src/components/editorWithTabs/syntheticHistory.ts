@@ -30,17 +30,10 @@
 // therefore restores the saved id (clean); a divergent re-edit produces brand
 // new content and hence a brand new id (dirty) — never the saved one.
 
-// Trailing newlines are NOT meaningful content for save/dirty tracking — the
-// store itself normalizes them via `adjustTrailingNewlines`/`trimTrailingNewline`
-// before saving. The engine's markdown serialization is also unstable across a
-// `setContent` -> edit -> undo round-trip purely in trailing newlines (loading
-// `'x\n'` may serialize to `'x\n\n\n'`, while undoing an edit lands on `'x\n'`),
-// so the content signature must ignore them or undo-to-saved would never match.
-const stripTrailingNewlines = (content: string): string =>
-  content.replace(/[\r\n]+$/, '')
-
-// A fast, stable 64-bit string hash (FNV-1a) over the trailing-newline-normalized
-// content. Used so the content -> id map stores short keys instead of whole
+// A fast, stable 64-bit string hash (FNV-1a) over the exact markdown content.
+// Trailing newlines are intentionally included: an empty paragraph at the end
+// is editable content and must make the tab dirty. Used so the content -> id
+// map stores short keys instead of whole
 // documents; a collision would map two genuinely different documents to the same
 // id and could reintroduce the false-clean it guards against. 64 bits keeps the
 // collision probability negligible even for a long editing session with many
@@ -51,10 +44,9 @@ const FNV64_OFFSET = 0xcbf29ce484222325n
 const FNV64_PRIME = 0x100000001b3n
 const MASK64 = 0xffffffffffffffffn
 const hashContent = (content: string): bigint => {
-  const normalized = stripTrailingNewlines(content)
   let hash = FNV64_OFFSET
-  for (let i = 0; i < normalized.length; i++) {
-    hash ^= BigInt(normalized.charCodeAt(i))
+  for (let i = 0; i < content.length; i++) {
+    hash ^= BigInt(content.charCodeAt(i))
     hash = (hash * FNV64_PRIME) & MASK64
   }
   return hash

@@ -117,6 +117,12 @@ interface ContentChangePayload {
   blocks?: unknown
 }
 
+const hasTrailingEmptyParagraph = (blocks: unknown): boolean => {
+  if (!Array.isArray(blocks) || blocks.length === 0) return false
+  const last = blocks[blocks.length - 1] as { name?: unknown; text?: unknown } | undefined
+  return last?.name === 'paragraph' && last?.text === ''
+}
+
 interface AffiliationEntry {
   type: string
   functionType?: string
@@ -1672,13 +1678,21 @@ export const useEditorStore = defineStore('editor', {
 
       const { filename, pathname, markdown: oldMarkdown, trimTrailingNewline } = tab
 
-      markdown = adjustTrailingNewlines(markdown, trimTrailingNewline)
-      tab.markdown = markdown
+      // A trailing blank paragraph is real editor content. Preserve it so
+      // pressing Enter at the end (or deleting that empty line) participates
+      // in dirty tracking and survives tab switches. Once such content is in
+      // the tab, keep preserving it on later edits instead of applying the old
+      // single-final-newline rule and silently deleting the empty paragraph.
+      const oldTrailingNewlinesArePreserved =
+        adjustTrailingNewlines(oldMarkdown, trimTrailingNewline) !== oldMarkdown
+      const hasEditableTrailingBlankParagraph = hasTrailingEmptyParagraph(blocks)
 
-      if (oldMarkdown.length === 0 && markdown.length === 1 && markdown[0] === '\n') {
-        debouncedSendBufferedState()
-        return
+      if (
+        !oldTrailingNewlinesArePreserved && !hasEditableTrailingBlankParagraph
+      ) {
+        markdown = adjustTrailingNewlines(markdown, trimTrailingNewline)
       }
+      tab.markdown = markdown
 
       if (wordCount) tab.wordCount = wordCount
       if (cursor) tab.cursor = cursor
