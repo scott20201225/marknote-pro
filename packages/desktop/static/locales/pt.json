@@ -240,7 +240,9 @@
       "closeAllTabs": "Fechar todas as abas",
       "rename": "Renomear",
       "copyPath": "Copiar caminho",
-      "showInFolder": "Mostrar na pasta"
+      "showInFolder": "Mostrar na pasta",
+      "saved": "Salvo",
+      "unsaved": "Aguardando salvamento"
     },
     "copyAsExcel": "Copiar como Excel",
     "tableBatchEdit": "Editar em lote",

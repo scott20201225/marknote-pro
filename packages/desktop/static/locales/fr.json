@@ -240,7 +240,9 @@
       "closeAllTabs": "Fermer tous les onglets",
       "rename": "Renommer",
       "copyPath": "Copier le chemin",
-      "showInFolder": "Afficher dans le dossier"
+      "showInFolder": "Afficher dans le dossier",
+      "saved": "Enregistré",
+      "unsaved": "En attente d'enregistrement"
     },
     "copyAsExcel": "Copier comme Excel",
     "tableBatchEdit": "Modification groupée",

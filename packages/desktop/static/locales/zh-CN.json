@@ -245,7 +245,9 @@
       "closeAllTabs": "关闭所有标签页",
       "rename": "重命名",
       "copyPath": "复制路径",
-      "showInFolder": "在系统文件夹中显示"
+      "showInFolder": "在系统文件夹中显示",
+      "saved": "已保存",
+      "unsaved": "待保存"
     },
     "copyAsExcel": "复制为 Excel",
     "tableBatchEdit": "批量编辑",

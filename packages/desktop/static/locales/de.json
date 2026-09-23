@@ -240,7 +240,9 @@
       "closeAllTabs": "Alle Tabs schließen",
       "rename": "Umbenennen",
       "copyPath": "Pfad kopieren",
-      "showInFolder": "Im Ordner anzeigen"
+      "showInFolder": "Im Ordner anzeigen",
+      "saved": "Gespeichert",
+      "unsaved": "Speichern ausstehend"
     },
     "copyAsExcel": "Copy As Excel",
     "tableBatchEdit": "Stapelbearbeitung",

@@ -12,8 +12,27 @@
           @click.middle="closeTab(file.id)"
           @contextmenu.prevent="handleContextMenu($event, file)"
         >
+          <el-tooltip
+            :content="file.isSaved ? t('contextMenu.tabs.saved') : t('contextMenu.tabs.unsaved')"
+            placement="right"
+            :fallback-placements="['left']"
+            :offset="6"
+            popper-class="tab-save-status-tooltip"
+            :teleported="true"
+            :z-index="2147483647"
+            :show-after="400"
+          >
+            <el-icon
+              class="tab-save-status"
+              :class="file.isSaved ? 'saved' : 'unsaved'"
+              :size="12"
+              :aria-label="file.isSaved ? t('contextMenu.tabs.saved') : t('contextMenu.tabs.unsaved')"
+            >
+              <CircleCheckFilled v-if="file.isSaved" />
+              <WarningFilled v-else />
+            </el-icon>
+          </el-tooltip>
           <span>{{ getDisplayFilename(file.filename) }}</span>
-          <span class="unsaved-dot" />
           <el-icon class="close-icon" :size="12" @click.stop="removeFileInTab(file)">
             <Close />
           </el-icon>
@@ -30,15 +49,17 @@ import { useLayoutStore } from '@/store/layout'
 import { storeToRefs } from 'pinia'
 import autoScroll from 'dom-autoscroller'
 import dragula from 'dragula'
-import { Close } from '@element-plus/icons-vue'
+import { CircleCheckFilled, Close, WarningFilled } from '@element-plus/icons-vue'
 import { showContextMenu } from '../../contextMenu/tabs'
 import bus from '../../bus'
 import type { IFileState } from '@shared/types/files'
+import { useI18n } from 'vue-i18n'
 
 const editorStore = useEditorStore()
 const layoutStore = useLayoutStore()
 
 const { currentFile, tabs } = storeToRefs(editorStore)
+const { t } = useI18n()
 
 interface TabScrollState {
   show: boolean
@@ -294,6 +315,32 @@ defineExpose({
   transition: opacity 0.15s ease-in-out;
 }
 
+.tab-save-status {
+  flex: 0 0 auto;
+  margin-right: 5px;
+}
+
+.tab-save-status.saved {
+  color: #409eff;
+}
+
+.tab-save-status.unsaved {
+  color: #e6a23c;
+}
+
+:global(.tab-save-status-tooltip.el-popper) {
+  z-index: 10000 !important;
+  background: var(--floatBgColor) !important;
+  color: var(--floatFontColor) !important;
+  border: 1px solid var(--floatBorderColor) !important;
+  box-shadow: var(--floatShadow) !important;
+}
+
+:global(.tab-save-status-tooltip.el-popper .el-popper__arrow::before) {
+  background: var(--floatBgColor) !important;
+  border-color: var(--floatBorderColor) !important;
+}
+
 .close-icon:hover {
   color: var(--focusColor);
 }
@@ -365,36 +412,19 @@ defineExpose({
     &:hover > .close-icon {
       opacity: 1;
     }
-    &:hover > .unsaved-dot {
-      display: none;
-    }
     & > span {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
       margin-right: 3px;
     }
-    & > .unsaved-dot {
-      display: none;
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--themeColor);
-      flex-shrink: 0;
-    }
   }
   & > li.unsaved:not(.active) {
     & > .close-icon {
       opacity: 0;
     }
-    & > .unsaved-dot {
-      display: block;
-    }
     &:hover > .close-icon {
       opacity: 1;
-    }
-    &:hover > .unsaved-dot {
-      display: none;
     }
   }
   & > li.active {
@@ -411,9 +441,6 @@ defineExpose({
     }
     & > .close-icon {
       opacity: 1;
-    }
-    & > .unsaved-dot {
-      display: none;
     }
   }
 }

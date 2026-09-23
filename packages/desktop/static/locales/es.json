@@ -240,7 +240,9 @@
       "closeAllTabs": "Cerrar todas las pestañas",
       "rename": "Renombrar",
       "copyPath": "Copiar ruta",
-      "showInFolder": "Mostrar en carpeta"
+      "showInFolder": "Mostrar en carpeta",
+      "saved": "Guardado",
+      "unsaved": "Pendiente de guardar"
     },
     "copyAsExcel": "Copiar como Excel",
     "tableBatchEdit": "Edición por lotes",
