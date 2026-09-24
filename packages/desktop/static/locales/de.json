@@ -227,6 +227,7 @@
       "newDrawing": "Neue Zeichnung",
       "newDirectory": "Neuer Ordner",
       "copy": "Kopieren",
+      "copyPath": "Pfad kopieren",
       "cut": "Ausschneiden",
       "paste": "Einfügen",
       "rename": "Umbenennen",

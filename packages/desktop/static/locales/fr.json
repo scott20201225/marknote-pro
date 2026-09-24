@@ -227,6 +227,7 @@
       "newDrawing": "Nouveau dessin",
       "newDirectory": "Nouveau dossier",
       "copy": "Copier",
+      "copyPath": "Copier le chemin",
       "cut": "Couper",
       "paste": "Coller",
       "rename": "Renommer",

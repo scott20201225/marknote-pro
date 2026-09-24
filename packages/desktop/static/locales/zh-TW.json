@@ -233,6 +233,7 @@
       "expandAll": "全部展開",
       "collapseAll": "全部折疊",
       "copy": "複製",
+      "copyPath": "複製路徑",
       "cut": "剪下",
       "paste": "貼上",
       "rename": "重新命名",

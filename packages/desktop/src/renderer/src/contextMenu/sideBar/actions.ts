@@ -31,6 +31,10 @@ export const copy = (_menuItem?: MenuItemArg, _browserWindow?: BrowserWindowArg)
   bus.emit('SIDEBAR::copy-cut', 'copy')
 }
 
+export const copyPath = (_menuItem?: MenuItemArg, _browserWindow?: BrowserWindowArg): void => {
+  bus.emit('SIDEBAR::copy-path')
+}
+
 export const cut = (_menuItem?: MenuItemArg, _browserWindow?: BrowserWindowArg): void => {
   bus.emit('SIDEBAR::copy-cut', 'cut')
 }
