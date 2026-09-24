@@ -232,6 +232,7 @@
       "expandAll": "Expand All",
       "collapseAll": "Collapse All",
       "copy": "Copy",
+      "copyPath": "Copy Path",
       "cut": "Cut",
       "paste": "Paste",
       "rename": "Rename",

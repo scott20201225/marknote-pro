@@ -227,6 +227,7 @@
       "newDrawing": "Yeni çizim",
       "newDirectory": "Yeni Klasör",
       "copy": "Kopyala",
+      "copyPath": "Yolu kopyala",
       "cut": "Kes",
       "paste": "Yapıştır",
       "rename": "Yeniden Adlandır",

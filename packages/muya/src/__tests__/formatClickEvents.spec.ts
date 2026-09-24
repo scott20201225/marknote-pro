@@ -83,6 +83,22 @@ describe('format-click on links', () => {
         expect(handler.mock.calls[0][0].formatType).toBe('link');
     });
 
+    it('resolves a reference-style local Drawio link before emitting the click', () => {
+        const muya = bootMuya('[architecture][drawing]\n\n[drawing]: ./diagrams/architecture.drawio');
+        const link = muya.domNode.querySelector<HTMLElement>(`a.${CLASS_NAMES.MU_REFERENCE_LINK}`)!;
+        expect(link).toBeTruthy();
+
+        const handler = vi.fn();
+        muya.on('format-click', handler);
+
+        dispatchClick(link, { ctrlKey: true });
+
+        expect(handler).toHaveBeenCalledTimes(1);
+        const payload = handler.mock.calls[0][0];
+        expect(payload.formatType).toBe('link');
+        expect(payload.data.href).toBe('./diagrams/architecture.drawio');
+    });
+
     it('does NOT emit format-click on a plain (no-modifier) link click', () => {
         const muya = bootMuya('[hello](https://example.com)');
         const link = muya.domNode.querySelector<HTMLElement>(`span.${CLASS_NAMES.MU_LINK}`)!;

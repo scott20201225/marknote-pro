@@ -227,6 +227,7 @@
       "newDrawing": "Novo desenho",
       "newDirectory": "Nova Pasta",
       "copy": "Copiar",
+      "copyPath": "Copiar caminho",
       "cut": "Cortar",
       "paste": "Colar",
       "rename": "Renomear",

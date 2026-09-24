@@ -232,6 +232,7 @@
       "expandAll": "全部展开",
       "collapseAll": "全部折叠",
       "copy": "复制",
+      "copyPath": "复制路径",
       "cut": "剪切",
       "paste": "粘贴",
       "rename": "重命名",

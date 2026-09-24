@@ -227,6 +227,7 @@
       "newDrawing": "新規図面",
       "newDirectory": "新しいフォルダ",
       "copy": "コピー",
+      "copyPath": "パスをコピー",
       "cut": "切り取り",
       "paste": "貼り付け",
       "rename": "名前を変更",

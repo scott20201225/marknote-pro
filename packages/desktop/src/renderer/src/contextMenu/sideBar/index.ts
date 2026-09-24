@@ -7,6 +7,7 @@ import {
   getNewArea,
   getNewDocument,
   getCOPY,
+  getCopyPath,
   getCUT,
   getPASTE,
   getMOVE_TO,
@@ -66,6 +67,8 @@ export const showContextMenu = (
       SEPARATOR,
       getReloadWorkspace(),
       SEPARATOR,
+      getCopyPath(),
+      SEPARATOR,
       getShowInFolder()
     ]
   } else if (kind === 'group') {
@@ -80,6 +83,8 @@ export const showContextMenu = (
       SEPARATOR,
       getRENAME(),
       getDELETE(),
+      SEPARATOR,
+      getCopyPath(),
       SEPARATOR,
       getShowInFolder()
     ]
@@ -96,6 +101,8 @@ export const showContextMenu = (
       getRENAME(),
       getDELETE(),
       SEPARATOR,
+      getCopyPath(),
+      SEPARATOR,
       getShowInFolder()
     ]
   } else if (kind === 'document') {
@@ -108,6 +115,8 @@ export const showContextMenu = (
       SEPARATOR,
       getRENAME(),
       getDELETE(),
+      SEPARATOR,
+      getCopyPath(),
       SEPARATOR,
       getShowInFolder()
     ]
@@ -123,6 +132,8 @@ export const showContextMenu = (
       SEPARATOR,
       getRENAME(),
       getDELETE(),
+      SEPARATOR,
+      getCopyPath(),
       SEPARATOR,
       getShowInFolder()
     ]
@@ -155,6 +166,8 @@ export const showNoteListContextMenu = (
       SEPARATOR,
       getRENAME(),
       SEPARATOR,
+      getCopyPath(),
+      SEPARATOR,
       getShowInFolder()
     ]
   } else if (kind === 'group') {
@@ -165,6 +178,8 @@ export const showNoteListContextMenu = (
       SEPARATOR,
       getRENAME(),
       getDELETE(),
+      SEPARATOR,
+      getCopyPath(),
       SEPARATOR,
       getShowInFolder()
     ]
@@ -178,6 +193,8 @@ export const showNoteListContextMenu = (
       getRENAME(),
       getDELETE(),
       SEPARATOR,
+      getCopyPath(),
+      SEPARATOR,
       getShowInFolder()
     ]
   } else if (kind === 'document') {
@@ -190,10 +207,12 @@ export const showNoteListContextMenu = (
       getRENAME(),
       getDELETE(),
       SEPARATOR,
+      getCopyPath(),
+      SEPARATOR,
       getShowInFolder()
     ]
   } else {
-    contextItems = [getNewDocument(), SEPARATOR, getPASTE()]
+    contextItems = [getNewDocument(), SEPARATOR, getPASTE(), getCopyPath()]
   }
 
   const items = normalizeContextItems(contextItems, hasPathCache)

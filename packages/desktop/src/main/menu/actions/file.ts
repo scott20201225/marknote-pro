@@ -923,19 +923,28 @@ ipcMain.on('mt::format-link-click', async (e, { data, dirname }: FormatLinkPaylo
   let pathname = localTarget?.pathname ?? ''
 
   if (pathname) {
+    const workspaceRoot = (win as BrowserWindow & { __marknoteWorkspaceRoot?: string })
+      .__marknoteWorkspaceRoot
+    const isWorkspaceDocument =
+      !!workspaceRoot &&
+      isChildOfDirectory(workspaceRoot, pathname) &&
+      (isMarkdownFile(pathname) || isDrawioFile(pathname))
+
+    // Workspace documents always stay in the current MarkNotePro window.
+    // `openFileOrFolder` dispatches Markdown to an editor tab and Drawio to
+    // the embedded drawing view, so inline and reference-style links share
+    // exactly the same application-internal navigation path.
+    if (isWorkspaceDocument) {
+      openFileOrFolder(win, pathname)
+      return
+    }
+
     if (isMarkdownFile(pathname)) {
       const innerWin = BrowserWindow.fromWebContents(e.sender)
       if (innerWin) {
         openFileOrFolder(innerWin, pathname)
       }
     } else if (isDrawioFile(pathname)) {
-      const workspaceRoot = (win as BrowserWindow & { __marknoteWorkspaceRoot?: string })
-        .__marknoteWorkspaceRoot
-      if (workspaceRoot && isChildOfDirectory(workspaceRoot, pathname)) {
-        void openDrawioFile(pathname, win)
-        return
-      }
-
       // 绘图文件位于工作区之外时，保持原有外部打开逻辑。
       const openedWithApplication = localTarget
         ? await openLocalLinkWithApplication(win, localTarget)

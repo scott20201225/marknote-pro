@@ -902,6 +902,12 @@ export const useProjectStore = defineStore('project', () => {
       const { pathname } = activeItem.value
       window.electron.shell.showItemInFolder(pathname)
     })
+    bus.on('SIDEBAR::copy-path', () => {
+      const pathname = activeItem.value?.pathname
+      if (pathname) {
+        window.electron.clipboard.writeText(pathname)
+      }
+    })
     bus.on('SIDEBAR::new', (type: unknown) => {
       const { pathname, isDirectory } = activeItem.value
       const dirname = isDirectory ? pathname : window.path.dirname(pathname)
