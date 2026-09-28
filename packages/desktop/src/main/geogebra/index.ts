@@ -19,6 +19,7 @@ interface GeoGebraDocumentEntry {
   mode: GeoGebraMode
   loaded: boolean
   controlsStyleKey?: string
+  themeStyleKey?: string
   exportTitle?: string
 }
 
@@ -52,6 +53,96 @@ const normalizeGeoGebraConfiguration = (
     )
   )
 })
+
+const getGeoGebraThemeColor = (
+  configuration: GeoGebraConfiguration,
+  name: string,
+  fallback: string
+): string => {
+  const value = configuration.colors[name]?.trim()
+  return value && !/[;{}]/.test(value) ? value : fallback
+}
+
+/**
+ * GeoGebra's graph canvas intentionally keeps its own colors.  This only
+ * adapts the surrounding application chrome and Algebra panel to MarkNotePro
+ * so modes with specialized content (Spreadsheet/Data/CAS) stay untouched.
+ */
+const buildGeoGebraThemeCss = (configuration: GeoGebraConfiguration): string => {
+  if (!configuration.dark) return ''
+
+  const panel = getGeoGebraThemeColor(configuration, 'sideBarBgColor', '#232323')
+  const surface = getGeoGebraThemeColor(configuration, 'editorBgColor', '#282828')
+  const floating = getGeoGebraThemeColor(configuration, 'floatBgColor', '#3f3f3f')
+  const text = getGeoGebraThemeColor(configuration, 'editorColor', '#dcdfe6')
+  const muted = getGeoGebraThemeColor(configuration, 'editorColor50', '#a8abb2')
+  const accent = getGeoGebraThemeColor(configuration, 'themeColor', '#409eff')
+  const border = getGeoGebraThemeColor(configuration, 'tableBorderColor', 'rgba(255, 255, 255, 0.14)')
+
+  return `
+    .GeoGebraFrame,
+    .GeoGebraFrame .gwt-SplitLayoutPanel.neutral-0,
+    .GeoGebraFrame .toolbar,
+    .GeoGebraFrame .main {
+      background-color: ${surface} !important;
+      color: ${text} !important;
+    }
+
+    .GeoGebraFrame .header,
+    .GeoGebraFrame .toolPanelHeading {
+      background-color: ${panel} !important;
+      color: ${text} !important;
+      border-color: ${border} !important;
+    }
+
+    .GeoGebraFrame .header .gwt-Label,
+    .GeoGebraFrame .toolPanelHeading .gwt-Label,
+    .GeoGebraFrame .header .button,
+    .GeoGebraFrame .toolPanelHeading .button,
+    .GeoGebraFrame .header .tabButton {
+      color: ${text} !important;
+    }
+
+    .GeoGebraFrame .header .tabButton.selected .gwt-Label {
+      color: ${accent} !important;
+    }
+
+    .GeoGebraFrame .algebraView,
+    .GeoGebraFrame .algebraView .gwt-TreeItem,
+    .GeoGebraFrame .algebraView .newRadioButtonTreeItemParent,
+    .GeoGebraFrame .algebraView .avInputItem,
+    .GeoGebraFrame .algebraView .panelRow,
+    .GeoGebraFrame .algebraView .scrollableTextBox,
+    .GeoGebraFrame .algebraView .marblePanel {
+      background-color: ${surface} !important;
+      color: ${text} !important;
+      border-color: ${border} !important;
+    }
+
+    .GeoGebraFrame .algebraView .avDummyLabel {
+      color: ${muted} !important;
+    }
+
+    .GeoGebraFrame .algebraView .menuItemView {
+      background-color: ${floating} !important;
+      color: ${text} !important;
+    }
+  `
+}
+
+const applyGeoGebraTheme = async (
+  entry: GeoGebraDocumentEntry,
+  configuration: GeoGebraConfiguration
+): Promise<void> => {
+  if (entry.view.webContents.isDestroyed()) return
+  if (entry.themeStyleKey) {
+    await entry.view.webContents.removeInsertedCSS(entry.themeStyleKey)
+    entry.themeStyleKey = undefined
+  }
+
+  const css = buildGeoGebraThemeCss(configuration)
+  if (css) entry.themeStyleKey = await entry.view.webContents.insertCSS(css)
+}
 
 export const isGeoGebraFile = (pathname: string): boolean =>
   typeof pathname === 'string' && path.extname(pathname).toLowerCase() === GEOGEBRA_EXTENSION
@@ -223,10 +314,13 @@ const createDocumentEntry = (
   return entry
 }
 
-const ensureViewLoaded = async (entry: GeoGebraDocumentEntry, language: string): Promise<void> => {
+const ensureViewLoaded = async (
+  entry: GeoGebraDocumentEntry,
+  configuration: GeoGebraConfiguration
+): Promise<void> => {
   if (entry.loaded) return
   entry.loaded = true
-  await entry.view.webContents.loadURL(getGeoGebraUrl(entry.mode, language))
+  await entry.view.webContents.loadURL(getGeoGebraUrl(entry.mode, configuration.language))
   if (!entry.controlsStyleKey && !entry.view.webContents.isDestroyed()) {
     entry.controlsStyleKey = await entry.view.webContents.insertCSS(`
       /* MarkNotePro exposes file, save, export and print in its native menu.
@@ -255,6 +349,7 @@ const ensureViewLoaded = async (entry: GeoGebraDocumentEntry, language: string):
       }
     `)
   }
+  await applyGeoGebraTheme(entry, configuration)
 }
 
 const getActiveDocument = (win: BrowserWindow): GeoGebraDocumentEntry | undefined => {
@@ -706,15 +801,15 @@ const configureGeoGebra = async (
   const languageChanged = windowEntry.language !== language
   windowEntry.language = language
   windowEntry.configuration = normalizedConfiguration
-  if (!languageChanged) return
   await Promise.all(
     [...windowEntry.documents.values()]
       .filter((entry) => entry.loaded && !entry.view.webContents.isDestroyed())
       .map(async (entry) => {
         try {
-          await setGeoGebraLanguage(entry, language)
+          if (languageChanged) await setGeoGebraLanguage(entry, language)
+          await applyGeoGebraTheme(entry, normalizedConfiguration)
         } catch (error) {
-          log.warn('同步 GeoGebra 界面语言失败:', error)
+          log.warn('同步 GeoGebra 界面配置失败:', error)
         }
       })
   )
@@ -782,7 +877,7 @@ export const openGeoGebraFile = async (
       // run against the previous BrowserView document while loadURL is still
       // navigating, making setBase64 appear to succeed while the construction
       // is later replaced by the blank app bootstrap.
-      await ensureViewLoaded(entry, windowEntry.language)
+      await ensureViewLoaded(entry, windowEntry.configuration)
       await loadBase64(entry, fileBase64)
 
       // New files are created as an empty placeholder before the BrowserView
@@ -796,7 +891,7 @@ export const openGeoGebraFile = async (
         }
       }
     } else {
-      await ensureViewLoaded(entry, windowEntry.language)
+      await ensureViewLoaded(entry, windowEntry.configuration)
     }
     const exportTitle = path.basename(filePath, path.extname(filePath))
     if (entry.exportTitle !== exportTitle) {
