@@ -31,6 +31,7 @@ import type {
   UnsavedFile,
   UnsavedDrawioFile
 } from './files'
+import type { GeoGebraMode } from './files'
 import type { BufferedState as BufferedStateType } from './bufferedState'
 import type { MenuTemplate, MenuPopupPosition } from './menu'
 
@@ -83,6 +84,10 @@ export interface DrawioConfiguration {
   colors: Record<string, string>
 }
 
+export interface GeoGebraConfiguration {
+  language: string
+}
+
 export interface DrawioExportPayload {
   format: string
   filename?: string
@@ -114,6 +119,14 @@ export interface IpcInvokeChannels {
   'mt::drawio::save-request': { args: [filePath: string]; ret: void }
   'mt::drawio::close-file': { args: [filePath: string]; ret: void }
   'mt::drawio::show': { args: [bounds: DrawioBounds]; ret: void }
+  'mt::geogebra::open': {
+    args: [pathname: string, mode?: GeoGebraMode, configuration?: GeoGebraConfiguration]
+    ret: void
+  }
+  'mt::geogebra::configure': { args: [configuration: GeoGebraConfiguration]; ret: void }
+  'mt::geogebra::save-request': { args: [filePath: string]; ret: void }
+  'mt::geogebra::close-file': { args: [filePath: string]; ret: void }
+  'mt::geogebra::show': { args: [bounds: DrawioBounds]; ret: void }
   'mt::fonts::list': { args: []; ret: string[] }
   'mt::github-desktop::show': {
     args: [options: GitHubDesktopShowOptions]
@@ -209,7 +222,10 @@ export interface IpcSendChannels {
   'mt::check-for-update': []
   'mt::clipboard::write-text': [text: string]
   'mt::close-window': []
-  'mt::close-window-confirm': [unsavedFiles: UnsavedFile[], unsavedDrawioFiles?: UnsavedDrawioFile[]]
+  'mt::close-window-confirm': [
+    unsavedFiles: UnsavedFile[],
+    unsavedDrawioFiles?: UnsavedDrawioFile[]
+  ]
   'mt::cmd-close-window': []
   'mt::cmd-import-file': []
   'mt::cmd-new-editor-window': []
@@ -297,6 +313,7 @@ export interface IpcSendChannels {
   'mt::window-zoom-delta': [direction: 'in' | 'out']
   'mt::drawio::hide': []
   'mt::drawio::state': [payload: { modified: boolean }]
+  'mt::geogebra::hide': []
   'mt::drawio-menu-mode': [enabled: boolean]
   'mt::drawio::set-bounds': [bounds: DrawioBounds]
   'mt::drawio-autosave-changed': [enabled: boolean]
@@ -353,6 +370,19 @@ export interface IpcMainEventChannels {
   'mt::drawio::state': [
     payload: {
       filePath: string
+      modified: boolean
+      isSaved: boolean
+      isSaving: boolean
+      saveError?: string
+      lastSavedHash?: string
+    }
+  ]
+  'mt::geogebra::opened': [payload: { filePath: string; title: string; mode: GeoGebraMode }]
+  'mt::geogebra::closed': [payload?: { filePath?: string }]
+  'mt::geogebra::state': [
+    payload: {
+      filePath: string
+      mode: GeoGebraMode
       modified: boolean
       isSaved: boolean
       isSaving: boolean

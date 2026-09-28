@@ -1,0 +1,125 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.web.html5.util;
+
+import org.geogebra.common.io.MyXMLio;
+import org.geogebra.common.util.FileExtensions;
+import org.geogebra.common.util.StringUtil;
+
+import elemental2.core.JsArray;
+import elemental2.core.Uint8Array;
+import elemental2.dom.Blob;
+import elemental2.dom.BlobPropertyBag;
+import elemental2.dom.URL;
+
+public class ArchiveEntry {
+	public final String string;
+	public final Uint8Array data;
+	private final FileExtensions extension;
+	private String fileName;
+
+	private ArchiveEntry(String fileName, String string, Uint8Array blob) {
+		this.string = string;
+		this.data = blob;
+		this.fileName = fileName;
+		extension = StringUtil.getFileExtension(fileName);
+	}
+
+	/**
+	 * @param blob binary content
+	 */
+	public ArchiveEntry(String fileName, Uint8Array blob) {
+		this(fileName, null, blob);
+	}
+
+	/**
+	 * @param string text content
+	 */
+	public ArchiveEntry(String fileName, String string) {
+		this(fileName, string, null);
+	}
+
+	/**
+	 * @param data encoded data
+	 * @return size in KiB (subject to rounding errors)
+	 */
+	public static int dataUrlToBinarySizeKB(String data) {
+		return data.length() * 3 / 4 / 1024;
+	}
+
+	/**
+	 * Copy under new filename.
+	 * @param fileName new filename
+	 * @return renamed copy of this
+	 */
+	public ArchiveEntry copy(String fileName) {
+		return new ArchiveEntry(fileName, string, data);
+	}
+
+	/**
+	 * @return URL for temporary use
+	 */
+	public String createUrl() {
+		if (string != null) {
+			return string;
+		}
+		BlobPropertyBag options = BlobPropertyBag.create();
+		options.setType(extension.getMime());
+		return URL.createObjectURL(
+				new Blob(new JsArray<>(Blob.ConstructorBlobPartsArrayUnionType.of(data)), options));
+	}
+
+	/**
+	 * @return whether this entry is empty
+	 */
+	public boolean isEmpty() {
+		return StringUtil.empty(string) && data == null;
+	}
+
+	/**
+	 * @return data URL
+	 */
+	public String export() {
+		return "data:" + extension.getMime() + ";base64," + Base64.bytesToBase64(data);
+	}
+
+	public String getFileName() {
+		return fileName;
+	}
+
+	public FileExtensions getExtension() {
+		return extension;
+	}
+
+	/**
+	 * @return whether this represents a thumbnail
+	 */
+	public boolean isThumbnail() {
+		return MyXMLio.XML_FILE_THUMBNAIL.equalsIgnoreCase(fileName);
+	}
+
+	/**
+	 * @return size in kilobytes
+	 */
+	public int getSizeKB() {
+		if (data != null) {
+			return data.byteLength / 1024;
+		} else {
+			return dataUrlToBinarySizeKB(string);
+		}
+	}
+}

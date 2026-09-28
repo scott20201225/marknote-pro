@@ -1,0 +1,103 @@
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"/>
+<script>
+    defaultParams.id = "notesApplet";
+    defaultParams.fontAwesome = "light";
+    var loadedFromStorage = false;
+
+    function loadUnsavedWork(ggw) {
+        var storage = window.sessionStorage;
+        var unsavedWork = storage.getItem('boardUnsaved');
+
+        if (unsavedWork) {
+            loadBase64(ggw, unsavedWork);
+            storage.removeItem('boardUnsaved')
+            loadedFromStorage = true;
+        }
+        return unsavedWork;
+    }
+
+    function loadBase64(ggw, base64){
+        ggw.setAttribute("data-param-ggbBase64", base64);
+        if(window.addAppletPreview){
+            window.addAppletPreview(base64);
+        }
+        perspective(false);
+        insertScript();
+    }
+
+    function toggleFullscreen() {
+        try {
+            // the CSS class is defined in https://git.geogebra.org/mow/mow-front/blob/master/app.php
+            window.parent.document.body.classList.toggle("fullscreen-app");
+        } catch (ex) {
+            // possibly the Mebis iframe is embedded in some non-standard page
+            window.console.log(ex);
+        }
+    }
+
+    function nativeLogin() {
+        try {
+            if (window.parent && window.parent.login) {
+                window.parent.login();
+            }
+        } catch (ex) {
+            console.log("Cannot login from this frame");
+        }
+    }
+
+    function ggbMultiplayerChange(users) {
+       window.parent && window.parent.multiplayerChange && window.parent.multiplayerChange(users);
+    }
+
+    function isEmbed() {
+        return false;
+    }
+
+    function getParentParam(name) {
+        return window.parent.document.body && window.parent.document.body.dataset[name];
+    }
+
+    const accessToken = window.accessToken || getParentParam("accesstoken");
+    if (accessToken) {
+       sessionStorage.setItem("token", accessToken);
+    }
+
+    let refreshToken = getParentParam("refreshtoken");
+
+    let lastRefresh = new Date();
+    window.refreshToken = function(callback) {
+        if (new Date() - lastRefresh < 240_000) {
+            callback(null);
+            return;
+        }
+        const baseUrl = getParentParam("baseurl");
+        fetch(`${baseUrl}/refresh`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: `refresh_token=${refreshToken}`
+        })
+        .then((response) => response.json())
+        .then(data => {
+            callback(data.access_token);
+            sessionStorage.setItem("token", data.access_token);
+            refreshToken = data.refresh_token;
+            lastRefresh = new Date();
+        })
+        .catch(_ => callback(null));
+    }
+</script>
+<style>
+body {
+  --ggb-primary-color: #975FA8;
+  --ggb-primary-variant-color: #C19FCB;
+  --ggb-dark-color: #723B86;
+  --ggb-light-color: #EADFEE;
+  --ggb-selection-color: rgba(151, 95, 168, 0.2);
+  --ggb-button-border-radius: 8px;
+}
+.GeoGebraFrame .fa-solid {
+  font-weight: 900;
+}
+</style>

@@ -1,0 +1,141 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.euclidian.plot.interval;
+
+import static org.geogebra.common.kernel.interval.IntervalSetOps.connectedInterval;
+import static org.geogebra.common.kernel.interval.IntervalSetOps.empty;
+import static org.geogebra.common.kernel.interval.IntervalSetOps.fromLegacy;
+
+import org.geogebra.common.kernel.interval.Interval;
+import org.geogebra.common.kernel.interval.IntervalSet;
+import org.geogebra.common.kernel.interval.function.IntervalTuple;
+import org.geogebra.common.util.DoubleUtil;
+
+public class DrawInterval {
+
+	private boolean joinToPrevious;
+	private final IntervalPathPlotter gp;
+	private final EuclidianViewBounds bounds;
+
+	/**
+	 * @param gp {@link IntervalPathPlotter}
+	 * @param bounds {@link EuclidianViewBounds}
+	 */
+	public DrawInterval(IntervalPathPlotter gp, EuclidianViewBounds bounds) {
+		this.gp = gp;
+		this.bounds = bounds;
+	}
+
+	public void setJoinToPrevious(boolean joinToPrevious) {
+		this.joinToPrevious = joinToPrevious;
+	}
+
+	/**
+	 * Draw interval (x, y) joined to the last y value
+	 * @param lastY the last y value to join to.
+	 * @param x interval
+	 * @param y interval
+	 */
+	public void drawJoined(IntervalSet lastY, Interval x, Interval y) {
+		if (y.isGreaterThan(connectedInterval(lastY))) {
+			drawUp(x, y);
+		} else {
+			drawDown(x, y);
+		}
+	}
+
+	void drawUp(Interval x, Interval y) {
+		if (joinToPrevious) {
+			lineTo(x.getLow(), y.getLow());
+		} else {
+			moveTo(x.getLow(), y.getLow());
+		}
+
+		lineTo(x.getHigh(), y.getHigh());
+	}
+
+	void drawDown(Interval x, Interval y) {
+		if (joinToPrevious) {
+			lineTo(x.getLow(), y.getHigh());
+		} else {
+			moveTo(x.getLow(), y.getHigh());
+		}
+
+		lineTo(x.getHigh(), y.getLow());
+	}
+
+	private void moveTo(double x, double y) {
+		gp.moveTo(clamp(x), clamp(y));
+	}
+
+	void lineTo(double x, double y) {
+		gp.lineTo(clamp(x), clamp(y));
+	}
+
+	private double clamp(double value) {
+		if (DoubleUtil.isEqual(value, Double.POSITIVE_INFINITY)) {
+			return IntervalPath.CLAMPED_INFINITY;
+		}
+
+		if (DoubleUtil.isEqual(value, Double.NEGATIVE_INFINITY)) {
+			return -IntervalPath.CLAMPED_INFINITY;
+		}
+		return value;
+	}
+
+	/**
+	 * Draws a whole interval (from screen top to bottom) at x.low
+	 * @param x interval
+	 */
+	public void drawWhole(Interval x) {
+		gp.segment(bounds, x.getLow(), bounds.getYmin(), x.getLow(), bounds.getYmax());
+	}
+
+	IntervalSet drawIndependent(IntervalTuple tuple) {
+		IntervalSet xSet = tuple.xSet();
+		IntervalSet ySet = tuple.ySet();
+
+		if (ySet.isEmpty()) {
+			return empty();
+		}
+
+		if (ySet.isWhole()) {
+			drawWhole(connectedInterval(xSet));
+			return empty();
+		}
+		if (xSet.isConnected() && ySet.isConnected()) {
+			Interval x = bounds.toScreenIntervalX(connectedInterval(tuple.xSet()));
+			Interval y = bounds.toScreenIntervalY(connectedInterval(tuple.ySet()));
+			if (y.isUndefined()) {
+				return empty();
+			}
+			line(x, y);
+			return fromLegacy(y);
+		}
+		return empty();
+	}
+
+	/**
+	 * Draws straight vertical line at x.high of interval y.
+	 * @param x interval
+	 * @param y interval
+	 */
+	public void line(Interval x, Interval y) {
+		moveTo(x.getHigh(), y.getLow());
+		lineTo(x.getHigh(), y.getHigh());
+	}
+}

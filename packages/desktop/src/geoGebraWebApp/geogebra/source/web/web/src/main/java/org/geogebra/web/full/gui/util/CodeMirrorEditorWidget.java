@@ -1,0 +1,264 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.web.full.gui.util;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.codemirror.editor.CodeMirrorResources;
+import org.geogebra.common.util.debug.Log;
+import org.geogebra.gwtutil.JavaScriptInjector;
+import org.geogebra.web.html5.util.StringConsumer;
+import org.gwtproject.core.client.Scheduler;
+import org.gwtproject.user.client.ui.FlowPanel;
+
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.core.client.RunAsyncCallback;
+
+import elemental2.dom.DOMRect;
+import elemental2.dom.Element;
+import jsinterop.annotations.JsOverlay;
+import jsinterop.annotations.JsPackage;
+import jsinterop.annotations.JsProperty;
+import jsinterop.annotations.JsType;
+import jsinterop.base.Js;
+import jsinterop.base.JsPropertyMap;
+
+/**
+ * Plain CodeMirror 6 editor host for the scripting editor prototype.
+ */
+public final class CodeMirrorEditorWidget extends FlowPanel {
+	private boolean loading = false;
+	private static final List<Runnable> callbacks = new ArrayList<>();
+	private final FlowPanel editorHost = new FlowPanel();
+	private CodeMirrorEditor codeMirrorEditor;
+	private String text = "";
+	private boolean focusOnCodeMirrorLoad = false;
+
+	/**
+	 * Creates a code mirror editor widget.
+	 */
+	public CodeMirrorEditorWidget() {
+		editorHost.addStyleName("codeMirrorEditorHost");
+		add(editorHost);
+	}
+
+	/**
+	 * @param text editor text
+	 */
+	public void setText(String text) {
+		this.text = text == null ? "" : text;
+		if (codeMirrorEditor != null && !codeMirrorEditor.getValue().equals(text)) {
+			codeMirrorEditor.setValue(this.text);
+		}
+	}
+
+	/**
+	 * @return editor text
+	 */
+	public String getText() {
+		return codeMirrorEditor == null ? text : codeMirrorEditor.getValue();
+	}
+
+	/** Inserts the given command with parenthesis at current cursor position.
+	 * @param command GeoGebra command string including parentheses (e.g. SetValue())
+	 */
+	public void insertCommand(String command) {
+		if (codeMirrorEditor != null) {
+			int curPos = codeMirrorEditor.getCursorPosition();
+			int newCursorPos = curPos + command.length() - 1;
+			codeMirrorEditor.replaceText(curPos, curPos, command);
+			codeMirrorEditor.setCursorPosition(newCursorPos);
+		}
+	}
+
+	/**
+	 * Inserts the given object label at the current position replacing the '@' character.
+	 * @param geoLabel label of geo element
+	 */
+	public void insertGeoBox(String geoLabel) {
+		if (codeMirrorEditor != null) {
+			int curPos = codeMirrorEditor.getCursorPosition();
+			int newCursorPos = curPos + geoLabel.length() - 1;
+			codeMirrorEditor.replaceText(curPos - 1, curPos, geoLabel);
+			codeMirrorEditor.setCursorPosition(newCursorPos);
+		}
+	}
+
+	/**
+	 * Refresh code mirror editor.
+	 */
+	public void refreshEditor() {
+		if (codeMirrorEditor != null) {
+			codeMirrorEditor.refresh();
+		}
+	}
+
+	/**
+	 * Focus code mirror editor.
+	 */
+	public void focusEditor() {
+		if (codeMirrorEditor != null) {
+			codeMirrorEditor.focus();
+		} else {
+			focusOnCodeMirrorLoad = true;
+		}
+	}
+
+	/**
+	 * Returns the pixel bounding rect of the cursor caret in the editor.
+	 * @return bounding rect of the cursor caret
+	 */
+	public DOMRect getCursorPixelPosition() {
+		return codeMirrorEditor.getCursorPixelPosition();
+	}
+
+	@Override
+	protected void onAttach() {
+		super.onAttach();
+		initCodeMirror();
+	}
+
+	@Override
+	protected void onDetach() {
+		if (codeMirrorEditor != null) {
+			codeMirrorEditor.destroy();
+			codeMirrorEditor = null;
+		}
+		super.onDetach();
+	}
+
+	private void initCodeMirror() {
+		if (codeMirrorEditor != null) {
+			return;
+		}
+
+		onCodeMirrorLoaded(() -> Scheduler.get().scheduleDeferred(() -> {
+			if (!isAttached() || codeMirrorEditor != null) {
+				return;
+			}
+
+			CodeMirrorOptions options = CodeMirrorOptions.create();
+			options.setValue(text);
+			options.setOnChange(value -> text = value);
+			codeMirrorEditor =
+					CodeMirror.createEditor(Js.uncheckedCast(editorHost.getElement()), options);
+			refreshEditor();
+			if (focusOnCodeMirrorLoad) {
+				codeMirrorEditor.focus();
+			}
+		}));
+	}
+
+	private void onCodeMirrorLoaded(Runnable callback) {
+		if (Window.getCodeMirror() != null) {
+			callback.run();
+			return;
+		}
+
+		callbacks.add(callback);
+		if (loading) {
+			return;
+		}
+
+		loading = true;
+		GWT.runAsync(CodeMirrorEditorWidget.class, new RunAsyncCallback() {
+			@Override
+			public void onFailure(Throwable throwable) {
+				loading = false;
+				callbacks.clear();
+				Log.error("CodeMirror editor failed to load");
+			}
+
+			@Override
+			public void onSuccess() {
+				JavaScriptInjector.inject(CodeMirrorResources.INSTANCE.codemirror());
+				loading = false;
+				runCallbacks();
+			}
+		});
+	}
+
+	private static void runCallbacks() {
+		List<Runnable> pendingCallbacks = new ArrayList<>(callbacks);
+		callbacks.clear();
+		for (Runnable callback : pendingCallbacks) {
+			callback.run();
+		}
+	}
+
+	/**
+	 * Access to global window properties.
+	 */
+	@JsType(isNative = true, namespace = JsPackage.GLOBAL, name = "window")
+	private static final class Window {
+		@JsProperty(name = "GeoGebraCodeMirror")
+		private static native Object getCodeMirror();
+	}
+
+	/**
+	 * Minimal JsInterop surface for CodeMirror 6.
+	 */
+	@JsType(isNative = true, namespace = JsPackage.GLOBAL, name = "GeoGebraCodeMirror")
+	private static final class CodeMirror {
+		private static native CodeMirrorEditor createEditor(Element element, CodeMirrorOptions options);
+	}
+
+	/**
+	 * CodeMirror editor options.
+	 */
+	@JsType(isNative = true, namespace = JsPackage.GLOBAL, name = "Object")
+	public static final class CodeMirrorOptions {
+		@JsProperty
+		public native void setValue(String value);
+
+		@JsProperty
+		public native void setOnChange(StringConsumer onChange);
+
+		/**
+		 * @return plain JS object
+		 */
+		@JsOverlay
+		private static CodeMirrorOptions create() {
+			return Js.uncheckedCast(JsPropertyMap.of());
+		}
+	}
+
+	/**
+	 * CodeMirror editor instance.
+	 */
+	@JsType(isNative = true, namespace = JsPackage.GLOBAL, name = "Object")
+	private static final class CodeMirrorEditor {
+		private native void destroy();
+
+		private native void focus();
+
+		private native String getValue();
+
+		private native void setValue(String text);
+
+		private native void refresh();
+
+		private native int getCursorPosition();
+
+		private native void setCursorPosition(int position);
+
+		private native void replaceText(int from, int to, String text);
+
+		private native DOMRect getCursorPixelPosition();
+	}
+}

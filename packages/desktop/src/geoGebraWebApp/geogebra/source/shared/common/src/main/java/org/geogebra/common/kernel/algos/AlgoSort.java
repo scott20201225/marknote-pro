@@ -1,0 +1,205 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.kernel.algos;
+
+import java.util.Iterator;
+import java.util.TreeSet;
+
+import org.geogebra.common.kernel.Construction;
+import org.geogebra.common.kernel.arithmetic.NumberValue;
+import org.geogebra.common.kernel.commands.Commands;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.kernel.geos.GeoList;
+import org.geogebra.common.kernel.geos.GeoNumeric;
+import org.geogebra.common.kernel.geos.GeoPoint;
+import org.geogebra.common.kernel.geos.GeoText;
+
+/**
+ * Sort a list. Adapted from AlgoMax and AlgoIterationList
+ *
+ * @author Michael Borcherds
+ * @version 04-01-2008
+ */
+public class AlgoSort extends AlgoElement {
+
+	private GeoList inputList; // input
+	private GeoList outputList; // output
+	private int size;
+	private GeoList valueList;
+
+	/**
+	 * Creates new list sorting algorithm
+	 *
+	 * @param cons
+	 *            construction
+	 * @param label
+	 *            label for output
+	 * @param inputList
+	 *            list to be sorted
+	 */
+	public AlgoSort(Construction cons, String label, GeoList inputList) {
+		this(cons, inputList);
+		outputList.setLabel(label);
+	}
+
+	/**
+	 * Creates new list sorting algorithm
+	 *
+	 * @param cons
+	 *            construction
+	 * @param label
+	 *            label for output
+	 * @param valueList
+	 *            list of values that shall be sorted
+	 * @param inputList
+	 *            list of keys which determines order of values in sorted list
+	 */
+	public AlgoSort(Construction cons, String label, GeoList valueList, GeoList inputList) {
+		this(cons, inputList, valueList);
+		outputList.setLabel(label);
+	}
+
+	/**
+	 * Creates new list sorting algorithm
+	 *
+	 * @param cons
+	 *            construction
+	 * @param inputList
+	 *            list of keys which determines order of values in sorted list
+	 * @param valueList
+	 *            list of values that shall be sorted
+	 */
+	public AlgoSort(Construction cons, GeoList inputList, GeoList valueList) {
+		super(cons);
+		this.inputList = inputList;
+		this.valueList = valueList;
+
+		outputList = new GeoList(cons);
+
+		setInputOutput();
+		compute();
+	}
+
+	/**
+	 * Creates new list sorting algorithm
+	 *
+	 * @param cons
+	 *            construction
+	 * @param inputList
+	 *            to be sorted
+	 */
+	public AlgoSort(Construction cons, GeoList inputList) {
+		this(cons, inputList, null);
+	}
+
+	@Override
+	public Commands getClassName() {
+		return Commands.Sort;
+	}
+
+	@Override
+	protected void setInputOutput() {
+
+		// make sure that x(Element[list,1]) will work even if the output list's
+		// length is zero
+		outputList.setTypeStringForXML(inputList.getTypeStringForXML());
+
+		input = new GeoElement[valueList == null ? 1 : 2];
+		if (valueList != null) {
+			input[0] = valueList;
+			input[1] = inputList;
+		} else {
+			input[0] = inputList;
+		}
+		setOnlyOutput(outputList);
+		setDependencies(); // done by AlgoElement
+	}
+
+	/**
+	 * @return sorted list
+	 */
+	public GeoList getResult() {
+		return outputList;
+	}
+
+	@Override
+	public final void compute() {
+
+		size = inputList.size();
+		if (!inputList.isDefined() || size == 0) {
+			outputList.setUndefined();
+			return;
+		}
+
+		if (valueList != null && (!valueList.isDefined() || valueList.size() != size)) {
+			outputList.setUndefined();
+			return;
+		}
+
+		GeoElement geo0 = inputList.get(0);
+
+		Class<? extends GeoElement> geoClass = geo0.getClass();
+
+		TreeSet<GeoElement> sortedSet;
+
+		if (geo0.isGeoPoint()) {
+			sortedSet = new TreeSet(GeoPoint.getComparatorX());
+
+		} else if (geo0.isGeoText()) {
+			sortedSet = new TreeSet(GeoText.getComparator());
+
+		} else if (geo0 instanceof NumberValue) {
+			sortedSet = new TreeSet(GeoNumeric.getComparator());
+
+		} else {
+			outputList.setUndefined();
+			return;
+		}
+
+		// copy inputList into treeset
+		for (int i = 0; i < size; i++) {
+			GeoElement geo = inputList.get(i);
+			if (geo.getClass().equals(geoClass)) {
+				sortedSet.add(geo);
+			} else {
+				outputList.setUndefined();
+				return;
+			}
+		}
+
+		// copy the sorted treeset back into a list
+		outputList.setDefined(true);
+		outputList.clear();
+
+		Iterator<GeoElement> iterator = sortedSet.iterator();
+		if (valueList == null) {
+			while (iterator.hasNext()) {
+				// need to copy elements like eg {(1,1)} so the properties can
+				// be set independently
+				outputList.addCopy(iterator.next());
+			}
+		} else {
+			while (iterator.hasNext()) {
+				int pos = inputList.find(iterator.next());
+				// need to copy elements like eg {(1,1)} so the properties can
+				// be set independently
+
+				outputList.addCopy(valueList.get(pos));
+			}
+		}
+	}
+}

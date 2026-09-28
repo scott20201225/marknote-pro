@@ -1,0 +1,59 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.freehep.graphicsio.pdf;
+
+/**
+ * This class implements a numbered reference to a PDFObject. Internally the
+ * class keeps track of the numbers. The user only sees its logical name. Only
+ * generation 0 is used in this PDFWriter, since we do not allow for updates of
+ * the PDF file.
+ * <p>
+ *
+ * @author Mark Donszelmann
+ * @version $Id: PDFRef.java,v 1.4 2009-08-17 21:44:44 murkle Exp $
+ */
+public class PDFRef implements PDFConstants {
+
+	private String name;
+
+	private int objectNumber;
+
+	private int generationNumber;
+
+	PDFRef(String name, int objectNumber, int generationNumber) {
+		this.name = name;
+		this.objectNumber = objectNumber;
+		this.generationNumber = generationNumber;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public int getObjectNumber() {
+		return objectNumber;
+	}
+
+	public int getGenerationNumber() {
+		return generationNumber;
+	}
+
+	@Override
+	public String toString() {
+		return objectNumber + " " + generationNumber + " R";
+	}
+}

@@ -1,0 +1,192 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.geogebra3D.euclidian3D.draw;
+
+import org.geogebra.common.awt.AwtFactory;
+import org.geogebra.common.awt.GBufferedImage;
+import org.geogebra.common.awt.GColor;
+import org.geogebra.common.awt.GGraphics2D;
+import org.geogebra.common.awt.GRectangle;
+import org.geogebra.common.euclidian.Drawable;
+import org.geogebra.common.euclidian.EuclidianStatic;
+import org.geogebra.common.euclidian.draw.DrawText;
+import org.geogebra.common.geogebra3D.euclidian3D.EuclidianView3D;
+import org.geogebra.common.geogebra3D.euclidian3D.openGL.Renderer;
+import org.geogebra.common.kernel.geos.GeoText;
+import org.jspecify.annotations.NonNull;
+
+/**
+ * class for drawing texts
+ *
+ * @author mathieu
+ *
+ */
+public class DrawLabel3DForText extends DrawLabel3D {
+	protected GeoText geo;
+	private int highLightIndex = -1;
+	GRectangle bounds = AwtFactory.getPrototype().newRectangle();
+
+	public DrawLabel3DForText(EuclidianView3D view, Drawable3D drawable) {
+		super(view, drawable);
+	}
+
+	@Override
+	protected final GRectangle getBounds(@NonNull CaptionText cpt, GGraphics2D measuringGraphics) {
+		if (geo.isLaTeX()) {
+			EuclidianStatic.drawMultilineLaTeX(
+					view.getApplication(),
+					measuringGraphics,
+					geo,
+					measuringGraphics,
+					cpt.font(),
+					GColor.BLACK,
+					GColor.WHITE,
+					cpt.text(),
+					0,
+					0,
+					geo.isSerifFont(),
+					getCallBack(),
+					bounds);
+		} else {
+			EuclidianStatic.drawIndexedMultilineString(
+					view.getApplication(),
+					cpt.text(),
+					measuringGraphics,
+					bounds,
+					cpt.font(),
+					geo.isSerifFont(),
+					0,
+					0,
+					DrawText.DEFAULT_MARGIN);
+		}
+		return bounds;
+	}
+
+	@Override
+	protected final GBufferedImage draw(@NonNull CaptionText cpt, GGraphics2D measuringGraphics) {
+		GBufferedImage bimg = createBufferedImage();
+		GGraphics2D g2d = createGraphics2D(bimg, cpt);
+
+		if (geo.isLaTeX()) {
+			EuclidianStatic.drawMultilineLaTeX(
+					view.getApplication(),
+					measuringGraphics,
+					geo,
+					g2d,
+					cpt.font(),
+					GColor.BLACK,
+					GColor.WHITE,
+					cpt.text(),
+					0,
+					0,
+					geo.isSerifFont(),
+					getCallBack(),
+					null);
+		} else {
+			EuclidianStatic.drawIndexedMultilineString(
+					view.getApplication(),
+					cpt.text(),
+					g2d,
+					AwtFactory.getPrototype().newRectangle(),
+					g2d.getFont(),
+					geo.isSerifFont(),
+					0,
+					0,
+					DrawText.DEFAULT_MARGIN);
+		}
+
+		return bimg;
+	}
+
+	public void setGeo(GeoText geo) {
+		this.geo = geo;
+	}
+
+	@Override
+	protected void drawText(Renderer renderer) {
+
+		// draw text
+		super.drawText(renderer);
+
+		if (geo.doHighlighting()) {
+			// draw bounds if highlighted
+			renderer.getRendererImpl().disableTextures();
+			renderer.setColor(GColor.HIGHLIGHT_GRAY);
+			renderer.getGeometryManager().draw(highLightIndex);
+			renderer.getRendererImpl().enableTextures();
+		}
+	}
+
+	@Override
+	public void updatePosition(Renderer renderer) {
+		super.updatePosition(renderer);
+
+		if (origin == null) {
+			renderer.getGeometryManager().remove(highLightIndex);
+			highLightIndex = -1;
+			return;
+		}
+
+		int old = highLightIndex;
+		highLightIndex = renderer
+				.getGeometryManager()
+				.rectangleBounds(
+						drawX,
+						drawY,
+						drawZ,
+						width / getFontScale(),
+						height / getFontScale(),
+						highLightIndex,
+						Drawable.UI_ELEMENT_HIGHLIGHT_WIDTH);
+		renderer.getGeometryManager().remove(old);
+	}
+
+	@Override
+	public void setWaitForReset() {
+		super.setWaitForReset();
+
+		highLightIndex = -1;
+	}
+
+	/**
+	 * update draw position
+	 */
+	@Override
+	public void updateDrawPosition() {
+
+		if (geo.isAbsoluteScreenLocActive()) {
+			if (origin == null) {
+				return;
+			}
+
+			drawX =
+					(int) (origin.getX() - drawable.getView3D().getWidth() / 2.0 + xOffset2 / getFontScale());
+			drawY = (int)
+					(drawable.getView3D().getHeight() / 2.0 - origin.getY() + yOffset2 / getFontScale());
+			drawZ = 0;
+
+		} else {
+			super.updateDrawPosition();
+		}
+	}
+
+	@Override
+	public void removeFromGL() {
+		super.removeFromGL();
+		view.getRenderer().getGeometryManager().remove(highLightIndex);
+	}
+}

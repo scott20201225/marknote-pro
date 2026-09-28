@@ -1,0 +1,448 @@
+@use 'colors';
+@use 'colorMap' as *;
+@use 'z-index';
+
+.GeoGebraFrame {
+
+	// command suggestion popup in AV
+	.gwt-SuggestBoxPopup.ggb-AlgebraViewSuggestionPopup.matDesign {
+		border-radius: 2px;
+		padding: 8px 16px;
+		font-size: 80%;
+		background-color: white;
+		box-shadow: 0 0 2px 1px colors.$popup-shadow;
+
+		.item {
+			height: 16px;
+			padding: 8px 0px;
+			cursor: pointer;
+
+			&.selectedItem {
+				color: colors.$teal-default;
+			}
+		}
+	}
+
+	// help popup with command list
+	.gwt-PopupPanel.helpPopupAV.GeoGebraPopup.matDesign,
+		.gwt-PopupPanel.GeoGebraPopup.matDesign.helpPopupAVBottom {
+		border-radius: 2px;
+		padding: 8px;
+		font-size: 80%;
+		background-color: white;
+		box-shadow: 0 0 2px 1px colors.$popup-shadow;
+
+		.inputHelp-leaf {
+			font-size: 90%;
+
+			&:hover {
+				background: colors.$selected-menuitem-background;
+			}
+		}
+
+		.inputHelp-functionTable {
+			.gwt-Label {
+				font-size: 90%;
+			}
+		}
+
+	}
+
+	// preview point popup
+	.previewPointsPopup {
+		background: white;
+		border-radius: 2px;
+		padding-left: 8px;
+		padding-right: 8px;
+		font-size: 90%; // 14px
+		box-shadow: 0 0 2px 1px colors.$popup-shadow;
+		white-space: nowrap;
+
+		.gwt-Label {
+			text-align: center;
+		}
+	}
+
+	//suite app picker popup
+	.appPickerPopup {
+			min-width: 244px;
+			border-radius: 2px;
+			box-shadow: 0px 2px 4px -1px colors.$black-20, 0px 4px 5px 0px colors.$black-14, 0px 1px 10px 0px colors.$black-12;
+			padding: 8px 0 8px 0;
+
+			.appPickerRow {
+				height: 48px;
+				min-width: 244px;
+				cursor: pointer;
+				display: flex;
+
+				&:hover {
+					background-color: neutral(200);
+				}
+			}
+
+			.appPickerLabel {
+				font-size: 100%;
+				height: 24px;
+				line-height: 24px;
+				padding: 12px 24px 12px 20px;
+				cursor: pointer;
+			}
+
+			.appIcon {
+				margin: 12px 0 12px 24px;
+			}
+	}
+
+	.autoCompletePopup {
+		max-height: 232px;
+		min-width: 192px;
+		max-width: 320px;
+		overflow-y: auto;
+	}
+
+	.autocompleteSyntaxHeading {
+		display: flex;
+		border-bottom: 1px colors.$black-12 solid;
+		padding: 4px 8px 4px 16px;
+		align-items: center;
+
+		.gwt-Label {
+			flex-grow: 1;
+			line-height: 24px;
+			height: 24px;
+		}
+
+		.button {
+			padding: 4px;
+			margin-left: 16px;
+			height: 32px;
+			box-sizing: border-box;
+		}
+
+		.gwt-Image {
+			opacity: 0.54;
+			&:hover {
+				opacity: 0.87;
+			}
+		}
+	}
+
+	.autocompleteSyntaxContent {
+		padding-top: 8px;
+		font-size: 87.5%;
+		overflow: auto;
+		max-height: 257px - 80px;
+	}
+
+	.submenuWithHeading {
+		min-width: 192px;
+		max-width: 560px;
+	}
+
+	.profilePopup {
+		min-width: 160px;
+		max-width: 280px;
+
+		.profileItem {
+			height: 40px;
+			margin-bottom: 12px;
+			background: transparent;
+			cursor: default;
+
+			.profileImage {
+				width: 40px;
+				height: 40px;
+				padding: 0;
+				opacity: 1;
+				margin: 0 0 0 12px;
+				border-radius: 50%;
+			}
+
+			.gwt-Label {
+				height: 20px;
+				line-height: 20px;
+				padding: 10px 0 10px 8px;
+				overflow: hidden;
+				text-overflow: ellipsis;
+			}
+		}
+
+		.menuSeparator {
+			width: 100%;
+		}
+	}
+
+	.gwt-PopupPanel.profilePopup .listMenuItem {
+		min-width: 160px;
+	}
+
+	.quickStyleBarPopup {
+		z-index: z-index.$z-dialog-over-keyboard;
+		border-radius: 12px;
+		padding: 8px;
+		background-color: white;
+		box-shadow: 0px 2px 24px -1px rgba(133, 132, 138, 0.14), 0px 2px 8px 0px rgba(133, 132, 138, 0.04);
+
+		.buttonList {
+			display: inline-flex;
+			gap: 8px;
+			flex-flow: wrap;
+
+			.iconButton {
+				z-index: z-index.$z-dialog-under-keyboard;
+			}
+		}
+
+		.sliderComponent.withMargin {
+			margin-top: 16px;
+		}
+
+		.colorPalette.withMargin {
+			margin-bottom: 16px;
+		}
+
+		&.labelStyle {
+			padding: 8px 0;
+			min-width: 184px;
+
+			.inputTextField {
+				margin: 0 8px;
+				width: calc(100% - 16px);
+
+				input[type=text] {
+					border: none;
+					box-shadow: none;
+				}
+			}
+
+			.checkMarkMenuItem {
+				padding: 0 16px;
+				cursor: pointer;
+				display: flex;
+				.gwt-HTML {
+					line-height: 32px;
+					margin-right: 32px;
+				}
+
+				img {
+					opacity: 1;
+					position: absolute;
+					right: 8px;
+					padding: 4px;
+				}
+
+				&:hover {
+					background-color: neutral(200);
+					cursor: pointer;
+				}
+			}
+		}
+
+		&.segmentStyle {
+			max-width: 168px;
+		}
+
+		&.pointStyle {
+			max-width: 256px;
+		}
+
+		&.cellBorderStyle {
+			padding: 8px 0;
+
+			.buttonList {
+				padding: 0 8px;
+			}
+		}
+
+		&.colorStyle {
+			.colorPalette {
+				width: 252px;
+				height: 148px;
+			}
+
+			&.fontStyle {
+				.colorPalette {
+					width: 144px;
+					height: 36px;
+					margin-bottom: 16px;
+				}
+				.checkbox {
+					margin-left: 0;
+				}
+			}
+		}
+
+		.materialTextButton {
+			margin: 16px 0 0 0;
+
+			.fa-solid, .fa-light {
+				padding: 4px;
+				margin: 8px 8px 0 0;
+			}
+		}
+
+		.divider {
+			height: 1px;
+			margin: 8px;
+		}
+
+		.lineThicknessItem {
+			display: flex;
+			height: 36px;
+			padding: 0px 16px;
+
+			&.textItem .gwt-Label {
+				line-height: 36px;
+			}
+
+			&:hover {
+				background-color: neutral(200);
+				cursor: pointer;
+			}
+
+			.checkImg {
+				opacity: 0;
+				margin: 6px 16px 6px 0px;
+
+				&.selected {
+					opacity: 0.54;
+				}
+
+				&.fa-solid, &.fa-light {
+					width: 24px;
+					padding: 3px 0px;
+				}
+			}
+
+			.linePreview {
+				width: 100%;
+				background-color: neutral(900);
+
+				&.thin {
+					height: 1px;
+					margin: 18px 0px;
+				}
+
+				&.thick {
+					height: 3px;
+					margin: 17px 0px;
+				}
+			}
+		}
+	}
+
+	.gridCardPanel {
+		display: flex;
+		align-items: center;
+		align-content: center;
+		gap: 12px;
+		flex-wrap: wrap;
+
+		.gridCard {
+			width: 114px;
+			height: 120px;
+			cursor: pointer;
+
+			.cardImagePanel {
+				height: 68px;
+				margin-bottom: 8px;
+				border-radius: 12px;
+				box-sizing: border-box;
+				border: 2px solid neutral(300);
+				display: inline-flex;
+
+				.gwt-Image {
+					width: 110px;
+					border-radius: 12px;
+				}
+
+				.checkMarkPanel {
+					visibility: hidden;
+					width: 24px;
+					height: 24px;
+					position: absolute;
+					margin: 8px 8px 0 78px;
+					background-color: var(--ggb-primary-color);
+					border-radius: 50%;
+
+					.checkmark {
+						width: 18px;
+						height: 18px;
+						padding: 3px;
+					}
+				}
+			}
+
+			.cardTitle {
+				height: 40px;
+				line-height: 16px;
+				font-size: 12px;
+				text-align: center;
+			}
+
+			&:hover .cardImagePanel {
+				border-color: neutral(500);
+			}
+
+			&.selected, &.selected:hover {
+				.cardImagePanel {
+					border-color: var(--ggb-primary-color);
+
+					.checkMarkPanel {
+						visibility: visible;
+					}
+				}
+
+				.cardTitle {
+					color: var(--ggb-primary-color);
+				}
+			}
+		}
+	}
+
+	.insertPopup {
+		width: 360px;
+		flex-wrap: wrap;
+
+		.panelContainer {
+			width: 100%;
+			height: 180px;
+		}
+
+		.tabPanel {
+			padding: 8px 16px;
+			height: 100%;
+			overflow: scroll;
+			position: absolute;
+		}
+		.group {
+			display: flex;
+			flex-wrap: wrap;
+
+			.gwt-Label {
+				padding: 4px;
+				cursor: pointer;
+			}
+			canvas {
+				margin: auto 2px;
+				cursor: pointer;
+			}
+			.gwt-Label:hover, canvas:hover {
+				background-color: neutral(200);
+			}
+		}
+		.objects .gwt-Label {
+			flex-basis: 50%;
+			box-sizing: border-box;
+		}
+		.divider {
+			height: 1px;
+			margin: 8px 0;
+		}
+	}
+
+	.toolsHolder .iconButton {
+		vertical-align: middle;
+	}
+}

@@ -71,6 +71,18 @@
             @keydown.enter.prevent="handleInputEnterFromKeyboard"
             @blur="handleInputBlur"
           />
+          <div
+            v-if="showTreeCreateInput && createCacheType === 'geogebra'"
+            class="geogebra-create-options"
+            :style="{ 'margin-left': `${depth * 5 + 15}px` }"
+          >
+            <label>{{ t('sideBar.tree.geoGebraMode') }}</label>
+            <select v-model="geoGebraMode">
+              <option v-for="mode of geoGebraModes" :key="mode.value" :value="mode.value">
+                {{ t(mode.labelKey) }}
+              </option>
+            </select>
+          </div>
           <file v-for="file of visibleRootFiles" :key="file.id" :file="file" :depth="depth" />
           <div
             v-if="
@@ -130,6 +142,8 @@ import {
   getVisibleNoteFolders
 } from '../../util/noteWorkspace'
 import type { TreeFileNode, TreeFolderNode, TreeNode, TabDescriptor } from './types'
+import type { GeoGebraMode } from '@shared/types/files'
+import { GEO_GEBRA_MODES } from '../../util/geogebra'
 
 const { t } = useI18n()
 
@@ -174,11 +188,22 @@ const createCacheType = computed<string | undefined>(() => {
   const cache = createCache.value as { type?: string }
   return cache.type
 })
+const geoGebraModes = GEO_GEBRA_MODES
+const geoGebraMode = computed<GeoGebraMode>({
+  get: () => (createCache.value as { geoGebraMode?: GeoGebraMode }).geoGebraMode ?? 'graphing',
+  set: (value) => {
+    const cache = createCache.value as { dirname?: string; type?: string }
+    if (!cache.dirname || !cache.type) return
+    projectStore.createCache = { dirname: cache.dirname, type: cache.type, geoGebraMode: value }
+  }
+})
 
 const isCreatingNoteInListMode = computed<boolean>(() => {
   return (
     noteNavigationMode.value === 'tree-list' &&
-    (createCacheType.value === 'document' || createCacheType.value === 'file')
+    (createCacheType.value === 'document' ||
+      createCacheType.value === 'file' ||
+      createCacheType.value === 'geogebra')
   )
 })
 
@@ -263,6 +288,13 @@ const toggleRootFromDoubleClick = (event: MouseEvent): void => {
   const target = event.target as HTMLElement | null
   if (target?.closest('input')) return
   toggleDirectories()
+}
+
+const toggleDirectories = (): void => {
+  const folders = visibleRootFolders.value
+  if (!folders.length) return
+  const shouldCollapse = folders.some((folder) => !folder.isCollapsed)
+  for (const folder of folders) folder.isCollapsed = shouldCollapse
 }
 
 const handleSplitDragStart = (event: MouseEvent): void => {
@@ -423,6 +455,23 @@ watch(
 .list-item {
   display: inline-block;
   margin-right: 10px;
+}
+
+.geogebra-create-options {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: var(--itemFontColor);
+}
+
+.geogebra-create-options select {
+  min-width: 130px;
+  color: inherit;
+  background: var(--editorBgColor);
+  border: 1px solid var(--borderColor);
 }
 
 .list-enter-active,

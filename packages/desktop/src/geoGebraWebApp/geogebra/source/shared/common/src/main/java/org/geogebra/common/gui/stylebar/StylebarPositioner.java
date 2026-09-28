@@ -1,0 +1,580 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.gui.stylebar;
+
+import java.util.Collections;
+import java.util.List;
+
+import org.geogebra.common.awt.AwtFactory;
+import org.geogebra.common.awt.GDimension;
+import org.geogebra.common.awt.GPoint;
+import org.geogebra.common.awt.GRectangle;
+import org.geogebra.common.awt.GRectangle2D;
+import org.geogebra.common.euclidian.DrawableND;
+import org.geogebra.common.euclidian.EuclidianConstants;
+import org.geogebra.common.euclidian.EuclidianView;
+import org.geogebra.common.euclidian.draw.DrawLine;
+import org.geogebra.common.euclidian.draw.DrawPoint;
+import org.geogebra.common.gui.EdgeInsets;
+import org.geogebra.common.kernel.geos.AbsoluteScreenLocateable;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.kernel.geos.GeoEmbed;
+import org.geogebra.common.kernel.geos.GeoFunction;
+import org.geogebra.common.main.App;
+import org.geogebra.common.main.SelectionManager;
+import org.jspecify.annotations.Nullable;
+
+import com.google.j2objc.annotations.Weak;
+
+/**
+ * dynamic stylebar positioner logic, also used for preview point popup
+ *
+ */
+public class StylebarPositioner {
+
+	private static final int MARGIN = 4;
+
+	@Weak
+	private final App app;
+	/**
+	 * euclidian view
+	 */
+	@Weak
+	protected final EuclidianView euclidianView;
+
+	@Weak
+	private final SelectionManager selectionManager;
+
+	private boolean center;
+	private GPoint oldPos = null;
+	private GeoElement oldPosFor;
+	private static final int MARGIN_FROM_EDGE = 16;
+	private static final int MARGIN_FROM_BOUNDING_BOX = 36;
+	private static final int ROTATION_HANDLER_SIZE = 24;
+
+	/**
+	 * @param app app
+	 */
+	public StylebarPositioner(App app) {
+		this(app, app.getActiveEuclidianView());
+	}
+
+	/**
+	 * @param app app
+	 * @param euclidianView euclidean view
+	 */
+	public StylebarPositioner(App app, EuclidianView euclidianView) {
+		this.app = app;
+		this.euclidianView = euclidianView;
+		this.selectionManager = app.getSelectionManager();
+	}
+
+	/**
+	 * @param center
+	 *            true if should be center positioned
+	 */
+	public void setCenter(boolean center) {
+		this.center = center;
+	}
+
+	private boolean hasVisibleGeos(List<GeoElement> geoList) {
+		for (GeoElement geo : geoList) {
+			if (isVisible(geo)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private boolean hasVisibleGeosInHits(List<GeoElement> geoList) {
+		for (GeoElement geo : geoList) {
+			if (isVisible(geo) && euclidianView.getHits().contains(geo)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private boolean isVisible(GeoElement geo) {
+		return geo.isVisibleInView(euclidianView.getViewID())
+				&& geo.isEuclidianVisible()
+				&& !geo.isAxis();
+	}
+
+	/**
+	 * @return list of active geos
+	 */
+	public List<GeoElement> createActiveGeoList() {
+		List<GeoElement> selectedGeos = selectionManager.getSelectedGeos();
+		List<GeoElement> justCreatedGeos = euclidianView.getEuclidianController().getJustCreatedGeos();
+		boolean selectedGeosVisible = euclidianView.checkHitForStylebar()
+				? hasVisibleGeosInHits(selectedGeos)
+				: hasVisibleGeos(selectedGeos);
+		if (selectedGeosVisible || hasVisibleGeos(justCreatedGeos)) {
+			justCreatedGeos.stream().forEach(geo -> {
+				if (!selectedGeos.contains(geo)) {
+					selectedGeos.add(geo);
+				}
+			});
+			return selectedGeos;
+		}
+		return Collections.emptyList();
+	}
+
+	private GPoint getStylebarPositionForDrawable(
+			GRectangle2D gRectangle2D,
+			boolean hasBoundingBox,
+			boolean isPoint,
+			boolean noUseOfRectangle,
+			int popupHeight,
+			int popupWidth,
+			GRectangle canvasRect) {
+		boolean functionOrLine = noUseOfRectangle || gRectangle2D == null;
+
+		int minXPosition = (int) Math.round(canvasRect.getX());
+		int maxXPosition = (int) Math.round(canvasRect.getX() + canvasRect.getWidth());
+		int minYPosition = (int) Math.round(canvasRect.getY());
+		int maxYPosition = (int) Math.round(canvasRect.getY() + canvasRect.getHeight());
+
+		double top;
+
+		if (functionOrLine) {
+			GPoint mouseLoc;
+			mouseLoc = euclidianView.getEuclidianController().getMouseLoc();
+			if (mouseLoc == null) {
+				return null;
+			}
+			top = mouseLoc.y + MARGIN;
+		} else if (isPoint) {
+			top = gRectangle2D.getMaxY();
+		} else {
+			if (hasBoundingBox) {
+				top = gRectangle2D.getMinY() - popupHeight;
+			} else {
+				top = gRectangle2D.getMinY();
+			}
+		}
+
+		if (top < minYPosition) {
+			top = gRectangle2D != null ? gRectangle2D.getMaxY() : minYPosition;
+		}
+
+		if (top > maxYPosition) {
+			if (isPoint) {
+				top = gRectangle2D.getMinY() - popupHeight;
+			} else {
+				top = maxYPosition;
+			}
+		}
+
+		double left;
+		if (functionOrLine) {
+			left = euclidianView.getEuclidianController().getMouseLoc().x + MARGIN;
+		} else {
+			if (isPoint) {
+				left = center
+						? (gRectangle2D.getMaxX() + gRectangle2D.getMinX()) / 2 - ((double) popupWidth / 2)
+						: gRectangle2D.getMaxX();
+			} else {
+				left = gRectangle2D.getMaxX();
+			}
+		}
+		left = Math.min(maxXPosition, Math.max(minXPosition, left));
+		return new GPoint((int) left, (int) top);
+	}
+
+	/**
+	 * Calculates the position of a popup of the given size on the canvas,
+	 * keeping it within the safe area of the euclidean view.
+	 * @param popupSize size of the popup
+	 * @return position on the canvas, or null if there is no place for the popup
+	 */
+	public @Nullable GPoint getPositionOnCanvas(GDimension popupSize) {
+		int euclideanViewWidth = euclidianView.getWidth();
+		int euclideanViewHeight = euclidianView.getHeight();
+		EdgeInsets safeArea = euclidianView.getSafeAreaInsets();
+
+		GRectangle rectangle = getGRectangle(
+				safeArea.getLeft(),
+				safeArea.getTop(),
+				euclideanViewWidth - safeArea.getRight(),
+				euclideanViewHeight - safeArea.getBottom() - popupSize.getHeight());
+
+		return getPositionOnCanvas(popupSize.getHeight(), popupSize.getWidth(), rectangle);
+	}
+
+	/**
+	 * Calculates the position of the dynamic stylebar on the EuclidianView
+	 *
+	 * @param stylebarHeight
+	 *            The height of the stylebar.
+	 * @param minYPosition
+	 *            The minimum y position on the canvas for the top of the
+	 *            stylebar.
+	 * @param maxYPosition
+	 *            The maximum y position on the canvas for the top of the
+	 *            stylebar. The top of the stylebar is allowed to be at this
+	 *            position, so if the entire stylebar should be on the canvas
+	 *            then the height of the stylebar should be already subtracted
+	 *            from this value.
+	 * @return Returns a GPoint which contains the x and y coordinates for the
+	 *         top of the stylebar.
+	 */
+	@SuppressWarnings({"WeakerAccess", "unused"})
+	public GPoint getPositionOnCanvas(int stylebarHeight, int minYPosition, int maxYPosition) {
+		return getPositionOnCanvas(
+				stylebarHeight, 0, getGRectangle(0, minYPosition, Integer.MAX_VALUE, maxYPosition));
+	}
+
+	/**
+	 * Calculates the position of the dynamic stylebar on the EuclidianView
+	 *
+	 * @param stylebarHeight
+	 *            The height of the stylebar.
+	 * @param minYPosition
+	 *            The minimum y position on the canvas for the top of the
+	 *            stylebar.
+	 * @param maxYPosition
+	 *            The maximum y position on the canvas for the top of the
+	 *            stylebar. The top of the stylebar is allowed to be at this
+	 *            position, so if the entire stylebar should be on the canvas
+	 *            then the height of the stylebar should be already subtracted
+	 *            from this value.
+	 * @param minXPosition
+	 *            The minimum x position on the canvas for the left end of the
+	 *            stylebar.
+	 * @param maxXPosition
+	 *            The maximum x position on the canvas for the left end of the
+	 *            stylebar. The left end of the stylebar is allowed to be on
+	 *            this position, so if the entire stylebar should be on the
+	 *            canvas then the width of the stylebar should be already
+	 *            subtracted from this value.
+	 * @return Returns a GPoint which contains the x and y coordinates for the
+	 *         top of the stylebar.
+	 */
+	@SuppressWarnings({"WeakerAccess", "SameParameterValue", "unused"})
+	public GPoint getPositionOnCanvas(
+			int stylebarHeight, int minYPosition, int maxYPosition, int minXPosition, int maxXPosition) {
+		return getPositionOnCanvas(
+				stylebarHeight, 0, getGRectangle(minXPosition, minYPosition, maxXPosition, maxYPosition));
+	}
+
+	/**
+	 * Calculates the position of the dynamic stylebar on the EuclidianView
+	 *
+	 * @param stylebarHeight
+	 *            The height of the stylebar.
+	 * @param stylebarWidth
+	 *            The width of the stylebar.
+	 * @param canvasRect
+	 *            The rectangle on the euclidian view where the top-left corner
+	 *            of the stylebar is allowed to be. If the whole stylebar should
+	 *            be on the euclidian view then the width and the height of the
+	 *            stylebar should be already subtracted from the rectangle's
+	 *            dimensions.
+	 * @return Returns a GPoint which contains the x and y coordinates for the
+	 *         top of the stylebar.
+	 */
+	@SuppressWarnings("WeakerAccess")
+	public @Nullable GPoint getPositionOnCanvas(
+			int stylebarHeight, int stylebarWidth, GRectangle canvasRect) {
+		List<GeoElement> activeGeoList = createActiveGeoList();
+		if (activeGeoList.isEmpty()) {
+			return null;
+		}
+
+		if (app.getConfig().hasPreviewPoints()) {
+			GeoElement selectedPreviewPoint = getSelectedPreviewPoint();
+			if (selectedPreviewPoint != null) {
+				return getPositionFor(selectedPreviewPoint, stylebarHeight, stylebarWidth, canvasRect);
+			}
+		}
+
+		GeoElement geo = activeGeoList.get(0);
+		if (geo.isEuclidianVisible()) {
+			if (geo instanceof GeoFunction) {
+				return getPositionForFunction(geo, stylebarHeight, stylebarWidth, canvasRect);
+			}
+			return getPositionFor(geo, stylebarHeight, stylebarWidth, canvasRect);
+		}
+		return null;
+	}
+
+	/**
+	 * Returns the position of the popup for the first element of the geoList.
+	 * This method is deprecated, use the getPositionFor(GeoElement geo, int
+	 * stylebarHeight, int stylebarWidth, GRectangle canvasRect) method instead!
+	 *
+	 * @param geoList
+	 *            selected geos
+	 * @param stylebarHeight
+	 *            height of stylebar
+	 * @param minYPosition
+	 *            min y pos of popup
+	 * @param maxYPosition
+	 *            max y pos of popup
+	 * @param minXPosition
+	 *            min x pos of popup
+	 * @param maxXPosition
+	 *            max x pos of popup
+	 * @return position of popup
+	 */
+	@Deprecated
+	@SuppressWarnings({"unused", "MethodWithTooManyParameters", "deprecation", "ReturnOfNull"})
+	public GPoint getPositionFor(
+			List<GeoElement> geoList,
+			int stylebarHeight,
+			int minYPosition,
+			int maxYPosition,
+			int minXPosition,
+			int maxXPosition) {
+		if (geoList != null && !geoList.isEmpty()) {
+			return getPositionFor(
+					geoList.get(0),
+					stylebarHeight,
+					0,
+					getGRectangle(minXPosition, minYPosition, maxXPosition, maxYPosition));
+		}
+		return null;
+	}
+
+	protected GRectangle getGRectangle(int minX, int minY, int maxX, int maxY) {
+		return AwtFactory.getPrototype().newRectangle(minX, minY, maxX - minX, maxY - minY);
+	}
+
+	private GeoElement getSelectedPreviewPoint() {
+		List<GeoElement> visiblePreviewPoints =
+				app.getSpecialPointsManager().getSelectedPreviewPoints();
+		if (visiblePreviewPoints != null && !visiblePreviewPoints.isEmpty()) {
+			for (GeoElement previewPoint : visiblePreviewPoints) {
+				if (euclidianView.getHits().contains(previewPoint)) {
+					return previewPoint;
+				}
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * @param geo
+	 *            geoElement
+	 * @param stylebarHeight
+	 *            height of stylebar
+	 * @param stylebarWidth
+	 *            width of stylebar
+	 * @param canvasRect
+	 *            canvas
+	 * @return position
+	 */
+	@SuppressWarnings("WeakerAccess")
+	public GPoint getPositionFor(
+			GeoElement geo, int stylebarHeight, int stylebarWidth, GRectangle canvasRect) {
+		DrawableND dr = euclidianView.getDrawableND(geo);
+		// noinspection ReturnOfNull
+		return dr == null
+				? null
+				: getStylebarPositionForDrawable(
+						dr.getBoundsForStylebarPosition(),
+						!(dr instanceof DrawLine),
+						dr instanceof DrawPoint,
+						dr.is3D(),
+						stylebarHeight,
+						stylebarWidth,
+						canvasRect);
+	}
+
+	private GPoint getPositionForFunction(
+			GeoElement geo, int stylebarHeight, int stylebarWidth, GRectangle canvasRect) {
+		if (euclidianView.getHits().contains(geo)) {
+			return getStylebarPositionForDrawable(
+					null, true, false, true, stylebarHeight, stylebarWidth, canvasRect);
+		} else {
+			// with select tool, it happens that first selected geo is a
+			// function, and then
+			// the user select another geo (e.g. a point). Then we still want to
+			// show style bar.
+			if (app.getMode() == EuclidianConstants.MODE_SELECT) {
+				DrawableND dr = euclidianView.getDrawableND(geo);
+				if (dr != null) {
+					return getStylebarPositionForDrawable(
+							dr.getBoundsForStylebarPosition(),
+							!(dr instanceof DrawLine),
+							false,
+							true,
+							stylebarHeight,
+							stylebarWidth,
+							canvasRect);
+				}
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Position quick stylebar
+	 * @param offsetWidth - offset width of parent
+	 * @param offsetHeight - offset height of stylebar
+	 * @return new position of the stylebar
+	 */
+	public @Nullable GPoint getPositionForStyleBar(int offsetWidth, int offsetHeight) {
+		List<GeoElement> activeGeoList = createActiveGeoList();
+		if (!activeGeoList.contains(oldPosFor)) {
+			oldPosFor = null;
+			oldPos = null;
+		}
+		if (activeGeoList.isEmpty()) {
+			return null;
+		}
+		if (app.getMode() == EuclidianConstants.MODE_SELECT) {
+			GPoint fromRectangle = setStylebarPositionBasedSelectionRectangle(offsetWidth, offsetHeight);
+			if (fromRectangle != null) {
+				return fromRectangle;
+			}
+		}
+
+		GPoint newPos = null, nextPos;
+
+		for (int i = 0; i < activeGeoList.size(); i++) {
+			GeoElement geo = activeGeoList.get(i);
+			// it's possible if a non visible geo is in activeGeoList, if we
+			// duplicate a geo, which has descendant.
+			if (geo.isEuclidianVisible()) {
+				nextPos = getPositionFromGeo(geo, offsetWidth, offsetHeight);
+
+				if (newPos == null) {
+					newPos = nextPos;
+				} else if (nextPos != null) {
+					newPos.x = Math.max(newPos.x, nextPos.x);
+					newPos.y = Math.min(newPos.y, nextPos.y);
+				}
+			}
+		}
+
+		// function selected, but dyn stylebar hit
+		// do not calculate the new position of stylebar
+		// set the current position instead
+		if (newPos == null && oldPos != null) {
+			newPos = oldPos;
+		}
+
+		return newPos;
+	}
+
+	private GPoint getPositionFromGeo(GeoElement geo, int offsetWidth, int offsetHeight) {
+		GPoint nextPos;
+
+		if (geo instanceof GeoFunction || (geo.isGeoLine() && !geo.isGeoSegment())) {
+			if (euclidianView.getHits().contains(geo)) {
+				nextPos = calculatePosition(null, false, true, offsetWidth, offsetHeight);
+				oldPos = nextPos;
+				oldPosFor = geo;
+			} else {
+				nextPos = null;
+			}
+		} else {
+			nextPos = fromDrawable(geo, offsetWidth, offsetHeight);
+		}
+
+		return nextPos;
+	}
+
+	private GPoint setStylebarPositionBasedSelectionRectangle(int offsetWidth, int offsetHeight) {
+		GRectangle selectionRectangle = app.getActiveEuclidianView().getSelectionRectangle();
+		if (selectionRectangle != null) {
+			GPoint newPos =
+					calculatePosition(selectionRectangle, false, false, offsetWidth, offsetHeight);
+			if (newPos != null) {
+				return newPos;
+			}
+		}
+		return null;
+	}
+
+	private GPoint fromDrawable(GeoElement geo, int offsetWidth, int offsetHeight) {
+		DrawableND dr = euclidianView.getDrawableND(geo);
+		List<GeoElement> activeGeoList = createActiveGeoList();
+		if (dr != null
+				&& (!(geo instanceof AbsoluteScreenLocateable
+								&& ((AbsoluteScreenLocateable) geo).isFurniture())
+						|| geo instanceof GeoEmbed)) {
+			return calculatePosition(
+					dr.getBoundsForStylebarPosition(),
+					dr instanceof DrawPoint && activeGeoList.size() < 2,
+					false,
+					offsetWidth,
+					offsetHeight);
+		}
+		return null;
+	}
+
+	private GPoint calculatePosition(
+			GRectangle2D gRectangle2D,
+			boolean isPoint,
+			boolean isFunction,
+			int offsetWidth,
+			int offsetHeight) {
+		double left, top;
+		boolean functionOrLine = isFunction || gRectangle2D == null;
+		if (functionOrLine) {
+			GPoint mouseLoc = euclidianView.getEuclidianController().getMouseLoc();
+			if (mouseLoc == null) {
+				return null;
+			}
+			top = mouseLoc.y + 10;
+		} else {
+			top = gRectangle2D.getMinY() - offsetHeight - MARGIN_FROM_BOUNDING_BOX;
+		}
+
+		// if there is no enough place on the top of bounding box, dynamic
+		// stylebar will be visible at the bottom of bounding box,
+		// stylebar of points will be bottom of point if possible.
+		if (top < 0 && gRectangle2D != null) {
+			top = gRectangle2D.getMaxY() + MARGIN_FROM_BOUNDING_BOX;
+			if (app.isWhiteboardActive()) {
+				top += ROTATION_HANDLER_SIZE + MARGIN_FROM_BOUNDING_BOX;
+			}
+		}
+
+		int maxtop = euclidianView.getHeight() - offsetHeight - 5;
+		if (top > maxtop) {
+			if (isPoint) {
+				// if there is no enough place under the point
+				// put the dyn. stylebar above the point
+				top = gRectangle2D.getMinY() - offsetHeight - 10;
+			} else {
+				top = maxtop;
+			}
+		}
+
+		// get left position
+		if (functionOrLine) {
+			left = euclidianView.getEuclidianController().getMouseLoc().x + 10;
+		} else {
+			left = gRectangle2D.getMinX() + gRectangle2D.getWidth() / 2 - (double) offsetWidth / 2;
+		}
+
+		if (left < MARGIN_FROM_EDGE) {
+			left = MARGIN_FROM_EDGE;
+		}
+		int maxLeft = euclidianView.getWidth() - offsetWidth;
+		if (left > maxLeft) {
+			left = maxLeft - MARGIN_FROM_EDGE;
+		}
+
+		return new GPoint((int) left, (int) top);
+	}
+}

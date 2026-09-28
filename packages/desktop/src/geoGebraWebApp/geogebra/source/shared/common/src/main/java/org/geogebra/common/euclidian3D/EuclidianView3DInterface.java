@@ -1,0 +1,404 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.euclidian3D;
+
+import org.geogebra.common.euclidian.EuclidianViewInterfaceCommon;
+import org.geogebra.common.geogebra3D.euclidian3D.openGL.Renderer;
+import org.geogebra.common.geogebra3D.euclidian3D.printer3D.Format;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.kernel.matrix.CoordMatrix4x4;
+import org.geogebra.common.kernel.matrix.Coords;
+import org.geogebra.common.main.settings.EuclidianSettings3D;
+import org.jspecify.annotations.NonNull;
+
+/**
+ * Interface for 3D view.
+ * @author mathieu
+ */
+public interface EuclidianView3DInterface extends EuclidianViewInterfaceCommon {
+	/** default scene x-coord of origin */
+	double XZERO_SCENE_STANDARD = 0;
+	/** default scene y-coord of origin */
+	double YZERO_SCENE_STANDARD = 0;
+	/** default scene z-coord of origin */
+	double ZZERO_SCENE_STANDARD = -1.5;
+
+	double ANGLE_ROT_OZ = -60;
+	double ANGLE_ROT_XOY = 20;
+
+	int PROJECTION_ORTHOGRAPHIC = 0;
+	int PROJECTION_PERSPECTIVE = 1;
+	int PROJECTION_GLASSES = 2;
+	int PROJECTION_OBLIQUE = 3;
+
+	/** Listener notified when the 3D view state changes in a way that may affect settings views. */
+	interface Listener {
+		/** Called after the AR ratio visibility has changed. */
+		void arRatioVisibilityUpdated();
+	}
+
+	/**
+	 * Registers a listener for 3D view state changes.
+	 * @param listener listener to add
+	 */
+	void addListener(@NonNull Listener listener);
+
+	/**
+	 * Unregisters a 3D view state listener.
+	 * @param listener listener to remove
+	 */
+	void removeListener(@NonNull Listener listener);
+
+	/**
+	 * rotate to default
+	 */
+	void setDefaultRotAnimation();
+
+	/**
+	 * start a rotation animation to be in the vector direction
+	 *
+	 * @param vn
+	 *            vector direction
+	 * @param checkSameValues
+	 *            say if we check already in vector direction, to swap the view
+	 * @param animated
+	 *            say if rotation will be animated
+	 */
+	void setRotAnimation(Coords vn, boolean checkSameValues, boolean animated);
+
+	/**
+	 * start a rotation animation to set angle around Oz axis
+	 *
+	 * @param rotOz
+	 *            angle around Oz
+	 * @param checkSameValues
+	 *            say if we check already in vector direction, to swap the view
+	 * @param animated
+	 *            say if rotation will be animated
+	 */
+	void setRotAnimation(double rotOz, boolean checkSameValues, boolean animated);
+
+	/**
+	 * start a rotation animation to be in the vector direction, shortest way
+	 *
+	 * @param v
+	 *            vector direction
+	 * @param animated
+	 *            say if rotation will be animated
+	 */
+	void setClosestRotAnimation(Coords v, boolean animated);
+
+	/**
+	 * @return Returns the zmin.
+	 */
+	double getZmin();
+
+	/**
+	 * @return Returns the zmax.
+	 */
+	double getZmax();
+
+	/**
+	 * sets the use of the clipping cube
+	 *
+	 * @param flag
+	 *            flag
+	 */
+	void setUseClippingCube(boolean flag);
+
+	/**
+	 * sets if the clipping cube is shown
+	 *
+	 * @param flag
+	 *            flag
+	 */
+	void setShowClippingCube(boolean flag);
+
+	/**
+	 * sets the reduction of the clipping box
+	 *
+	 * @param value
+	 *            reduction
+	 */
+	void setClippingReduction(int value);
+
+	/**
+	 *
+	 * @param projection
+	 *            projection type
+	 */
+	void setProjection(int projection);
+
+	/**
+	 * sets the visibility of xOy plane grid
+	 *
+	 * @param flag
+	 *            flag
+	 * @return whether it changed
+	 */
+	boolean setShowGrid(boolean flag);
+
+	/**
+	 * sets the visibility of xOy plane
+	 *
+	 * @param flag
+	 *            flag
+	 */
+	void setShowPlane(boolean flag);
+
+	/**
+	 * sets the visibility of xOy plane plate
+	 *
+	 * @param flag
+	 *            flag
+	 */
+	void setShowPlate(boolean flag);
+
+	/**
+	 * sets the rotation matrix
+	 *
+	 * @param theta
+	 *            argument
+	 * @param phi
+	 *            alt angle
+	 */
+	void setRotXYinDegrees(double theta, double phi);
+
+	/**
+	 * sets the origin
+	 *
+	 * @param x
+	 *            x coord
+	 * @param y
+	 *            y coord
+	 * @param z
+	 *            z coord
+	 */
+	void setZeroFromXML(double x, double y, double z);
+
+	/**
+	 * set Matrix for view3D
+	 */
+	void updateMatrix();
+
+	/**
+	 * tells the view it has changed
+	 */
+	void setViewChanged();
+
+	/**
+	 * tell the view that it has to be updated
+	 *
+	 */
+	void setWaitForUpdate();
+
+	/**
+	 * set if y axis is up (and not z axis)
+	 *
+	 * @param flag
+	 *            flag
+	 */
+	void setYAxisVertical(boolean flag);
+
+	/**
+	 * @return screen z-coord of origin
+	 */
+	double getZZero();
+
+	/**
+	 * update all drawables
+	 */
+	void updateAllDrawables();
+
+	/**
+	 *
+	 * @return eye position
+	 */
+	Coords getEyePosition();
+
+	/**
+	 * @param boundsMin2
+	 *            real world view min
+	 * @param boundsMax2
+	 *            real world view max
+	 */
+	void zoomRW(Coords boundsMin2, Coords boundsMax2);
+
+	/**
+	 * set export will be done on next 3D frame
+	 *
+	 * @param format - export format
+	 * @param showDialog - true if export dialog should be shown, export directly otherwise
+	 */
+	void setExport3D(Format format, boolean showDialog);
+
+	/**
+	 * zoom y &amp; z axes ratio regarding x axis
+	 *
+	 * @param zoomFactorY
+	 *            y:x ratio
+	 * @param zoomFactorZ
+	 *            z:x ratio
+	 */
+	void zoomAxesRatio(double zoomFactorY, double zoomFactorZ);
+
+	/**
+	 * Keeps the zoom, but makes sure the bound objects are free. This is necessary
+	 * in File &gt; New because there might have been dynamic xmin bounds
+	 */
+	void resetXYMinMaxObjects();
+
+	/**
+	 * set the settings to standard view position, orientation, scaling
+	 */
+	void setSettingsToStandardView();
+
+	/**
+	 *
+	 * @return renderer
+	 */
+	Renderer getRenderer();
+
+	/**
+	 * @param xZero x-coordinate of the origin
+	 */
+	void setXZero(double xZero);
+
+	/**
+	 * @param yZero y-coordinate of the origin
+	 */
+	void setYZero(double yZero);
+
+	/**
+	 * @param zZero z-coordinate of the origin
+	 */
+	void setZZero(double zZero);
+
+	/**
+	 * @param da
+	 *            angle change
+	 */
+	void shiftRotAboutZ(double da);
+
+	/**
+	 * @param db
+	 *            angle change
+	 */
+	void shiftRotAboutY(double db);
+
+	/**
+	 * @return angle around Oz
+	 */
+	double getAngleA();
+
+	/**
+	 * @return xOy plane tilting
+	 */
+	double getAngleB();
+
+	/**
+	 * show focus on geo (if something needs to be done)
+	 *
+	 * @param geo
+	 *            geo
+	 */
+	void showFocusOn(GeoElement geo);
+
+	/**
+	 * set 3D cursor visibility
+	 *
+	 * @param flag
+	 *            flag
+	 */
+	void setCursor3DVisible(boolean flag);
+
+	/**
+	 * return the matrix : screen coords -&gt; scene coords.
+	 *
+	 * @return the matrix : screen coords -&gt; scene coords.
+	 */
+	CoordMatrix4x4 getToSceneMatrix();
+
+	/**
+	 * @return screen : real world z-coord ratio
+	 */
+	double getZscale();
+
+	/**
+	 * @return whether XR display is active
+	 */
+	boolean isXREnabled();
+
+	/**
+	 * @return ARRatio is shown
+	 */
+	boolean isARRatioShown();
+
+	/**
+	 * set ARRatio is shown
+	 */
+	void setARRatioIsShown(boolean value);
+
+	/**
+	 * set AR Ratio Metric System
+	 */
+	void setARRatioMetricSystem(int value);
+
+	/**
+	 * @return AR Ratio Metric System
+	 */
+	int getARRatioMetricSystem();
+
+	/**
+	 * @param value
+	 *            whether to use grayscale for glasses
+	 */
+	void setGlassesGrayScaled(boolean value);
+
+	/**
+	 * @return projection, e.g. {@link EuclidianView3DInterface#PROJECTION_GLASSES}
+	 */
+	int getProjection();
+
+	/**
+	 * @return whether to use greyscale
+	 */
+	boolean isGlassesGrayScaled();
+
+	@Override
+	EuclidianSettings3D getSettings();
+
+	/**
+	 * @return oblique projection factor
+	 */
+	double getProjectionObliqueFactor();
+
+	/**
+	 * @param value whether to remove green channel
+	 */
+	void setGlassesShutDownGreen(boolean value);
+
+	/**
+	 * @return whether to remove green channel
+	 */
+	boolean isGlassesShutDownGreen();
+
+	/**
+	 * @return oblique projection angle
+	 */
+	double getProjectionObliqueAngle();
+}

@@ -1,0 +1,266 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.geogebra3D.kernel3D.commands;
+
+import org.geogebra.common.geogebra3D.kernel3D.geos.GeoPlane3D;
+import org.geogebra.common.geogebra3D.kernel3D.geos.GeoQuadric3D;
+import org.geogebra.common.geogebra3D.kernel3D.geos.GeoVec4D;
+import org.geogebra.common.geogebra3D.kernel3D.implicit3D.AlgoDependentImplicitSurface;
+import org.geogebra.common.geogebra3D.kernel3D.implicit3D.GeoImplicitSurface;
+import org.geogebra.common.kernel.Kernel;
+import org.geogebra.common.kernel.algos.AlgoElement;
+import org.geogebra.common.kernel.arithmetic.Equation;
+import org.geogebra.common.kernel.arithmetic.ExpressionNode;
+import org.geogebra.common.kernel.arithmetic.ExpressionValue;
+import org.geogebra.common.kernel.arithmetic.MyVecNDNode;
+import org.geogebra.common.kernel.arithmetic.Polynomial;
+import org.geogebra.common.kernel.arithmetic3D.Vector3DValue;
+import org.geogebra.common.kernel.commands.AlgebraProcessor;
+import org.geogebra.common.kernel.commands.CommandDispatcher;
+import org.geogebra.common.kernel.commands.EvalInfo;
+import org.geogebra.common.kernel.commands.ParametricProcessor;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.kernel.kernelND.GeoQuadricNDConstants;
+import org.geogebra.common.main.PreviewFeature;
+import org.geogebra.common.util.StringUtil;
+
+/**
+ * 3D expression processor
+ *
+ */
+public class AlgebraProcessor3D extends AlgebraProcessor {
+
+	/**
+	 * @param kernel
+	 *            kernel
+	 * @param cd
+	 *            command dispatcher
+	 */
+	public AlgebraProcessor3D(Kernel kernel, CommandDispatcher cd) {
+		super(kernel, cd);
+	}
+
+	@Override
+	protected GeoElement[] processPointVector3D(
+			ExpressionNode n, ExpressionValue evaluate, EvalInfo evalInfo) {
+		String label = n.getLabel();
+
+		double[] p = ((Vector3DValue) evaluate).getPointAsDouble();
+		int mode = ((Vector3DValue) evaluate).getToStringMode();
+		if (evaluate instanceof MyVecNDNode) {
+			// force vector for CAS vectors GGB-1492
+			if (((MyVecNDNode) evaluate).isCASVector()) {
+				n.setForceVector();
+			}
+		}
+		GeoElement[] ret = new GeoElement[1];
+		boolean isIndependent = n.isConstant();
+
+		// make vector, if label begins with lowercase character
+		if (label != null) {
+			if (!(n.isForcedPoint() || n.isForcedVector())) { // may be set by
+				// MyXMLHandler
+				if (StringUtil.isLowerCase(label.charAt(0))) {
+					n.setForceVector();
+				} else {
+					n.setForcePoint();
+				}
+			}
+		}
+
+		boolean isVector = n.shouldEvaluateToGeoVector();
+
+		if (isIndependent) {
+			// get coords
+			double x = p[0];
+			double y = p[1];
+			double z = p[2];
+			if (isVector) {
+				ret[0] = kernel.getManager3D().vector3D(x, y, z);
+			} else {
+				ret[0] = kernel.getManager3D().point3D(x, y, z, false).toGeoElement();
+			}
+			ret[0].setDefinition(n);
+
+		} else {
+			if (isVector) {
+				ret[0] = kernel.getManager3D().dependentVector3D(n);
+			} else {
+				ret[0] = kernel.getManager3D().dependentPoint3D(n, true).toGeoElement();
+			}
+		}
+
+		if (mode == Kernel.COORD_SPHERICAL) {
+			((GeoVec4D) ret[0]).setMode(Kernel.COORD_SPHERICAL);
+		}
+		if (evalInfo.isLabelOutput()) {
+			ret[0].setLabel(label);
+		}
+		return ret;
+	}
+
+	@Override
+	protected void checkNoTermsInZ(Equation equ) {
+
+		if (equ.containsZ()) {
+			switch (equ.degree()) {
+				case 0:
+				case 1:
+					equ.setForcePlane();
+					break;
+				case 2:
+					equ.setForceQuadric();
+					break;
+				default:
+					equ.setForceSurface();
+					break;
+			}
+		}
+	}
+
+	@Override
+	protected GeoElement[] processLine(Equation equ, ExpressionNode def, EvalInfo info) {
+
+		if (equ.isForcedLine() && !equ.containsFreeFunctionVariable("z")) {
+			return super.processLine(equ, def, info);
+		}
+
+		// check if the equ is forced plane or if the 3D view has the focus
+		if (equ.isForcedPlane() || kernel.isParsingFor3D()) {
+			return processPlane(equ, def, info);
+		}
+		return super.processLine(equ, def, info);
+	}
+
+	@Override
+	public GeoElement[] processConic(Equation equ, ExpressionNode def, EvalInfo info) {
+
+		if (equ.isForcedConic()) {
+			return super.processConic(equ, def, info);
+		}
+
+		// check if the equ is forced plane or if the 3D view has the focus
+		if (equ.isForcedQuadric()
+				|| kernel.getApplication().getActiveEuclidianView().isEuclidianView3D()) {
+			return processQuadric(equ, def, info);
+		}
+		return super.processConic(equ, def, info);
+	}
+
+	private GeoElement[] processQuadric(Equation equ, ExpressionNode def, EvalInfo info) {
+
+		GeoQuadric3D quadric;
+		String label = equ.getLabel();
+		Polynomial lhs = equ.getNormalForm();
+
+		boolean isIndependent = lhs.isConstant(info);
+
+		if (isIndependent) {
+			double xx = lhs.getCoeffValue("xx");
+			double yy = lhs.getCoeffValue("yy");
+			double zz = lhs.getCoeffValue("zz");
+			double c = lhs.getCoeffValue("");
+			double xy = lhs.getCoeffValue("xy") / 2;
+			double xz = lhs.getCoeffValue("xz") / 2;
+			double yz = lhs.getCoeffValue("yz") / 2;
+			double x = lhs.getCoeffValue("x") / 2;
+			double y = lhs.getCoeffValue("y") / 2;
+			double z = lhs.getCoeffValue("z") / 2;
+
+			double[] coeffs = {xx, yy, zz, c, xy, xz, yz, x, y, z};
+			quadric = new GeoQuadric3D(cons, coeffs);
+		} else {
+			quadric = (GeoQuadric3D) kernel.getManager3D().dependentQuadric3D(equ);
+		}
+		quadric.setDefinition(def);
+		quadric.showUndefinedInAlgebraView(true);
+		if (quadric.getType() == GeoQuadricNDConstants.QUADRIC_SPHERE) {
+			quadric.setToSpecificForm();
+		} else {
+			quadric.setToImplicitForm();
+		}
+		setEquationLabelAndVisualStyle(quadric, label, info);
+		return new GeoElement[] {quadric};
+	}
+
+	/**
+	 * @param equ
+	 *            equation to process
+	 * @return resulting plane
+	 */
+	private GeoElement[] processPlane(Equation equ, ExpressionNode def, EvalInfo info) {
+		GeoPlane3D plane;
+		String label = equ.getLabel();
+		Polynomial lhs = equ.getNormalForm();
+
+		boolean isIndependent = lhs.isConstant(info);
+
+		if (isIndependent) {
+			// get coefficients
+			double a = lhs.getCoeffValue("x");
+			double b = lhs.getCoeffValue("y");
+			double c = lhs.getCoeffValue("z");
+			double d = lhs.getCoeffValue("");
+			plane = (GeoPlane3D) kernel.getManager3D().plane3D(a, b, c, d);
+			plane.setDefinition(def);
+		} else {
+			plane = (GeoPlane3D) kernel.getManager3D().dependentPlane3D(equ);
+		}
+		setEquationLabelAndVisualStyle(plane, label, info);
+
+		return array(plane);
+	}
+
+	@Override
+	public ParametricProcessor getParamProcessor() {
+		if (this.paramProcessor == null) {
+			paramProcessor = new ParametricProcessor3D(kernel, this);
+		}
+		return paramProcessor;
+	}
+
+	@Override
+	public GeoElement[] processImplicitPoly(
+			Equation equ, ExpressionNode definition, EvalInfo info, ExpressionValue evaluatedDef) {
+
+		if (PreviewFeature.isAvailable(PreviewFeature.IMPLICIT_SURFACES)
+				|| equ.isForcedQuadric()
+				|| equ.isForcedPlane()) {
+			Polynomial lhs = equ.getNormalForm();
+			boolean isIndependent =
+					!equ.isFunctionDependent() && lhs.isConstant(info) && !equ.hasVariableDegree();
+
+			if (kernel.getApplication().getActiveEuclidianView().isEuclidianView3D()
+					|| equ.isForcedSurface()
+					|| equ.isForcedPlane()
+					|| equ.isForcedQuadric()) {
+				GeoElement geo;
+				if (isIndependent) {
+					geo = new GeoImplicitSurface(cons, equ);
+				} else {
+					AlgoElement surfaceAlgo = new AlgoDependentImplicitSurface(cons, equ);
+					geo = surfaceAlgo.getOutput(0);
+				}
+				geo.setDefinition(definition);
+				geo.setLabel(equ.getLabel());
+				return new GeoElement[] {geo};
+			}
+		}
+
+		return super.processImplicitPoly(equ, definition, info, evaluatedDef);
+	}
+}

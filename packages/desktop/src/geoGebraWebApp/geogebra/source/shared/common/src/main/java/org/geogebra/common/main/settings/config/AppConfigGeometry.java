@@ -1,0 +1,362 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.main.settings.config;
+
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
+import org.geogebra.common.GeoGebraConstants;
+import org.geogebra.common.gui.toolcategorization.AppType;
+import org.geogebra.common.io.layout.DockPanelData;
+import org.geogebra.common.io.layout.Perspective;
+import org.geogebra.common.kernel.Kernel;
+import org.geogebra.common.kernel.StringTemplate;
+import org.geogebra.common.kernel.arithmetic.SymbolicMode;
+import org.geogebra.common.kernel.arithmetic.filter.ExpressionFilter;
+import org.geogebra.common.kernel.commands.filter.CommandArgumentFilter;
+import org.geogebra.common.kernel.commands.selector.CommandFilter;
+import org.geogebra.common.kernel.commands.selector.CommandFilterFactory;
+import org.geogebra.common.kernel.geos.properties.FillType;
+import org.geogebra.common.kernel.parser.function.ParserFunctionsFactory;
+import org.geogebra.common.main.App;
+import org.geogebra.common.main.AppKeyboardType;
+import org.geogebra.common.main.settings.AlgebraStyle;
+import org.geogebra.common.main.settings.LabelVisibility;
+import org.geogebra.common.main.settings.config.equationforms.EquationBehaviourGeometry;
+import org.geogebra.common.main.settings.updater.GeometrySettingsUpdater;
+import org.geogebra.common.main.settings.updater.SettingsUpdater;
+import org.geogebra.common.main.syntax.suggestionfilter.SyntaxFilter;
+import org.geogebra.common.properties.factory.DefaultPropertiesFactory;
+import org.geogebra.common.properties.factory.PropertiesFactory;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+
+/**
+ * App-specific behaviors of Geometry app
+ * @author Zbynek
+ */
+public class AppConfigGeometry extends AbstractAppConfig {
+
+	public AppConfigGeometry() {
+		super(GeoGebraConstants.GEOMETRY_APPCODE);
+	}
+
+	public AppConfigGeometry(String appCode) {
+		super(appCode, GeoGebraConstants.GEOMETRY_APPCODE);
+	}
+
+	@Override
+	public void adjust(DockPanelData dp) {
+		if (dp.getViewId() == App.VIEW_ALGEBRA) {
+			dp.setLocation("3");
+			dp.setTabId(DockPanelData.TabIds.TOOLS);
+		} else if (dp.getViewId() == App.VIEW_EUCLIDIAN) {
+			dp.setLocation("1");
+		}
+	}
+
+	@Override
+	public String getAVTitle() {
+		return "Algebra";
+	}
+
+	@Override
+	public void initializeEquationBehaviour() {
+		equationBehaviour = new EquationBehaviourGeometry();
+	}
+
+	@Override
+	public String getAppTitle() {
+		return "Perspective.Geometry";
+	}
+
+	@Override
+	public String getAppName() {
+		return "GeoGebraGeometry";
+	}
+
+	@Override
+	public String getAppNameShort() {
+		return "Geometry";
+	}
+
+	@Override
+	public String getAppNameWithoutCalc() {
+		return "Geometry";
+	}
+
+	@Override
+	public String getTutorialKey() {
+		return getSubAppCode() == null ? "TutorialGeometry" : "TutorialSuite";
+	}
+
+	@Override
+	public boolean showKeyboardHelpButton() {
+		return true;
+	}
+
+	@Override
+	public boolean hasPreviewPoints() {
+		return true;
+	}
+
+	@Override
+	public boolean allowsSuggestions() {
+		return true;
+	}
+
+	@Override
+	public boolean shouldKeepRatioEuclidian() {
+		return true;
+	}
+
+	@Override
+	public int getDefaultPrintDecimals() {
+		return Kernel.STANDARD_PRINT_DECIMALS_GEOMETRY;
+	}
+
+	@Override
+	public boolean hasSingleEuclidianViewWhichIs3D() {
+		return false;
+	}
+
+	@Override
+	public int[] getDecimalPlaces() {
+		return new int[] {0, 1, 2, 3, 4, 5, 10, 15};
+	}
+
+	@Override
+	public int[] getSignificantFigures() {
+		return new int[] {3, 5, 10, 15};
+	}
+
+	@Override
+	public boolean isGreekAngleLabels() {
+		return true;
+	}
+
+	@Override
+	public boolean isCASEnabled() {
+		return getSubAppCode() != null;
+	}
+
+	@Override
+	public String getPreferencesKey() {
+		return "_geometry";
+	}
+
+	@Override
+	public String getForcedPerspective() {
+		return Perspective.GEOMETRY + "";
+	}
+
+	@Override
+	public boolean isEnableStructures() {
+		return true;
+	}
+
+	@Override
+	public AppType getToolbarType() {
+		return AppType.GEOMETRY_CALC;
+	}
+
+	@Override
+	public boolean showGridOnFileNew() {
+		return false;
+	}
+
+	@Override
+	public boolean showAxesOnFileNew() {
+		return false;
+	}
+
+	@Override
+	public boolean hasTableView() {
+		return false;
+	}
+
+	@Override
+	public SymbolicMode getSymbolicMode() {
+		return SymbolicMode.NONE;
+	}
+
+	@Override
+	public boolean hasSlidersInAV() {
+		return true;
+	}
+
+	@Override
+	public boolean hasAutomaticLabels() {
+		return true;
+	}
+
+	@Override
+	public boolean hasAutomaticSliders() {
+		return true;
+	}
+
+	@Override
+	public @NonNull AlgebraStyle getDefaultAlgebraStyle() {
+		return AlgebraStyle.DESCRIPTION;
+	}
+
+	@Override
+	public String getDefaultSearchTag() {
+		return "ft.phone-2d";
+	}
+
+	@Override
+	public LabelVisibility getDefaultLabelingStyle() {
+		return LabelVisibility.PointsOnly;
+	}
+
+	@Override
+	public CommandFilter createCommandFilter() {
+		return CommandFilterFactory.createNoCasCommandFilter();
+	}
+
+	@Override
+	public CommandArgumentFilter getCommandArgumentFilter() {
+		return null;
+	}
+
+	@Override
+	public @Nullable SyntaxFilter newCommandSyntaxFilter() {
+		return null;
+	}
+
+	@Override
+	public boolean showToolsPanel() {
+		return true;
+	}
+
+	@Override
+	public SettingsUpdater createSettingsUpdater() {
+		return new GeometrySettingsUpdater();
+	}
+
+	@Override
+	public GeoGebraConstants.Version getVersion() {
+		return GeoGebraConstants.Version.GEOMETRY;
+	}
+
+	@Override
+	public boolean hasExam() {
+		return true;
+	}
+
+	@Override
+	public String getExamMenuItemText() {
+		return "";
+	}
+
+	@Override
+	public Set<FillType> getAvailableFillTypes() {
+		return new HashSet<>(Arrays.asList(FillType.values()));
+	}
+
+	@Override
+	public boolean isObjectDraggingRestricted() {
+		return false;
+	}
+
+	@Override
+	public int getDefaultAngleUnit() {
+		return Kernel.ANGLE_DEGREE;
+	}
+
+	@Override
+	public boolean isAngleUnitSettingEnabled() {
+		return true;
+	}
+
+	@Override
+	public boolean isCoordinatesObjectSettingEnabled() {
+		return true;
+	}
+
+	@Override
+	public PropertiesFactory createPropertiesFactory() {
+		return new DefaultPropertiesFactory();
+	}
+
+	@Override
+	public boolean disableTraceCM() {
+		return false;
+	}
+
+	@Override
+	public AppKeyboardType getKeyboardType() {
+		return AppKeyboardType.GEOMETRY;
+	}
+
+	@Override
+	public ExpressionFilter createExpressionFilter() {
+		return null;
+	}
+
+	@Override
+	public ParserFunctionsFactory createParserFunctionsFactory() {
+		return ParserFunctionsFactory.createParserFunctionsFactory();
+	}
+
+	@Override
+	public boolean shouldHideEquations() {
+		return false;
+	}
+
+	@Override
+	public boolean hasAnsButtonInAv() {
+		return true;
+	}
+
+	@Override
+	public StringTemplate getOutputStringTemplate() {
+		return StringTemplate.latexTemplate;
+	}
+
+	@Override
+	public boolean sendKeyboardEvents() {
+		return false;
+	}
+
+	@Override
+	public boolean hasLabelForDescription() {
+		return true;
+	}
+
+	@Override
+	public boolean hasEuclidianView() {
+		return true;
+	}
+
+	@Override
+	public boolean hasDistributionView() {
+		return false;
+	}
+
+	@Override
+	public boolean hasAlgebraView() {
+		return true;
+	}
+
+	@Override
+	public boolean hasSpreadsheetView() {
+		return false;
+	}
+}

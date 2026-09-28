@@ -1,0 +1,83 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.web.full.gui.toolbar.mow.toolbox.components;
+
+import java.util.List;
+
+import org.geogebra.common.euclidian.EuclidianConstants;
+import org.geogebra.common.gui.SetLabels;
+import org.geogebra.web.full.gui.contextmenu.CalculatorSubMenu;
+import org.geogebra.web.full.gui.menubar.MainMenu;
+import org.geogebra.web.full.gui.toolbar.mow.toolbox.ToolModeIconSpecAdapter;
+import org.geogebra.web.full.javax.swing.GPopupMenuW;
+import org.geogebra.web.html5.gui.menu.AriaMenuItem;
+import org.geogebra.web.html5.gui.view.IconSpec;
+import org.geogebra.web.html5.main.AppW;
+import org.geogebra.web.html5.main.toolbox.ToolboxIcon;
+
+public final class CategoryMenuPopup extends GPopupMenuW implements SetLabels {
+	private final List<Integer> tools;
+
+	/**
+	 * Menu popup for MOW toolbox
+	 * @param appW - application
+	 * @param tools - list of tools
+	 */
+	public CategoryMenuPopup(AppW appW, List<Integer> tools) {
+		super(appW);
+		this.tools = tools;
+		getPopupPanel().setAutoHideEnabled(false);
+		buildGui();
+	}
+
+	private void buildGui() {
+		clearItems();
+
+		for (Integer mode : tools) {
+			if (mode == EuclidianConstants.MODE_CALCULATOR) {
+				addItem(new AriaMenuItem(
+						"GeoGebra",
+						getApp().getToolboxIconResource().getImageResource(ToolboxIcon.GEOGEBRA),
+						new CalculatorSubMenu(getApp())));
+			} else {
+				addItem(mode);
+			}
+		}
+	}
+
+	private void addItem(int mode) {
+		String text = getTextForMode(mode);
+		ToolboxIcon toolboxIcon = ToolModeIconSpecAdapter.getToolboxIcon(mode);
+		IconSpec iconSpec = getApp().getToolboxIconResource().getImageResource(toolboxIcon);
+
+		AriaMenuItem item = MainMenu.getMenuBarItem(iconSpec, text, () -> getApp().setMode(mode));
+		addItem(item);
+	}
+
+	/**
+	 * @param mode - tool mode
+	 * @return tool name
+	 */
+	public String getTextForMode(int mode) {
+		return getApp().getToolName(mode);
+	}
+
+	@Override
+	public void setLabels() {
+		buildGui();
+	}
+}

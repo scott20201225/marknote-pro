@@ -1,0 +1,624 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.web.full.gui.util;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import org.geogebra.common.awt.GColor;
+import org.geogebra.common.gui.dialog.handler.ColorChangeHandler;
+import org.geogebra.common.gui.dialog.options.model.ColorObjectModel;
+import org.geogebra.common.main.App;
+import org.geogebra.common.main.Localization;
+import org.geogebra.common.util.StringUtil;
+import org.geogebra.ggbjdk.java.awt.geom.Dimension;
+import org.geogebra.web.awt.GFontW;
+import org.geogebra.web.awt.JLMContext2D;
+import org.geogebra.web.awt.JLMContextHelper;
+import org.geogebra.web.full.gui.dialog.CustomColorDialog;
+import org.geogebra.web.full.gui.dialog.CustomColorDialog.ICustomColor;
+import org.geogebra.web.full.gui.images.AppResources;
+import org.geogebra.web.html5.gui.util.Dom;
+import org.geogebra.web.html5.gui.view.button.StandardButton;
+import org.geogebra.web.shared.components.dialog.DialogData;
+import org.gwtproject.canvas.client.Canvas;
+import org.gwtproject.user.client.ui.FlowPanel;
+import org.gwtproject.user.client.ui.Label;
+import org.gwtproject.user.client.ui.SimplePanel;
+import org.jspecify.annotations.NonNull;
+
+import elemental2.dom.HTMLImageElement;
+import jsinterop.base.Js;
+
+public final class ColorChooserW extends FlowPanel implements ICustomColor {
+	private static final int PREVIEW_HEIGHT = 40;
+	private static final int PREVIEW_WIDTH = 100;
+	private static final int MARGIN_TOP = 20;
+	private static final int MARGIN_X = 5;
+	public static final GColor NO_TILE_COLOR = GColor.newColor(255, 255, 255);
+	public static final GColor NORMAL_TILE_COLOR = GColor.newColorRGB(0);
+	public static final GColor EMPTY_TILE_COLOR = GColor.newColor(16, 16, 16);
+	public static final GColor SELECTED_TILE_COLOR = GColor.newColor(255, 0, 0);
+	public static final String TITLE_FONT = "14pt " + GFontW.GEOGEBRA_FONT_SANSERIF;
+	public static final int TITLE_HEIGHT = 20;
+	public static final GColor FOCUS_COLOR = GColor.newColor(0, 0, 255);
+	public static final double BORDER_WIDTH = 2;
+	public static final double PREVIEW_BORDER_WIDTH = 14;
+	Canvas canvas;
+	JLMContext2D ctx;
+	Dimension colorIconSize;
+	int padding;
+	List<ColorTable> tables;
+	private final ColorTable leftTable;
+	private final ColorTable mainTable;
+	private final RecentTable recentTable;
+	private final ColorTable otherTable;
+	private ColorTable lastSource;
+	private GColor selectedColor;
+	ColorChangeHandler changeHandler;
+	PreviewPanel previewPanel;
+	private final StandardButton btnCustomColor;
+	App app;
+
+	private class ColorTable {
+		private final int left;
+		private final int top;
+		private int tableOffsetY;
+		private final int maxCol;
+		private final int maxRow;
+		private String title;
+		private final List<GColor> palette;
+		private int width;
+		private int height;
+		private final HTMLImageElement checkMark;
+		private final int checkX;
+		private final int checkY;
+		private boolean checkNeeded;
+		private double titleOffsetX;
+		private double titleOffsetY;
+		private int currentCol;
+		private int currentRow;
+		private int selectedCol;
+		private int selectedRow;
+		private int capacity;
+
+		private ColorTable(int x, int y, int col, int row, List<Integer> data) {
+			left = x;
+			top = y;
+			tableOffsetY = 0;
+			maxCol = col;
+			maxRow = row;
+			setCapacity(maxCol * maxRow);
+			this.title = "";
+			palette = new ArrayList<>();
+			currentCol = -1;
+			currentRow = -1;
+			setSelectedCol(-1);
+			setSelectedRow(-1);
+			if (data != null) {
+				for (Integer code : data) {
+					palette.add(GColor.newColorRGB(code));
+				}
+			}
+
+			setWidth(col * colorIconSize.getWidth() + padding);
+			setHeight(row * colorIconSize.getHeight() + padding);
+
+			checkMark = Dom.createImage();
+			checkMark.src = AppResources.INSTANCE.color_chooser_check().getSafeUri().asString();
+
+			final int checkSize = 12;
+			checkX = (colorIconSize.getWidth() - checkSize) / 2 + padding;
+			checkY = (colorIconSize.getHeight() - checkSize) / 2 + padding;
+			checkNeeded = false;
+		}
+
+		protected void drawTitle() {
+			if (title.isEmpty()) {
+				return;
+			}
+			ctx.save();
+			ctx.translate(left, top);
+
+			ctx.setTextBaseline("top");
+			ctx.clearRect(0, 0, width, TITLE_HEIGHT);
+			ctx.setFont(TITLE_FONT);
+			ctx.fillText(title, titleOffsetX, titleOffsetY);
+			ctx.restore();
+
+			tableOffsetY = TITLE_HEIGHT;
+		}
+
+		void draw() {
+			drawTitle();
+			ctx.save();
+			ctx.scale(1, 1);
+
+			ctx.translate(left, top);
+			for (int row = 0; row < maxRow; row++) {
+				for (int col = 0; col < maxCol; col++) {
+					drawColorTile(col, row);
+				}
+			}
+
+			// ctx.strokeRect(0, 0, getWidth(), getHeight());
+			ctx.restore();
+		}
+
+		private void drawColorTile(int col, int row) {
+			int h = colorIconSize.getHeight();
+			int w = colorIconSize.getWidth();
+
+			final int x = col * w;
+			final int y = tableOffsetY + (row * h);
+
+			GColor borderColor = NORMAL_TILE_COLOR;
+			ctx.setLineWidth(1);
+
+			GColor fillColor = getColorFromPalette(col, row);
+
+			boolean emptyTile = fillColor == null;
+			if (emptyTile) {
+				fillColor = NO_TILE_COLOR;
+			}
+
+			ctx.setFillStyle(StringUtil.toHtmlColor(fillColor));
+
+			ctx.fillRect(x + padding, y + padding, w - padding, h - padding);
+
+			if (emptyTile) {
+				borderColor = EMPTY_TILE_COLOR;
+			} else if (col == currentCol && row == currentRow) {
+				ctx.setLineWidth(BORDER_WIDTH);
+				borderColor = FOCUS_COLOR;
+			} else if (col == getSelectedCol() && row == getSelectedRow()) {
+				ctx.setLineWidth(BORDER_WIDTH);
+				if (checkNeeded) {
+					ctx.drawImage(checkMark, x + checkX, y + checkY);
+					borderColor = SELECTED_TILE_COLOR;
+				}
+			}
+
+			ctx.setStrokeStyle(StringUtil.toHtmlColor(borderColor));
+			ctx.strokeRect(x + padding, y + padding, w - padding, h - padding);
+		}
+
+		void setFocus(int x, int y) {
+
+			if (x < left
+					|| x > (left + width)
+					|| y < top + tableOffsetY
+					|| y > (top + height + tableOffsetY)) {
+				focusLost();
+				return;
+			}
+
+			int col = (x - left) / colorIconSize.getWidth();
+			int row = (y - top - tableOffsetY) / colorIconSize.getHeight();
+			if (isValidCol(col) && isValidRow(row)) {
+				currentCol = col;
+				currentRow = row;
+				draw();
+			}
+		}
+
+		private void focusLost() {
+			currentCol = -1;
+			currentRow = -1;
+			draw();
+		}
+
+		void unselect() {
+			setSelectedCol(-1);
+			setSelectedRow(-1);
+			currentCol = -1;
+			currentRow = -1;
+		}
+
+		void select(int col, int row) {
+			setSelectedCol(col);
+			setSelectedRow(row);
+			currentCol = col;
+			currentRow = row;
+
+			draw();
+		}
+
+		void selectByColor(GColor color) {
+			unselect();
+			for (int idx = 0; idx < palette.size(); idx++) {
+				if (colorEquals(color, palette.get(idx))) {
+					select(idx % maxCol, idx / maxCol);
+					break;
+				}
+			}
+		}
+
+		private boolean isValidCol(int col) {
+			return col >= 0 && col < maxCol;
+		}
+
+		private boolean isValidRow(int row) {
+			return row >= 0 && row < maxRow;
+		}
+
+		int getIndex(int col, int row) {
+			return row * maxCol + col;
+		}
+
+		private GColor getColorFromPalette(int col, int row) {
+			int idx = getIndex(col, row);
+			return palette != null && idx < palette.size() ? palette.get(idx) : null;
+		}
+
+		void setHeight(int height) {
+			this.height = height;
+		}
+
+		int getWidth() {
+			return width;
+		}
+
+		void setWidth(int width) {
+			this.width = width;
+		}
+
+		GColor getSelectedColor() {
+			if (!(isValidCol(currentCol) && isValidRow(currentRow))) {
+				setSelectedCol(-1);
+				setSelectedRow(-1);
+				return null;
+			}
+			setSelectedCol(currentCol);
+			setSelectedRow(currentRow);
+
+			return getColorFromPalette(currentCol, currentRow);
+		}
+
+		void injectColor(GColor color) {
+			palette.add(0, color);
+			draw();
+			if (palette.size() > getCapacity()) {
+				palette.remove(getCapacity());
+			}
+		}
+
+		void setCheckNeeded(boolean checkNeeded) {
+			this.checkNeeded = checkNeeded;
+		}
+
+		void setTitle(String title, int offsetX, int offsetY) {
+			this.title = title;
+			titleOffsetX = offsetX;
+			titleOffsetY = offsetY;
+		}
+
+		int getSelectedCol() {
+			return selectedCol;
+		}
+
+		void setSelectedCol(int selectedCol) {
+			this.selectedCol = selectedCol;
+		}
+
+		int getSelectedRow() {
+			return selectedRow;
+		}
+
+		void setSelectedRow(int selectedRow) {
+			this.selectedRow = selectedRow;
+		}
+
+		int getCapacity() {
+			return capacity;
+		}
+
+		void setCapacity(int capacity) {
+			this.capacity = capacity;
+		}
+	}
+
+	private final class RecentTable extends ColorTable {
+		private final List<Entry> entries;
+
+		private class Entry {
+			ColorTable table;
+			int col;
+			int row;
+
+			Entry(ColorTable table) {
+				this.table = table;
+				this.col = table.getSelectedCol();
+				this.row = table.getSelectedRow();
+			}
+		}
+
+		private RecentTable(int x, int y, int col, int row) {
+			super(x, y, col, row, null);
+			entries = new ArrayList<>();
+		}
+
+		private void injectFrom(ColorTable source) {
+			injectColor(source.getSelectedColor());
+			entries.add(0, new Entry(source));
+			if (entries.size() > getCapacity()) {
+				entries.remove(getCapacity());
+			}
+		}
+
+		private void apply() {
+			Entry entry = entries.get(getIndex(getSelectedCol(), getSelectedRow()));
+			entry.table.select(entry.col, entry.row);
+		}
+	}
+
+	private final class PreviewPanel extends FlowPanel {
+		private final Label titleLabel;
+		Canvas previewCanvas;
+		private final JLMContext2D previewCtx;
+		private final Label rgb;
+
+		private PreviewPanel() {
+			FlowPanel m = new FlowPanel();
+			m.setStyleName("colorChooserPreview");
+			titleLabel = new Label();
+			previewCanvas = Canvas.createIfSupported();
+			previewCanvas.setSize(PREVIEW_WIDTH + "px", PREVIEW_HEIGHT + "px");
+			previewCanvas.setCoordinateSpaceHeight(PREVIEW_HEIGHT);
+			previewCanvas.setCoordinateSpaceWidth(PREVIEW_WIDTH);
+			previewCtx = Js.uncheckedCast(previewCanvas.getContext2d());
+			rgb = new Label();
+			add(titleLabel);
+			m.add(previewCanvas);
+			m.add(rgb);
+			add(m);
+		}
+
+		void update() {
+			GColor color = getSelectedColor();
+			if (color == null) {
+				return;
+			}
+			rgb.setText(ColorObjectModel.getColorAsString(app, color));
+			previewCtx.clearRect(0, 0, PREVIEW_WIDTH, PREVIEW_HEIGHT);
+
+			String htmlColor = StringUtil.toHtmlColor(color);
+
+			previewCtx.setFillStyle(htmlColor);
+
+			previewCtx.globalAlpha = 1;
+			previewCtx.fillRect(0, 0, PREVIEW_WIDTH, PREVIEW_HEIGHT);
+
+			previewCtx.setStrokeStyle(htmlColor);
+
+			previewCtx.globalAlpha = 1.0;
+			previewCtx.setLineWidth(PREVIEW_BORDER_WIDTH);
+			previewCtx.strokeRect(0, 0, PREVIEW_WIDTH, PREVIEW_HEIGHT);
+		}
+
+		void setLabels(String previewTitle) {
+			titleLabel.setText(previewTitle);
+		}
+	}
+
+	/**
+	 * @param app
+	 *            application
+	 * @param width
+	 *            width
+	 * @param height
+	 *            height
+	 * @param colorIconSize
+	 *            swatch size
+	 * @param padding
+	 *            padding
+	 */
+	public ColorChooserW(final App app, int width, int height, Dimension colorIconSize, int padding) {
+		this.app = app;
+
+		canvas = Canvas.createIfSupported();
+		canvas.setSize(width + "px", height + "px");
+		canvas.setCoordinateSpaceHeight(height);
+		canvas.setCoordinateSpaceWidth(width);
+		ctx = JLMContextHelper.as(canvas.getContext2d());
+
+		changeHandler = null;
+		lastSource = null;
+
+		this.colorIconSize = colorIconSize;
+		this.padding = padding;
+
+		int x = MARGIN_X;
+		leftTable = new ColorTable(
+				x,
+				MARGIN_TOP,
+				2,
+				8,
+				Arrays.asList(
+						0xffffff, 0xff0000, 0xc0c0c0, 0xff7f00, 0xa0a0a0, 0xbfff00, 0x808080, 0x00ff00,
+						0x606060, 0x00ffff, 0x404040, 0x0000ff, 0x202020, 0x7f00ff, 0x000000, 0xff00ff));
+
+		x += leftTable.getWidth() + 5;
+
+		mainTable = new ColorTable(
+				x,
+				20,
+				8,
+				8,
+				Arrays.asList(
+						0xffc0cb, 0xff99cc, 0xff6699, 0xff3366, 0xff0033, 0xcc0000, 0x800000, 0x330000,
+						0xffefd5, 0xffcc33, 0xff9900, 0xff9933, 0xff6600, 0xcc6600, 0x996600, 0x333300,
+						0xffeacd, 0xffff99, 0xffff66, 0xffd700, 0xffcc66, 0xcc9900, 0x993300, 0x663300,
+						0xccffcc, 0xccff66, 0x99ff00, 0x99cc00, 0x66cc00, 0x669900, 0x339900, 0x006633,
+						0xd0f0c0, 0x99ff99, 0x66ff00, 0x33ff00, 0x00cc00, 0x009900, 0x006400, 0x003300,
+						0xafeeee, 0x99ffff, 0x33ffcc, 0x0099ff, 0x0099cc, 0x006699, 0x0033cc, 0x003399,
+						0xbcd4e6, 0x99ccff, 0x66ccff, 0x6699ff, 0x7d7dff, 0x3333ff, 0x0000cc, 0x000033,
+						0xccccff, 0xcc99ff, 0xcc66ff, 0x9966ff, 0x6600cc, 0x800080, 0x4b0082, 0x330033,
+						0xe0b0ff, 0xff99ff, 0xff9999, 0xff33cc, 0xdc143c, 0xcc0066, 0x990033, 0x660099));
+
+		x += mainTable.getWidth() + 5;
+
+		recentTable = new RecentTable(x, 22, 6, 4);
+		otherTable = new ColorTable(x, 140, 6, 2, null);
+
+		leftTable.setCheckNeeded(true);
+		mainTable.setCheckNeeded(true);
+		otherTable.setCheckNeeded(true);
+
+		previewPanel = new PreviewPanel();
+		previewPanel.setStyleName("optionsPanel");
+
+		tables = Arrays.asList(leftTable, mainTable, recentTable, otherTable);
+
+		setLabels();
+
+		btnCustomColor = new StandardButton("+");
+		btnCustomColor.setStyleName("CustomColorButton");
+		btnCustomColor.addFastClickHandler(event -> showCustomColorDialog());
+		SimplePanel sp = new SimplePanel(btnCustomColor);
+		sp.addStyleName("CustomColorButtonParent");
+
+		add(canvas);
+		add(sp);
+		add(previewPanel);
+
+		canvas.addClickHandler(event -> {
+			for (ColorTable table : tables) {
+				GColor color = table.getSelectedColor();
+				if (color != null) {
+					colorChanged(table, color);
+					break;
+				}
+			}
+		});
+
+		canvas.addMouseMoveHandler(event -> {
+			int mx = event.getRelativeX(canvas.getElement());
+			int my = event.getRelativeY(canvas.getElement());
+			for (ColorTable table : tables) {
+				table.setFocus(mx, my);
+			}
+		});
+	}
+
+	private void colorChanged(@NonNull ColorTable source, GColor color) {
+		selectedColor = color;
+		previewPanel.update();
+
+		if (lastSource != null && lastSource != source && lastSource != recentTable) {
+			lastSource.unselect();
+		}
+
+		lastSource = source;
+
+		if (source != recentTable) {
+			recentTable.injectFrom(source);
+		} else {
+			recentTable.apply();
+		}
+
+		if (changeHandler != null) {
+			changeHandler.onColorChange(getSelectedColor());
+		}
+
+		source.draw();
+	}
+
+	/**
+	 * @param color1
+	 *            first color
+	 * @param color2
+	 *            second color
+	 * @return colors are the same but not null
+	 */
+	public static boolean colorEquals(GColor color1, GColor color2) {
+		return color1 != null
+				&& color2 != null
+				&& color1.getRed() == color2.getRed()
+				&& color1.getGreen() == color2.getGreen()
+				&& color1.getBlue() == color2.getBlue();
+	}
+
+	private void updateTables() {
+		for (ColorTable table : tables) {
+			table.draw();
+		}
+	}
+
+	/**
+	 * Update the UI.
+	 */
+	public void update() {
+		updateTables();
+		previewPanel.update();
+	}
+
+	@Override
+	public GColor getSelectedColor() {
+		return selectedColor;
+	}
+
+	/**
+	 * @param color
+	 *            selected color
+	 */
+	public void setSelectedColor(GColor color) {
+		selectedColor = color;
+		leftTable.selectByColor(color);
+		mainTable.selectByColor(color);
+		otherTable.selectByColor(color);
+	}
+
+	/**
+	 * Update localization
+	 */
+	public void setLabels() {
+		Localization loc = app.getLocalization();
+		leftTable.setTitle("", 0, 0);
+		recentTable.setTitle(loc.getMenu("RecentColor"), 0, 0);
+		otherTable.setTitle(loc.getMenu("Other"), 0, 0);
+		previewPanel.setLabels(loc.getMenu("Preview"));
+		update();
+	}
+
+	/**
+	 * Set color change handler.
+	 * @param handler color change handler
+	 */
+	public void addChangeHandler(ColorChangeHandler handler) {
+		this.changeHandler = handler;
+	}
+
+	/**
+	 * Show custom color dialog.
+	 */
+	void showCustomColorDialog() {
+		app.setWaitCursor();
+		DialogData data = new DialogData("ChooseColor", "Cancel", "OK");
+		CustomColorDialog dialog = new CustomColorDialog(app, data, this);
+		dialog.show(selectedColor != null ? selectedColor : GColor.BLACK);
+		app.setDefaultCursor();
+	}
+
+	@Override
+	public void onCustomColor(GColor color) {
+		otherTable.injectColor(color);
+		otherTable.select(0, 0);
+		colorChanged(otherTable, color);
+	}
+}

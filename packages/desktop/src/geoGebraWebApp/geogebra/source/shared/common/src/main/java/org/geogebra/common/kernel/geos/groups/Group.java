@@ -1,0 +1,159 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.kernel.geos.groups;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.stream.Stream;
+
+import org.geogebra.common.io.XMLStringBuilder;
+import org.geogebra.common.kernel.geos.GeoElement;
+
+/**
+ *  model for group of selected geos
+ */
+public class Group {
+
+	public static final Comparator<GeoElement> orderComparator =
+			Comparator.comparingDouble(GeoElement::getOrdering);
+
+	private GeoElement lead;
+	private ArrayList<GeoElement> geosGroup = new ArrayList<>();
+	private boolean isFixed;
+
+	/**
+	 * Constructor for group
+	 * @param selectedGeos - geos selected for group
+	 */
+	public Group(ArrayList<GeoElement> selectedGeos) {
+		setFixed(selectedGeos.get(0).isLocked());
+		for (GeoElement geo : selectedGeos) {
+			geosGroup.add(geo);
+			geo.setParentGroup(this);
+		}
+
+		updateLead();
+	}
+
+	/**
+	 * @return the geo with the lowest ordering in this group
+	 */
+	public GeoElement getMinByOrder() {
+		return Collections.min(geosGroup, orderComparator);
+	}
+
+	/**
+	 * @return the geo with the highest ordering in this group
+	 */
+	public GeoElement getMaxByOrder() {
+		return Collections.max(geosGroup, orderComparator);
+	}
+
+	private void updateLead() {
+		lead = geosGroup.get(0);
+		for (GeoElement geo : geosGroup) {
+			if (geo.getConstructionIndex() < lead.getConstructionIndex()) {
+				lead = geo;
+			}
+		}
+	}
+
+	/**
+	 * @return list of geos in this group
+	 */
+	public ArrayList<GeoElement> getGroupedGeos() {
+		return geosGroup;
+	}
+
+	/**
+	 * @return stream of elements of this group.
+	 */
+	public Stream<GeoElement> stream() {
+		return geosGroup.stream();
+	}
+
+	/**
+	 * set as group the geos given
+	 * @param geos list of selected geos
+	 */
+	public void setGroupedGeos(ArrayList<GeoElement> geos) {
+		geosGroup = geos;
+		updateLead();
+	}
+
+	/**
+	 * @param fixed whether the group is fixed
+	 */
+	public void setFixed(boolean fixed) {
+		isFixed = fixed;
+	}
+
+	public boolean isGroupFixed() {
+		return isFixed;
+	}
+
+	/**
+	 * xml representation of group for saving/loading
+	 * @param sb - xml string builder
+	 */
+	public void getXML(XMLStringBuilder sb) {
+		sb.startTag("group", 0);
+		for (int i = 0; i < getGroupedGeos().size(); i++) {
+			sb.attr("l" + i, getGroupedGeos().get(i).getLabelSimple());
+		}
+		sb.endTag();
+	}
+
+	/**
+	 * The lead element of the group.
+	 * Used to skip the others when tabbing through geos.
+	 *
+	 * @return lead element of the group
+	 */
+	public GeoElement getLead() {
+		return lead;
+	}
+
+	/**
+	 *
+	 * @param geo to query
+	 * @return if geo is the lead element of the group.
+	 */
+	public boolean isLead(GeoElement geo) {
+		return geo == lead;
+	}
+
+	/**
+	 *
+	 * @param geos to check
+	 * @return if all geos belongs to the same group
+	 */
+	public static boolean isInSameGroup(ArrayList<GeoElement> geos) {
+		if (geos.size() == 0 || !geos.get(0).hasGroup()) {
+			return false;
+		}
+
+		Group group = geos.get(0).getParentGroup();
+		for (int i = 1; i < geos.size(); i++) {
+			if (geos.get(i).getParentGroup() != group) {
+				return false;
+			}
+		}
+		return true;
+	}
+}

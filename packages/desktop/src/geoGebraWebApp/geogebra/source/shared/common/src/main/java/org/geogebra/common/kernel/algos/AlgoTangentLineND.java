@@ -1,0 +1,206 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.kernel.algos;
+
+import org.geogebra.common.euclidian.EuclidianConstants;
+import org.geogebra.common.kernel.Construction;
+import org.geogebra.common.kernel.StringTemplate;
+import org.geogebra.common.kernel.commands.Commands;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.kernel.geos.GeoLine;
+import org.geogebra.common.kernel.geos.LabelManager;
+import org.geogebra.common.kernel.kernelND.AlgoIntersectND;
+import org.geogebra.common.kernel.kernelND.GeoConicND;
+import org.geogebra.common.kernel.kernelND.GeoLineND;
+import org.geogebra.common.kernel.kernelND.GeoPointND;
+
+/**
+ *
+ * @author Markus
+ */
+public abstract class AlgoTangentLineND extends AlgoElement implements TangentAlgo {
+
+	protected GeoLineND g; // input
+	protected GeoConicND c; // input
+	protected GeoLineND[] tangents; // output
+
+	protected GeoLine diameter;
+	protected AlgoIntersectND algoIntersect;
+	protected GeoPointND[] tangentPoints;
+
+	/** Creates new AlgoTangentLine */
+	protected AlgoTangentLineND(Construction cons, String label, GeoLineND g, GeoConicND c) {
+		this(cons, g, c);
+		LabelManager.setLabels(label, getOutput());
+	}
+
+	/**
+	 * @param cons
+	 *            construction
+	 * @param labels
+	 *            output labels
+	 * @param g
+	 *            direction line
+	 * @param c
+	 *            conic
+	 */
+	public AlgoTangentLineND(Construction cons, String[] labels, GeoLineND g, GeoConicND c) {
+		this(cons, g, c);
+		LabelManager.setLabels(labels, getOutput());
+	}
+
+	@Override
+	public Commands getClassName() {
+		return Commands.Tangent;
+	}
+
+	@Override
+	public int getRelatedModeID() {
+		return EuclidianConstants.MODE_TANGENTS;
+	}
+
+	AlgoTangentLineND(Construction cons, GeoLineND g, GeoConicND c) {
+		super(cons);
+		this.g = g;
+		this.c = c;
+
+		initDiameterAndDirection();
+
+		setTangents();
+
+		setInputOutput(); // for AlgoElement
+
+		compute();
+	}
+
+	/**
+	 * init diameter and direction
+	 */
+	protected abstract void initDiameterAndDirection();
+
+	/**
+	 * set tangents
+	 */
+	protected abstract void setTangents();
+
+	// for AlgoElement
+	@Override
+	public void setInputOutput() {
+		input = new GeoElement[2];
+		input[0] = (GeoElement) g;
+		input[1] = c;
+
+		GeoElement[] out = new GeoElement[tangents.length];
+		for (int i = 0; i < tangents.length; i++) {
+			out[i] = (GeoElement) tangents[i];
+		}
+		super.setOutput(out);
+		setDependencies(); // done by AlgoElement
+	}
+
+	/**
+	 * @return resulting tangents
+	 */
+	public GeoLineND[] getTangents() {
+		return tangents;
+	}
+
+	GeoLineND getLine() {
+		return g;
+	}
+
+	GeoConicND getConic() {
+		return c;
+	}
+
+	@Override
+	public GeoPointND getTangentPoint(GeoElement conic, GeoLine line) {
+		if (conic != c) {
+			return null;
+		}
+
+		if (line == tangents[0]) {
+			return tangentPoints[0];
+		} else if (line == tangents[1]) {
+			return tangentPoints[1];
+		} else {
+			return null;
+		}
+	}
+
+	/**
+	 *
+	 * @return true if tangents will be defined
+	 */
+	protected boolean checkUndefined() {
+		return c.isDegenerate();
+	}
+
+	// calc tangents parallel to g
+	@Override
+	public final void compute() {
+		// degenerates should not have any tangents
+		if (checkUndefined()) {
+			tangents[0].setUndefined();
+			tangents[1].setUndefined();
+			return;
+		}
+
+		// update diameter line
+		updateDiameterLine();
+
+		// intersect diameter line with conic -> tangentPoints
+		algoIntersect.update();
+
+		if (c.isParabola()) {
+			updateTangentParabola();
+			return;
+		}
+
+		// calc tangents through tangentPoints
+		for (int i = 0; i < tangents.length; i++) {
+			updateTangent(i);
+		}
+	}
+
+	/**
+	 * update diameter line
+	 */
+	protected abstract void updateDiameterLine();
+
+	/**
+	 * update i-th tangent
+	 *
+	 * @param index
+	 *            index
+	 */
+	protected abstract void updateTangent(int index);
+
+	protected abstract void updateTangentParabola();
+
+	@Override
+	public final String toString(StringTemplate tpl) {
+		// Michael Borcherds 2008-03-30
+		// simplified to allow better Chinese translation
+		return getLoc()
+				.getPlainDefault(
+						"TangentToAParallelToB",
+						"Tangent to %0 parallel to %1",
+						c.getLabel(tpl),
+						g.getLabel(tpl));
+	}
+}

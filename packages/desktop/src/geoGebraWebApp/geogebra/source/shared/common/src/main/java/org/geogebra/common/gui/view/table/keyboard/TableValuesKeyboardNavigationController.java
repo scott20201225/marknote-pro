@@ -1,0 +1,420 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.gui.view.table.keyboard;
+
+import org.geogebra.common.gui.view.table.TableValues;
+import org.geogebra.common.gui.view.table.TableValuesCell;
+import org.geogebra.common.gui.view.table.TableValuesModel;
+import org.geogebra.common.kernel.geos.GeoList;
+import org.geogebra.common.kernel.kernelND.GeoEvaluatable;
+import org.geogebra.common.ownership.NonOwning;
+import org.geogebra.common.util.StringUtil;
+import org.jspecify.annotations.NonNull;
+
+import com.google.j2objc.annotations.Weak;
+
+/**
+ * A controller for keyboard and touch navigation in the "table of values" view.
+ * <p>
+ * This controller accepts key press events, and figures out which cell to select in response,
+ * if any. Besides keyboard events, it also supports touch navigation (i.e., tapping on cells
+ * to change the selection) by means of {@link #select(int, int)}.
+ * </p>
+ * <p>
+ * Initially, no cell is selected - clients need to call {@link #select(int, int)} with a
+ * valid row and column index (e.g., 0, 0) before keyboard events will result in a change in
+ * selection.
+ * </p>
+ * <p>
+ * Note: All row and column indexes are 0-based.
+ * </p>
+ * @apiNote This controller *requires* its delegate for correct operation. If the delegate is not
+ * set, no exception is thrown, but the controller will not do anything useful.
+ * @implNote Currently, the code assumes that the first column is the "x" column,
+ * and that it is always present (it may be empty, though).
+ */
+public final class TableValuesKeyboardNavigationController {
+
+	/**
+	 * Keys handled by navigation controller.
+	 */
+	public enum Key {
+		ARROW_LEFT,
+		ARROW_RIGHT,
+		ARROW_UP,
+		ARROW_DOWN,
+		RETURN,
+		CONTEXT_MENU,
+		COPY;
+	}
+
+	@NonOwning
+	@Weak
+	public TableValuesKeyboardNavigationControllerDelegate delegate;
+
+	@NonOwning
+	private final @NonNull TableValues tableValuesView;
+
+	@NonOwning
+	private final @NonNull TableValuesModel tableValuesModel;
+
+	private boolean isReadonly = false;
+	private int selectedRow = -1;
+	private int selectedColumn = -1;
+	private boolean addedPlaceholderColumn = false;
+	private boolean addedPlaceholderRow = false;
+
+	/**
+	 * Create a new instance.
+	 * @param tableValuesView The table of values view.
+	 * @param delegate The delegate (can be null here, but must be supplied through
+	 * the public writable field before use).
+	 */
+	public TableValuesKeyboardNavigationController(
+			@NonNull TableValues tableValuesView,
+			TableValuesKeyboardNavigationControllerDelegate delegate) {
+		this.tableValuesView = tableValuesView;
+		this.tableValuesModel = tableValuesView.getTableValuesModel();
+		this.delegate = delegate;
+	}
+
+	/**
+	 * Prevent editing while keeping existing cells available for keyboard navigation.
+	 */
+	public void setReadonly(boolean readonly) {
+		isReadonly = readonly;
+	}
+
+	/**
+	 * @return The selected row index, or -1 if no cell is selected.
+	 */
+	public int getSelectedRow() {
+		return selectedRow;
+	}
+
+	/**
+	 * @return The selected column index, or -1 if no cell is selected.
+	 */
+	public int getSelectedColumn() {
+		return selectedColumn;
+	}
+
+	/**
+	 * @return The overall number of "navigable" (reachable) rows in the table, including an
+	 * additional placeholder row for appending new data if the table values model has editable
+	 * columns.
+	 * @apiNote This is not the same as {@link TableValuesModel#getRowCount()}, because that
+	 * does not include the placeholder row.
+	 */
+	public int getNavigableRowsCount() {
+		return tableValuesModel.getRowCount()
+				+ (!isReadonly && tableValuesModel.hasEditableColumns() ? 1 : 0);
+	}
+
+	/**
+	 * @return The overall number of "navigable" (reachable) columns in the table, including an
+	 * additional placeholder column for inputting new data if the table values model allows
+	 * adding columns (@see {@link TableValuesModel#allowsAddingColumns()}.
+	 * @apiNote This is not the same as {@link TableValuesModel#getColumnCount()}, because that
+	 * does not include the placeholder column.
+	 */
+	public int getNavigableColumnsCount() {
+		return tableValuesModel.getColumnCount()
+				+ (!isReadonly && tableValuesModel.allowsAddingColumns() ? 1 : 0);
+	}
+
+	/**
+	 * @param column column index
+	 * @return True if the column at index is editable
+	 * (see {@link TableValuesModel#isColumnEditable(int)}) or is a placeholder column (which
+	 * is also editable). This information can be used to display non-editable columns in a
+	 * different color in the UI, for example.
+	 */
+	public boolean isColumnEditable(int column) {
+		return !isReadonly
+				&& (tableValuesModel.isColumnEditable(column)
+						|| (tableValuesModel.allowsAddingColumns()
+								&& column == tableValuesModel.getColumnCount()));
+	}
+
+	/**
+	 * Select a cell.
+	 * @param row the row index to select, or -1 to clear any selection.
+	 * @param column the column index to select, or -1 to clear any selection.
+	 */
+	public void select(int row, int column) {
+		boolean changed = selectedRow != row || selectedColumn != column;
+		if (!changed) {
+			if (delegate != null && selectedRow != -1 && selectedColumn != -1) {
+				// notify delegate so it can re-focus the selected cell after a
+				// potential reload (e.g., after receiving a datasetChanged event)
+				delegate.refocusCell(selectedRow, selectedColumn);
+			}
+			return;
+		}
+
+		// the following commit may delete the selected column, requiring the target column
+		// to be decremented (shifted left) by 1
+		boolean selectedColumnIsLeftOfColumn = selectedColumn != -1 && selectedColumn < column;
+		int columnCountBeforeCommit = tableValuesModel.getColumnCount();
+		commitPendingChanges();
+		boolean columnDeleted = tableValuesModel.getColumnCount() < columnCountBeforeCommit;
+
+		int previouslySelectedRow = selectedRow;
+		int previouslySelectedColumn = selectedColumn;
+		selectedRow = row;
+		selectedColumn = columnDeleted && selectedColumnIsLeftOfColumn ? column - 1 : column;
+
+		if (selectedColumn >= tableValuesModel.getColumnCount()) {
+			if (tableValuesModel.allowsAddingColumns() && !addedPlaceholderColumn) {
+				addedPlaceholderColumn = true;
+				selectedColumn = tableValuesModel.getColumnCount();
+			}
+		} else if (selectedRow >= tableValuesModel.getRowCount()) {
+			if (isColumnEditable(selectedColumn) && !addedPlaceholderRow) {
+				addedPlaceholderRow = true;
+				selectedRow = tableValuesModel.getRowCount();
+			}
+		}
+		if (!isCellNavigable(selectedRow, selectedColumn)) {
+			selectedRow = -1;
+			selectedColumn = -1;
+		}
+		if (delegate != null) {
+			if (selectedRow >= 0 && selectedColumn >= 0) {
+				if (previouslySelectedRow >= 0 && previouslySelectedColumn >= 0) {
+					delegate.unfocusCell(previouslySelectedRow, previouslySelectedColumn, true);
+				}
+				delegate.focusCell(selectedRow, selectedColumn);
+			} else {
+				delegate.unfocusCell(previouslySelectedRow, previouslySelectedColumn, false);
+			}
+		}
+	}
+
+	/**
+	 * Clear (remove) any selection.
+	 *
+	 * Equivalent to {@code select(-1, -1)}.
+	 */
+	public void deselect() {
+		select(-1, -1);
+	}
+
+	/**
+	 * Handle a key event and inform the delegate about necessary actions.
+	 *
+	 * If no cell is currently selected, this method will have no effect.
+	 * @param key the key that was pressed.
+	 * @apiNote This class requires its delegate for correct operation. If the delegate is not
+	 * set when {@link #keyPressed(Key)} is called, nothing will happen.
+	 */
+	public void keyPressed(Key key) {
+		if (selectedRow < 0 || selectedColumn < 0) {
+			return; // no selection, no keyboard navigation
+		}
+		if (delegate == null) {
+			return; // see apiNote
+		}
+		switch (key) {
+			case ARROW_LEFT:
+				handleArrowLeft();
+				break;
+			case ARROW_RIGHT:
+				handleArrowRight();
+				break;
+			case ARROW_UP:
+				handleArrowUp();
+				break;
+			case ARROW_DOWN:
+				handleArrowDown();
+				break;
+			case RETURN:
+				handleArrowDown();
+				break;
+			case CONTEXT_MENU:
+				handleContextMenu();
+				break;
+			case COPY:
+				handleCopy();
+				break;
+		}
+	}
+
+	private void handleArrowLeft() {
+		if (isFirstColumn(selectedColumn)) {
+			// arrow left in first column -> no change in selection
+			return;
+		}
+		int previousColumn = findNavigableColumn(selectedColumn, -1);
+		if (previousColumn >= 0) {
+			select(selectedRow, previousColumn);
+		}
+	}
+
+	private void handleArrowRight() {
+		if (isEditingPlaceholderColumn()) {
+			if (isCellEmpty(selectedRow, selectedColumn)) {
+				select(selectedRow, selectedColumn);
+				return; // arrow right in empty placeholder column -> no change in selection
+			}
+			// arrow right in non-empty placeholder column
+			select(selectedRow, selectedColumn + 1);
+			return;
+		}
+		int nextColumn = findNavigableColumn(selectedColumn, 1);
+		if (nextColumn == -1) {
+			if (tableValuesModel.allowsAddingColumns() && !addedPlaceholderColumn) {
+				addedPlaceholderColumn = true;
+				nextColumn = getMaxColumnIndex() - 1;
+			} else {
+				nextColumn = selectedColumn;
+			}
+		}
+		select(selectedRow, nextColumn);
+	}
+
+	private void handleArrowUp() {
+		if (isFirstRow(selectedRow)) {
+			return;
+		}
+		select(selectedRow - 1, selectedColumn);
+	}
+
+	private void handleArrowDown() {
+		if (!isColumnEditable(selectedColumn) && selectedRow == tableValuesModel.getRowCount() - 1) {
+			return;
+		}
+		if (isEditingPlaceholderColumn()) {
+			if (selectedRow == tableValuesModel.getRowCount()
+					&& isCellEmpty(selectedRow, selectedColumn)) {
+				// arrow down in empty cell in placeholder column in last row
+				// -> no change in selection
+				select(selectedRow, selectedColumn);
+				return;
+			}
+		} else if (addedPlaceholderRow && isCellEmpty(selectedRow, selectedColumn)) {
+			// arrow down in empty placeholder row
+			// -> no change in selection
+			select(selectedRow, selectedColumn);
+			return;
+		}
+		select(selectedRow + 1, selectedColumn);
+	}
+
+	private void handleContextMenu() {
+		delegate.showContextMenu(selectedColumn);
+	}
+
+	private void handleCopy() {
+		delegate.copyContent(selectedRow, selectedColumn);
+	}
+
+	private boolean isFirstRow(int row) {
+		return row == 0;
+	}
+
+	private boolean isFirstColumn(int column) {
+		return column == 0;
+	}
+
+	private int findNavigableColumn(int column, int direction) {
+		for (int index = column + direction;
+				index >= 0 && index < getMaxColumnIndex();
+				index += direction) {
+			if (isCellNavigable(selectedRow, index)) {
+				return index;
+			}
+		}
+		return -1;
+	}
+
+	// note: the returned end index is exclusive!
+	private int getMaxRowIndex(int column) {
+		if (addedPlaceholderColumn && column == getMaxColumnIndex() - 1) {
+			return tableValuesModel.getRowCount() + 1;
+		}
+		if (!isColumnEditable(column)) {
+			return tableValuesModel.getRowCount();
+		}
+		return tableValuesModel.getRowCount() + (addedPlaceholderRow ? 1 : 0);
+	}
+
+	// note: the returned end index is exclusive!
+	private int getMaxColumnIndex() {
+		return tableValuesModel.getColumnCount() + (addedPlaceholderColumn ? 1 : 0);
+	}
+
+	private boolean isCellNavigable(int row, int column) {
+		if (row < 0 || column < 0 || column >= getMaxColumnIndex()) {
+			return false;
+		}
+		return row < getMaxRowIndex(column);
+	}
+
+	private boolean isCellEmpty(int row, int column) {
+		String cellContent = delegate.getCellEditorContent(row, column);
+		return cellContent == null || StringUtil.isTrimmedEmpty(cellContent);
+	}
+
+	private void commitPendingChanges() {
+		if (selectedRow == -1 || selectedColumn == -1) {
+			return;
+		}
+		if (isEditingPlaceholderColumn() || isColumnEditable(selectedColumn)) {
+			String cellContent = delegate.getCellEditorContent(selectedRow, selectedColumn);
+			if (cellContent == null) {
+				cellContent = "";
+			}
+			boolean cellContentChanged = cellContent.length() > 0;
+			if (selectedRow < tableValuesModel.getRowCount()
+					&& selectedColumn < tableValuesModel.getColumnCount()) {
+				TableValuesCell cell = tableValuesModel.getCellAt(selectedRow, selectedColumn);
+				cellContentChanged = cellContent.compareTo(cell.getInput()) != 0;
+			}
+			if (cellContentChanged) {
+				GeoEvaluatable evaluatable = tableValuesView.getEvaluatable(selectedColumn);
+				GeoList list = evaluatable instanceof GeoList ? (GeoList) evaluatable : null;
+				tableValuesView.getProcessor().processInput(cellContent, list, selectedRow);
+
+				if (selectedRow < tableValuesModel.getRowCount()
+						&& selectedColumn < tableValuesModel.getColumnCount()
+						&& tableValuesModel.getCellAt(selectedRow, selectedColumn).isErroneous()) {
+					delegate.invalidCellContentDetected(selectedRow, selectedColumn);
+				}
+			}
+		}
+		addedPlaceholderRow = false;
+		addedPlaceholderColumn = false;
+	}
+
+	// Test support
+
+	/**
+	 * @return whether the currently selected column is the placeholder column that was just added
+	 */
+	public boolean isEditingPlaceholderColumn() {
+		return addedPlaceholderColumn && selectedColumn == getMaxColumnIndex() - 1;
+	}
+
+	/**
+	 * @return whether the currently selected row is the placeholder row that was just added
+	 */
+	public boolean isEditingPlaceholderRow() {
+		return addedPlaceholderRow && selectedRow == getMaxRowIndex(selectedColumn) - 1;
+	}
+}

@@ -1,0 +1,115 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.web.html5.main;
+
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyObject;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import org.geogebra.common.io.layout.DockPanelData;
+import org.geogebra.web.full.gui.GuiManagerW;
+import org.geogebra.web.full.gui.toolbarpanel.AlgebraTab;
+import org.geogebra.web.full.gui.toolbarpanel.TabContainer;
+import org.geogebra.web.full.gui.toolbarpanel.ToolbarPanel;
+import org.geogebra.web.full.gui.toolbarpanel.ToolbarTab;
+import org.geogebra.web.full.gui.toolbarpanel.ToolsTab;
+import org.geogebra.web.full.gui.toolbarpanel.tableview.StickyProbabilityTable;
+import org.geogebra.web.full.gui.toolbarpanel.tableview.TableTab;
+import org.geogebra.web.full.main.AppWFull;
+import org.geogebra.web.html5.gui.util.FocusUtil;
+import org.geogebra.web.test.AppMocker;
+import org.geogebra.web.test.GgbMockitoTestRunner;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.stubbing.Answer;
+
+import com.google.gwtmockito.WithClassesToStub;
+
+@RunWith(GgbMockitoTestRunner.class)
+@WithClassesToStub(FocusUtil.class)
+public class GgbAPIWTest {
+
+	private GgbAPIW api;
+	private ToolbarPanel toolbarPanel;
+
+	@Before
+	public void setUp() {
+		AppWFull app = spy(AppMocker.mockGraphing());
+		toolbarPanel = spyToolbarPanel(app);
+		api = new GgbAPIW(app);
+	}
+
+	private ToolbarPanel spyToolbarPanel(AppWFull app) {
+		final GuiManagerW guiManager = spy(app.getGuiManager());
+		final ToolbarPanel toolbarPanel = spy(guiManager.getUnbundledToolbar());
+		spyTabs(toolbarPanel);
+		when(guiManager.getUnbundledToolbar()).thenReturn(toolbarPanel);
+		when(app.getGuiManager()).thenReturn(guiManager);
+		return toolbarPanel;
+	}
+
+	private void spyTabs(ToolbarPanel toolbarPanel) {
+		final AlgebraTab algebraTab = spy(new AlgebraTab(toolbarPanel));
+		final ToolsTab toolsTab = spy(new ToolsTab(toolbarPanel));
+		final TableTab tableTab = spy(new TableTab(toolbarPanel, StickyProbabilityTable::new));
+		when(toolbarPanel.getTab(anyObject())).thenAnswer((Answer<ToolbarTab>) invocation -> {
+			DockPanelData.TabIds tabID = invocation.getArgumentAt(0, DockPanelData.TabIds.class);
+			switch (tabID) {
+				case TABLE:
+					return tableTab;
+				case TOOLS:
+					return toolsTab;
+				case ALGEBRA:
+					return algebraTab;
+			}
+			return null;
+		});
+		final TabContainer tabContainer = spy(new TabContainer(toolbarPanel));
+		when(toolbarPanel.getTabContainer()).thenReturn(tabContainer);
+	}
+
+	@Test
+	public void setPerspective() {
+		api.setPerspective("-SP");
+		assertTrue(toolbarPanel.isClosed());
+		api.setPerspective("+SP");
+		assertTrue(toolbarPanel.isOpen());
+
+		api.setPerspective("-Algebra");
+		assertTrue(toolbarPanel.isClosed());
+		api.setPerspective("+Algebra");
+		assertTrue(toolbarPanel.isOpen());
+		verify(toolbarPanel, times(1)).openAlgebra(anyBoolean());
+
+		api.setPerspective("-Tools");
+		assertTrue(toolbarPanel.isClosed());
+		api.setPerspective("+Tools");
+		assertTrue(toolbarPanel.isOpen());
+		verify(toolbarPanel, times(1)).openTools(anyBoolean());
+
+		api.setPerspective("-Table");
+		assertTrue(toolbarPanel.isClosed());
+		api.setPerspective("+Table");
+		assertTrue(toolbarPanel.isOpen());
+		verify(toolbarPanel, times(1)).openTableView(anyBoolean());
+	}
+}

@@ -1,0 +1,74 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.kernel.arithmetic;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import java.util.List;
+
+import org.geogebra.common.BaseUnitTest;
+import org.geogebra.common.kernel.StringTemplate;
+import org.geogebra.common.kernel.geos.GeoConic;
+import org.geogebra.common.kernel.geos.GeoLine;
+import org.junit.jupiter.api.Test;
+
+class RequiresBracketsTest extends BaseUnitTest {
+
+	@Test
+	void testFunctionMinusFunction() {
+		add("f(x) = 3x - 1");
+		add("g(x) = -2x + 4");
+
+		add("eq1: f - g = 0");
+
+		((GeoLine) lookup("eq1")).setToUserForm();
+
+		assertEquals(
+				"3x - 1 - (-2 x + 4) = 0", lookup("eq1").toValueString(StringTemplate.algebraTemplate));
+	}
+
+	@Test
+	void testFunctionsTimesFunction() {
+		add("f(x) = 3x - 1");
+		add("g(x) = x");
+
+		add("eq0: f * f = 0");
+		add("eq1: f * g = 0");
+		add("eq2: g * f = 0");
+		add("eq3: g * g = 0");
+		List.of("eq0", "eq1", "eq2", "eq3")
+				.forEach(label -> ((GeoConic) lookup(label)).setToUserForm());
+
+		assertEquals(
+				"(3x - 1) (3x - 1) = 0", lookup("eq0").toValueString(StringTemplate.algebraTemplate));
+		assertEquals("(3x - 1) x = 0", lookup("eq1").toValueString(StringTemplate.algebraTemplate));
+		assertEquals("x (3x - 1) = 0", lookup("eq2").toValueString(StringTemplate.algebraTemplate));
+		assertEquals("x x = 0", lookup("eq3").toValueString(StringTemplate.algebraTemplate));
+	}
+
+	@Test
+	void testMultiplyListElements() {
+		add("a = {1, x + 2, 3, x + 4}");
+		add("b = {5, 10, x + 15, x + 20}");
+
+		add("l1 = a * b");
+
+		assertEquals(
+				"{5, (x + 2) * 10, 3 (x + 15), (x + 4) (x + 20)}",
+				lookup("l1").toValueString(StringTemplate.algebraTemplate));
+	}
+}

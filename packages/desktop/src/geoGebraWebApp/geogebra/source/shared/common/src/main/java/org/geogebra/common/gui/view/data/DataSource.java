@@ -1,0 +1,746 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.gui.view.data;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Supplier;
+
+import org.geogebra.common.gui.view.data.DataVariable.GroupType;
+import org.geogebra.common.gui.view.spreadsheet.CellRangeUtil;
+import org.geogebra.common.io.XMLStringBuilder;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.kernel.geos.GeoElementSpreadsheet;
+import org.geogebra.common.kernel.geos.GeoList;
+import org.geogebra.common.main.App;
+import org.geogebra.common.main.Localization;
+import org.geogebra.common.main.SelectionManager;
+import org.geogebra.common.main.SpreadsheetTableModel;
+import org.geogebra.common.plugin.GeoClass;
+import org.geogebra.common.spreadsheet.core.SpreadsheetCoords;
+import org.geogebra.common.spreadsheet.core.TabularRange;
+import org.geogebra.common.util.debug.Log;
+
+/**
+ * Manages a list of DataVariables for the DataAnalysisView.
+ *
+ * @author G. Sturr
+ *
+ */
+public class DataSource {
+
+	private final App app;
+	private final Localization loc;
+	private final SpreadsheetTableModel tableModel;
+	private final SelectionManager selection;
+
+	private final ArrayList<DataVariable> dataList;
+	private int selectedIndex;
+	private boolean frequencyFromColumn = false;
+	private final Supplier<List<TabularRange>> rangeSupplier;
+
+	// ====================================
+	// Constructor
+	// ====================================
+
+	/**
+	 * Data source that can take selected elements from the app (selected e.g. in graphics view)
+	 * or from a fallback supplier (canvas-based spreadsheet only selects content locally).
+	 * @param app
+	 *            application
+	 * @param rangeSupplier provides ranges selected in spreadsheet
+	 */
+	public DataSource(App app, Supplier<List<TabularRange>> rangeSupplier) {
+		this.app = app;
+		this.loc = app.getLocalization();
+		this.tableModel = app.getSpreadsheetTableModel();
+		this.selection = app.getSelectionManager();
+		dataList = new ArrayList<>();
+		selectedIndex = 0;
+		this.rangeSupplier = rangeSupplier;
+	}
+
+	// ====================================
+	// Add/Remove
+	// ====================================
+
+	/**
+	 * @return whether there is no data
+	 */
+	public boolean isEmpty() {
+		return dataList.isEmpty();
+	}
+
+	/**
+	 * Clear all data
+	 */
+	public void clearData() {
+		// TODO dereference geos from all DataItems
+		dataList.clear();
+	}
+
+	// ====================================
+	// Getters/Setters
+	// ====================================
+
+	public int getSelectedIndex() {
+		return selectedIndex;
+	}
+
+	public void setSelectedIndex(int selectedIndex) {
+		this.selectedIndex = selectedIndex;
+	}
+
+	/**
+	 * @return whether header is enabled
+	 */
+	public boolean enableHeader() {
+		return getSelectedDataVariable().enableHeader();
+	}
+
+	/**
+	 * Enable or disable header.
+	 * @param enableHeader whether to enable header
+	 */
+	public void setEnableHeader(boolean enableHeader) {
+		getSelectedDataVariable().setEnableHeader(enableHeader);
+	}
+
+	/**
+	 * @return whether the data is numeric
+	 */
+	public boolean isNumericData() {
+		if (getSelectedDataVariable() == null) {
+			return false;
+		}
+		return getSelectedDataVariable().getGeoClass() == GeoClass.NUMERIC;
+	}
+
+	/**
+	 * @return geo class of the selected data variable
+	 */
+	public GeoClass getGeoClass() {
+		return getSelectedDataVariable().getGeoClass();
+	}
+
+	/**
+	 * @return whether the selected data variable holds points
+	 */
+	public boolean isPointData() {
+		return getSelectedDataVariable().getGeoClass() == GeoClass.POINT;
+	}
+
+	/**
+	 * TODO remove (unused)?
+	 * @param index index
+	 * @return data variable
+	 */
+	public DataVariable getDataVariable(int index) {
+		return dataList.get(index);
+	}
+
+	/**
+	 * @return selected variable
+	 */
+	public DataVariable getSelectedDataVariable() {
+		if (selectedIndex >= dataList.size()) {
+			return null;
+		}
+		return dataList.get(selectedIndex);
+	}
+
+	/**
+	 * @return group type
+	 */
+	public GroupType getGroupType() {
+		if (isEmpty()) {
+			return GroupType.RAWDATA; // default
+		}
+		return getSelectedDataVariable().getGroupType();
+	}
+
+	/**
+	 * @param varIndex
+	 *            variable index
+	 * @return group type
+	 */
+	public GroupType getGroupType(int varIndex) {
+		if (varIndex >= dataList.size()) {
+			return GroupType.RAWDATA; // default
+		}
+		return dataList.get(varIndex).getGroupType();
+	}
+
+	/**
+	 * @param groupType
+	 *            group type
+	 * @param varIndex
+	 *            variable index
+	 */
+	public void setGroupType(GroupType groupType, int varIndex) {
+		dataList.get(varIndex).setGroupType(groupType);
+	}
+
+	/**
+	 * @return the start value of the first class for the selected data variable
+	 */
+	public double getClassStart() {
+		return getSelectedDataVariable().getClassStart();
+	}
+
+	/**
+	 * Set the class start.
+	 * @param classStart start value for the first class
+	 */
+	public void setClassStart(double classStart) {
+		getSelectedDataVariable().setClassStart(classStart);
+	}
+
+	/**
+	 * @return the class width for the selected data variable
+	 */
+	public double getClassWidth() {
+		return getSelectedDataVariable().getClassWidth();
+	}
+
+	/**
+	 * Set the class width.
+	 * @param classWidth class width
+	 */
+	public void setClassWidth(double classWidth) {
+		getSelectedDataVariable().setClassWidth(classWidth);
+	}
+
+	/**
+	 * Sets the DataItem at a given location to reference the currently selected
+	 * GeoElements
+	 *
+	 * @param dataIndex
+	 *            index of a DataVariable in dataList
+	 * @param itemIndex
+	 *            index of a DataItem in the given DataVariable
+	 *
+	 */
+	public void setDataItemToGeoSelection(int dataIndex, int itemIndex) {
+		if (dataList.get(dataIndex) == null) {
+			return;
+		}
+		dataList.get(dataIndex).setDataItem(itemIndex, createDataItemFromGeoSelection());
+	}
+
+	/**
+	 * Returns a DataItem that references data from the currently selected geos.
+	 *
+	 * @return Either a spreadsheet cell range, a GeoList or null if the
+	 *         selected geos cannot form a DataItem
+	 */
+	private DataItem createDataItemFromGeoSelection() {
+		if (selection.getSelectedGeos() == null || selection.getSelectedGeos().size() == 0) {
+			return null;
+		}
+
+		GeoElement geo = selection.getSelectedGeos().get(0);
+
+		if (geo.isGeoList()) {
+			return new DataItem((GeoList) geo);
+		} else if (geo.getSpreadsheetCoords() != null) {
+			return new DataItem(TabularRange.clone(rangeSupplier.get()), tableModel);
+		}
+
+		return null;
+	}
+
+	// =====================================
+	// Getters for the source dialog table
+	// =====================================
+
+	/**
+	 * @return 2D array of data from the currently selected DataVariable
+	 */
+	public String[][] getTableData() {
+		return getTableData(getSelectedIndex());
+	}
+
+	/**
+	 * @param dataIndex
+	 *            data index
+	 * @return 2D array of data from the DataVariable at the given index
+	 *         position
+	 */
+	public String[][] getTableData(int dataIndex) {
+		if (dataIndex >= dataList.size()) {
+			return null;
+		}
+
+		ArrayList<String[]> list = new ArrayList<>();
+		list.addAll(dataList.get(dataIndex).getStringData());
+
+		// get maximum row count
+		int rowCount = 0;
+		for (String[] s : list) {
+			rowCount = Math.max(rowCount, s.length);
+		}
+
+		// create data array
+		String[][] data = new String[rowCount][list.size()];
+
+		for (int c = 0; c < list.size(); c++) {
+			for (int r = 0; r < list.get(c).length; r++) {
+				data[r][c] = list.get(c)[r];
+			}
+		}
+
+		return data;
+	}
+
+	/**
+	 * @return data titles from the currently selected DataVariable
+	 */
+	public String[] getTitles() {
+		return getTitles(getSelectedIndex());
+	}
+
+	/**
+	 * @param dataIndex
+	 *            data index
+	 * @return data titles from the DataVariable at the given index position
+	 */
+	public String[] getTitles(int dataIndex) {
+		if (dataIndex >= dataList.size()) {
+			return null;
+		}
+
+		ArrayList<String> list = new ArrayList<>();
+		list.addAll(dataList.get(dataIndex).getTitles(loc));
+
+		String[] s = list.toArray(new String[list.size()]);
+
+		return s;
+	}
+
+	/**
+	 * @return descriptions (e.g. "Data", "Frequency" etc.) of the DataItems in
+	 *         the currently selected DataVariable
+	 */
+	public String[] getDescriptions() {
+		ArrayList<String> list = getSelectedDataVariable().getColumnNames();
+		return list.toArray(new String[list.size()]);
+	}
+
+	/**
+	 * @param dataIndex
+	 *            data index
+	 * @return descriptions (e.g. "Data", "Frequency" etc.) of the DataItems in
+	 *         the DataVariable at the given index position
+	 */
+	public String[] getDescriptions(int dataIndex) {
+		if (dataIndex >= dataList.size()) {
+			return null;
+		}
+
+		ArrayList<String> list = dataList.get(dataIndex).getColumnNames();
+		return list.toArray(new String[list.size()]);
+	}
+
+	// =========================================
+	// GeoLists for DataAnalysisView
+	// =========================================
+
+	/**
+	 * Converts the currently selected DataVariable to a list of GeoLists
+	 *
+	 * @param mode
+	 *            mode
+	 * @param leftToRight
+	 *            whether to swap X and Y
+	 * @param doCopy
+	 *            whether to copy elements
+	 * @return arrayList of GeoLists corresponding to data stored in the given
+	 *         DataVariable
+	 */
+	public ArrayList<GeoList> toGeoList(int mode, boolean leftToRight, boolean doCopy) {
+
+		return toGeoList(mode, leftToRight, doCopy, getSelectedIndex());
+	}
+
+	/**
+	 * Converts a DataVariable at a given index position in dataList to a list
+	 * of GeoLists
+	 *
+	 * @param mode
+	 *            mode
+	 * @param leftToRight
+	 *            whether to swap X and Y
+	 * @param doCopy
+	 *            whether to copy elements
+	 * @param dataIndex
+	 *            data index
+	 * @return arrayList of GeoLists corresponding to data stored in the
+	 *         DataVariable at the given index position
+	 */
+	public ArrayList<GeoList> toGeoList(
+			int mode, boolean leftToRight, boolean doCopy, int dataIndex) {
+
+		if (dataList == null || dataList.isEmpty()) {
+			return null;
+		}
+
+		return dataList.get(dataIndex).getGeoListData(app, mode, leftToRight, doCopy);
+	}
+
+	/**
+	 * @param mode
+	 *            mode
+	 * @param leftToRight
+	 *            whether to swap X and Y
+	 * @param doCopy
+	 *            whether to copy elements
+	 * @return all variables in a list
+	 */
+	public ArrayList<GeoList> toGeoListAll(int mode, boolean leftToRight, boolean doCopy) {
+
+		if (dataList == null || dataList.size() == 0) {
+			return null;
+		}
+
+		ArrayList<GeoList> list = new ArrayList<>();
+
+		for (DataVariable var : dataList) {
+			list.addAll(var.getGeoListData(app, mode, leftToRight, doCopy));
+		}
+
+		return list;
+	}
+
+	// ====================================
+	// Automatic Source Generation
+	// ====================================
+
+	/**
+	 * Sets this DataSource to the currently selected GeoElements (from {@link SelectionManager}),
+	 * falls back to spreadsheet selection.
+	 *
+	 * @param mode
+	 *            Data analysis mode
+	 */
+	public void setDataListFromSelection(int mode) {
+		dataList.clear();
+		if (selection.getSelectedGeos().isEmpty()) {
+			if (!rangeSupplier.get().isEmpty()) {
+				setDataListFromSpreadsheet(mode);
+			}
+			return;
+		}
+
+		try {
+			// if the first selected geo is a spreadsheet cell then use the
+			// spreadsheet's selected cell range list
+			if (selection.getSelectedGeos().get(0).getSpreadsheetCoords() != null) {
+				setDataListFromSpreadsheet(mode);
+
+			} else {
+				// otherwise add all selected GeoLists
+				setDataListFromGeoList(mode);
+			}
+		} catch (Exception e) {
+			Log.debug(e);
+		}
+	}
+
+	/**
+	 * @param items items
+	 * @param frequencies frequencies
+	 * @param mode mode
+	 */
+	public void setDataListFromSettings(ArrayList<String> items, String frequencies, int mode) {
+		dataList.clear();
+		ArrayList<TabularRange> ranges = new ArrayList<>();
+
+		for (int i = 0; i < items.size(); i++) {
+			String range = items.get(i);
+
+			SpreadsheetCoords start =
+					GeoElementSpreadsheet.getSpreadsheetCoordsSafe(range.substring(0, range.indexOf(':')));
+
+			SpreadsheetCoords end =
+					GeoElementSpreadsheet.getSpreadsheetCoordsSafe(range.substring(range.indexOf(':') + 1));
+
+			TabularRange tr = new TabularRange(start.row, start.column, end.row, end.column);
+			ranges.add(tr);
+		}
+
+		if (frequencies != null) {
+			setFrequencyFromColumn(true);
+
+			SpreadsheetCoords start = GeoElementSpreadsheet.getSpreadsheetCoordsSafe(
+					frequencies.substring(0, frequencies.indexOf(':')));
+
+			SpreadsheetCoords end = GeoElementSpreadsheet.getSpreadsheetCoordsSafe(
+					frequencies.substring(frequencies.indexOf(':') + 1));
+
+			TabularRange tr = new TabularRange(start.row, start.column, end.row, end.column);
+			ranges.add(tr);
+		}
+
+		setDataListFromSpreadsheet(mode, ranges);
+	}
+
+	/**
+	 * Creates a new list of DataVariables from the currently selected GeoLists
+	 */
+	private void setDataListFromGeoList(int mode) {
+
+		// create a list of GeoLists from the selected elements
+		ArrayList<GeoList> list = new ArrayList<>();
+		for (GeoElement geo : selection.getSelectedGeos()) {
+			if (geo.isGeoList() && !geo.isMatrix()) {
+				list.add((GeoList) geo);
+			}
+		}
+		if (list.size() == 0) {
+			return;
+		}
+
+		ArrayList<DataItem> itemList = new ArrayList<>();
+		DataVariable var = new DataVariable(loc, tableModel);
+
+		switch (mode) {
+			default:
+			case DataAnalysisModel.MODE_ONEVAR:
+				itemList.add(new DataItem(list.get(0)));
+				var.setDataVariableAsRawData(GeoClass.NUMERIC, itemList);
+				break;
+
+			case DataAnalysisModel.MODE_REGRESSION:
+				if (list.get(0).getElementType() == GeoClass.POINT) {
+					itemList.add(new DataItem(list.get(0)));
+					var.setDataVariableAsRawData(GeoClass.POINT, itemList);
+				} else {
+					itemList.add(new DataItem(list.get(0)));
+					if (list.size() == 1) {
+						itemList.add(new DataItem(tableModel));
+					}
+					var.setDataVariableAsRawData(GeoClass.NUMERIC, itemList);
+				}
+				break;
+
+			case DataAnalysisModel.MODE_MULTIVAR:
+				for (GeoList geo : list) {
+					itemList.add(new DataItem(geo));
+				}
+				var.setDataVariableAsRawData(GeoClass.NUMERIC, itemList);
+				break;
+		}
+
+		dataList.add(var);
+	}
+
+	/**
+	 * Creates a new list of DataVariables from the current spreadsheet
+	 * selection.
+	 */
+	private void setDataListFromSpreadsheet(int mode) {
+		// The cell range list returned by the spreadsheet can change
+		// dynamically, so we need to use a copy.
+		List<TabularRange> rangeList = TabularRange.clone(rangeSupplier.get());
+		setDataListFromSpreadsheet(mode, rangeList);
+	}
+
+	private void setDataListFromSpreadsheet(int mode, List<TabularRange> rangeList) {
+		DataVariable var = new DataVariable(loc, tableModel);
+
+		ArrayList<DataItem> itemList = new ArrayList<>();
+
+		switch (mode) {
+			default:
+			case DataAnalysisModel.MODE_ONEVAR:
+				if (isFrequencyFromColumn()) {
+					TabularRange tr = rangeList.get(0);
+
+					if ((tr.is2D() && !tr.is1D()) || rangeListContainsFrequencies(rangeList)) {
+						var.setGroupType(GroupType.FREQUENCY);
+						add1DTabularRanges(rangeList, itemList);
+						ArrayList<DataItem> values = new ArrayList<>();
+						values.add(itemList.get(0));
+						var.setDataVariable(
+								GroupType.FREQUENCY, GeoClass.NUMERIC, values, itemList.get(1), null, null);
+						break;
+					}
+				}
+				itemList.add(new DataItem(rangeList, tableModel));
+				var.setDataVariableAsRawData(GeoClass.NUMERIC, itemList);
+				break;
+
+			case DataAnalysisModel.MODE_REGRESSION:
+
+				// test if there is at least one GeoPoint in the selection
+				boolean hasPoint = CellRangeUtil.containsGeoClass(rangeList, GeoClass.POINT, tableModel);
+
+				if (hasPoint) {
+					// single list of points
+					itemList.add(new DataItem(rangeList, tableModel));
+					var.setDataVariableAsRawData(GeoClass.POINT, itemList);
+
+				} else {
+					// separate x, y lists
+					add1DTabularRanges(rangeList, itemList);
+					if (itemList.size() < 2) {
+						itemList.add(new DataItem(tableModel));
+					}
+					var.setDataVariableAsRawData(GeoClass.NUMERIC, itemList);
+				}
+				break;
+
+			case DataAnalysisModel.MODE_MULTIVAR:
+				for (TabularRange range : rangeList) {
+					if (range.isContiguousRows() || range.isPartialRow()) {
+						ArrayList<TabularRange> partialRows = range.toPartialRowList();
+						for (TabularRange partialRow : partialRows) {
+							itemList.add(new DataItem(partialRow, tableModel));
+						}
+					} else {
+						ArrayList<TabularRange> partialColumns = range.toPartialColumnList();
+						for (TabularRange partialColumn : partialColumns) {
+							itemList.add(new DataItem(partialColumn, tableModel));
+						}
+					}
+				}
+				var.setDataVariableAsRawData(GeoClass.NUMERIC, itemList);
+
+				break;
+		}
+
+		dataList.add(var);
+	}
+
+	/**
+	 * Attempts to extract two 1D cell ranges from the given cell range list and
+	 * then add these as DataItems to the given DataItem list. The orientation
+	 * of the 1D cell ranges (vertical or horizontal) is determined from the
+	 * shape of the given cell ranges.
+	 */
+	private void add1DTabularRanges(List<TabularRange> rangeList, ArrayList<DataItem> itemList) {
+
+		ArrayList<TabularRange> r;
+		TabularRange sel = CellRangeUtil.getActual(rangeList.get(0), tableModel);
+		boolean scanByColumn = sel.getWidth() <= 2;
+
+		if (rangeList.size() == 1) { // single cell range
+
+			if (scanByColumn) {
+				// list of vertical cell ranges
+				r = sel.toPartialColumnList();
+			} else {
+				// list of horizontal cell ranges
+				r = sel.toPartialRowList();
+			}
+
+			if (r != null) {
+				if (r.size() > 0) {
+					itemList.add(new DataItem(r.get(0), tableModel));
+				}
+				if (r.size() > 1) {
+					itemList.add(new DataItem(r.get(1), tableModel));
+				}
+			}
+
+		} else if (rangeList.size() == 2) { // two separate cell ranges
+
+			if (scanByColumn) {
+				// extract vertical cell ranges
+				itemList.add(new DataItem(rangeList.get(0).toPartialColumnList().get(0), tableModel));
+				itemList.add(new DataItem(rangeList.get(1).toPartialColumnList().get(0), tableModel));
+
+			} else {
+				// extract horizontal cell range
+				itemList.add(new DataItem(rangeList.get(0).toPartialRowList().get(0), tableModel));
+				itemList.add(new DataItem(rangeList.get(1).toPartialRowList().get(0), tableModel));
+			}
+		}
+	}
+
+	// ====================================
+	// Utility methods
+	// ====================================
+
+	/**
+	 * Returns true if the current data source contains the specified GeoElement
+	 *
+	 * @param geo
+	 *            element
+	 * @return whether element is in the source
+	 */
+	protected boolean isInDataSource(GeoElement geo) {
+
+		for (DataVariable var : dataList) {
+			if (var.isInDataSource(geo)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Get variable descriptions
+	 *
+	 * @param sb
+	 *            XML builder
+	 */
+	public void getXMLDescription(XMLStringBuilder sb) {
+		for (DataVariable var : dataList) {
+			var.getXML(sb);
+		}
+	}
+
+	/**
+	 *
+	 * @return if frequency data comes from column.
+	 */
+	public boolean isFrequencyFromColumn() {
+		return frequencyFromColumn;
+	}
+
+	/**
+	 * When set to true, spreadsheet 2nd column of selected cells are treated as
+	 * frequency data for One-variable analysis.
+	 *
+	 * @param value
+	 *            to set
+	 */
+	public void setFrequencyFromColumn(boolean value) {
+		this.frequencyFromColumn = value;
+	}
+
+	/**
+	 * Frequency data for One-variable analysis is stored as a separate entry in the rangeList,
+	 * this method checks whether the list actually contains frequency data or not by checking
+	 * if the first and last list entry are neighbors
+	 * @param rangeList rangeList
+	 * @return returns true if the union of first and last range has 2 rows or 2 columns,
+	 * except for the trivial case of 2x1 selection.
+	 */
+	public boolean rangeListContainsFrequencies(List<TabularRange> rangeList) {
+		if (!rangeList.isEmpty()) {
+			TabularRange first = rangeList.get(0);
+			TabularRange last = rangeList.get(rangeList.size() - 1);
+			int width = last.getMaxColumn() - first.getMinColumn() + 1;
+			int height = last.getMaxRow() - first.getMinRow() + 1;
+			return (width == 2 && height != 1) || (height == 2 && width != 1);
+		}
+		return false;
+	}
+}

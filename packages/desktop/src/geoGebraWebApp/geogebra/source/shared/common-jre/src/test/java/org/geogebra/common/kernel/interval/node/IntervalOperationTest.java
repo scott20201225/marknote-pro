@@ -1,0 +1,65 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.kernel.interval.node;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import org.geogebra.common.plugin.Operation;
+import org.junit.jupiter.api.Test;
+
+class IntervalOperationTest {
+
+	private final IntervalOperationSupport support = new IntervalOperationSupport();
+
+	@Test
+	void testIsSupported() {
+		assertTrue(support.isSupported(Operation.ABS));
+		assertTrue(support.isSupported(Operation.ARCCOS));
+		assertTrue(support.isSupported(Operation.ARCTAN));
+		assertTrue(support.isSupported(Operation.COS));
+		assertTrue(support.isSupported(Operation.COSH));
+		assertTrue(support.isSupported(Operation.COT));
+		assertTrue(support.isSupported(Operation.CSC));
+		assertTrue(support.isSupported(Operation.DIVIDE));
+		assertTrue(support.isSupported(Operation.EXP));
+		assertTrue(support.isSupported(Operation.LOG));
+		assertTrue(support.isSupported(Operation.LOG2));
+		assertTrue(support.isSupported(Operation.LOG10));
+		assertTrue(support.isSupported(Operation.MINUS));
+		assertTrue(support.isSupported(Operation.MULTIPLY));
+		assertTrue(support.isSupported(Operation.NROOT));
+		assertTrue(support.isSupported(Operation.PLUS));
+		assertTrue(support.isSupported(Operation.POWER));
+		assertTrue(support.isSupported(Operation.SEC));
+		assertTrue(support.isSupported(Operation.SIN));
+		assertTrue(support.isSupported(Operation.SINH));
+		assertTrue(support.isSupported(Operation.SQRT));
+		assertTrue(support.isSupported(Operation.TAN));
+		assertTrue(support.isSupported(Operation.TANH));
+		assertTrue(support.isSupported(Operation.LOGB));
+		assertTrue(support.isSupported(Operation.INVISIBLE_PLUS));
+	}
+
+	@Test
+	void testHasNotEquivalent() {
+		assertFalse(support.isSupported(Operation.ALT));
+		assertFalse(support.isSupported(Operation.DIRAC));
+		assertFalse(support.isSupported(Operation.GAMMA));
+		assertFalse(support.isSupported(Operation.HEAVISIDE));
+	}
+}

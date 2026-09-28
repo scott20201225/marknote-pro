@@ -1,0 +1,704 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.web.full.gui.components;
+
+import static org.geogebra.common.properties.PropertyView.TextField;
+
+import java.util.function.Consumer;
+
+import org.geogebra.common.euclidian.event.PointerEventType;
+import org.geogebra.common.gui.SetLabels;
+import org.geogebra.common.gui.inputfield.Input;
+import org.geogebra.common.main.Localization;
+import org.geogebra.common.util.MulticastEvent;
+import org.geogebra.common.util.StringUtil;
+import org.geogebra.common.util.TextFormat;
+import org.geogebra.common.util.TextObject;
+import org.geogebra.common.util.debug.Log;
+import org.geogebra.editor.web.MathFieldW;
+import org.geogebra.web.full.gui.dialog.ProcessInput;
+import org.geogebra.web.full.gui.view.algebra.InputPanelW;
+import org.geogebra.web.full.gui.view.probcalculator.MathTextFieldW;
+import org.geogebra.web.html5.gui.BaseWidgetFactory;
+import org.geogebra.web.html5.gui.accessibility.HasFocus;
+import org.geogebra.web.html5.gui.inputfield.AutoCompleteTextFieldW;
+import org.geogebra.web.html5.gui.util.AriaHelper;
+import org.geogebra.web.html5.gui.util.ClickStartHandler;
+import org.geogebra.web.html5.gui.util.Dom;
+import org.geogebra.web.html5.main.AppW;
+import org.gwtproject.core.client.Scheduler;
+import org.gwtproject.event.dom.client.BlurEvent;
+import org.gwtproject.event.dom.client.FocusEvent;
+import org.gwtproject.user.client.ui.FlowPanel;
+import org.gwtproject.user.client.ui.FocusWidget;
+import org.gwtproject.user.client.ui.IsWidget;
+import org.gwtproject.user.client.ui.Label;
+import org.gwtproject.user.client.ui.Widget;
+
+/**
+ * Input field material design component, supports plain text field and math text field.
+ */
+public class ComponentInputField extends FlowPanel
+		implements SetLabels, Input, HasFocus, TextObject {
+	private final Localization loc;
+	private String errorTextKey;
+	private String labelTextKey;
+	private final String placeholderTextKey;
+	private final String suffixTextKey;
+	private String supportiveTextKey;
+	private FlowPanel contentPanel;
+	private Label labelText;
+	private InputAdapter adapter;
+	private Label errorLabel;
+	private Label suffixLabel;
+	private Label supportiveLabel;
+	private final MulticastEvent<BlurEvent> onBlur = new MulticastEvent<>();
+	private final MulticastEvent<FocusEvent> onFocus = new MulticastEvent<>();
+
+	@SuppressWarnings("PMD.CommentRequired")
+	private interface InputAdapter extends IsWidget {
+
+		void focus();
+
+		void addFocusBlurHandlers();
+
+		/**
+		 * Add mouse over/ out handlers
+		 */
+		void addHoverHandlers();
+
+		void addEnterHandler(Consumer<String> setValue);
+
+		void addInputHandler(ProcessInput inputHandler);
+
+		void addSuffix(Label suffixLabel);
+
+		void setEnabled(boolean enabled);
+
+		String getText();
+
+		void setText(String text);
+
+		void setPlaceholder(String localizedPlaceholder);
+
+		void setAriaLabel(String localizedLabel);
+
+		void focusAndSelectAll();
+	}
+
+	private final class TextInputAdapter implements InputAdapter {
+		private final InputPanelW inputTextField;
+
+		TextInputAdapter(InputPanelW inputTextField) {
+			this.inputTextField = inputTextField;
+		}
+
+		@Override
+		public void focus() {
+			inputTextField.getTextComponent().setFocus(true);
+		}
+
+		@Override
+		public void addFocusBlurHandlers() {
+			FocusWidget inputFocusWidget = inputTextField.getTextComponent().getTextBox();
+			inputFocusWidget.addFocusHandler(event -> {
+				onFocus.notifyListeners(event);
+				setFocusState();
+			});
+			inputFocusWidget.addBlurHandler(event -> {
+				onBlur.notifyListeners(event);
+				resetInputField();
+			});
+		}
+
+		@Override
+		public void addHoverHandlers() {
+			FocusWidget inputFocusWidget = inputTextField.getTextComponent().getTextBox();
+			inputFocusWidget.addMouseOverHandler(event -> getContentPanel().addStyleName("hoverState"));
+			inputFocusWidget.addMouseOutHandler(event -> getContentPanel().removeStyleName("hoverState"));
+		}
+
+		@Override
+		public void addEnterHandler(Consumer<String> setValue) {
+			inputTextField.getTextComponent().addEnterPressHandler(() -> {
+				String text = inputTextField.getText();
+				setValue.accept(text);
+			});
+		}
+
+		@Override
+		public void addInputHandler(ProcessInput inputHandler) {
+			Dom.addEventListener(
+					inputTextField.getTextComponent().getTextBox().getElement(),
+					"input",
+					event -> inputHandler.onInput());
+		}
+
+		@Override
+		public void addSuffix(Label suffixLabel) {
+			inputTextField.getTextComponent().add(suffixLabel);
+		}
+
+		@Override
+		public void setEnabled(boolean enabled) {
+			inputTextField.setEnabled(enabled);
+		}
+
+		@Override
+		public String getText() {
+			return inputTextField.getText();
+		}
+
+		@Override
+		public void setText(String text) {
+			inputTextField.getTextComponent().setText(text);
+		}
+
+		@Override
+		public void setPlaceholder(String localizedPlaceholder) {
+			inputTextField
+					.getTextComponent()
+					.getTextBox()
+					.getElement()
+					.setAttribute("placeholder", localizedPlaceholder);
+		}
+
+		@Override
+		public void setAriaLabel(String localizedLabel) {
+			AriaHelper.setLabel(inputTextField.getTextComponent().getTextField(), localizedLabel);
+		}
+
+		@Override
+		public void focusAndSelectAll() {
+			inputTextField.getTextComponent().setFocus(true);
+			inputTextField.getTextComponent().selectAll();
+		}
+
+		@Override
+		public Widget asWidget() {
+			return inputTextField;
+		}
+	}
+
+	private final class MathInputAdapter implements InputAdapter {
+
+		private final MathTextFieldW inputMathField;
+
+		MathInputAdapter(MathTextFieldW inputMathField) {
+			this.inputMathField = inputMathField;
+		}
+
+		@Override
+		public void focus() {
+			inputMathField.focus();
+		}
+
+		@Override
+		public void addFocusBlurHandlers() {
+			MathFieldW mathField = inputMathField.getMathField();
+			mathField.setOnFocus(event -> {
+				onFocus.notifyListeners(event);
+				setFocusState();
+			});
+			inputMathField.addBlurHandler(event -> {
+				onBlur.notifyListeners(event);
+				resetInputField();
+			});
+		}
+
+		@Override
+		public void addHoverHandlers() {
+			Widget inputMathFieldWidget = inputMathField.asWidget();
+			Dom.addEventListener(
+					inputMathFieldWidget.getElement(),
+					"mouseover",
+					event -> getContentPanel().addStyleName("hoverState"));
+			Dom.addEventListener(
+					inputMathFieldWidget.getElement(),
+					"mouseout",
+					event -> getContentPanel().removeStyleName("hoverState"));
+		}
+
+		@Override
+		public void addEnterHandler(Consumer<String> setValue) {
+			inputMathField.addChangeHandler((enter) -> {
+				if (enter) {
+					String text = inputMathField.getText();
+					setValue.accept(text);
+				}
+			});
+		}
+
+		@Override
+		public void addInputHandler(ProcessInput inputHandler) {
+			inputMathField
+					.getMathField()
+					.getInternal()
+					.registerMathFieldInternalListener(ignore -> inputHandler.onInput());
+		}
+
+		@Override
+		public void addSuffix(Label suffixLabel) {
+			// not needed
+		}
+
+		@Override
+		public void setEnabled(boolean enabled) {
+			inputMathField.getMathField().setEnabled(enabled);
+		}
+
+		@Override
+		public String getText() {
+			return inputMathField.getText();
+		}
+
+		@Override
+		public void setText(String text) {
+			inputMathField.setText(text);
+			inputMathField.updateAriaValue();
+		}
+
+		@Override
+		public void setPlaceholder(String localizedPlaceholder) {
+			// not supported with LaTeX
+		}
+
+		@Override
+		public void setAriaLabel(String localizedLabel) {
+			inputMathField.setLabel(localizedLabel);
+		}
+
+		@Override
+		public void focusAndSelectAll() {
+			focus();
+			inputMathField.selectEntryAt(0, 0);
+		}
+
+		@Override
+		public Widget asWidget() {
+			return inputMathField.asWidget();
+		}
+	}
+
+	/**
+	 * @param app see {@link AppW}
+	 * @param placeholder placeholder text (can be null)
+	 * @param labelTxt label of input field
+	 * @param errorTxt error label of input field
+	 * @param defaultValue default text of input text field
+	 * @param suffixTxt suffix at end of text field
+	 * @param supportiveTxt hint for the user bellow the text field
+	 */
+	public ComponentInputField(
+			AppW app,
+			String placeholder,
+			String labelTxt,
+			String errorTxt,
+			String defaultValue,
+			String suffixTxt,
+			String supportiveTxt) {
+		this(app, placeholder, labelTxt, errorTxt, defaultValue, suffixTxt, supportiveTxt, true, false);
+	}
+
+	/**
+	 * @param app see {@link AppW}
+	 * @param placeholder placeholder text (can be null)
+	 * @param labelTxt label of input field
+	 * @param errorTxt error label of input field
+	 * @param defaultValue default text of input text field
+	 * @param suffixTxt suffix at end of text field
+	 * @param supportiveTxt hint for the user bellow the text field
+	 * @param hasKeyboardBtn whether to show keyboard button or not
+	 * (disabled in {@link org.geogebra.web.full.gui.dialog.Export3dDialog})
+	 * @param isMathMode whether it is math mode or not
+	 */
+	public ComponentInputField(
+			AppW app,
+			String placeholder,
+			String labelTxt,
+			String errorTxt,
+			String defaultValue,
+			String suffixTxt,
+			String supportiveTxt,
+			boolean hasKeyboardBtn,
+			boolean isMathMode) {
+		this.loc = app.getLocalization();
+		this.labelTextKey = labelTxt;
+		this.errorTextKey = errorTxt;
+		this.placeholderTextKey = placeholder;
+		this.suffixTextKey = suffixTxt;
+		this.supportiveTextKey = supportiveTxt;
+		buildGui(app, hasKeyboardBtn, isMathMode);
+		if (!StringUtil.empty(defaultValue)) {
+			setInputText(defaultValue);
+		}
+		addClickHandler();
+		adapter.addFocusBlurHandlers();
+		adapter.addHoverHandlers();
+	}
+
+	/**
+	 * @param app see {@link AppW}
+	 * @param placeholder placeholder text (can be null)
+	 * @param labelTxt label of input field
+	 * @param errorTxt error label of input field
+	 * @param defaultValue default text of input text field
+	 * @param supportiveTxt hint for the user bellow the text field
+	 */
+	public ComponentInputField(
+			AppW app,
+			String placeholder,
+			String labelTxt,
+			String errorTxt,
+			String defaultValue,
+			String supportiveTxt) {
+		this(app, placeholder, labelTxt, errorTxt, defaultValue, null, supportiveTxt);
+	}
+
+	/**
+	 * @param app see {@link AppW}
+	 * @param placeholder placeholder text (can be null)
+	 * @param errorTxt error label of input field
+	 * @param property {@link TextField}
+	 */
+	public ComponentInputField(AppW app, String placeholder, String errorTxt, TextField property) {
+		this.loc = app.getLocalization();
+		this.labelTextKey = property.getLabel();
+		this.errorTextKey = errorTxt;
+		this.placeholderTextKey = placeholder;
+		this.suffixTextKey = null;
+		buildGui(app, true, property.getFormat() == TextFormat.MATH);
+		if (!StringUtil.empty(property.getValue())) {
+			setInputText(property.getValue());
+		}
+		addClickHandler();
+		adapter.addFocusBlurHandlers();
+		addEnterHandler(property::setValue, true);
+		adapter.addHoverHandlers();
+		property.setConfigurationUpdateDelegate(() -> this.configurationUpdated(property));
+		property.setVisibilityUpdateDelegate(() -> setVisible(property.isVisible()));
+	}
+
+	// BUILD UI
+
+	private void buildGui(AppW app, boolean hasKeyboardBtn, boolean isMathTextField) {
+		contentPanel = new FlowPanel();
+		contentPanel.setStyleName("inputTextField");
+		contentPanel.addStyleName("validation");
+		contentPanel.addStyleName(isMathTextField ? "mathInput" : "textInput");
+
+		FlowPanel optionHolder = new FlowPanel();
+		optionHolder.addStyleName("optionLabelHolder");
+		// input text field
+		if (isMathTextField) {
+			createInputMathField(app);
+		} else {
+			createInputTextField(app, hasKeyboardBtn);
+		}
+		if (labelTextKey != null && !labelTextKey.isBlank()) {
+			String localizedLabel = app.getLocalization().getMenu(labelTextKey);
+			labelText = BaseWidgetFactory.INSTANCE.newSecondaryText(localizedLabel, "label");
+			adapter.setAriaLabel(localizedLabel);
+		}
+		if (placeholderTextKey != null && !placeholderTextKey.isEmpty()) {
+			adapter.setPlaceholder(app.getLocalization().getMenu(placeholderTextKey));
+		}
+		// suffix if there is any
+		addSuffix();
+		// build component
+		if (labelText != null) {
+			optionHolder.add(labelText);
+		}
+
+		optionHolder.add(adapter.asWidget());
+		contentPanel.add(optionHolder);
+		// add error label if there is any
+		addErrorLabel(contentPanel);
+		addSupportiveTextLabel(contentPanel);
+		add(contentPanel);
+		setLabels();
+	}
+
+	private void createInputTextField(AppW app, boolean hasKeyboardBtn) {
+		InputPanelW inputTextField = new InputPanelW("", app, -1, hasKeyboardBtn);
+		inputTextField.addStyleName("textField");
+		inputTextField.getTextComponent().prepareShowSymbolButton(false);
+		adapter = new TextInputAdapter(inputTextField);
+	}
+
+	private void createInputMathField(AppW app) {
+		MathTextFieldW inputMathField = new MathTextFieldW(app);
+		adapter = new MathInputAdapter(inputMathField);
+	}
+
+	private void addErrorLabel(FlowPanel root) {
+		if (!StringUtil.empty(errorTextKey)) {
+			if (errorLabel == null) {
+				errorLabel = new Label();
+			}
+			errorLabel.setText(errorTextKey);
+			errorLabel.setStyleName("errorLabel");
+			root.add(errorLabel);
+		} else if (errorLabel != null) {
+			errorLabel.removeFromParent();
+		}
+	}
+
+	private void addSupportiveTextLabel(FlowPanel rootPanel) {
+		if (!StringUtil.empty(supportiveTextKey)) {
+			if (supportiveLabel == null) {
+				supportiveLabel = BaseWidgetFactory.INSTANCE.newSecondaryText(
+						loc.getMenu(supportiveTextKey), "supportLabel hide");
+				addFocusHandler(ignore -> {
+					if (supportiveLabel != null) {
+						supportiveLabel.removeStyleName("hide");
+					}
+				});
+				addBlurHandler(ignore -> {
+					if (supportiveLabel != null) {
+						supportiveLabel.addStyleName("hide");
+					}
+				});
+			}
+			rootPanel.add(supportiveLabel);
+		}
+	}
+
+	private void addSuffix() {
+		if (!StringUtil.empty(suffixTextKey)) {
+			if (suffixLabel == null) {
+				suffixLabel = new Label();
+			}
+			suffixLabel.setText(suffixTextKey);
+			suffixLabel.addStyleName("suffix");
+			adapter.addSuffix(suffixLabel);
+		} else if (suffixLabel != null) {
+			suffixLabel.removeFromParent();
+		}
+	}
+
+	// HANDLERS
+
+	private void addClickHandler() {
+		ClickStartHandler.init(this, new ClickStartHandler(false, true) {
+
+			@Override
+			public void onClickStart(int x, int y, PointerEventType type) {
+				if (!isDisabled()) {
+					setFocusState();
+					focusDeferred();
+				}
+			}
+		});
+	}
+
+	/**
+	 * Adds a handler that is invoked when the user confirms input, either by
+	 * pressing Enter or by moving focus away from the field.
+	 * Note: if Enter is pressed and focus subsequently leaves the field,
+	 * the handler will be called twice.
+	 * @param enterHandler handler invoked on Enter key
+	 * @param invokeOnBlur whether it should invoke handler on blur too
+	 */
+	public void addEnterHandler(Consumer<String> enterHandler, boolean invokeOnBlur) {
+		adapter.addEnterHandler(enterHandler);
+		if (invokeOnBlur) {
+			onBlur.addListener(evt -> enterHandler.accept(getText()));
+		}
+	}
+
+	/**
+	 * @param listener listener invoked when the input field gains focus
+	 */
+	public void addFocusHandler(MulticastEvent.Listener<FocusEvent> listener) {
+		onFocus.addListener(listener);
+	}
+
+	/**
+	 * @param listener listener invoked when the input field loses focus
+	 */
+	public void addBlurHandler(MulticastEvent.Listener<BlurEvent> listener) {
+		onBlur.addListener(listener);
+	}
+
+	/**
+	 * @param inputHandler input event handler
+	 */
+	public void addInputHandler(ProcessInput inputHandler) {
+		adapter.addInputHandler(inputHandler);
+	}
+
+	/**
+	 * Sets the style of InputPanel to focus state
+	 */
+	protected void setFocusState() {
+		contentPanel.addStyleName("active");
+	}
+
+	/**
+	 * Focus input text field
+	 */
+	public void focusDeferred() {
+		Scheduler.get().scheduleDeferred(adapter::focus);
+	}
+
+	/**
+	 * Focus and select content.
+	 */
+	public void focusAndSelectAll() {
+		adapter.focusAndSelectAll();
+	}
+
+	/**
+	 * Resets input style on blur
+	 */
+	public void resetInputField() {
+		contentPanel.removeStyleName("active");
+	}
+
+	// INPUT ERROR HANDLING
+
+	@Override
+	public String getText() {
+		return adapter.getText();
+	}
+
+	@Override
+	public void setText(String text) {
+		setInputText(text);
+	}
+
+	@Override
+	public void setEditable(boolean editable) {
+		setDisabled(!editable);
+	}
+
+	@Override
+	public void updateLabel(String labelTextKey) {
+		this.labelTextKey = labelTextKey;
+		if (labelText != null) {
+			labelText.setText(loc.getMenu(labelTextKey));
+		}
+	}
+
+	@Override
+	public void showError(String errorMessage) {
+		setError(errorMessage);
+	}
+
+	@Override
+	public void setErrorResolved() {
+		setError(null);
+	}
+
+	// HELPERS
+
+	/**
+	 * @param text
+	 *            should appear in the input text field
+	 */
+	public void setInputText(String text) {
+		adapter.setText(text);
+		setError(null);
+	}
+
+	/**
+	 * @param message
+	 *            localized error
+	 */
+	public void setError(String message) {
+		this.errorTextKey = message;
+		addErrorLabel(contentPanel);
+		if (!StringUtil.empty(message)) {
+			Log.warn(message);
+		}
+		Dom.toggleClass(this.contentPanel, "error", !StringUtil.empty(message));
+	}
+
+	/**
+	 * @return whether an error is shown
+	 */
+	public boolean hasError() {
+		return !StringUtil.empty(errorTextKey);
+	}
+
+	/**
+	 * Enable/disable input text field
+	 * @param disabled whether it should be disabled or not
+	 */
+	public void setDisabled(boolean disabled) {
+		Dom.toggleClass(getContentPanel(), "disabled", disabled);
+		adapter.setEnabled(!disabled);
+	}
+
+	/**
+	 * @return whether the text field is disabled
+	 */
+	public boolean isDisabled() {
+		return getContentPanel().getStyleName().contains("disabled");
+	}
+
+	/**
+	 * @return panel containing the whole component
+	 */
+	public FlowPanel getContentPanel() {
+		return contentPanel;
+	}
+
+	@Override
+	public void setLabels() {
+		if (labelText != null) {
+			labelText.setText(loc.getMenu(labelTextKey));
+		}
+		if (errorLabel != null) {
+			errorLabel.setText(loc.getMenu(errorTextKey));
+		}
+		if (placeholderTextKey != null && !placeholderTextKey.isEmpty()) {
+			adapter.setPlaceholder(loc.getMenu(placeholderTextKey));
+		}
+		if (supportiveTextKey != null) {
+			supportiveLabel.setText(loc.getMenu(supportiveTextKey));
+		}
+	}
+
+	private void configurationUpdated(TextField textFieldProperty) {
+		labelTextKey = textFieldProperty.getLabel();
+		String localizedLabel = loc.getMenu(labelTextKey);
+		if (labelText != null) {
+			labelText.setText(localizedLabel);
+		}
+		setInputText(textFieldProperty.getValue());
+		adapter.setAriaLabel(localizedLabel);
+		setDisabled(!textFieldProperty.isEnabled());
+		String error = textFieldProperty.getErrorMessage();
+		setError(error);
+	}
+
+	@Override
+	public void focus() {
+		focusDeferred();
+	}
+
+	/**
+	 * @return the underlying text field widget
+	 */
+	public AutoCompleteTextFieldW getTextWidget() {
+		return adapter instanceof TextInputAdapter textInputAdapter
+				? textInputAdapter.inputTextField.getTextComponent()
+				: null;
+	}
+}

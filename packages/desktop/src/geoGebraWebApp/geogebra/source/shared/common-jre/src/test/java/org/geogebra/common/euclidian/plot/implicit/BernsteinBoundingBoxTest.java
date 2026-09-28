@@ -1,0 +1,38 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.euclidian.plot.implicit;
+
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+
+import org.junit.jupiter.api.Test;
+
+class BernsteinBoundingBoxTest {
+	@Test
+	void testSpitBox() {
+		BernsteinBoundingBox box = newBox(-10, 10, -10, 10);
+		BernsteinBoundingBox[] boxes = box.split();
+		BernsteinBoundingBox[] expected = {
+			newBox(-10, 0, -10, 0), newBox(0, 10, -10, 0), newBox(-10, 0, 0, 10), newBox(0, 10, 0, 10)
+		};
+
+		assertArrayEquals(expected, boxes);
+	}
+
+	private static BernsteinBoundingBox newBox(double xmin, double xmax, double ymin, double ymax) {
+		return new BernsteinBoundingBox(xmin, ymin, xmax, ymax);
+	}
+}

@@ -65,6 +65,18 @@
         @keydown.enter.prevent="handleInputEnterFromKeyboard"
         @blur="handleInputBlur"
       />
+      <div
+        v-if="showTreeCreateInput && createCacheType === 'geogebra'"
+        class="geogebra-create-options"
+        :style="{ 'margin-left': `${depth * 5 + 15}px` }"
+      >
+        <label>{{ t('sideBar.tree.geoGebraMode') }}</label>
+        <select v-model="geoGebraMode">
+          <option v-for="mode of geoGebraModes" :key="mode.value" :value="mode.value">
+            {{ t(mode.labelKey) }}
+          </option>
+        </select>
+      </div>
       <File v-for="file of visibleFiles" :key="file.id" :file="file" :depth="depth + 1" />
     </div>
   </div>
@@ -92,6 +104,8 @@ import {
   getVisibleNoteFolders
 } from '../../util/noteWorkspace'
 import type { TreeFileNode, TreeFolderNode } from './types'
+import type { GeoGebraMode } from '@shared/types/files'
+import { GEO_GEBRA_MODES } from '../../util/geogebra'
 
 const props = defineProps<{
   folder: TreeFolderNode
@@ -155,12 +169,22 @@ const createCacheDirname = computed<string | undefined>(() => {
 const createCacheType = computed<string | undefined>(() => {
   return (createCache.value as { type?: string }).type
 })
+const geoGebraModes = GEO_GEBRA_MODES
+const geoGebraMode = computed<GeoGebraMode>({
+  get: () => (createCache.value as { geoGebraMode?: GeoGebraMode }).geoGebraMode ?? 'graphing',
+  set: (value) => {
+    const cache = createCache.value as { dirname?: string; type?: string }
+    if (!cache.dirname || !cache.type) return
+    projectStore.createCache = { dirname: cache.dirname, type: cache.type, geoGebraMode: value }
+  }
+})
 const isCreatingNoteInListMode = computed<boolean>(() => {
   return (
     props.noteNavigationMode === 'tree-list' &&
     (createCacheType.value === 'document' ||
       createCacheType.value === 'file' ||
-      createCacheType.value === 'drawing')
+      createCacheType.value === 'drawing' ||
+      createCacheType.value === 'geogebra')
   )
 })
 const showTreeCreateInput = computed<boolean>(() => {
@@ -357,5 +381,22 @@ input.rename {
   background: var(--floatBorderColor);
   width: 70%;
   border-radius: 3px;
+}
+
+.geogebra-create-options {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: var(--sideBarColor);
+}
+
+.geogebra-create-options select {
+  min-width: 130px;
+  color: inherit;
+  background: var(--editorBgColor);
+  border: 1px solid var(--floatBorderColor);
 }
 </style>

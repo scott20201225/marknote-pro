@@ -1,0 +1,237 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.geogebra3D.euclidian3D.openGL;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.geogebra.common.geogebra3D.euclidian3D.openGL.ManagerShaders.TypeElement;
+import org.geogebra.common.kernel.matrix.Coords;
+
+/**
+ * manager for packing buffers (for curves)
+ */
+public class GLBufferManagerTemplatesForPoints extends GLBufferManager {
+
+	// we don't use buffers here
+	private static final int ELEMENTS_SIZE_START = 0;
+	private static final int INDICES_SIZE_START = 0;
+
+	/**
+	 * number of templates for points
+	 */
+	private static final int POINT_TEMPLATES_COUNT = 3;
+
+	private GLBufferIndicesArray bufferIndicesArray;
+
+	private final ArrayList<Double>[] vertexTemplates;
+	private final ArrayList<Double>[] normalTemplates;
+	private final ArrayList<Short>[] indicesTemplates;
+
+	private ArrayList<Double> currentVertexArray;
+	private ArrayList<Double> currentNormalArray;
+	private ArrayList<Short> currentIndicesArray;
+
+	/**
+	 *
+	 * @param pointSize
+	 *            point size
+	 * @return template index for this size
+	 */
+	public static int getIndexForPointSize(float pointSize) {
+		return pointSize < 2.5f ? 0 : pointSize > 5.5f ? 2 : 1;
+	}
+
+	/**
+	 *
+	 * @param index
+	 *            template index
+	 * @return sphere size for template index
+	 */
+	public static int getSphereSizeForIndex(int index) {
+		switch (index) {
+			case 0:
+				return 2;
+			case 1:
+				return 4;
+			default:
+				return 7;
+		}
+	}
+
+	/**
+	 * constructor
+	 */
+	@SuppressWarnings("unchecked")
+	public GLBufferManagerTemplatesForPoints(ManagerShaders manager) {
+		super(manager);
+		vertexTemplates = new ArrayList[POINT_TEMPLATES_COUNT];
+		normalTemplates = new ArrayList[POINT_TEMPLATES_COUNT];
+		indicesTemplates = new ArrayList[POINT_TEMPLATES_COUNT];
+	}
+
+	@Override
+	protected int calculateIndicesLength(int size, TypeElement type) {
+		// not used
+		return size;
+	}
+
+	@Override
+	protected void putIndices(int size, TypeElement type, boolean reuseSegment) {
+		// not used
+	}
+
+	/**
+	 * draw
+	 *
+	 * @param r
+	 *            renderer
+	 */
+	public void draw(Renderer r) {
+		drawBufferPacks(r);
+	}
+
+	@Override
+	protected int getElementSizeStart() {
+		return ELEMENTS_SIZE_START;
+	}
+
+	@Override
+	protected int getIndicesSizeStart() {
+		return INDICES_SIZE_START;
+	}
+
+	/**
+	 *
+	 * @return new indices array
+	 */
+	public GLBufferIndicesArray getBufferIndicesArray() {
+		bufferIndicesArray = new GLBufferIndicesArray(0);
+		return bufferIndicesArray;
+	}
+
+	/**
+	 *
+	 * @return current indices array
+	 */
+	public List<Short> getCurrentIndicesArray() {
+		return currentIndicesArray;
+	}
+
+	@Override
+	public void setIndices(int size, TypeElement type) {
+		// not used
+	}
+
+	@Override
+	boolean isTemplateForPoints() {
+		return true;
+	}
+
+	/**
+	 *
+	 * @param manager
+	 *            manager
+	 * @param pointSize
+	 *            point size
+	 */
+	public void createSphereIfNeeded(ManagerShaders manager, int pointSize) {
+
+		int templateIndex = getIndexForPointSize(pointSize);
+
+		currentVertexArray = vertexTemplates[templateIndex];
+		if (currentVertexArray == null) {
+			createSphere(manager, templateIndex);
+		}
+	}
+
+	private void createSphere(ManagerShaders manager, int templateIndex) {
+
+		manager.setScalerIdentity();
+		manager.drawSphere(getSphereSizeForIndex(templateIndex), Coords.O, 1d, -1);
+		manager.setScalerView();
+
+		currentVertexArray = new ArrayList<>();
+		for (int i = 0; i < elementsLength * 3; i++) {
+			currentVertexArray.add(vertexArray.get(i));
+		}
+		vertexTemplates[templateIndex] = currentVertexArray;
+
+		currentNormalArray = new ArrayList<>();
+		for (int i = 0; i < elementsLength * 3; i++) {
+			currentNormalArray.add(normalArray.get(i));
+		}
+		normalTemplates[templateIndex] = currentNormalArray;
+
+		currentIndicesArray = new ArrayList<>();
+		currentIndicesArray.addAll(bufferIndicesArray);
+		indicesTemplates[templateIndex] = currentIndicesArray;
+
+		vertexArray = null;
+		normalArray = null;
+		bufferIndicesArray = null;
+	}
+
+	/**
+	 * select template according to point size
+	 *
+	 * @param manager
+	 *            manager
+	 * @param pointSize
+	 *            point size
+	 */
+	public void selectSphereAndCreateIfNeeded(ManagerShaders manager, float pointSize) {
+
+		int templateIndex = getIndexForPointSize(pointSize);
+		currentVertexArray = vertexTemplates[templateIndex];
+		if (currentVertexArray == null) {
+			createSphere(manager, templateIndex);
+		} else {
+			elementsLength = currentVertexArray.size() / 3;
+			currentNormalArray = normalTemplates[templateIndex];
+			currentIndicesArray = indicesTemplates[templateIndex];
+		}
+	}
+
+	/**
+	 * select sphere corresponding to point size. WARNING: geometries must have
+	 * been created first
+	 *
+	 * @param pointSize
+	 *            point size
+	 */
+	public void selectSphere(int pointSize) {
+		int templateIndex = getIndexForPointSize(pointSize);
+		currentVertexArray = vertexTemplates[templateIndex];
+		elementsLength = currentVertexArray.size() / 3;
+		currentNormalArray = normalTemplates[templateIndex];
+		currentIndicesArray = indicesTemplates[templateIndex];
+	}
+
+	/**
+	 * draw current sphere
+	 *
+	 * @param manager
+	 *            manager
+	 */
+	public void drawSphere(ManagerShaders manager) {
+		manager.startGeometry(Manager.Type.TRIANGLES);
+		manager.endGeometry(
+				currentIndicesArray.size(), elementsLength, currentVertexArray, currentNormalArray);
+		manager.endList();
+	}
+}

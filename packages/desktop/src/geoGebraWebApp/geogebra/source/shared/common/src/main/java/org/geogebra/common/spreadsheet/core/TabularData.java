@@ -1,0 +1,204 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.spreadsheet.core;
+
+import org.geogebra.common.gui.view.spreadsheet.HasTabularValues;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+
+/**
+ * Interacting with the structure and contents of tabular data.
+ * @apiNote All indices (e.g., row, column) are 0-based.
+ */
+public interface TabularData<T> extends HasTabularValues<T> {
+	/** Controls how cell content is serialised (e.g. for the clipboard). */
+	enum SerializationFormat {
+		FORMULAS,
+		VALUES
+	}
+
+	// -- Delegates & Listeners --
+
+	/**
+	 * @return cell processor
+	 */
+	@NonNull SpreadsheetCellProcessor getCellProcessor();
+
+	/**
+	 * @return provider of paste operations
+	 */
+	@Nullable TabularDataPasteInterface<T> getPaste();
+
+	/**
+	 * @return utility for pasting data by pointer drag
+	 */
+	@Nullable CellDragPasteHandler getCellDragPasteHandler();
+
+	/**
+	 * Add a listener for data update and data dimension changes.
+	 * @param listener change listener
+	 */
+	void addChangeListener(@NonNull TabularDataChangeListener listener);
+
+	// -- Structure --
+
+	/**
+	 * Insert a row at the given index, shifting all subsequent rows down by one.
+	 * @param row Index of new row.
+	 */
+	void insertRowAt(int row);
+
+	/**
+	 * Delete the content at the given row index, and shift all subsequent rows up by one.
+	 * @param row Index of row to delete.
+	 */
+	void deleteRowAt(int row);
+
+	/**
+	 * Insert a column at the given index, shifting all subsequent columns right by one.
+	 * @param column Index of column to add.
+	 */
+	void insertColumnAt(int column);
+
+	/**
+	 * Delete the content at the given cell index, and shift all subsequence columns left by one.
+	 * @param column Index of column to delete.
+	 */
+	void deleteColumnAt(int column);
+
+	/**
+	 * Expand the size of the data if necessary (i.e., if the given number of rows or columns
+	 * is less than the current size, nothing happens).
+	 * @param numberOfRows Minimum number of rows.
+	 * @param numberOfColumns Minimum number of columns.
+	 */
+	default void ensureCapacity(int numberOfRows, int numberOfColumns) {
+		int rows = numberOfRows();
+		for (int i = rows; i <= numberOfRows; i++) {
+			insertRowAt(i);
+		}
+		int columns = numberOfColumns();
+		for (int i = columns; i <= numberOfColumns; i++) {
+			insertColumnAt(i);
+		}
+	}
+
+	/**
+	 * Get name of a column.
+	 * @param column column index
+	 * @return column name
+	 */
+	default @NonNull String getColumnName(int column) {
+		return Spreadsheet.getColumnName(column);
+	}
+
+	/**
+	 * Get name of a row.
+	 * @param row row index
+	 * @return row name
+	 */
+	default @NonNull String getRowName(int row) {
+		return String.valueOf(row + 1);
+	}
+
+	/**
+	 * Get a cell name.
+	 * @param row row index
+	 * @param column column index
+	 * @return cell name
+	 */
+	default @NonNull String getCellName(int row, int column) {
+		return getColumnName(column) + getRowName(row);
+	}
+
+	// -- Content --
+
+	/**
+	 * Set the content of cell (row, column), replacing any existing content.
+	 * Will grow the size of the data (number of rows/columns) if row/column is outside the
+	 * current size.
+	 * @param row Row index of cell.
+	 * @param column Column index of cell.
+	 * @param content The content for (row, column). If {@code null}, clears the cell.
+	 */
+	void setContent(int row, int column, @Nullable T content);
+
+	/**
+	 * Replace the content of cell (row, column) with {@code null}.
+	 * Will not shrink the size of the data (number of rows/columns) if row/column is the
+	 * last cell with content on the right or bottom edge.
+	 * @param row Row index of cell.
+	 * @param column Column index of cell.
+	 */
+	void removeContentAt(int row, int column);
+
+	/**
+	 * @param row Row index
+	 * @param column Column index
+	 * @return true if the cell at (row, column) contains a text object (GeoText).
+	 */
+	boolean isTextContentAt(int row, int column);
+
+	/**
+	 * Remove "empty cell" flag.
+	 * @param row Row index of cell.
+	 * @param column Column index of cell.
+	 */
+	default void markNonEmpty(int row, int column) {
+		// not needed in tests
+	}
+
+	/**
+	 * Serialize cell content (e.g. for clipboard).
+	 * @param row Row index of cell.
+	 * @param column Column index of cell.
+	 * @param format specifies how to serialize content
+	 * @return Content of given cell formatted for external use (clipboard), or an empty string
+	 * if there is no content at (row, column).
+	 */
+	@NonNull String serializeContentAt(int row, int column, SerializationFormat format);
+
+	/**
+	 * @param row Row index
+	 * @param column Column index
+	 * @return Whether the cell contains a formula.
+	 */
+	boolean hasFormulaAt(int row, int column);
+
+	/**
+	 * Check for errors in spreadsheet data.
+	 * @param row Row index of cell.
+	 * @param column Column index of cell.
+	 * @return {@code true} if cell (row, column) currently has an error.
+	 */
+	boolean hasError(int row, int column);
+
+	/**
+	 * @return A generic error message to display for cells with errors.
+	 */
+	String getErrorString();
+
+	/**
+	 * Some data types may override default mouse down action.
+	 * @param row table row
+	 * @param column table column
+	 * @return whether specific handling happened
+	 */
+	default boolean handleMouseDown(int row, int column) {
+		return false;
+	}
+}

@@ -1,0 +1,89 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.editor.share.controller;
+
+import org.geogebra.common.awt.AwtFactory;
+import org.geogebra.common.awt.GRectangle2D;
+import org.geogebra.editor.share.serializer.TeXBuilder;
+import org.geogebra.editor.share.tree.Node;
+import org.geogebra.editor.share.tree.SequenceNode;
+
+import com.himamis.retex.renderer.share.Box;
+import com.himamis.retex.renderer.share.BoxConsumer;
+import com.himamis.retex.renderer.share.BoxPosition;
+import com.himamis.retex.renderer.share.OvalBox;
+import com.himamis.retex.renderer.share.platform.FactoryProvider;
+
+public class CursorBoxConsumer implements BoxConsumer {
+
+	private final TeXBuilder texBuilder;
+
+	private final Node argument;
+
+	private final boolean beforeFirst;
+	private final Node input;
+	private BoxPosition cursorPosition;
+	private double boxWidth;
+
+	CursorBoxConsumer(
+			TeXBuilder texBuilder, SequenceNode sequenceNode, int currentOffset, Node input) {
+		this.texBuilder = texBuilder;
+		this.input = input;
+		beforeFirst = currentOffset == 0;
+		Node argumentTmp = sequenceNode != null
+				? sequenceNode.getChild(currentOffset == 0 ? 0 : currentOffset - 1)
+				: null;
+		argument = argumentTmp == null ? TeXBuilder.SELECTION : argumentTmp;
+	}
+
+	@Override
+	public void handle(Box box, BoxPosition position) {
+		Node node = texBuilder.getNode(box.getAtom());
+		highlightInput(box, node, input);
+		if (node == argument) {
+			cursorPosition = position;
+			boxWidth = beforeFirst ? 0 : box.getWidth();
+		}
+	}
+
+	protected static void highlightInput(Box box, Node node, Node input) {
+		if (node == input && input != null) {
+			if (box instanceof OvalBox ovalBox) {
+				ovalBox.setColor(FactoryProvider.getInstance()
+						.getGraphicsFactory()
+						.createColor(TeXBuilder.INPUT_BORDER));
+			}
+		}
+	}
+
+	/**
+	 * @return cursor rectangle
+	 */
+	public GRectangle2D getBounds() {
+		if (cursorPosition == null) {
+			return null;
+		}
+
+		GRectangle2D rectangle2D = AwtFactory.getPrototype().newRectangle2D();
+		rectangle2D.setRect(
+				cursorPosition.x() + boxWidth,
+				cursorPosition.baseline() - cursorPosition.scale() * 0.8,
+				1,
+				cursorPosition.scale());
+		return rectangle2D;
+	}
+}

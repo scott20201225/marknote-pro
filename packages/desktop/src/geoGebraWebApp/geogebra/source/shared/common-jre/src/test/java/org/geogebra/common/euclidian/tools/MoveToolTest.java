@@ -1,0 +1,565 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.euclidian.tools;
+
+import static org.geogebra.common.BaseUnitTest.hasValue;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.verify;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import org.geogebra.common.cas.MockedCasGiac;
+import org.geogebra.common.euclidian.EuclidianConstants;
+import org.geogebra.common.euclidian.ScreenReaderAdapter;
+import org.geogebra.common.jre.headless.EuclidianViewNoGui;
+import org.geogebra.common.kernel.StringTemplate;
+import org.geogebra.common.kernel.geos.AbsoluteScreenLocateable;
+import org.geogebra.common.kernel.geos.GeoBoolean;
+import org.geogebra.common.kernel.geos.GeoCasCell;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.kernel.geos.GeoImage;
+import org.geogebra.common.kernel.geos.GeoLine;
+import org.geogebra.common.kernel.geos.GeoList;
+import org.geogebra.common.kernel.geos.GeoNumeric;
+import org.geogebra.common.kernel.geos.GeoSegment;
+import org.geogebra.common.kernel.kernelND.GeoElementND;
+import org.geogebra.common.main.UndoRedoMode;
+import org.geogebra.common.plugin.EuclidianStyleConstants;
+import org.geogebra.common.plugin.EventListener;
+import org.geogebra.common.plugin.EventType;
+import org.geogebra.test.EventAccumulator;
+import org.geogebra.test.annotation.Issue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+
+class MoveToolTest extends BaseToolTest {
+
+	@BeforeEach
+	void setmode() {
+		setMode(EuclidianConstants.MODE_MOVE);
+	}
+
+	@Test
+	void smallDragShouldNotMovePointOnListOrDispatchUpdate() {
+		add("l={(0, 0), (2, -2)}");
+		add("A=Point(l)");
+		ArrayList<String> updates = new ArrayList<>();
+		EventListener accumulator = event -> {
+			if (event.getType() == EventType.UPDATE) {
+				updates.add(event.target.getLabelSimple());
+			}
+		};
+		getApp().getEventDispatcher().addEventListener(accumulator);
+
+		dragRW(0, 0, 0.8, -0.8);
+		assertEquals(Collections.emptyList(), updates);
+
+		dragRW(0, 0, 2, -2);
+		checkContent("A = (2, -2)");
+		assertEquals(Collections.singletonList("A"), updates);
+	}
+
+	@Test
+	void moveFreeLineWithMouse() {
+		GeoLine line = new GeoLine(getKernel().getConstruction());
+		line.setCoords(0, 1, 1);
+		line.setLabel("g");
+		line.setEuclidianVisible(true);
+		line.updateRepaint();
+
+		dragRW(4, -1, 4, -2);
+
+		checkContent("g: y = -2");
+	}
+
+	@Test
+	void moveMultipleSelectedPointsWithMouse() {
+		GeoElement pointA = add("A = (1, -1)");
+		GeoElement pointB = add("B = (3, -1)");
+		getApp().getSelectionManager().setSelectedGeos(Arrays.asList(pointA, pointB));
+
+		dragRW(1, -1, 2, -2);
+
+		checkContent("A = (2, -2)", "B = (4, -2)");
+	}
+
+	@Test
+	void clickingEmptySpaceShouldClearSelection() {
+		GeoElement point = add("A = (1, -1)");
+		click(50, 50);
+		assertTrue(point.isSelected());
+
+		click(200, 200);
+
+		assertFalse(point.isSelected());
+	}
+
+	@Test
+	void moveBoxPlotWithMouse() {
+		GeoNumeric numeric = add("BoxPlot(0, 1, {1, 2, 3, 4})");
+		numeric.setFixed(false);
+
+		dragRW(1, -1, 1, -4);
+
+		assertEquals(
+				"BoxPlot(-4, 1, {1, 2, 3, 4})", numeric.getDefinition(StringTemplate.defaultTemplate));
+	}
+
+	@Test
+	void fixedBoxPlotShouldNotMove() {
+		GeoNumeric numeric = add("BoxPlot(0, 1, {1, 2, 3, 4})");
+		numeric.setFixed(true);
+
+		dragRW(1, -1, 1, -4);
+
+		assertEquals(
+				"BoxPlot(0, 1, {1, 2, 3, 4})", numeric.getDefinition(StringTemplate.defaultTemplate));
+	}
+
+	@Test
+	void movingBoxPlotShouldSupportUndoAndRedo() {
+		getApp().setUndoRedoMode(UndoRedoMode.GUI);
+		getApp().setUndoActive(true);
+		GeoNumeric numeric = add("BoxPlot(0, 1, {1, 2, 3, 4})");
+		numeric.setFixed(false);
+
+		dragRW(1, -1, 1, -4);
+		getApp().getKernel().undo();
+
+		assertEquals(
+				"BoxPlot(0, 1, {1, 2, 3, 4})", numeric.getDefinition(StringTemplate.defaultTemplate));
+
+		getApp().getKernel().redo();
+		assertEquals(
+				"BoxPlot(-4, 1, {1, 2, 3, 4})", numeric.getDefinition(StringTemplate.defaultTemplate));
+	}
+
+	@Test
+	void movingSliderValueShouldSupportUndo() {
+		getApp().getKernel().setUndoActive(true);
+		getApp().getKernel().initUndoInfo();
+		GeoNumeric slider = add("Slider(-5,5,.1)");
+		slider.setSliderFixed(true);
+		assertEquals(0, slider.evaluateDouble(), .001);
+
+		dragStart(148, 58);
+		assertEquals(0.1, slider.evaluateDouble(), .001);
+		dragEnd(160, 58);
+		assertEquals(1.1, slider.evaluateDouble(), .001);
+
+		getApp().getKernel().undo();
+		assertEquals(0, slider.evaluateDouble(), .001);
+	}
+
+	@Test
+	@Issue({"APPS-7317", "APPS-7429"})
+	void dependentListExpressionShouldNotMove() {
+		add("y_1={0,1,2}");
+		add("y_2={0,2,3}");
+		GeoElement element = add("(y_1, y_2)");
+
+		dragRW(0, 0, 1, -1);
+
+		assertEquals("(y_1, y_2)", element.getDefinition(StringTemplate.defaultTemplate));
+		assertEquals("{(0, 0), (1, 2), (2, 3)}", element.toValueString(StringTemplate.defaultTemplate));
+	}
+
+	@Test
+	void moveWithMouseShouldChangeSegment1() {
+		add("A = (0,0)");
+		add("f = Segment(A, (1,-1))");
+		dragRW(1, -1, 2, -3);
+		checkContent("A = (1, -2)", "f = 1.41421");
+	}
+
+	@Test
+	void moveWithMouseShouldChangeVector1() {
+		add("v = Vector((1,-1))");
+		dragRW(1, -1, 2, -3);
+		checkContent("v = (2, -3)");
+	}
+
+	@Test
+	void moveWithMouseShouldChangeVector2() {
+		add("list = {Vector((1,-1))}");
+		dragRW(1, -1, 2, -3);
+		checkContent("list = {(2, -3)}");
+	}
+
+	@Test
+	void casFreeListShouldNotBeMoveable() {
+		MockedCasGiac mockGiac = setupGiac();
+		mockGiac.memorize("Evaluate({(1, -1), (1, 1)})", "{(1,-1),(1,1)}");
+		GeoCasCell f = new GeoCasCell(getKernel().getConstruction());
+		getKernel().getConstruction().addToConstructionList(f, false);
+		f.setInput("l5:={(1, -1), (1, 1)}");
+		f.computeOutput();
+		GeoList list = (GeoList) f.getTwinGeo();
+		list.setLabel("l5");
+		assertThat(list, hasValue("{(1, -1), (1, 1)}"));
+		dragStart(50, 50);
+		assertThat(list.isSelected(), equalTo(true));
+		dragEnd(100, 50);
+		assertThat(list, hasValue("{(1, -1), (1, 1)}"));
+	}
+
+	@Test
+	void freeListShouldBeDraggable() {
+		GeoList list = add("{(1, -1), (1, 1)}");
+		list.setEuclidianVisible(true);
+		list.updateRepaint();
+		EventAccumulator accumulator = new EventAccumulator();
+		getApp().getEventDispatcher().addEventListener(accumulator);
+		dragRW(1, -1, 2, -1);
+		assertThat(list, hasValue("{(2, -1), (2, 1)}"));
+		assertTrue(accumulator.getEvents().contains("UPDATE l1"), "List should have been updated");
+	}
+
+	private MockedCasGiac setupGiac() {
+		MockedCasGiac mockedCasGiac = new MockedCasGiac();
+		mockedCasGiac.applyTo(getApp());
+		return mockedCasGiac;
+	}
+
+	@Test
+	void moveWithMouseShouldChangePolygon1() {
+		add("A = (0,0)");
+		add("q = Polygon(A, (0,-1), 4)");
+		add("SetVisibleInView(B,1,false)");
+		dragRW(1, -1, 2, -3);
+		checkContent(
+				"A = (1, -2)", "q = 1", "f = 1", "g = 1", "B = (2, -3)", "C = (2, -2)", "h = 1", "i = 1");
+	}
+
+	@Test
+	void moveWithMouseShouldChangePolygon2() {
+		GeoElement A = add("A = (0,0)");
+		GeoElement q = add("q = Polygon((x(A), y(A)), (2, 0), (2, -2), (0, -2))");
+		dragRW(1, -1, 2, -2);
+		assertThat(A, hasValue("(0, 0)"));
+		assertThat(q, hasValue("6"));
+	}
+
+	@Test
+	void moveWithMouseShouldChangePolygon3() {
+		GeoElement A = add("A = (0,0)");
+		GeoElement q = add("q = Polygon(A, A + (2, 0), A + (2, -2), A + (0, -2))");
+		dragRW(1, -1, 2, -2);
+		assertThat(A, hasValue("(1, -1)"));
+		assertThat(q, hasValue("4"));
+	}
+
+	@Test
+	void moveWithMouseShouldNotChangeFixedSegment() {
+		add("A = (0,0)");
+		add("f = Segment(A, (1,-1))");
+		add("SetFixed(f,true)");
+		dragRW(1, -1, 2, -3);
+		checkContent("A = (0, 0)", "f = 1.41421");
+	}
+
+	@Test
+	void moveWithMouseShouldNotChangeFixedPolygon() {
+		add("A = (0,0)");
+		add("q = Polygon(A, (0,-1), 4)");
+		add("SetFixed(q,true)");
+		dragRW(1, -1, 2, -3);
+		checkContent(
+				"A = (0, 0)", "q = 1", "f = 1", "g = 1", "B = (1, -1)", "C = (1, 0)", "h = 1", "i = 1");
+	}
+
+	@Test
+	void moveWithMouseShouldNotChangeValueOfInfiniteCircle() {
+		add("A=(1,-1)");
+		add("B=(2,-2)");
+		add("C=(3,-3)");
+		GeoElement circle = add("Circle(A,B,C)");
+		assertThat(circle, hasValue("(-0.71x - 0.71y) (∞) = 0"));
+		dragRW(0, 0, 1, -1);
+		assertThat(circle, hasValue("(-0.71x - 0.71y) (∞) = 0"));
+	}
+
+	@Test
+	void moveWithMouseShouldChangeCircle1() {
+		add("A=(1, -1)");
+		GeoElement circle = add("Circle(A, 2)");
+		dragRW(1, -3, 2, -4);
+		assertThat(circle, hasValue("(x - 2)² + (y + 2)² = 4"));
+	}
+
+	@Test
+	void moveWithMouseShouldChangeCircle2() {
+		add("c = Circle((1, -1), 2)");
+		dragRW(1, -3, 2, -4);
+		checkContent("c: (x - 2)² + (y + 2)² = 4");
+	}
+
+	@Test
+	void moveWithMouseShouldChangeEllipse() {
+		add("e = Ellipse((1, 1), (2, 2), (3, 3))");
+		checkContent("e: 17x² - 2x y + 17y² - 48x - 48y = 0");
+		dragRW(0, 0, 1, -1);
+		checkContent("e: 17x² - 2x y + 17y² - 84x - 12y = -36");
+	}
+
+	@Test
+	void moveWithMouseShouldNotChangeEllipse() {
+		add("e = Ellipse((2, 2), (1, 0.6), 2)");
+		checkContent("e: 60x² - 11.2x y + 56.16y² - 165.44x - 129.216y = 0.5696");
+		dragRW(0, 0, 1, -1);
+		checkContent("e: 60x² - 11.2x y + 56.16y² - 165.44x - 129.216y = 0.5696");
+	}
+
+	@Test
+	void moveWithMouseShouldChangeRay() {
+		add("r = Ray((0, 0), (1, -1))");
+		dragRW(0, 0, 2, -1);
+		checkContent("r: x + y = 1");
+	}
+
+	@Test
+	void moveWithMouseShouldChangeDependentPoint() {
+		add("a = 1");
+		add("b = -1");
+		add("A = (a, b)");
+		dragRW(1, -1, 2, -2);
+		checkContent("A = (2, -2)");
+	}
+
+	@Test
+	void moveWithMouseShouldChangeOutputOfTranslate1() {
+		add("A = (2, 2)");
+		add("v = Vector((-1, -3))");
+		GeoElement point = add("Translate(A, v)");
+		dragRW(1, -1, 2, -2);
+		assertThat(point, hasValue("(2, -2)"));
+	}
+
+	@Test
+	void moveWithMouseShouldChangeOutputOfTranslate2() {
+		add("A = (2, 2)");
+		add("v = Vector((-1, -3))");
+		GeoElement list = add("{Translate(A, v)}");
+		dragRW(1, -1, 2, -2);
+		assertThat(list, hasValue("{(2, -2)}"));
+	}
+
+	@Test
+	void selectionReadByScreenReaderOnce() {
+		ScreenReaderAdapter screenReader = Mockito.spy(ScreenReaderAdapter.class);
+		((EuclidianViewNoGui) getApp().getActiveEuclidianView()).setScreenReader(screenReader);
+		add("A = (1, -1)");
+		dragRW(1, -1, 1, -1);
+		verify(screenReader).readText(anyString());
+	}
+
+	@Test
+	void moveChangeableCoords() {
+		add("a=1");
+		add("b=-1");
+		add("A=(a,b)");
+		dragRW(1, -1, 2, -3);
+		checkContentWithVisibility(false, "a = 2", "b = -3");
+		checkContent("A = (2, -3)");
+	}
+
+	@Test
+	void drag3dPointWithDependencies() {
+		add("A=(1,-1,0)");
+		add("B=2A");
+		dragRW(1, -1, 2, -3);
+		checkContent("A = (2, -3, 0)", "B = (4, -6, 0)");
+	}
+
+	@Test
+	void moveButton() {
+		GeoElement furniture = add("furniture=Button()");
+		assertFurnitureDragBehavior(furniture);
+	}
+
+	@Test
+	void moveInputBox() {
+		GeoElement furniture = add("furniture=InputBox()");
+		assertFurnitureDragBehavior(furniture);
+	}
+
+	@Test
+	void moveCheckBox() {
+		GeoElement furniture = add("furniture=CheckBox()");
+		assertTrue(furniture.isLockedPosition());
+		assertCannotDrag(furniture);
+		assertCanDrag(furniture, true);
+		((GeoBoolean) furniture).setCheckboxFixed(false);
+		assertCanDrag(furniture, false);
+	}
+
+	@Test
+	void moveImage() {
+		GeoImage image = createImage();
+		image.setLabel("img");
+		image.setAbsoluteScreenLocActive(true);
+		add("SetFixed(img,true)");
+		assertCannotDrag(image);
+		add("SetFixed(img,false)");
+		assertCanDrag(image, false);
+	}
+
+	@Test
+	@Issue("APPS-5592")
+	void moveImageMovesChildren() {
+		GeoImage image = createImage();
+		image.setLabel("img");
+		add("Reflect(img,xAxis)");
+		image.setAbsoluteScreenLocActive(true);
+		DragResult dr = getDragResult(image, false);
+		assertEquals("UPDATE img,UPDATE img',UPDATE_STYLE img", dr.events);
+	}
+
+	@Test
+	void moveDropdown() {
+		GeoElement furniture = add("furniture={1,2,3}");
+		assertArrayEquals(new String[] {"furniture"}, getApp().getGgbApi().getAllObjectNames());
+		((GeoList) furniture).setDrawAsComboBox(true);
+		furniture.setEuclidianVisible(true);
+		furniture.setLabelVisible(true);
+		furniture.updateRepaint();
+		assertCanDrag(furniture, true); // right-click only; no left-dragging of dropdowns
+	}
+
+	@Test
+	void undoMoving() {
+		getApp().setUndoActive(true);
+		add("A = (1, -1)");
+		dragRW(1, -1, 2, -3);
+		checkContent("A = (2, -3)");
+		getApp().getKernel().undo();
+		checkContent("A = (1, -1)");
+	}
+
+	@Test
+	void moveTranslateOutput() {
+		Stream.of("(0,0)", "(1,0)", "(1,1)", "(0,1)").forEach(this::add);
+		add("quad=Polygon(A,B,C,D)");
+		add("trV=Translate(quad,(1,-2))");
+		add("tr=Translate(quad,(1,-2))");
+		GeoElement corner = add("Vertex(tr,1)");
+		GeoElement cornerV = add("Vertex(trV,1)");
+		// first drag poly translated by point
+		assertThat(corner, hasValue("(1, -2)"));
+		dragRW(1.5, -1.5, 1.5, -2.5);
+		assertThat(corner, hasValue("(1, -3)"));
+		// now drag poly translated by vector
+		assertThat(cornerV, hasValue("(1, -2)"));
+		dragRW(1.5, -1.5, 1.5, -2.5);
+		assertThat(cornerV, hasValue("(1, -3)"));
+	}
+
+	@Test
+	void shouldNotMoveDependentTranslateOutput() {
+		add("a=-2");
+		Stream.of("(0,0)", "(1,0)", "(1,1)", "(0,1)").forEach(this::add);
+		add("quad=Polygon(A,B,C,D)");
+		add("tr=Translate(quad,Vector((1,a)))");
+		GeoElement corner = add("Vertex(tr,1)");
+		assertThat(corner, hasValue("(1, -2)"));
+		dragRW(1.5, -1.5, 1.5, -2.5);
+		assertThat(corner, hasValue("(1, -2)"));
+	}
+
+	@Test
+	void movePointShouldSnapOnDrag() {
+		GeoElement point = add("A = (0, 0)");
+		snapToGrid();
+		dragStart(0, 0);
+		dragEnd(205, 0);
+		assertThat(point, hasValue("(4, 0)"));
+	}
+
+	private void snapToGrid() {
+		getApp().getActiveEuclidianView().setPointCapturing(EuclidianStyleConstants.POINT_CAPTURING_ON);
+	}
+
+	@Test
+	void moveSegmentShouldSnapOnDrag() {
+		GeoSegment segment = add("Segment((0, 0), (1, 0))");
+		snapToGrid();
+		dragStart(25, 0);
+		dragEnd(230, 0);
+		assertThat(segment.startPoint, hasValue("(4, 0)"));
+	}
+
+	private void assertFurnitureDragBehavior(GeoElement furniture) {
+		add("SetFixed(furniture,true)");
+		assertCannotDrag(furniture);
+		assertCanDrag(furniture, true);
+		add("SetFixed(furniture,false)");
+		assertCanDrag(furniture, false);
+	}
+
+	private void assertCannotDrag(GeoElementND furniture) {
+		assertEquals(new DragResult(0, 0, ""), getDragResult(furniture, false));
+	}
+
+	private void assertCanDrag(GeoElementND furniture, boolean right) {
+		assertEquals(
+				new DragResult(100, 50, "UPDATE_STYLE " + furniture.getLabelSimple()),
+				getDragResult(furniture, right));
+	}
+
+	private DragResult getDragResult(GeoElementND geo, boolean rightClick) {
+		int offX = 10;
+		int offY = geo.isGeoImage() ? -10 : 10;
+		add("SetCoords(" + geo.getLabelSimple() + ", 100, 100)");
+		dragStart(100 + offX, 100 + offY, rightClick);
+		EventAccumulator listener = new EventAccumulator();
+		getApp().getEventDispatcher().addEventListener(listener);
+		dragEnd(200 + offX, 150 + offY, rightClick);
+		return new DragResult(
+				((AbsoluteScreenLocateable) geo).getAbsoluteScreenLocX() - 100,
+				((AbsoluteScreenLocateable) geo).getAbsoluteScreenLocY() - 100,
+				listener.getEvents().toArray(new String[0]));
+	}
+
+	private record DragResult(int x, int y, String events) {
+		private DragResult(int x, int y, String... events) {
+			this(
+					x,
+					y,
+					String.join(
+							",",
+							Arrays.stream(events)
+									.filter(event -> event.startsWith("UPDATE"))
+									.collect(Collectors.toSet())));
+		}
+
+		@Override
+		public String toString() {
+			return x + "," + y + ":" + events;
+		}
+	}
+}

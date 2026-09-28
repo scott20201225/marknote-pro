@@ -1,0 +1,421 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.web.full.gui.view.probcalculator;
+
+import org.geogebra.common.gui.AccessibilityGroup;
+import org.geogebra.common.gui.view.data.PlotSettings;
+import org.geogebra.common.gui.view.probcalculator.ProbabilityCalculatorTableValuesViewModel;
+import org.geogebra.common.gui.view.probcalculator.ProbabilityCalculatorTableValuesViewModel.ButtonState;
+import org.geogebra.common.gui.view.probcalculator.ProbabilityCalculatorView;
+import org.geogebra.common.gui.view.probcalculator.ProbabilityManager;
+import org.geogebra.common.gui.view.probcalculator.ProbabilityTable;
+import org.geogebra.common.gui.view.probcalculator.StatisticsCalculator;
+import org.geogebra.common.main.App;
+import org.geogebra.ggbjdk.java.awt.geom.Dimension;
+import org.geogebra.web.full.css.GuiResources;
+import org.geogebra.web.full.css.MaterialDesignResources;
+import org.geogebra.web.full.gui.components.sideSheet.ComponentSideSheet;
+import org.geogebra.web.full.gui.components.sideSheet.SideSheetData;
+import org.geogebra.web.full.gui.toolbar.mow.toolbox.components.IconButton;
+import org.geogebra.web.full.gui.toolbarpanel.tableview.StickyProbabilityTable;
+import org.geogebra.web.full.gui.view.data.PlotPanelEuclidianViewW;
+import org.geogebra.web.html5.gui.view.ImageIconSpec;
+import org.geogebra.web.html5.gui.zoompanel.FocusableWidget;
+import org.geogebra.web.html5.main.AppW;
+import org.geogebra.web.html5.main.AsyncManager;
+import org.geogebra.web.html5.main.GlobalKeyDispatcherW;
+import org.gwtproject.core.client.Scheduler;
+import org.gwtproject.core.client.Scheduler.ScheduledCommand;
+import org.gwtproject.dom.style.shared.Unit;
+import org.gwtproject.user.client.ui.FlowPanel;
+import org.gwtproject.user.client.ui.Widget;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+
+/**
+ * Probability Calculator View for web
+ */
+public class ProbabilityCalculatorViewW extends ProbabilityCalculatorView {
+	/** export action */
+	ScheduledCommand exportToEVAction;
+	/** plot panel */
+	FlowPanel plotPanelPlus;
+
+	protected FlowPanel probCalcPanel;
+	private IconButton overlayIconButton;
+	private @Nullable IconButton tableIconButton;
+	private IconButton btnLineGraph;
+	private IconButton btnStepGraph;
+	private IconButton btnBarGraph;
+
+	protected FlowPanel plotPanelOptions;
+	private ComponentSideSheet sideSheet;
+	private ProbabilityCalculatorTableValuesViewModel tableModel;
+
+	private void updateTableButton(ButtonState buttonState) {
+		tableIconButton.setVisible(buttonState != ButtonState.HIDDEN);
+		tableIconButton.setActive(buttonState == ButtonState.ACTIVE);
+	}
+
+	/**
+	 * @param app creates new probability calculator view
+	 */
+	protected ProbabilityCalculatorViewW(AppW app) {
+		super(app);
+		createGUIElements();
+		createExportToEvAction();
+		createLayoutPanels();
+	}
+
+	/**
+	 * Factory method
+	 * @param app application
+	 * @return new PC view
+	 */
+	public static ProbabilityCalculatorViewW create(AppW app) {
+		ProbabilityCalculatorViewW view = new ProbabilityCalculatorViewW(app);
+		view.isIniting = false;
+		view.init();
+		view.settingsChanged(app.getSettings().getProbCalcSettings());
+		return view;
+	}
+
+	@Override
+	public void setLabels() {
+		setLabelArrays();
+
+		ProbabilityTable table = getTable();
+		if (table != null) {
+			table.setLabels();
+		}
+
+		btnLineGraph.setLabels();
+		btnStepGraph.setLabels();
+		btnBarGraph.setLabels();
+		overlayIconButton.setLabels();
+		if (tableIconButton != null) {
+			tableIconButton.setLabels();
+		}
+
+		if (sideSheet != null) {
+			sideSheet.setLabels();
+		}
+	}
+
+	/**
+	 * Action to export all GeoElements that are currently displayed in this
+	 * panel to a EuclidianView. The viewID for the target EuclidianView is
+	 * stored as a property with key "euclidianViewID".
+	 *
+	 * <p>This action is passed as a parameter to plotPanel where it is used in the
+	 * plotPanel context menu and the EuclidianView transfer handler when the
+	 * plot panel is dragged into an EV.</p>
+	 */
+	private void createExportToEvAction() {
+		exportToEVAction = () -> {
+			// if null ID then use EV1 unless shift is down, then use EV2
+			int euclidianViewID = GlobalKeyDispatcherW.getShiftDown()
+					? getApp().getEuclidianView2(1).getViewID()
+					: getApp().getEuclidianView1().getViewID();
+			// do the export, preload Take, Pascal/Binomial, Integral, ...
+			AsyncManager manager = ((AppW) app).getAsyncManager();
+			manager.prefetch(() -> exportGeosToEV(euclidianViewID), "advanced", "stats", "cas");
+		};
+	}
+
+	private void createLayoutPanels() {
+		setPlotPanel(new PlotPanelEuclidianViewW(kernel));
+
+		plotPanelOptions = new FlowPanel();
+		plotPanelOptions.setStyleName("plotPanelOptions");
+
+		if (tableIconButton != null) {
+			plotPanelOptions.add(tableIconButton);
+		}
+		plotPanelOptions.add(overlayIconButton);
+		if (!app.getConfig().hasDistributionView()) {
+			plotPanelOptions.add(btnBarGraph);
+			plotPanelOptions.add(btnStepGraph);
+			plotPanelOptions.add(btnLineGraph);
+			updateGraphButtons();
+		}
+
+		plotPanelPlus = new FlowPanel();
+		plotPanelPlus.addStyleName("PlotPanelPlus");
+		plotPanelPlus.add(plotPanelOptions);
+		plotPanelPlus.add(getPlotPanel().getComponent());
+	}
+
+	protected void init() {
+		setLabels();
+		attachView();
+	}
+
+	private void createGUIElements() {
+		setLabelArrays();
+
+		overlayIconButton = new IconButton(
+				(AppW) app,
+				null,
+				new ImageIconSpec(GuiResources.INSTANCE.normal_overlay_black()),
+				"OverlayNormalCurve");
+		overlayIconButton.addStyleName(
+				app.isUnbundled() ? "probCalcStylbarBtn singleButton" : "probCalcStylbarBtn");
+		overlayIconButton.setTooltipPositionRight();
+		overlayIconButton.addFastClickHandler(source -> onOverlayClicked());
+		new FocusableWidget(AccessibilityGroup.PROBABILITY_OVERLAY, null, overlayIconButton)
+				.attachTo((AppW) app);
+		if (app.getConfig().hasDistributionView()) {
+			createTableButtonAndSideSheet();
+		}
+
+		btnLineGraph = new IconButton(
+				(AppW) app, null, new ImageIconSpec(GuiResources.INSTANCE.line_graph()), "LineGraph");
+		btnLineGraph.addStyleName("probCalcStylbarBtn");
+		btnLineGraph.addFastClickHandler(event -> setGraphType(GRAPH_LINE));
+
+		btnStepGraph = new IconButton(
+				(AppW) app, null, new ImageIconSpec(GuiResources.INSTANCE.step_graph()), "StepGraph");
+		btnStepGraph.addStyleName("probCalcStylbarBtn");
+		btnStepGraph.addFastClickHandler(event -> setGraphType(GRAPH_STEP));
+
+		btnBarGraph = new IconButton(
+				(AppW) app, null, new ImageIconSpec(GuiResources.INSTANCE.bar_chart()), "BarChart");
+		btnBarGraph.addStyleName("probCalcStylbarBtn");
+		btnBarGraph.addFastClickHandler(event -> setGraphType(GRAPH_BAR));
+	}
+
+	// TODO APPS-7848: Cancel subscription in Web State integration
+	@SuppressWarnings("CheckReturnValue")
+	private void createTableButtonAndSideSheet() {
+		tableIconButton = new IconButton(
+				(AppW) app,
+				null,
+				new ImageIconSpec(MaterialDesignResources.INSTANCE.toolbar_table_view_black()),
+				"Table");
+		tableIconButton.addStyleName(
+				app.isUnbundled() ? "probCalcStylbarBtn singleButton" : "probCalcStylbarBtn");
+		tableIconButton.setTooltipPositionRight();
+		tableIconButton.addFastClickHandler(source -> onTableClicked());
+		new FocusableWidget(AccessibilityGroup.PROBABILITY_TABLE, null, tableIconButton)
+				.attachTo((AppW) app);
+		tableModel = new ProbabilityCalculatorTableValuesViewModel(this);
+		updateTableButton(tableModel.getButtonState().get());
+		tableModel.getButtonState().subscribe(this::updateTableButton);
+		sideSheet = new ComponentSideSheet((AppW) app, new SideSheetData("Table"));
+		sideSheet.addStyleName("probabilityTableSideSheet");
+		sideSheet.addAttachHandler(e -> {
+			if (!e.isAttached()) {
+				tableModel.onClosed();
+			}
+		});
+	}
+
+	/**
+	 * Adds the probability table shared with the distribution view to the side sheet.
+	 * @param table probability table
+	 */
+	public void setSideSheetTable(@NonNull StickyProbabilityTable table) {
+		table.setStyleName("tvTable", true);
+		if (sideSheet != null) {
+			sideSheet.resetContentTo(table);
+		}
+	}
+
+	private void onTableClicked() {
+		if (sideSheet == null) {
+			return;
+		}
+		if (sideSheet.isAttached()) {
+			tableModel.onClosed();
+			sideSheet.close();
+		} else {
+			tableModel.onButtonTapped();
+			sideSheet.show();
+		}
+	}
+
+	/**
+	 * Overlay button action
+	 */
+	protected void onOverlayClicked() {
+		setShowNormalOverlay(!isShowNormalOverlay());
+		updateAll(false);
+	}
+
+	/**
+	 * @return the wrapper panel of this view
+	 */
+	public Widget getWrapperPanel() {
+		return plotPanelPlus;
+	}
+
+	@Override
+	protected void updateOutput(boolean updateDistributionView) {
+		updateDistribution();
+		updatePlotSettings();
+		updateIntervalProbability();
+		updateDiscreteTable();
+		setXAxisPoints();
+	}
+
+	@Override
+	protected void onDistributionUpdate() {
+		overlayIconButton.setVisible(isOverlayDefined());
+		getPlotPanel().repaintView();
+		if (sideSheet != null && sideSheet.isAttached() && !isDiscreteProbability()) {
+			sideSheet.close();
+		}
+	}
+
+	@Override
+	protected void addRemoveTable(boolean showTable) {
+		// TODO APPS-3708
+	}
+
+	@Override
+	protected void plotPanelUpdateSettings(PlotSettings settings) {
+		getPlotPanel().commonFields.updateSettings(getPlotPanel(), plotSettings);
+	}
+
+	@Override
+	public void updateDiscreteTable() {
+		if (!isDiscreteProbability() || getTable() == null) {
+			return;
+		}
+		int[] firstXLastX = generateFirstXLastXCommon();
+		getTable().setTable(selectedDist, parameters, firstXLastX[0], firstXLastX[1]);
+		selectProbabilityTableRows();
+		tabResized();
+	}
+
+	@Override
+	public PlotPanelEuclidianViewW getPlotPanel() {
+		return (PlotPanelEuclidianViewW) super.getPlotPanel();
+	}
+
+	@Override
+	protected void updateGUI() {
+		updateLowHighResult();
+		updateGraphButtons();
+		overlayIconButton.setActive(isShowNormalOverlay());
+	}
+
+	private void updateGraphButtons() {
+		btnLineGraph.setVisible(isDiscreteProbability());
+		btnStepGraph.setVisible(isDiscreteProbability());
+		btnBarGraph.setVisible(isDiscreteProbability());
+
+		btnLineGraph.setActive(getGraphType() == ProbabilityCalculatorView.GRAPH_LINE);
+		btnStepGraph.setActive(getGraphType() == ProbabilityCalculatorView.GRAPH_STEP);
+		btnBarGraph.setActive(getGraphType() == ProbabilityCalculatorView.GRAPH_BAR);
+	}
+
+	/**
+	 * update low and high
+	 */
+	public void updateLowHighResult() {
+		Scheduler.get().scheduleDeferred(this::tabResized);
+		if (getResultPanel() != null) {
+			updateResult(getResultPanel());
+		}
+	}
+
+	/**
+	 * @return whether distribution tab is open
+	 */
+	@Override
+	public boolean isDistributionTabOpen() {
+		return true;
+	}
+
+	@Override
+	public ProbabilityManager getProbManager() {
+		return probManager;
+	}
+
+	@Override
+	public void setInterval(double low, double high) {
+		setLow(low);
+		setHigh(high);
+		if (getResultPanel() != null) {
+			getResultPanel().updateLowHigh("" + low, "" + high);
+		}
+		setXAxisPoints();
+		updateIntervalProbability();
+		updateGUI();
+	}
+
+	@Override
+	public boolean suggestRepaint() {
+		return false;
+	}
+
+	/**
+	 * Resize callback
+	 */
+	public void onResize() {
+		// in most cases it is enough to updatePlotSettings, but when
+		// setPerspective is called early
+		// during Win8 app initialization, we also need to update the tabbed
+		// pane and make the whole process deferred
+		getApp().invokeLater(() -> {
+			tabResized();
+			updatePlotSettings();
+		});
+	}
+
+	/**
+	 * Tab resized callback
+	 */
+	public void tabResized() {
+		int width = plotPanelPlus.getOffsetWidth() - 5;
+		int height = plotPanelPlus.getOffsetHeight();
+		if (width > 0) {
+			resizePlotPanel(width, height);
+		}
+	}
+
+	void resizePlotPanel(int width, int maxHeight) {
+		int height = maxHeight > PlotPanelEuclidianViewW.DEFAULT_HEIGHT
+				? Math.max(PlotPanelEuclidianViewW.DEFAULT_HEIGHT, maxHeight / 2)
+				: Math.max(maxHeight, 40);
+		getPlotPanel().setPreferredSize(new Dimension(width, height));
+		double margin = (maxHeight - height) / 2.0;
+
+		getPlotPanel().getCanvasElement().getStyle().setMarginTop(margin, Unit.PX);
+
+		getPlotPanel().repaintView();
+		getPlotPanel().getEuclidianController().calculateEnvironment();
+	}
+
+	@Override
+	public StatisticsCalculator getStatCalculator() {
+		return null;
+	}
+
+	/**
+	 * @return application
+	 */
+	protected App getApp() {
+		return app;
+	}
+
+	public @Nullable ProbabilityCalculatorTableValuesViewModel getModel() {
+		return tableModel;
+	}
+}

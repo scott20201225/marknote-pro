@@ -11,6 +11,7 @@ import format from './format'
 import language from './language'
 import theme from './theme'
 import drawioFile from './drawioFile'
+import geogebraFile from './geogebraFile'
 import type Keybindings from '../../keyboard/shortcutHandler'
 import type Preference from '../../preferences'
 
@@ -40,7 +41,7 @@ export default function (
   keybindings: Keybindings,
   preferences: Preference,
   recentlyUsedFiles: string[] = [],
-  options: { drawioMode?: boolean; drawioAutoSave?: boolean } = {}
+  options: { drawioMode?: boolean; drawioAutoSave?: boolean; geogebraMode?: boolean } = {}
 ): MenuItemConstructorOptions[] {
   if (options.drawioMode) {
     return [
@@ -48,6 +49,17 @@ export default function (
       // Without this placeholder it consumes the Draw.io File menu instead.
       ...(process.platform === 'darwin' ? [marknotepro(keybindings)] : []),
       drawioFile(keybindings, options.drawioAutoSave ?? true),
+      theme(preferences),
+      language(preferences),
+      help()
+    ]
+  }
+
+  if (options.geogebraMode) {
+    const { autoSave } = preferences.getAll() as { autoSave?: boolean }
+    return [
+      ...(process.platform === 'darwin' ? [marknotepro(keybindings)] : []),
+      geogebraFile(keybindings, !!autoSave),
       theme(preferences),
       language(preferences),
       help()

@@ -1,0 +1,168 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.kernel.geos;
+
+import static org.hamcrest.CoreMatchers.anyOf;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
+
+import org.geogebra.common.kernel.StringTemplate;
+import org.geogebra.common.kernel.arithmetic.ExpressionValue;
+import org.geogebra.common.kernel.arithmetic.MyVecNDNode;
+import org.geogebra.common.kernel.kernelND.GeoVectorND;
+import org.junit.jupiter.api.Test;
+
+class GeoSymbolicVectorTest extends BaseSymbolicTest {
+
+	@Test
+	void testLowercaseIsVector() {
+		String[] inputs = {"u = (1, 2)", "v = (3, 4, 5)", "w = (a, b, 5)", "a = (r+ 3, t + 2, f + 1)"};
+		for (String input : inputs) {
+			GeoSymbolic symbolic = add(input);
+			assertIsVector(symbolic);
+			assertIsVector(symbolic.getDefinition());
+		}
+	}
+
+	@Test
+	void testAdditionSubtractionResultsInVector() {
+		add("a = (1, 2)");
+		add("b = (v, w)");
+		add("c = (2, 4, u)");
+		String[] variables = {"a", "b", "c"};
+		String[] operations = {"+", "-"};
+		for (String var1 : variables) {
+			for (String var2 : variables) {
+				for (String op : operations) {
+					GeoSymbolic symbolic = add(var1 + op + var2);
+					assertIsVector(symbolic);
+				}
+			}
+		}
+	}
+
+	@Test
+	void testCrossProductResultsInVector() {
+		String crossProduct = "\u2297";
+		add("a = (f, g)");
+		add("b = (h, q, z)");
+		String[] inputs = {"a" + crossProduct + "b", "b" + crossProduct + "a", "b" + crossProduct + "b"
+		};
+		for (String input : inputs) {
+			GeoSymbolic symbolic = add(input);
+			assertIsVector(symbolic);
+		}
+	}
+
+	@Test
+	void testScalarMultiplicationResultsInVector() {
+		add("a = (1, 2)");
+		add("b = (v, w)");
+		add("c = (2, 4, u)");
+		String[] variables = {"a", "b", "c"};
+		String[] scalars = {"1", "-5", "p", "999"};
+		for (String variable : variables) {
+			for (String scalar : scalars) {
+				GeoSymbolic symbolic = add(scalar + " " + variable);
+				assertIsVector(symbolic);
+			}
+		}
+	}
+
+	@Test
+	void testVectorOfListsToListOfVectors() {
+		add("l1 = {1,2,pi}");
+		add("l2 = {3,4,5}");
+		GeoSymbolic list = add("L3 = (l1, l2)");
+		assertThat(
+				list.getLaTeXDescriptionRHS(true, StringTemplate.numericLatex),
+				equalTo("\\left\\{\\left(1,\\;3 \\right),\\;"
+						+ "\\left(2,\\;4 \\right),\\;"
+						+ "\\left(\\pi ,\\;5 \\right)\\right\\}"));
+		list.setSymbolicMode(false, false);
+		assertThat(
+				list.getLaTeXDescriptionRHS(true, StringTemplate.numericLatex),
+				equalTo("\\left\\{\\left(1,\\;3 \\right),\\;"
+						+ "\\left(2,\\;4 \\right),\\;"
+						+ "\\left(3.1415926536,\\;5 \\right)\\right\\}"));
+	}
+
+	@Test
+	void testVectorOfListsToListOfVectorsWithLowercaseLabel() {
+		add("l1 = {1,2,pi}");
+		add("l2 = {3,4,5}");
+		GeoSymbolic list = add("l3 = (l1, l2)");
+		assertThat(
+				list.getLaTeXDescriptionRHS(true, StringTemplate.numericLatex),
+				equalTo("\\left\\{\\left(1,\\;3 \\right),\\;"
+						+ "\\left(2,\\;4 \\right),\\;"
+						+ "\\left(\\pi ,\\;5 \\right)\\right\\}"));
+		list.setSymbolicMode(false, false);
+		assertThat(
+				list.getLaTeXDescriptionRHS(true, StringTemplate.numericLatex),
+				equalTo("\\left\\{\\left(1,\\;3 \\right),\\;"
+						+ "\\left(2,\\;4 \\right),\\;"
+						+ "\\left(3.1415926536,\\;5 \\right)\\right\\}"));
+	}
+
+	@Test
+	void testDotProduct() {
+		t("Dot[Vector[(1,2)],Vector[(3,4)]]", "11");
+		t("Dot[Vector[(p,q)],Vector[(r,s)]]", "p * r + q * s");
+	}
+
+	@Test
+	void testCrossProduct() {
+		t("Cross[Vector[(1,2)],Vector[(3,4)]]", "-2");
+		t("Cross[Vector[(p,q)], Vector[(r,s)]]", "p * s - q * r");
+	}
+
+	@Test
+	void testVectors() {
+		// these should give Vector not point
+		t("Length(Vector((3,4)))", "5");
+		t("x(Vector((3,4)))", "3");
+		t("y(Vector((3,4)))", "4");
+		t("z(Vector((3,4)))", "0");
+		t("x(Vector((3,4,5)))", "3");
+		t("y(Vector((3,4,5)))", "4");
+		t("z(Vector((3,4,5)))", "5");
+		t("abs(Vector((1,2)))", "sqrt(5)");
+		t("UnitVector((1,2))", "(1 / 5 * sqrt(5), 2 / 5 * sqrt(5))");
+		t("UnitVector((p,q))", "(p / sqrt(p^(2) + q^(2)), q / sqrt(p^(2) + q^(2)))");
+		t("UnitPerpendicularVector((1,2))", "(-2 / sqrt(5), 1 / sqrt(5))");
+		t("UnitPerpendicularVector((p,q))", "((-q) / sqrt(p^(2) + q^(2)), p / sqrt(p^(2) + q^(2)))");
+		t("PerpendicularVector((1,2))", "(-2, 1)");
+		t("PerpendicularVector((p,q))", "(-q, p)");
+		t("Dot((p,q),(r,s))", "p * r + q * s");
+		t("Dot((1,2),(3,4))", "11");
+	}
+
+	private void assertIsVector(GeoSymbolic symbolic) {
+		assertThat(symbolic.getTwinGeo(), anyOf(nullValue(), instanceOf(GeoVectorND.class)));
+		assertIsVector(symbolic.getValue());
+	}
+
+	private void assertIsVector(ExpressionValue node) {
+		ExpressionValue value = node.unwrap();
+		assertThat(value, instanceOf(MyVecNDNode.class));
+		assertThat(((MyVecNDNode) value).isCASVector(), is(true));
+	}
+}

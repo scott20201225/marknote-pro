@@ -1,0 +1,280 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.util;
+
+import static org.geogebra.common.gui.view.algebra.AlgebraItem.checkAllRHSareIntegers;
+
+import org.geogebra.common.kernel.StringTemplate;
+import org.geogebra.common.kernel.arithmetic.BooleanValue;
+import org.geogebra.common.kernel.arithmetic.Command;
+import org.geogebra.common.kernel.arithmetic.Equation;
+import org.geogebra.common.kernel.arithmetic.ExpressionNode;
+import org.geogebra.common.kernel.arithmetic.ExpressionValue;
+import org.geogebra.common.kernel.arithmetic.MyDouble;
+import org.geogebra.common.kernel.arithmetic.MyList;
+import org.geogebra.common.kernel.arithmetic.NumberValue;
+import org.geogebra.common.kernel.cas.AlgoComplexSolve;
+import org.geogebra.common.kernel.cas.AlgoSolve;
+import org.geogebra.common.kernel.commands.Commands;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.kernel.geos.GeoSymbolic;
+import org.geogebra.common.kernel.geos.HasSymbolicMode;
+
+public class SymbolicUtil {
+
+	/**
+	 * Check if symbolic is Solve/NSolve command
+	 *
+	 * @param symbolic
+	 *        GeoSymbolic input
+	 * @return true if symbolic is solve command
+	 */
+	public static boolean isSolve(GeoSymbolic symbolic) {
+		Command topLevelCommand = symbolic.getDefinition().getTopLevelCommand();
+		return topLevelCommand != null
+				&& (Commands.Solve.getCommand().equals(topLevelCommand.getName())
+						|| Commands.NSolve.getCommand().equals(topLevelCommand.getName()));
+	}
+
+	private static boolean isNumericOfSolve(GeoSymbolic symbolic) {
+		ExpressionNode definition = symbolic.getDefinition();
+		if (definition.getLeft() instanceof Command
+				&& Commands.Numeric.getCommand().equals(((Command) definition.getLeft()).getName())) {
+			Command firstCommand = (Command) definition.getLeft();
+			if (firstCommand.getArgumentNumber() > 0
+					&& firstCommand.getArgument(0).getLeft() instanceof Command) {
+				Command secondCommand = (Command) firstCommand.getArgument(0).getLeft();
+				return Commands.Solve.getCommand().equals(secondCommand.getName());
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Check if Solve and NSolve give different outputs
+	 *
+	 * @param symbolic
+	 *        GeoSymbolic input
+	 * @return true if outputs of symbolic are different
+	 *
+	 */
+	public static boolean isSymbolicSolveDiffers(GeoSymbolic symbolic) {
+		GeoSymbolic opposite = getOpposite(symbolic);
+		String textOriginal = getValueString(symbolic);
+		String textOpposite = getValueString(opposite);
+
+		return !containsUndefinedOrIsEmpty(symbolic)
+				&& !containsUndefinedOrIsEmpty(opposite)
+				&& !textOriginal.equals(textOpposite);
+	}
+
+	private static String getValueString(GeoSymbolic symbolic) {
+		return symbolic.toValueString(StringTemplate.defaultTemplate);
+	}
+
+	/**
+	 * @param geo - GeoElement to check
+	 * @return true if expression tree contains an undefined variable or empty list
+	 */
+	public static boolean containsUndefinedOrIsEmpty(GeoElement geo) {
+		return geo.any(SymbolicUtil::isUndefinedOrEmpty);
+	}
+
+	// Returns true if it is an undefined "?" (Double.NaN) value or empty list.
+	private static boolean isUndefinedOrEmpty(ExpressionValue v) {
+		// Return true for undefined "?"
+		if (v instanceof MyDouble) {
+			return !((MyDouble) v).isDefined();
+		}
+
+		// Return true for empty list
+		if (v instanceof MyList && ((MyList) v).size() == 0) {
+			return true;
+		}
+
+		// In case of a symbolic expression check its value
+		if (v instanceof GeoSymbolic) {
+			return ((GeoSymbolic) v).getValue().any(SymbolicUtil::isUndefinedOrEmpty);
+		}
+
+		return false;
+	}
+
+	private static GeoSymbolic getOpposite(GeoSymbolic symbolic) {
+		GeoSymbolic opposite = new GeoSymbolic(
+				symbolic.getConstruction(), symbolic.getDefinition().deepCopy(symbolic.getKernel()));
+		toggleNumericSolve(opposite);
+		return opposite;
+	}
+
+	/**
+	 * Handles the showing/hiding of Solve/NSolve variants
+	 * @param symbolic GeoSymbolic input
+	 *
+	 */
+	public static void handleSolveNSolve(GeoSymbolic symbolic) {
+		if (isSolve(symbolic)) {
+			if (containsUndefinedOrIsEmpty(symbolic)
+					&& !containsUndefinedOrIsEmpty(getOpposite(symbolic))) {
+				toggleNumericSolve(symbolic);
+				if (symbolic.getDefinition().isTopLevelCommand(Commands.Solve.name())) {
+					symbolic.setWrapInNumeric(!checkAllRHSareIntegers(symbolic.getTwinGeo()));
+				}
+			}
+
+			if (!containsUndefinedOrIsEmpty(symbolic)
+					&& containsUndefinedOrIsEmpty(getOpposite(symbolic))) {
+				if (symbolic.getDefinition().isTopLevelCommand(Commands.Solve.name())) {
+					symbolic.setWrapInNumeric(!checkAllRHSareIntegers(symbolic.getTwinGeo()));
+				}
+			}
+		}
+	}
+
+	/**
+	 * Toggles between symbolic and numeric versions of Solve
+	 *
+	 * @param symbolic
+	 *            GeoSymbolic that we want to change
+	 */
+	public static void toggleNumericSolve(GeoSymbolic symbolic) {
+		Command topLevelCommand = symbolic.getDefinition().getTopLevelCommand();
+		boolean isNSolve = Commands.NSolve.getCommand().equals(topLevelCommand.getName());
+		Commands opposite = isNSolve ? Commands.Solve : Commands.NSolve;
+
+		topLevelCommand.setName(opposite.getCommand());
+		if (isNSolve
+				&& topLevelCommand.getArgumentNumber() == 2
+				&& topLevelCommand.getArgument(1).unwrap() instanceof Equation) {
+			ExpressionNode eqn = topLevelCommand.removeLastArgument();
+			symbolic.setExcludedEquation(eqn);
+		} else if (!isNSolve && symbolic.getExcludedEquation() != null) {
+			topLevelCommand.addArgument(symbolic.getExcludedEquation());
+		}
+		symbolic.computeOutput();
+	}
+
+	private static void toggleNumericWrap(GeoSymbolic symbolic) {
+		boolean isNumeric = symbolic.getDefinition().isTopLevelCommand(Commands.Numeric.getCommand());
+		if (isNumeric) {
+			unwrapFromNumeric(symbolic);
+		} else {
+			wrapInNumeric(symbolic);
+		}
+	}
+
+	private static void wrapInNumeric(GeoSymbolic symbolic) {
+		Command numeric = new Command(symbolic.getKernel(), "Numeric", false);
+		numeric.addArgument(symbolic.getDefinition().deepCopy(symbolic.getKernel()));
+		symbolic.setDefinition(numeric.wrap());
+		symbolic.computeOutput();
+	}
+
+	private static void unwrapFromNumeric(GeoSymbolic symbolic) {
+		symbolic.setDefinition(((Command) symbolic.getDefinition().getLeft()).getArgument(0));
+		symbolic.computeOutput();
+	}
+
+	/**
+	 * Changes the symbolic flag of a geo or its parent algo
+	 *
+	 * @param geo
+	 *            element that we want to change
+	 * @return whether it's symbolic after toggle
+	 */
+	public static boolean toggleSymbolic(GeoElement geo) {
+		if (geo instanceof HasSymbolicMode) {
+			if (isOutputOfAlgoSolveOnly(geo)) {
+				return !((AlgoSolve) geo.getParentAlgorithm()).toggleNumeric();
+			}
+			HasSymbolicMode hasSymbolicGeo = (HasSymbolicMode) geo;
+			hasSymbolicGeo.setSymbolicMode(!hasSymbolicGeo.isSymbolicMode(), true);
+
+			if (geo instanceof GeoSymbolic symbolic) {
+				if (isSolve(symbolic) || isNumericOfSolve(symbolic)) {
+					toggleSymbolicForSolve(symbolic);
+				}
+			}
+
+			geo.updateRepaint();
+			return hasSymbolicGeo.isSymbolicMode();
+		}
+		return false;
+	}
+
+	private static void toggleSymbolicForSolve(GeoSymbolic symbolic) {
+		if (symbolic.shouldWrapInNumeric()) {
+			toggleNumericWrap(symbolic);
+		} else {
+			toggleNumericSolve(symbolic);
+		}
+		symbolic.setDescriptionNeedsUpdateInAV(true);
+	}
+
+	/**
+	 * @param geo GeoElement
+	 * @return Whether the passed GeoElement's parent algorithm is an instance of {@link AlgoSolve}
+	 * (but not of {@link AlgoComplexSolve})
+	 */
+	public static boolean isOutputOfAlgoSolveOnly(GeoElement geo) {
+		return geo.getParentAlgorithm() instanceof AlgoSolve
+				&& !(geo.getParentAlgorithm() instanceof AlgoComplexSolve);
+	}
+
+	/**
+	 * Changes the engineering notation mode flag of a geo
+	 * @param geo Element
+	 * @return Whether the engineering notation mode flag is set to true after the toggle
+	 */
+	public static boolean toggleEngineeringNotation(GeoElement geo) {
+		if (geo instanceof HasSymbolicMode) {
+			HasSymbolicMode hasSymbolicGeo = (HasSymbolicMode) geo;
+			hasSymbolicGeo.setEngineeringNotationMode(!hasSymbolicGeo.isEngineeringNotationMode());
+			geo.updateRepaint();
+			return hasSymbolicGeo.isEngineeringNotationMode();
+		}
+		return false;
+	}
+
+	/**
+	 * @param geo Element
+	 * @return Whether the element has the engineering notation mode activated
+	 */
+	public static boolean isEngineeringNotationMode(GeoElement geo) {
+		return geo instanceof HasSymbolicMode && ((HasSymbolicMode) geo).isEngineeringNotationMode();
+	}
+
+	/**
+	 * @param expression to be checked
+	 * @return true if numeric approximation should be calculated
+	 */
+	public static boolean shouldComputeNumericValue(ExpressionValue expression) {
+		if (expression != null
+				&& expression.isNumberValue()
+				&& !(expression.unwrap() instanceof BooleanValue)) {
+			ExpressionValue unwrapped = expression.unwrap();
+			if (expression.wrap().containsGeoDummyVariable()) {
+				return false;
+			}
+			if (unwrapped instanceof NumberValue) {
+				return ((NumberValue) unwrapped).isDefined();
+			}
+			return true;
+		}
+		return false;
+	}
+}

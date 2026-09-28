@@ -1,0 +1,314 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.web.full.gui.properties.ui;
+
+import static org.geogebra.common.main.GeoGebraColorConstants.NEUTRAL_700;
+import static org.geogebra.common.properties.PropertyView.ActionableButtonRow;
+import static org.geogebra.common.properties.PropertyView.ButtonWithIcon;
+import static org.geogebra.common.properties.PropertyView.Checkbox;
+import static org.geogebra.common.properties.PropertyView.ColorSelectorRow;
+import static org.geogebra.common.properties.PropertyView.ComboBox;
+import static org.geogebra.common.properties.PropertyView.ConnectedButtonGroup;
+import static org.geogebra.common.properties.PropertyView.DimensionRatioEditor;
+import static org.geogebra.common.properties.PropertyView.Dropdown;
+import static org.geogebra.common.properties.PropertyView.ExpandableList;
+import static org.geogebra.common.properties.PropertyView.GroupedIconButtonRow;
+import static org.geogebra.common.properties.PropertyView.HorizontalSplitView;
+import static org.geogebra.common.properties.PropertyView.ImagePicker;
+import static org.geogebra.common.properties.PropertyView.MultiSelectionIconRow;
+import static org.geogebra.common.properties.PropertyView.RelatedPropertyViewCollection;
+import static org.geogebra.common.properties.PropertyView.SingleSelectionIconRow;
+import static org.geogebra.common.properties.PropertyView.Slider;
+import static org.geogebra.common.properties.PropertyView.TabList;
+import static org.geogebra.common.properties.PropertyView.TextArea;
+import static org.geogebra.common.properties.PropertyView.TextField;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import org.geogebra.common.awt.GColor;
+import org.geogebra.common.gui.AccessibilityGroup;
+import org.geogebra.common.main.Localization;
+import org.geogebra.common.properties.PropertyView;
+import org.geogebra.common.properties.PropertyViewFactory;
+import org.geogebra.common.properties.factory.PropertiesArray;
+import org.geogebra.common.properties.impl.objects.FontProperty;
+import org.geogebra.web.full.gui.components.ComponentCheckbox;
+import org.geogebra.web.full.gui.components.ComponentComboBox;
+import org.geogebra.web.full.gui.components.ComponentConnectedButtonGroup;
+import org.geogebra.web.full.gui.components.ComponentDropDown;
+import org.geogebra.web.full.gui.components.ComponentExpandableList;
+import org.geogebra.web.full.gui.components.ComponentInputField;
+import org.geogebra.web.full.gui.components.ComponentSlider;
+import org.geogebra.web.full.gui.components.ComponentTextArea;
+import org.geogebra.web.full.gui.properties.ui.panel.ActionableButtonPanel;
+import org.geogebra.web.full.gui.properties.ui.panel.DimensionRatioPanel;
+import org.geogebra.web.full.gui.properties.ui.panel.IconButtonPanel;
+import org.geogebra.web.full.gui.properties.ui.panel.ImagePickerPanel;
+import org.geogebra.web.full.gui.properties.ui.panel.MultiSelectionIconRowPanel;
+import org.geogebra.web.full.gui.toolbar.mow.popupcomponents.ColorChooserPanel;
+import org.geogebra.web.full.gui.view.probcalculator.ProbabilityResultRow;
+import org.geogebra.web.full.main.AppWFull;
+import org.geogebra.web.html5.gui.view.IconSpec;
+import org.geogebra.web.html5.gui.view.button.StandardButton;
+import org.geogebra.web.html5.gui.zoompanel.FocusableWidget;
+import org.geogebra.web.html5.main.AppW;
+import org.geogebra.web.shared.components.tab.ComponentTab;
+import org.geogebra.web.shared.components.tab.TabData;
+import org.gwtproject.user.client.ui.FlowPanel;
+import org.gwtproject.user.client.ui.Label;
+import org.gwtproject.user.client.ui.Widget;
+
+/**
+ * Maps properties to UI components for the properties view.
+ */
+public final class PropertiesPanelAdapter {
+	private final Localization loc;
+	private final AppW app;
+	private final List<Widget> widgets = new ArrayList<>();
+
+	/**
+	 * @param loc localization
+	 * @param app application
+	 */
+	public PropertiesPanelAdapter(Localization loc, AppW app) {
+		this.loc = loc;
+		this.app = app;
+	}
+
+	/**
+	 * @param props properties
+	 * @return panel with controls for all the properties
+	 */
+	public FlowPanel buildPanel(PropertiesArray props) {
+		FlowPanel panel = new FlowPanel();
+		List<PropertyView> propertyViews = PropertyViewFactory.propertyViewListOf(props);
+		for (PropertyView prop : propertyViews) {
+			Widget widget = getWidget(prop);
+			panel.add(widget);
+		}
+		addAccessibility(AccessibilityGroup.SETTINGS_ITEM);
+		return panel;
+	}
+
+	/**
+	 * @param accessibilityGroup accessibility group
+	 */
+	public void addAccessibility(AccessibilityGroup accessibilityGroup) {
+		new FocusableWidget(accessibilityGroup, null, widgets).attachTo(app);
+	}
+
+	/**
+	 * Creates widget based on property
+	 * @param propertyView {@link PropertyView}
+	 * @return {@link Widget}
+	 */
+	public Widget getWidget(PropertyView propertyView) {
+		int oldLength = widgets.size();
+		Widget ret = createWidget(propertyView);
+		ret.setVisible(propertyView.isVisible());
+		propertyView.setVisibilityUpdateDelegate(() -> ret.setVisible(propertyView.isVisible()));
+		if (oldLength == widgets.size()) {
+			// only add widget if it didn't contribute its parts to the widget list already
+			widgets.add(ret);
+		}
+		return ret;
+	}
+
+	private Widget createWidget(PropertyView propertyView) {
+		if (propertyView == null) {
+			return null;
+		}
+		if (propertyView instanceof Checkbox checkBoxProperty) {
+			return new ComponentCheckbox(
+					loc, checkBoxProperty, checkBoxProperty.getLabel(), checkBoxProperty::setSelected, false);
+		}
+		if (propertyView instanceof ImagePicker imagePicker) {
+			return new ImagePickerPanel(app, imagePicker);
+		}
+		if (propertyView instanceof ConnectedButtonGroup connectedButtonGroup) {
+			return new ComponentConnectedButtonGroup(connectedButtonGroup, widgets);
+		}
+		if (propertyView instanceof ButtonWithIcon buttonWithIcon) {
+			IconSpec icon = ((AppWFull) app)
+					.getPropertiesIconResource()
+					.getImageResource(buttonWithIcon.getIcon())
+					.withFill(NEUTRAL_700.toString());
+			StandardButton button = new StandardButton(
+					icon, app.getLocalization().getMenu(buttonWithIcon.getLabel()), 24, 24);
+			button.addFastClickHandler(event -> buttonWithIcon.performAction());
+			button.addStyleName(
+					switch (buttonWithIcon.getStyle()) {
+						case BORDERLESS -> "buttonWithIcon";
+						case OUTLINED -> "materialOutlinedButton";
+					});
+			return button;
+		}
+		if (propertyView instanceof Slider sliderProperty) {
+			return new ComponentSlider(app, sliderProperty);
+		}
+		if (propertyView instanceof ActionableButtonRow buttonRow) {
+			return new ActionableButtonPanel(buttonRow);
+		}
+		if (propertyView instanceof MultiSelectionIconRow multiSelectRow) {
+			return new MultiSelectionIconRowPanel(multiSelectRow, app);
+		}
+		if (propertyView instanceof DimensionRatioEditor dimensionRatioEditor) {
+			return new DimensionRatioPanel(app, this, dimensionRatioEditor);
+		}
+		if (propertyView instanceof GroupedIconButtonRow groupedIconButtonRow) {
+			return new IconButtonPanel(
+					app, groupedIconButtonRow.getLabel(), groupedIconButtonRow.getIconRowList());
+		}
+		if (propertyView instanceof HorizontalSplitView splitView) {
+			FlowPanel panel = new FlowPanel();
+			panel.addStyleName("horizontalSplitView");
+			Widget leading = getHalfWidthWidget(splitView.getLeadingPropertyView());
+			Widget trailing = getHalfWidthWidget(splitView.getTrailingPropertyView());
+			leading.setVisible(true);
+			trailing.setVisible(true);
+			panel.add(leading);
+			panel.add(trailing);
+			return panel;
+		}
+		if (propertyView instanceof RelatedPropertyViewCollection relatedPropertyView) {
+			FlowPanel panel = new FlowPanel();
+			if (relatedPropertyView.getTitle() != null) {
+				panel.add(new Label(app.getLocalization().getMenu(relatedPropertyView.getTitle())));
+			}
+			int contentSpacing = relatedPropertyView.getContentSpacing();
+			if (contentSpacing > 0) {
+				panel.getElement().addClassName("contentSpacing" + contentSpacing);
+			}
+			for (PropertyView pw : relatedPropertyView.getPropertyViews()) {
+				panel.add(getWidget(pw));
+			}
+			return panel;
+		}
+		if (propertyView instanceof TabList tabList) {
+			List<String> tabTitles = tabList.getTabTitles();
+			TabData[] tabData = new TabData[tabTitles.size()];
+			for (int index = 0; index < tabTitles.size(); index++) {
+				FlowPanel tabContent = new FlowPanel();
+				for (PropertyView contentPropertyView : tabList.getTabContents().get(index)) {
+					tabContent.add(getWidget(contentPropertyView));
+				}
+				tabData[index] = new TabData(tabTitles.get(index), tabContent);
+			}
+			int selectedTabIndex = tabList.getSelectedTabIndex();
+			ComponentTab componentTab = new ComponentTab(app, "Scripting", selectedTabIndex, tabData);
+			componentTab.addTabChangedListener(index -> {
+				if (tabList.getSelectedTabIndex() != index) {
+					tabList.setSelectedTabIndex(index);
+				}
+			});
+			tabList.setConfigurationUpdateDelegate(() -> {
+				int updatedIndex = tabList.getSelectedTabIndex();
+				if (componentTab.getSelectedTabIdx() != updatedIndex) {
+					componentTab.switchToTab(updatedIndex);
+				}
+			});
+			return componentTab;
+		}
+		if (propertyView instanceof ExpandableList expandable) {
+			Checkbox leadProperty = expandable.getCheckbox();
+			ComponentExpandableList expandableList =
+					new ComponentExpandableList(app, leadProperty, expandable.getTitle());
+			for (PropertyView prop : expandable.getItems()) {
+				expandableList.addToContent(getWidget(prop));
+			}
+			return expandableList;
+		}
+		if (propertyView instanceof Dropdown dropDownView) {
+			ComponentDropDown dropDown = new ComponentDropDown(
+					app, dropDownView.getPropertyName(), dropDownView, getItemStyler(dropDownView));
+			dropDown.setFullWidth(true);
+			return dropDown;
+		}
+		if (propertyView instanceof ComboBox comboBoxProperty) {
+			ComponentComboBox comboBox = new ComponentComboBox(app, comboBoxProperty);
+			comboBox.setDisabled(!comboBoxProperty.isEnabled());
+			return comboBox;
+		}
+		if (propertyView instanceof SingleSelectionIconRow iconRow) {
+			return new IconButtonPanel(app, iconRow, true);
+		}
+		if (propertyView instanceof ColorSelectorRow colorSelectorRow) {
+			List<GColor> colors = colorSelectorRow.getColors();
+			// Copy and add null value to enable plus button
+			colors = new ArrayList<>(colors);
+			colors.add(null);
+			ColorChooserPanel colorPanel = new ColorChooserPanel(
+					app,
+					colors,
+					color -> {
+						boolean handled = false;
+						for (int i = 0; i < colorSelectorRow.getColors().size(); i++) {
+							if (colorSelectorRow.getColors().get(i) == color) {
+								colorSelectorRow.setSelectedColorIndex(i);
+								handled = true;
+							}
+						}
+						if (!handled) {
+							colorSelectorRow.setCustomColor(color);
+						}
+					},
+					colorSelectorRow);
+			Integer index = colorSelectorRow.getSelectedColorIndex();
+			if (index != null) {
+				colorPanel.updateColorSelection(colorSelectorRow.getColors().get(index));
+			}
+			colorPanel.addStyleName("colorPanel");
+			return colorPanel;
+		}
+		if (propertyView instanceof TextField textField) {
+			ComponentInputField inputField = new ComponentInputField(app, "", "", textField);
+			inputField.setDisabled(!textField.isEnabled());
+			return inputField;
+		}
+		if (propertyView instanceof TextArea textAreaPropertyView) {
+			return new ComponentTextArea(app.getLocalization(), textAreaPropertyView);
+		}
+		if (propertyView instanceof PropertyView.ProbabilityResultRow probabilityResultRow) {
+			return new ProbabilityResultRow(app, probabilityResultRow, widgets);
+		}
+		return new Label(propertyView.toString());
+	}
+
+	/**
+	 * @param propertyView {@link PropertyView}
+	 * @return widget based on propertyView with defined half-width
+	 */
+	public Widget getHalfWidthWidget(PropertyView propertyView) {
+		Widget widget = getWidget(propertyView);
+		widget.addStyleName("halfWidth");
+		return widget;
+	}
+
+	private ComponentDropDown.Styler getItemStyler(Dropdown dropDownView) {
+		Map<Integer, FontProperty.FontFamily> fontFamilies = dropDownView.getFontFamilies();
+		if (!fontFamilies.isEmpty()) {
+			return (item, index) -> {
+				FontProperty.FontFamily font =
+						fontFamilies.getOrDefault(index, FontProperty.FontFamily.ARIAL);
+				item.getElement().getStyle().setProperty("fontFamily", font.cssName());
+			};
+		}
+		return null;
+	}
+}

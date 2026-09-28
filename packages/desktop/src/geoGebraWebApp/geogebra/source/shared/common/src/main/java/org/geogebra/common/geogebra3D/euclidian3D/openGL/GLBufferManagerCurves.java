@@ -1,0 +1,121 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.geogebra3D.euclidian3D.openGL;
+
+import java.util.List;
+
+import org.geogebra.common.geogebra3D.euclidian3D.openGL.ManagerShaders.TypeElement;
+
+/**
+ * manager for packing buffers (for curves)
+ */
+public class GLBufferManagerCurves extends GLBufferManager {
+
+	// complex materials need more than 1500
+	private static final int ELEMENTS_SIZE_START = 2048;
+	// for now on, only segments are drawn here, so we count 1 triangle per vertex,
+	// and 3 indices per triangle
+	private static final int INDICES_SIZE_START = ELEMENTS_SIZE_START * 3;
+
+	/**
+	 *
+	 * @param manager
+	 *            manager
+	 */
+	public GLBufferManagerCurves(ManagerShaders manager) {
+		super(manager);
+	}
+
+	@Override
+	protected int calculateIndicesLength(int size, TypeElement type) {
+		return switch (type) {
+			case CURVE -> 3 * 2 * size * manager.getCurveLatitudeSplits();
+			case TRIANGLES -> 3 * size;
+			case TEMPLATE -> size;
+			default -> 0; // should not happen
+		};
+	}
+
+	@Override
+	protected void putIndices(int size, TypeElement type, boolean reuseSegment) {
+		switch (type) {
+			case CURVE:
+				putToIndicesForCurve(size);
+				break;
+			case TRIANGLES:
+				for (int i = 0; i < 3 * size; i++) {
+					putToIndices(i);
+				}
+				break;
+			case TEMPLATE:
+				List<Short> indicesArray = manager.getBufferTemplates().getCurrentIndicesArray();
+				for (short i : indicesArray) {
+					putToIndices(i);
+				}
+				break;
+			default: // should not happen
+				break;
+		}
+	}
+
+	/**
+	 * draw
+	 *
+	 * @param r
+	 *            renderer
+	 * @param hidden
+	 *            if hidden
+	 */
+	public void draw(Renderer r, boolean hidden) {
+		((TexturesShaders) r.getTextures()).setPackedDash();
+		r.getRendererImpl().setDashTexture(hidden ? Textures.DASH_PACKED_HIDDEN : Textures.DASH_PACKED);
+		drawBufferPacks(r);
+	}
+
+	@Override
+	protected int getElementSizeStart() {
+		return ELEMENTS_SIZE_START;
+	}
+
+	@Override
+	protected int getIndicesSizeStart() {
+		return INDICES_SIZE_START;
+	}
+
+	/**
+	 * draw a point
+	 *
+	 */
+	public void drawPoint() {
+		manager.getBufferTemplates().drawSphere(manager);
+	}
+
+	@Override
+	protected void setElements(boolean reuseSegment, TypeElement type) {
+		if (type == TypeElement.TEMPLATE) {
+			currentBufferPack.setElements(manager.getTranslate(), manager.getScale(), reuseSegment);
+		} else {
+			super.setElements(reuseSegment, type);
+		}
+	}
+
+	@Override
+	protected boolean checkCurrentBufferSegmentDoesNotFit(int indicesLength, TypeElement type) {
+		return type != currentBufferSegment.type
+				|| super.checkCurrentBufferSegmentDoesNotFit(indicesLength, type);
+	}
+}

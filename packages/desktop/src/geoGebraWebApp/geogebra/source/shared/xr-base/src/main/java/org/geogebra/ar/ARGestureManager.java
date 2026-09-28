@@ -1,0 +1,159 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.ar;
+
+import org.geogebra.common.euclidian.MoveMode;
+import org.geogebra.common.geogebra3D.euclidian3D.EuclidianView3D;
+import org.geogebra.common.kernel.matrix.Coords;
+import org.geogebra.common.main.App;
+
+public abstract class ARGestureManager {
+
+	private EuclidianView3D mView;
+	protected float mScaleFactor = 1.0f;
+	private Coords mPos = new Coords(2);
+	private boolean isTouched = false;
+	private boolean mUpdateOriginIsWanted = false;
+	private float mAngle;
+	private boolean actionPointerLeftPreviously = false;
+	private boolean mTaped;
+
+	protected static float SCALE_MIN_MULTIPLIER = 0.3f;
+	protected static float SCALE_MAX_MULTIPLIER = 30.0f;
+
+	public ARGestureManager(EuclidianView3D view) {
+		mView = view;
+	}
+
+	public void onRotationStart() {
+		mView.rememberOrigins();
+	}
+
+	protected void onRotation(double angle) {
+		mView.setCoordSystemFromMouseMove((int) angle, 0, MoveMode.ROTATE_VIEW);
+	}
+
+	public synchronized float getScaleFactor() {
+		return mScaleFactor;
+	}
+
+	public synchronized void resetScaleFactor() {
+		mScaleFactor = 1;
+	}
+
+	/**
+	 * Copy current position's x,y coordinates to output.
+	 * @param ret output coordinates
+	 */
+	public synchronized void copyXYPosition(Coords ret) {
+		ret.setX(mPos.getX());
+		ret.setY(mPos.getY());
+	}
+
+	public synchronized boolean getIsTouched() {
+		return isTouched;
+	}
+
+	public synchronized void setIsTouched(boolean flag) {
+		isTouched = flag;
+	}
+
+	public synchronized boolean getUpdateOriginIsWanted() {
+		return mUpdateOriginIsWanted;
+	}
+
+	public synchronized void setUpdateOriginIsWanted(boolean updateOriginIsWanted) {
+		mUpdateOriginIsWanted = updateOriginIsWanted;
+	}
+
+	public synchronized float getDAngle() {
+		return mAngle;
+	}
+
+	public synchronized void setDAngle(float value) {
+		mAngle = value;
+	}
+
+	protected synchronized void firstFingerDown(ARMotionEvent event, App app) {
+		mUpdateOriginIsWanted = true;
+		isTouched = false;
+		updatePos(event);
+	}
+
+	protected synchronized void secondFingerDown(ARMotionEvent event) {
+		isTouched = true;
+		mUpdateOriginIsWanted = true;
+		updatePos(event);
+	}
+
+	protected synchronized void onMove(ARMotionEvent event, App app) {
+		isTouched = event.getPointerCount() > 1;
+		if (actionPointerLeftPreviously) {
+			mUpdateOriginIsWanted = true;
+			actionPointerLeftPreviously = false;
+		}
+		updatePos(event);
+	}
+
+	protected synchronized void firstFingerUp(App app) {
+		isTouched = false;
+	}
+
+	protected synchronized void secondFingerUp(App app) {
+		isTouched = false;
+		mUpdateOriginIsWanted = true;
+		actionPointerLeftPreviously = true;
+	}
+
+	protected synchronized void actionCancelled() {
+		isTouched = false;
+	}
+
+	private void updatePos(ARMotionEvent event) {
+		float x, y;
+		if (event.getPointerCount() == 2) {
+			float nfX, nfY, nsX, nsY;
+			nsX = event.getX(0);
+			nsY = event.getY(0);
+			nfX = event.getX(1);
+			nfY = event.getY(1);
+
+			x = (nfX + nsX) / 2;
+			y = (nfY + nsY) / 2;
+
+		} else {
+			x = event.getX(0);
+			y = event.getY(0);
+		}
+		setPos(x, y);
+	}
+
+	protected synchronized void setPos(double x, double y) {
+		mPos.setX(x);
+		mPos.setY(y);
+	}
+
+	public abstract void addGestureRecognizers();
+
+	public synchronized boolean isTaped() {
+		return mTaped;
+	}
+
+	public synchronized void setTaped(boolean taped) {
+		mTaped = taped;
+	}
+}

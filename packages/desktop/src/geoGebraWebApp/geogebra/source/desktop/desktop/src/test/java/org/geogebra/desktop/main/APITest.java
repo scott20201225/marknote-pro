@@ -1,0 +1,107 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.desktop.main;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.geogebra.common.kernel.commands.AlgebraTest;
+import org.geogebra.common.plugin.GgbAPI;
+import org.geogebra.desktop.headless.AppDNoGui;
+import org.geogebra.editor.share.util.Unicode;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+class APITest {
+	private AppDNoGui app;
+	private GgbAPI api;
+
+	/**
+	 * Initialize app.
+	 */
+	@BeforeEach
+	void setupApp() {
+		app = AlgebraTest.createApp();
+		api = app.getGgbApi();
+	}
+
+	@Test
+	void casEvalTest() {
+		String assignResult = api.evalCommandCAS("$1:=a+a", null);
+		assertEquals("2a", assignResult);
+		String solveResult = api.evalGeoGebraCAS(
+				"Solve[{ a=2, 12*sqrt(3)* a* b^2*exp(-3* b)" + "-6*sqrt(3)* a* b*exp(-3* b)=0},{ a, b}]");
+		assertEquals("{{a = 2, b = 0}, {a = 2, b = 1 / 2}}", solveResult);
+		// OK in GUI, causes problems in the API - sent to Giac as
+		// evalfa(ggbsort(normal(zeros((ggbtmpvart)^(2)=(4)*(ggbtmpvart),x))))
+		String solveResult2 = api.evalGeoGebraCAS("Solutions[t^2 = 4t]");
+		assertEquals("{0, 4}", solveResult2);
+	}
+
+	@Test
+	void casAssignmentTest() {
+		api.evalCommand("$1:f(x)=x");
+		assertEquals("f(x)=x", casInput(0));
+		api.evalCommand("$2:g(x):=x");
+		assertEquals("g(x):=x", casInput(1));
+		api.evalCommand("$2:h(x)" + Unicode.ASSIGN_STRING + "x");
+		assertEquals("h(x) := x", casInput(1));
+		// overwrite existing cell
+		api.evalCommand("$1:=f(x):=x+1");
+		assertEquals("f(x):=x+1", casInput(0));
+		api.evalCommand("$3=7");
+		assertEquals("7", casInput(2));
+	}
+
+	@Test
+	void getValueStringTest() {
+		api.evalCommand("txt=\"foo\"");
+		api.evalCommand("input=InputBox(txt)");
+		api.evalCommand("a=4");
+		assertEquals("foo", api.getValueString("txt"));
+		assertEquals("foo", api.getValueString("input"));
+		assertEquals("a = 4", api.getValueString("a"));
+	}
+
+	@Test
+	void casCellComparisonShouldNotCreateCASCell() {
+		api.evalCommand("$1==8");
+		assertEquals(0, app.getKernel().getConstruction().getCASObjectNumber());
+	}
+
+	@Test
+	void casCellComparisonShouldCheckEquality() {
+		api.evalCommand("$1=7");
+		// create a bool in AV
+		assertEquals("a", api.evalCommandGetLabels("$1==8"));
+		String compare = api.evalCommandCAS("$1==8", null);
+		assertEquals("false", compare);
+		assertEquals(1, app.getKernel().getConstruction().getCASObjectNumber());
+	}
+
+	@Test
+	void casCellAssignmentCommandCAS() {
+		api.evalCommand("$1:=7");
+		assertEquals("7", casInput(0));
+		String evalEquation = api.evalCommandCAS("$1=8", null);
+		assertEquals("7", casInput(0));
+		assertEquals("7 = 8", evalEquation);
+	}
+
+	private String casInput(int i) {
+		return app.getKernel().getConstruction().getCasCell(i).getLocalizedInput();
+	}
+}

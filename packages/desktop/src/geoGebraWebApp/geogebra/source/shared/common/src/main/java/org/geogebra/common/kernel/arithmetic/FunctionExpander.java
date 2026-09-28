@@ -1,0 +1,326 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.kernel.arithmetic;
+
+import java.util.function.UnaryOperator;
+
+import org.geogebra.common.kernel.CASGenericInterface;
+import org.geogebra.common.kernel.Kernel;
+import org.geogebra.common.kernel.StringTemplate;
+import org.geogebra.common.kernel.arithmetic.variable.Variable;
+import org.geogebra.common.kernel.arithmetic3D.MyVec3DNode;
+import org.geogebra.common.kernel.geos.GeoCasCell;
+import org.geogebra.common.kernel.geos.GeoDummyVariable;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.kernel.geos.GeoSymbolic;
+import org.geogebra.common.kernel.kernelND.GeoCurveCartesianND;
+import org.geogebra.common.kernel.kernelND.GeoSurfaceCartesianND;
+import org.geogebra.common.plugin.Operation;
+
+/**
+ * Expands f as f(x) or f(x,y) in CAS
+ *
+ * @author Zbynek Konecny
+ */
+public class FunctionExpander implements Traversing {
+	// store function variables if needed
+	private FunctionVariable[] variables = null;
+	private final int constructionIndex;
+
+	public FunctionExpander() {
+		this(Integer.MAX_VALUE);
+	}
+
+	public FunctionExpander(int constructionIndex) {
+		this.constructionIndex = constructionIndex;
+	}
+
+	private FunctionExpander(GeoElement element) {
+		this(element == null ? Integer.MAX_VALUE : element.getConstructionIndex());
+	}
+
+	private ExpressionValue expand(GeoElement geo) {
+		if (geo instanceof FunctionalNVar) {
+			return ((FunctionalNVar) geo)
+					.getFunctionExpression()
+					.deepCopy(geo.getKernel())
+					.traverse(this);
+		}
+		if (geo instanceof GeoCasCell) {
+			ExpressionValue geoCasCellValue = ((GeoCasCell) geo).getValue();
+			if (geoCasCellValue != null) {
+				return geoCasCellValue.deepCopy(geo.getKernel()).traverse(this).unwrap();
+			}
+		}
+		return geo;
+	}
+
+	private boolean contains(GeoDummyVariable gdv) {
+		if (variables == null) {
+			return false;
+		}
+		for (FunctionVariable funvar : variables) {
+			if (funvar
+					.toString(StringTemplate.defaultTemplate)
+					.equals(gdv.toString(StringTemplate.defaultTemplate))) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	@Override
+	@SuppressWarnings("PMD.AvoidDeeplyNestedIfStmts")
+	public ExpressionValue process(ExpressionValue ev) {
+		if (ev instanceof ExpressionNode en) {
+			boolean surfaceNoComplex = false;
+			if (en.getOperation() == Operation.FUNCTION
+					|| en.getOperation() == Operation.FUNCTION_NVAR
+					|| en.getOperation() == Operation.VEC_FUNCTION) {
+				ExpressionValue geo = en.getLeft().unwrap();
+				ExpressionValue deriv = null;
+				if (geo.isOperation(Operation.DERIVATIVE)) {
+					// template not important, right it is a constant
+					// MyDouble anyway
+					deriv = ((ExpressionNode) geo).getRight().evaluate(StringTemplate.defaultTemplate);
+					geo = ((ExpressionNode) geo).getLeft().unwrap();
+				}
+				if (geo instanceof GeoDummyVariable) {
+					geo = ((GeoDummyVariable) geo).getElementWithSameName();
+				}
+				ExpressionNode en2 = null;
+				FunctionVariable[] fv = null;
+				if (geo instanceof GeoCurveCartesianND) {
+					Kernel kernel = ((GeoCurveCartesianND) geo).getKernel();
+					ExpressionValue en2x = ((GeoCurveCartesianND) geo)
+							.getFun(0)
+							.getFunctionExpression()
+							.getCopy(kernel)
+							.traverse(this);
+					ExpressionValue en2y = ((GeoCurveCartesianND) geo)
+							.getFun(1)
+							.getFunctionExpression()
+							.getCopy(kernel)
+							.traverse(this);
+					if (((GeoCurveCartesianND) geo).getDimension() > 2) {
+						ExpressionValue en2z = ((GeoCurveCartesianND) geo)
+								.getFun(2)
+								.getFunctionExpression()
+								.getCopy(kernel)
+								.traverse(this);
+						en2 = new MyVec3DNode(kernel, en2x, en2y, en2z).wrap();
+					} else {
+						en2 = new MyVecNode(kernel, en2x, en2y).wrap();
+					}
+
+					fv = ((GeoCurveCartesianND) geo).getFunctionVariables();
+				}
+				if (geo instanceof FunctionalNVar) {
+					en2 = (ExpressionNode) ((FunctionalNVar) geo)
+							.getFunctionExpression()
+							.getCopy(((FunctionalNVar) geo).getKernel())
+							.traverse(this);
+					fv = ((FunctionalNVar) geo).getFunction().getFunctionVariables();
+				} else if (geo instanceof GeoSymbolic symbolic) {
+					FunctionExpander expander = newFunctionExpander(symbolic);
+					ExpressionValue symbolicValue = symbolic.getValue();
+					if (symbolicValue != null) {
+						en2 = (ExpressionNode)
+								symbolicValue.wrap().getCopy(symbolic.getKernel()).traverse(expander);
+						fv = symbolic.getFunctionVariables();
+					}
+				}
+				if (geo instanceof GeoCasCell casCell) {
+					ValidExpression ve = casCell.getValue();
+					// related to #4126 -- maybe not needed though
+					if (casCell.isKeepInputUsed()) {
+						ve = expand(casCell).wrap();
+					}
+					en2 = ve.unwrap() instanceof FunctionNVar
+							? ((FunctionNVar) ve.unwrap()).getExpression()
+							: ve.wrap();
+
+					en2 = en2.traverse(this).wrap();
+					if (en2.getLeft() instanceof GeoSurfaceCartesianND) {
+						FunctionNVar[] fun = ((GeoSurfaceCartesianND) en2.getLeft()).getFunctions();
+						MyVecNDNode vector = buildVector(fun, en.getKernel(), UnaryOperator.identity());
+						en2 = new ExpressionNode(en.getKernel(), vector);
+						if (en.getRight() instanceof MyList argList
+								&& argList.get(0).unwrap() instanceof MyList) {
+							en.setRight(argList.get(0).unwrap());
+						}
+					} else {
+						en2 = en2.getCopy(casCell.getKernel());
+					}
+					fv = casCell.getFunctionVariables();
+				}
+				if (geo instanceof GeoSurfaceCartesianND geoSurface) {
+					if (en.getRight() instanceof MyList
+							&& ((MyList) en.getRight()).get(0) instanceof ExpressionNode
+							&& ((ExpressionNode) ((MyList) en.getRight()).get(0)).getLeft() instanceof MyList) {
+						en.setRight(((ExpressionNode) ((MyList) en.getRight()).get(0)).getLeft());
+					}
+					Kernel kernel = geoSurface.kernel;
+					fv = geoSurface.getFunctionVariables();
+					if (geoSurface.getComplexVariable() != null) {
+						en2 = geoSurface.getDefinition().deepCopy(kernel);
+					} else {
+						surfaceNoComplex = true;
+						FunctionNVar[] fun = geoSurface.getFunctions();
+						MyVecNDNode vector = buildVector(fun, en.getKernel(), ex -> ex.deepCopy(kernel));
+						en2 = new ExpressionNode(en.getKernel(), vector);
+					}
+				}
+				if (deriv != null) {
+					en2 = getDerivative(en2, deriv, en.getKernel(), fv);
+				}
+				if (fv != null) {
+					return replaceFunctionVariables(en, en2, fv, surfaceNoComplex);
+				}
+			} else if (en.getOperation() != Operation.DERIVATIVE) {
+				if (en.getLeft() instanceof GeoDummyVariable dummyVar && !contains(dummyVar)) {
+					GeoElement geo = dummyVar.getElementWithSameName();
+					if (geo != null && hasLowerConstructionIndex(geo)) {
+						en.setLeft(expand(geo));
+					}
+				}
+				if (en.getLeft() instanceof Variable variable) {
+					GeoElement geo = variable
+							.getKernel()
+							.getConstruction()
+							.lookupLabel(en.getLeft().toString(StringTemplate.defaultTemplate));
+					if (geo != null) {
+						return ((FunctionalNVar) geo)
+								.getFunctionExpression()
+								.getCopy(((FunctionalNVar) geo).getKernel())
+								.traverse(this);
+					}
+				}
+			}
+			if (en.getRight() instanceof GeoDummyVariable dummyVar && !contains(dummyVar)) {
+				GeoElement geo = dummyVar.getElementWithSameName();
+				if (geo != null && hasLowerConstructionIndex(geo)) {
+					en.setRight(expand(geo));
+				}
+			}
+		} else if (ev instanceof GeoDummyVariable dummyVar && !contains(dummyVar)) {
+			GeoElement geo = dummyVar.getElementWithSameName();
+			if (geo != null && hasLowerConstructionIndex(geo)) {
+				return expand(geo);
+			}
+		} else if (ev instanceof GeoCasCell) {
+			// expanding the cell here is necessary #4126
+			if (((GeoCasCell) ev).isKeepInputUsed()) {
+				return expand((GeoCasCell) ev);
+			}
+			ExpressionValue geoCasCellValue = ((GeoCasCell) ev).getValue();
+			if (geoCasCellValue != null) {
+				return geoCasCellValue.wrap().getCopy(((GeoCasCell) ev).getKernel());
+			}
+		} else if (ev instanceof FunctionNVar) {
+			variables = ((FunctionNVar) ev).fVars;
+		}
+
+		return ev;
+	}
+
+	private MyVecNDNode buildVector(
+			FunctionNVar[] fun, Kernel kernel, UnaryOperator<ExpressionNode> transform) {
+		if (fun.length > 2) {
+			return new MyVec3DNode(
+					kernel,
+					transform.apply(fun[0].getExpression()),
+					transform.apply(fun[1].getExpression()),
+					transform.apply(fun[2].getExpression()));
+		} else {
+			return new MyVecNode(
+					kernel, transform.apply(fun[0].getExpression()), transform.apply(fun[1].getExpression()));
+		}
+	}
+
+	private ExpressionNode getDerivative(
+			ExpressionNode en, ExpressionValue deriv, Kernel kernel, FunctionVariable[] fv) {
+		CASGenericInterface cas = kernel.getGeoGebraCAS().getCurrentCAS();
+		Command derivCommand = new Command(kernel, "Derivative", false);
+		derivCommand.addArgument(en);
+		if (fv != null && fv.length > 0) {
+			derivCommand.addArgument(fv[0].wrap());
+		}
+		derivCommand.addArgument(deriv.wrap());
+		return cas.evaluateToExpression(derivCommand, null, kernel).wrap();
+	}
+
+	private ExpressionValue replaceFunctionVariables(
+			ExpressionNode en, ExpressionNode en2, FunctionVariable[] fv, boolean surfaceNoComplex) {
+		ExpressionValue argument =
+				en.getRight().wrap().getCopy(en.getKernel()).traverse(this).unwrap();
+		ExpressionValue ithArg = argument;
+		VariableReplacer vr = en.getKernel().getVariableReplacer();
+
+		// some heuristic to apply f(list) piecewise for simple functions, see APPS-4510
+		if (en.isOperation(Operation.FUNCTION)
+				&& isListNotMatrix(argument)
+				&& !en2.containsCommands()) {
+			return new ExpressionNode(
+					en.getKernel(), new Function(en2, fv[0]), Operation.FUNCTION, argument);
+		}
+		// variables have to be replaced with one traversing
+		// or else replacing f(x,y) with f(y,x)
+		// will result in f(x, x)
+		for (int i = 0; i < fv.length; i++) {
+			if (en.getOperation() == Operation.FUNCTION_NVAR || surfaceNoComplex) {
+				ithArg = getElement(argument, i, fv.length);
+			}
+			vr.addVars(fv[i].getSetVarString(), ithArg);
+		}
+		return en2.traverse(vr).wrap();
+	}
+
+	private boolean isListNotMatrix(ExpressionValue argument) {
+		return (argument instanceof MyList) && !((MyList) argument).isMatrix();
+	}
+
+	private ExpressionValue getElement(ExpressionValue argument, int i, int argLength) {
+		if (argument instanceof MyList && ((MyList) argument).size() == argLength) {
+			return ((MyList) argument).get(i);
+		} else {
+			return VectorArithmetic.computeCoord(argument.wrap(), i);
+		}
+	}
+
+	private boolean hasLowerConstructionIndex(GeoElement element) {
+		int elementConstructionIndex = element.getConstructionIndex();
+		return elementConstructionIndex > -1 && elementConstructionIndex < constructionIndex;
+	}
+
+	/**
+	 * Creates a new Function Expander.
+	 * @return function expander
+	 */
+	public static FunctionExpander newFunctionExpander() {
+		return new FunctionExpander();
+	}
+
+	/**
+	 * Creates a new function expander
+	 * @param element geo element to expand
+	 * @return function expander
+	 */
+	public static FunctionExpander newFunctionExpander(GeoElement element) {
+		return new FunctionExpander(element);
+	}
+}

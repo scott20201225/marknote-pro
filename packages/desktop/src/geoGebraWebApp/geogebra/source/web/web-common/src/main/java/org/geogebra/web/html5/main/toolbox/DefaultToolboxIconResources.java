@@ -1,0 +1,169 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.web.html5.main.toolbox;
+
+import org.geogebra.web.resources.SVGResource;
+import org.gwtproject.resources.client.ClientBundle;
+import org.gwtproject.resources.client.Resource;
+
+/**
+ * Icons for the toolbox.
+ */
+@Resource
+public interface DefaultToolboxIconResources extends ClientBundle {
+
+	DefaultToolboxIconResources INSTANCE = new DefaultToolboxIconResourcesImpl();
+
+	@Source("org/geogebra/common/icons/svg/web/matDesignIcons/mow/toolbox/mouse_cursor.svg")
+	SVGResource mouse_cursor();
+
+	@Source("org/geogebra/common/icons/svg/web/toolIcons/mode_pen.svg")
+	SVGResource pen();
+
+	@Source("org/geogebra/common/icons/svg/web/toolIcons/mode_highlighter.svg")
+	SVGResource highlighter();
+
+	@Source("org/geogebra/common/icons/svg/web/toolIcons/mode_eraser.svg")
+	SVGResource eraser();
+
+	@Source("org/geogebra/common/icons/svg/web/matDesignIcons/av/plusMenu/add.svg")
+	SVGResource add_black();
+
+	@Source("org/geogebra/common/icons/svg/web/matDesignIcons/mow/toolbox/tool_shapes.svg")
+	SVGResource shapes();
+
+	@Source("org/geogebra/common/icons/svg/web/toolIcons/mode_shapesquare.svg")
+	SVGResource square();
+
+	@Source("org/geogebra/common/icons/svg/web/toolIcons/mode_shaperectangle.svg")
+	SVGResource rectangle();
+
+	@Source("org/geogebra/common/icons/svg/web/toolIcons/mode_shapetriangle.svg")
+	SVGResource triangle();
+
+	@Source("org/geogebra/common/icons/svg/web/toolIcons/mode_circle.svg")
+	SVGResource circle();
+
+	@Source("org/geogebra/common/icons/svg/web/toolIcons/mode_shapeellipse.svg")
+	SVGResource ellipse();
+
+	@Source("org/geogebra/common/icons/svg/web/toolIcons/mode_pentagon.svg")
+	SVGResource pentagon();
+
+	@Source("org/geogebra/common/icons/svg/web/toolIcons/mode_line.svg")
+	SVGResource line();
+
+	@Source("org/geogebra/common/icons/svg/web/toolIcons/mode_shapefreeform.svg")
+	SVGResource freeform();
+
+	@Source("org/geogebra/common/icons/svg/web/toolIcons/mode_parallelogram.svg")
+	SVGResource parallelogram();
+
+	@Source("org/geogebra/common/icons/svg/web/toolIcons/mode_stadium.svg")
+	SVGResource stadium();
+
+	@Source("org/geogebra/common/icons/svg/web/toolIcons/mode_curve.svg")
+	SVGResource curve();
+
+	@Source("org/geogebra/common/icons/svg/web/toolIcons/mode_masktool.svg")
+	SVGResource mask();
+
+	@Source("org/geogebra/common/icons/svg/web/matDesignIcons/mow/toolbox/text_fields.svg")
+	SVGResource texts();
+
+	@Source("org/geogebra/common/icons/svg/web/toolIcons/mode_media_text.svg")
+	SVGResource text();
+
+	@Source("org/geogebra/common/icons/svg/web/toolIcons/mode_equation.svg")
+	SVGResource equation();
+
+	@Source("org/geogebra/common/icons/svg/web/matDesignIcons/dialog/upload_black_24dp.svg")
+	SVGResource upload();
+
+	@Source("org/geogebra/common/icons/svg/web/toolIcons/mode_image.svg")
+	SVGResource image();
+
+	@Source("org/geogebra/common/icons/svg/web/toolIcons/mode_camera.svg")
+	SVGResource camera();
+
+	@Source("org/geogebra/common/icons/svg/web/toolIcons/mode_pdf.svg")
+	SVGResource pdf();
+
+	@Source("org/geogebra/common/icons/svg/web/matDesignIcons/openFileView/link_black_24dp.svg")
+	SVGResource link();
+
+	@Source("org/geogebra/common/icons/svg/web/toolIcons/mode_web.svg")
+	SVGResource web();
+
+	@Source("org/geogebra/common/icons/svg/web/toolIcons/mode_video.svg")
+	SVGResource video();
+
+	@Source("org/geogebra/common/icons/svg/web/toolIcons/mode_audio.svg")
+	SVGResource audio();
+
+	@Source("org/geogebra/common/icons/svg/web/matDesignIcons/mow/toolbox/add_box.svg")
+	SVGResource apps();
+
+	@Source("org/geogebra/common/icons/svg/web/toolIcons/mode_geogebra.svg")
+	SVGResource geogebra();
+
+	@Source("org/geogebra/common/icons/svg/web/toolIcons/mode_mindmap.svg")
+	SVGResource mindmap();
+
+	@Source("org/geogebra/common/icons/svg/web/toolIcons/mode_table.svg")
+	SVGResource table();
+
+	@Source("org/geogebra/common/icons/svg/web/toolIcons/mode_graspablemath.svg")
+	SVGResource grasphmath();
+
+	@Source("org/geogebra/common/icons/svg/web/toolIcons/mode_ruler.svg")
+	SVGResource ruler();
+
+	@Source("org/geogebra/common/icons/svg/web/toolIcons/mode_protractor.svg")
+	SVGResource ruler_protractor();
+
+	@Source("org/geogebra/common/icons/svg/web/toolIcons/mode_triangleprotractor.svg")
+	SVGResource ruler_triangle();
+
+	@Source("org/geogebra/common/icons/svg/web/matDesignIcons/ev/target.svg")
+	SVGResource target();
+
+	// MEBIS TOOLBOX SVGS
+	@Source("org/geogebra/common/icons/svg/web/matDesignIcons/mow/toolbox/polygon.svg")
+	SVGResource pentagon_fontawesome();
+
+	@Source("org/geogebra/common/icons/svg/web/matDesignIcons/mow/toolbox/ellipse.svg")
+	SVGResource ellipse_fontawesome();
+
+	@Source("org/geogebra/common/icons/svg/web/matDesignIcons/mow/toolbox/freeform.svg")
+	SVGResource freeform_fontawesome();
+
+	@Source("org/geogebra/common/icons/svg/web/matDesignIcons/mow/toolbox/geogebra.svg")
+	SVGResource geogebra_fontawesome();
+
+	@Source("org/geogebra/common/icons/svg/web/matDesignIcons/mow/toolbox/line.svg")
+	SVGResource curve_fontawesome();
+
+	@Source("org/geogebra/common/icons/svg/web/matDesignIcons/mow/toolbox/parallel.svg")
+	SVGResource parallelogram_fontawesome();
+
+	@Source("org/geogebra/common/icons/svg/web/matDesignIcons/mow/toolbox/stadium.svg")
+	SVGResource stadium_fontawesome();
+
+	@Source("org/geogebra/common/icons/svg/web/matDesignIcons/mow/toolbox/mask.svg")
+	SVGResource mask_fontawesome();
+}

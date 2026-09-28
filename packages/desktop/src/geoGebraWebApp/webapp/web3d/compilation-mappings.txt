@@ -1,0 +1,30 @@
+E41C5A2D87671AEF4C95E0A0C221F634.cache.js
+compiler.emulatedStack false
+compiler.predeclare.cross.fragment.references false
+compiler.stackMode strip
+compiler.useSourceMaps true
+compiler.useSymbolMaps false
+gwt.cspCompatModeEnabled false
+gwt.enableDebugId false
+gwt.logging.enabled FALSE
+gwt.logging.simpleConsoleHandler ENABLED
+gwt.uncaughtexceptionhandler.windowonerror IGNORE
+jre.checkedMode DISABLED
+jre.checks.api AUTO
+jre.checks.bounds AUTO
+jre.checks.checkLevel NORMAL
+jre.checks.numeric AUTO
+jre.checks.type DISABLED
+jre.debugMode DISABLED
+jre.logging.logLevel OFF
+jre.logging.simpleConsoleHandler ENABLED
+jsinterop.checks DISABLED
+superdevmode off
+user.agent safari
+webApiUsage modern
+widgets.audioElementSupport maybe
+widgets.canvasElementSupport maybe
+widgets.gwt.enableDebugId false
+widgets.videoElementSupport maybe
+
+Devmode:devmode.js

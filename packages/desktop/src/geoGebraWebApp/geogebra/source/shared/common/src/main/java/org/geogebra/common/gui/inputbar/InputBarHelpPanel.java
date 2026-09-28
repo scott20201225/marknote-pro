@@ -1,0 +1,336 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.gui.inputbar;
+
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.TreeSet;
+
+import org.geogebra.common.GeoGebraConstants;
+import org.geogebra.common.gui.util.TableSymbols;
+import org.geogebra.common.kernel.commands.CommandsConstants;
+import org.geogebra.common.main.App;
+import org.geogebra.common.util.LowerCaseDictionary;
+import org.geogebra.common.util.ManualPage;
+import org.geogebra.common.util.StringUtil;
+import org.geogebra.common.util.debug.Analytics;
+import org.jspecify.annotations.NonNull;
+
+import com.google.j2objc.annotations.Weak;
+
+public class InputBarHelpPanel {
+
+	@Weak
+	protected App mApp;
+
+	private LowerCaseDictionary mMathFuncDict;
+	private LowerCaseDictionary mDict;
+	private Collection<String> mAllCommands;
+	private Collection<String> mMathFunc;
+	private LowerCaseDictionary[] mSubDict;
+	private TreeMap<String, Integer> mCategoryNameToTableIndex;
+	private Map<Integer, Collection<String>> mCommands;
+	private StringBuilder mStringBuilder;
+
+	/**
+	 * @param app
+	 *            application
+	 */
+	public InputBarHelpPanel(App app) {
+		super();
+		this.mApp = app;
+		updateDictionaries();
+	}
+
+	/**
+	 *
+	 * @param app
+	 *            app
+	 * @param comparator
+	 *            String comparator
+	 * @param index
+	 *            category index
+	 * @return commands tree map
+	 */
+	public static TreeSet<String> getCommandTreeMap(
+			App app, Comparator<String> comparator, int index) {
+
+		LowerCaseDictionary[] subDict = app.getSubCommandDictionary();
+
+		if (subDict[index].isEmpty()) {
+			return null;
+		}
+
+		TreeSet<String> cmdTree = new TreeSet<>(comparator);
+
+		for (String s : subDict[index]) {
+			String cmd = subDict[index].get(s);
+			if (cmd != null && cmd.length() > 0) {
+				cmdTree.add(cmd);
+			}
+		}
+		return cmdTree;
+	}
+
+	/**
+	 *
+	 * @param app
+	 *            app
+	 * @param comparator
+	 *            String comparator
+	 * @return all commands tree set
+	 */
+	public static TreeSet<String> getAllCommandsTreeSet(App app, Comparator<String> comparator) {
+
+		TreeSet<String> treeSet = new TreeSet<>(comparator);
+
+		LowerCaseDictionary dict = app.getCommandDictionary();
+		for (String s : dict) {
+			String cmdName = dict.get(s);
+			if (cmdName != null && cmdName.length() > 0) {
+				treeSet.add(cmdName);
+			}
+		}
+		return treeSet;
+	}
+
+	/**
+	 * Update command dictionaries.
+	 */
+	public void updateDictionaries() {
+		// CAS-Specific Syntaxes
+		if (mApp.getConfig().getVersion() == GeoGebraConstants.Version.CAS) {
+			mApp.getCommandDictionaryCAS();
+		}
+		// math functions
+		String[] translatedFunctions = TableSymbols.getTranslatedFunctions(mApp);
+		mMathFuncDict = new LowerCaseDictionary();
+		for (String function : translatedFunctions) {
+			// remove start space char
+			int index = function.indexOf(' ');
+			String insert;
+			if (index == -1) {
+				insert = function;
+			} else {
+				insert = function.substring(index + 1);
+			}
+			mMathFuncDict.addEntry(insert);
+		}
+		mMathFunc = mMathFuncDict.getAllCommands();
+
+		// all commands dictionary (with math functions){
+		mDict = new LowerCaseDictionary(mApp.getCommandDictionary());
+		for (String function : mMathFunc) {
+			mDict.addEntry(function);
+		}
+		mAllCommands = mDict.getAllCommands();
+
+		// by category dictionaries
+		mSubDict = mApp.getSubCommandDictionary();
+
+		int n = getCategoriesCount();
+		mCommands = new HashMap<>(n);
+		mCategoryNameToTableIndex = new TreeMap<>();
+
+		for (int i = 0; i < n; i++) {
+			String categoryName = getCategoryName(i);
+			Collection<String> list = getSubDictionary(i).getAllCommands();
+			if (list != null) {
+				mCategoryNameToTableIndex.put(categoryName, i);
+				mCommands.put(i, list);
+			}
+		}
+	}
+
+	protected Collection<String> getCommands(int i) {
+		return mCommands.get(i);
+	}
+
+	public Collection<String> getAllCommands() {
+		return mAllCommands;
+	}
+
+	public Collection<String> getMathFunc() {
+		return mMathFunc;
+	}
+
+	/**
+	 *
+	 * @return all commands dictionary
+	 */
+	public LowerCaseDictionary getDictionary() {
+		return this.mDict;
+	}
+
+	/**
+	 *
+	 * @return math functions dictionary
+	 */
+	public LowerCaseDictionary getMathFuncDictionary() {
+		return this.mMathFuncDict;
+	}
+
+	protected LowerCaseDictionary getSubDictionary(int i) {
+		return mSubDict[i];
+	}
+
+	/**
+	 * @param category
+	 *            category idex
+	 * @return category dictionary
+	 */
+	public LowerCaseDictionary getCategoryDictionary(int category) {
+		if (category == CommandsConstants.MATH_FUNC_INDEX) {
+			return getMathFuncDictionary();
+		}
+		if (category == CommandsConstants.ALL_COMMANDS_INDEX) {
+			return getDictionary();
+		}
+		return getSubDictionary(category);
+	}
+
+	/**
+	 * @param i category index (0 to getCategoriesCount())
+	 * @return category name
+	 */
+	public String getCategoryName(int i) {
+		return mApp.getKernel().getAlgebraProcessor().getSubCommandSetName(i);
+	}
+
+	public int getCategoriesCount() {
+		return mSubDict.length;
+	}
+
+	public TreeMap<String, Integer> getCategories() {
+		return mCategoryNameToTableIndex;
+	}
+
+	/**
+	 * @param categoryName
+	 *            category name
+	 * @return all commands in category
+	 */
+	public Collection<String> getCommandsFromCategory(String categoryName) {
+		TreeMap<String, Integer> categories = getCategories();
+		if (categories == null || !categories.containsKey(categoryName)) {
+			return null;
+		}
+		return getCommandsFromCategory(categories.get(categoryName));
+	}
+
+	/**
+	 * @param category
+	 *            category index
+	 * @return all commands in category
+	 */
+	public Collection<String> getCommandsFromCategory(int category) {
+		if (category == CommandsConstants.MATH_FUNC_INDEX) {
+			return getMathFunc();
+		}
+		if (category == CommandsConstants.ALL_COMMANDS_INDEX) {
+			return getAllCommands();
+		}
+		return getCommands(category);
+	}
+
+	/**
+	 * @return title of the mathematical functions category
+	 */
+	public String getMathFunctionsTitle() {
+		return mApp.getLocalization().getMenu("MathematicalFunctions");
+	}
+
+	/**
+	 * @return title of the all commands category
+	 */
+	public String getAllCommandsTitle() {
+		return mApp.getLocalization().getMenu("AllCommands");
+	}
+
+	/**
+	 * @param command
+	 *            command
+	 * @param urlCaller
+	 *            caller parameter (?caller=phone disables UI)
+	 * @return help URL
+	 */
+	public String getURLForCommand(String command, String urlCaller) {
+
+		// safety check
+		if (StringUtil.empty(command)) {
+			return null;
+		}
+
+		if (mStringBuilder == null) {
+			mStringBuilder = new StringBuilder();
+		} else {
+			mStringBuilder.setLength(0);
+		}
+
+		// check if math func
+		if (command.contains("(")) {
+			String mathFuncHelpURL = mApp.getGuiManager().getHelpURL(ManualPage.OPERATORS, null);
+
+			mStringBuilder.append(mathFuncHelpURL);
+			mStringBuilder.append(urlCaller);
+			String ret = mStringBuilder.toString();
+			return ret.replaceAll(" ", "%20");
+		}
+
+		// regular command
+		String internal = mApp.getReverseCommand(command);
+		String url = mApp.getGuiManager().getHelpURL(ManualPage.COMMAND, internal);
+
+		mStringBuilder.setLength(0);
+		mStringBuilder.append(url);
+		mStringBuilder.append(urlCaller);
+
+		String ret = mStringBuilder.toString();
+		return ret.replaceAll(" ", "%20");
+	}
+
+	/**
+	 * verify that word is not reserved or an existing geo
+	 *
+	 * @param word
+	 *            word around cursor
+	 * @return whether it's a function or geo
+	 */
+	public boolean checkWordAroundCursorIsUsable(String word) {
+		return word.isEmpty()
+				|| !(mApp.getParserFunctions().isReserved(word)
+						|| mApp.getKernel().lookupLabel(word) != null);
+	}
+
+	/**
+	 * Logs the command help usage Analytics event
+	 *
+	 * @param commandName name of the command
+	 * @param useReverse whether the command name should be translated to internal name or not
+	 */
+	public void logHelpIconEvent(@NonNull String commandName, boolean useReverse) {
+		Map<String, Object> params = new HashMap<>();
+		String command = commandName.contains("(") || !useReverse
+				? commandName
+				: mApp.getReverseCommand(commandName);
+		params.put(Analytics.Param.COMMAND, command);
+		Analytics.logEvent(Analytics.Event.COMMAND_HELP_ICON, params);
+	}
+}

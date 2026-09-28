@@ -1,0 +1,161 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.scientific;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import org.geogebra.common.BaseUnitTest;
+import org.geogebra.common.gui.view.table.ScientificDataTableController;
+import org.geogebra.common.gui.view.table.TableValuesView;
+import org.geogebra.common.kernel.Construction;
+import org.geogebra.common.kernel.Kernel;
+import org.geogebra.common.kernel.geos.GeoFunction;
+import org.geogebra.common.kernel.geos.LabelManager;
+import org.geogebra.common.main.MyError;
+import org.geogebra.common.main.undo.UndoManager;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+final class ScientificDataTableControllerTests extends BaseUnitTest {
+
+	private TableValuesView tableValuesView;
+	private ScientificDataTableController controller;
+	private UndoManager undoManager;
+
+	@BeforeEach
+	void setUp() {
+		Kernel kernel = getKernel();
+		activateUndo();
+		undoManager = kernel.getConstruction().getUndoManager();
+
+		tableValuesView = new TableValuesView(kernel);
+		kernel.attach(tableValuesView);
+
+		controller = new ScientificDataTableController(kernel);
+		controller.setup(tableValuesView);
+	}
+
+	@Test
+	void testInitialSetup() {
+		assertNull(controller.getDefinitionOfF());
+		assertFalse(controller.isFDefined());
+		assertNull(controller.getDefinitionOfG());
+		assertFalse(controller.isGDefined());
+		assertEquals(0, getUndoHistorySize());
+		assertTrue(getApp().isSaved());
+	}
+
+	@Test
+	void testInitialSetupWithExistingFunction() {
+		Kernel kernel = getKernel();
+		Construction construction = kernel.getConstruction();
+		construction.clearConstruction();
+
+		// create a function "f"
+		GeoFunction function = new GeoFunction(construction);
+		function.setAuxiliaryObject(true);
+		function.rename("f");
+
+		// this should cause an exception / conflict
+		controller = new ScientificDataTableController(kernel);
+		controller.setup(tableValuesView); // setting up for the first time: no name conflict
+		assertNotNull(controller.getFunctionF());
+		add(LabelManager.HIDDEN_PREFIX + "f:3x");
+		MyError error = assertThrows(MyError.class, () -> controller.setup(tableValuesView));
+		assertTrue(
+				error.getMessage().startsWith("This label is already in use"),
+				"Unexpected message " + error.getMessage());
+	}
+
+	@Test
+	void testDefineFunctions() {
+		// define f
+		assertTrue(controller.defineFunctions("x", null));
+		assertFalse(controller.hasFDefinitionErrorOccurred());
+		assertEquals("x", controller.getDefinitionOfF());
+		assertEquals(1, getUndoHistorySize());
+		assertFalse(controller.getFunctionF().isEuclidianVisible());
+		assertFalse(controller.getFunctionF().isPointsVisible());
+
+		// define g
+		assertTrue(controller.defineFunctions("x", "ln(x)"));
+		assertFalse(controller.hasGDefinitionErrorOccurred());
+		assertEquals("ln(x)", controller.getDefinitionOfG());
+		assertEquals(2, getUndoHistorySize());
+	}
+
+	@Test
+	void testRedefineF() {
+		// define f
+		controller.defineFunctions("x", null);
+		assertEquals(1, getUndoHistorySize());
+
+		// redefine f using a different definition
+		assertTrue(controller.defineFunctions("sqrt(x)", null));
+		assertFalse(controller.hasFDefinitionErrorOccurred());
+		assertEquals("sqrt(x)", controller.getDefinitionOfF());
+		assertEquals(2, getUndoHistorySize());
+
+		// redefine f using the same definition, no undo point should be created
+		assertTrue(controller.defineFunctions("sqrt(x)", null));
+		assertFalse(controller.hasFDefinitionErrorOccurred());
+		assertEquals("sqrt(x)", controller.getDefinitionOfF());
+		assertEquals(2, getUndoHistorySize());
+	}
+
+	@Test
+	void testInvalidInput() {
+		controller.defineFunctions("abc", null);
+		assertTrue(controller.hasFDefinitionErrorOccurred());
+		assertFalse(controller.hasGDefinitionErrorOccurred());
+		assertEquals(0, getUndoHistorySize());
+	}
+
+	@Test
+	void testUndo() {
+		assertFalse(undoManager.undoPossible());
+
+		// define f
+		assertTrue(controller.defineFunctions("x", null));
+		assertEquals("x", controller.getDefinitionOfF());
+		assertTrue(undoManager.undoPossible());
+
+		// redefine f
+		assertTrue(controller.defineFunctions("3*sqrt(x)", null));
+		assertEquals("3sqrt(x)", controller.getDefinitionOfF());
+		assertTrue(undoManager.undoPossible());
+
+		// undo (redefine f)
+		undoManager.undo();
+		assertTrue(undoManager.undoPossible()); // still one more undo step in the history
+		assertEquals("x", controller.getDefinitionOfF());
+
+		// undo (define f)
+		undoManager.undo();
+		assertFalse(undoManager.undoPossible());
+		assertNull(controller.getDefinitionOfF());
+	}
+
+	private int getUndoHistorySize() {
+		return getKernel().getConstruction().getUndoManager().getHistorySize();
+	}
+}

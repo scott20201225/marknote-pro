@@ -229,6 +229,7 @@
       "newArea": "New Area",
       "newDocument": "New Note",
       "newDrawing": "New Drawing",
+      "newGeoGebra": "New GeoGebra",
       "expandAll": "Expand All",
       "collapseAll": "Collapse All",
       "copy": "Copy",
@@ -301,7 +302,14 @@
       "noNotesInArea": "No notes in this area",
       "groupNamePlaceholder": "Group name",
       "areaNamePlaceholder": "Area name",
-      "documentNamePlaceholder": "Note name"
+      "documentNamePlaceholder": "Note name",
+      "geoGebraMode": "GeoGebra mode",
+      "geoGebraGraphing": "Graphing",
+      "geoGebra3d": "3D Calculator",
+      "geoGebraGeometry": "Geometry",
+      "geoGebraCas": "CAS",
+      "geoGebraProbability": "Probability",
+      "geoGebraScientific": "Scientific"
     },
     "toc": {
       "title": "Table Of Contents"

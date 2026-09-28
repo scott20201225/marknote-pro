@@ -1,0 +1,202 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.euclidian;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.Arrays;
+
+import org.geogebra.common.euclidian.event.PointerEventType;
+import org.geogebra.common.jre.headless.AppCommon;
+import org.geogebra.common.kernel.StringTemplate;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.kernel.geos.GeoImage;
+import org.geogebra.common.kernel.kernelND.GeoElementND;
+import org.geogebra.common.plugin.EuclidianStyleConstants;
+import org.geogebra.test.BaseAppTestSetup;
+import org.geogebra.test.TestEvent;
+
+public class BaseEuclidianControllerTest extends BaseAppTestSetup {
+
+	protected EuclidianController ec;
+
+	/**
+	 * Set up the controller
+	 */
+	public void setUpController() {
+		setupClassicApp();
+		ec = getApp().getActiveEuclidianView().getEuclidianController();
+		reset();
+	}
+
+	/**
+	 * @param mode
+	 *            app mode
+	 */
+	protected void setMode(int mode) {
+		getApp().setMode(mode);
+	}
+
+	/**
+	 * @param x
+	 *            screen x-coordinate
+	 * @param y
+	 *            screen y-coordinate
+	 */
+	protected void click(int x, int y) {
+		click(x, y, null);
+	}
+
+	protected void click(int x, int y, PointerEventType type) {
+		TestEvent evt = new TestEvent(x, y, type, false);
+		ec.wrapMousePressed(evt);
+		ec.wrapMouseReleased(evt);
+	}
+
+	/**
+	 * Start a drag
+	 *
+	 * @param x
+	 *            screen x-coordinate
+	 * @param y
+	 *            screen y-coordinate
+	 */
+	protected void dragStart(int x, int y, boolean right) {
+		TestEvent evt = new TestEvent(x, y, null, right);
+		ec.setDraggingDelay(0);
+		ec.wrapMousePressed(evt);
+	}
+
+	protected void dragStart(int x, int y) {
+		dragStart(x, y, false);
+	}
+
+	/**
+	 * Finish a drag
+	 *
+	 * @param x
+	 *            screen x-coordinate
+	 * @param y
+	 *            screen y-coordinate
+	 */
+	protected void dragEnd(int x, int y, boolean right) {
+		TestEvent evt = new TestEvent(x, y, null, right);
+		ec.wrapMouseDragged(evt, true);
+		ec.wrapMouseDragged(evt, true);
+		ec.wrapMouseReleased(evt);
+	}
+
+	protected void pointerRelease(int x, int y) {
+		TestEvent evt = new TestEvent(x, y, null, false);
+		ec.wrapMouseReleased(evt);
+	}
+
+	protected void drag(int x, int y) {
+		TestEvent evt = new TestEvent(x, y, null, false);
+		ec.wrapMouseDragged(evt, true);
+	}
+
+	protected void dragEnd(int x, int y) {
+		dragEnd(x, y, false);
+	}
+
+	/**
+	 * Reset the app
+	 */
+	protected void reset() {
+		AppCommon app = getApp();
+		app.getKernel().clearConstruction(true);
+		app.initDialogManager(true);
+		app.getActiveEuclidianView().clearView();
+		app.getSettings().beginBatch();
+		app.getActiveEuclidianView().getSettings().reset();
+		app.getActiveEuclidianView().getSettings().setShowAxes(false, false);
+
+		app.getActiveEuclidianView().getSettings().setCoordSystem(0, 0, 50, 50, true);
+		app.getActiveEuclidianView()
+				.getSettings()
+				.setPointCapturing(EuclidianStyleConstants.POINT_CAPTURING_OFF);
+		app.getSettings().endBatch();
+		ec.setLastMouseUpLoc(null);
+	}
+
+	/**
+	 * Reset last mouse location in the controller
+	 */
+	protected void resetMouseLocation() {
+		ec.setLastMouseUpLoc(null);
+	}
+
+	/**
+	 * @param desc
+	 *            expected definitions of all visible objects in construction
+	 *            order
+	 */
+	protected final void checkContent(String... desc) {
+		checkContentWithVisibility(true, desc);
+	}
+
+	/**
+	 * @param desc
+	 *            expected definitions of all hidden objects in construction
+	 *            order
+	 */
+	protected final void checkHiddenContent(String... desc) {
+		checkContentWithVisibility(false, desc);
+	}
+
+	/**
+	 * @param visible
+	 *            visibility filter
+	 * @param desc
+	 *            expected definitions of all hidden objects in construction
+	 *            order
+	 */
+	protected void checkContentWithVisibility(boolean visible, String... desc) {
+		int i = 0;
+		for (String label : getApp().getGgbApi().getAllObjectNames()) {
+			GeoElement geo = lookup(label);
+			if (geo.isEuclidianVisible() == visible) {
+				assertTrue(i < desc.length, "Extra element: " + geo.toString(StringTemplate.editTemplate));
+
+				assertEquals(desc[i], geo.toString(StringTemplate.editTemplate));
+				i++;
+			}
+		}
+		assertEquals(desc.length, i, "length mismatch between object names and argument");
+	}
+
+	protected void checkContentLabels(String... labels) {
+		assertEquals(Arrays.asList(labels), Arrays.asList(getApp().getGgbApi().getAllObjectNames()));
+	}
+
+	protected GeoImage createImage() {
+		GeoImage img = new GeoImage(getApp().getKernel().getConstruction());
+		img.setImageFileName("foo.png", 50, 50);
+		return img;
+	}
+
+	protected <T extends GeoElement> T add(String input) {
+		GeoElementND[] evaluate = evaluate(input);
+		return evaluate.length > 0 ? (T) evaluate[0] : null;
+	}
+
+	protected Drawable getDrawable(GeoElement geo) {
+		return (Drawable) getApp().getActiveEuclidianView().getDrawableND(geo);
+	}
+}

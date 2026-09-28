@@ -1,0 +1,103 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.kernel.cas;
+
+import static org.geogebra.test.TestStringUtil.unicode;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.geogebra.common.kernel.StringTemplate;
+import org.geogebra.common.kernel.geos.GeoList;
+import org.geogebra.common.kernel.geos.GeoNumeric;
+import org.geogebra.common.kernel.kernelND.GeoElementND;
+import org.geogebra.suite.BaseSuiteTest;
+import org.geogebra.test.annotation.Issue;
+import org.junit.jupiter.api.Test;
+
+class AlgoSolveTest extends BaseSuiteTest {
+
+	@Test
+	void testSolveResultsAreInDegrees() {
+		t("l1=Solve(sin(x)=0.5)", unicode("{x = 30*deg, x = 150*deg}"));
+		t("l4=Solve(sin(30deg)=sin(x))", unicode("{x = 30*deg, x = 150*deg}"));
+		t("l1=Solve(sin(x+5deg)=0.5)", unicode("{x = 25*deg, x = 145*deg}"));
+		t("l2=Solve(sin(0.5 x)=0.5)", unicode("{x = 60*deg, x = 300*deg}"));
+		t(
+				"l3=NSolve(sin(abs(x))=0.5)",
+				unicode("{x = -150*deg, x = -30*deg, x = 30*deg, x = 150*deg}"));
+		t("l5=Solve(sin(360deg/x)=0.5)", "{x = 12 / 1, x = 12 / 5}");
+		t("l3=Solve(sin(30deg)=1/x)", "{x = 2}");
+		t("l3=Solve(sin(30deg)=x)", "{x = 1 / 2}");
+		t("l3=Solve(sin(30deg)=sin(x deg))", "{x = 30, x = 150}");
+		t("Solve(sin(pi*x/4)=sqrt(2)/2)", "{x = 1, x = 3}");
+	}
+
+	@Test
+	@Issue("APPS-6278")
+	void shouldNotSendTooManyZerosToCas() {
+		add("f(x)=5.4 sin(((2 π)/(365)) (x-75))+12");
+		GeoElementND solve = add("NSolve(f(x)=17.4)");
+		assertEquals("{x = 166.25, x = 166.25}", solve.toValueString(StringTemplate.defaultTemplate));
+	}
+
+	@Test
+	@Issue("APPS-6615")
+	void shouldSendEnoughBracketsToCas() {
+		GeoNumeric number = add("a=0.3");
+		number.setSymbolicMode(true, false);
+		assertEquals("{x = 0.09}", add("NSolve(a^2=x)").toValueString(StringTemplate.defaultTemplate));
+		add("a=1-0.3");
+		assertEquals("{x = 0.49}", add("NSolve(a^2=x)").toValueString(StringTemplate.defaultTemplate));
+	}
+
+	@Test
+	@Issue("APPS-6583")
+	void testCSolutionsZ() {
+		add("w=1+0i");
+		GeoList list = add("CSolutions(z^3=w)");
+		list.setSymbolicMode(true, false);
+		assertEquals(
+				"l1\\, = \\,\\left\\{1 + 0 \\; i,\\;\\frac{i \\; \\sqrt{3} - 1}{2},"
+						+ "\\;\\frac{-i \\; \\sqrt{3} - 1}{2}\\right\\}",
+				list.getLaTeXAlgebraDescription(true, StringTemplate.latexTemplate));
+	}
+
+	@Test
+	@Issue("APPS-6583")
+	void testCSolveX() {
+		add("w=1+0i");
+		GeoList list = add("CSolve(x^3=w)");
+		list.setSymbolicMode(true, false);
+		assertEquals(
+				"l1\\, = \\,\\left\\{x\\, = \\,1 + 0 \\; i,\\;x\\, = \\,\\frac{1}{2}"
+						+ " \\; \\left(i \\; \\sqrt{3} - 1 \\right),\\;x\\, = \\,\\frac{1}{2}"
+						+ " \\; \\left(-i \\; \\sqrt{3} - 1 \\right)\\right\\}",
+				list.getLaTeXAlgebraDescription(true, StringTemplate.latexTemplate));
+	}
+
+	@Test
+	@Issue("APPS-6583")
+	void testCSolveZ() {
+		add("w=1+0i");
+		GeoList list = add("CSolve(z^3=w)");
+		list.setSymbolicMode(true, false);
+		assertEquals(
+				"l1\\, = \\,\\left\\{z\\, = \\,1 + 0 \\; i,\\;z\\, = \\,\\frac{1}{2}"
+						+ " \\; \\left(i \\; \\sqrt{3} - 1 \\right),\\;z\\, = \\,\\frac{1}{2}"
+						+ " \\; \\left(-i \\; \\sqrt{3} - 1 \\right)\\right\\}",
+				list.getLaTeXAlgebraDescription(true, StringTemplate.latexTemplate));
+	}
+}
