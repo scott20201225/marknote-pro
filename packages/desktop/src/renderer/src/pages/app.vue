@@ -83,6 +83,7 @@ import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
 import { useMainStore } from '@/store'
 import { storeToRefs } from 'pinia'
 import { addStyles, addThemeStyle, addCustomStyle, type AddStylesOptions } from '@/util/theme'
+import { getGeoGebraConfiguration } from '@/util/geogebraConfiguration'
 import Recent from '@/components/recent/index.vue'
 import EditorWithTabs from '@/components/editorWithTabs/index.vue'
 import Tabs from '@/components/editorWithTabs/tabs.vue'
@@ -210,10 +211,6 @@ const handleWindowZoomGestureChange = (event: Event): void => {
   lastGestureScale.value = scale
 }
 
-const getGeoGebraConfiguration = () => ({
-  language: preferencesStore.language
-})
-
 const handleWorkbenchSwitch = (event: Event): void => {
   const target = (event as CustomEvent).detail
   if (target === 'note' || target === 'git') {
@@ -271,10 +268,15 @@ watch(customCss, (value, oldValue) => {
   }
 })
 
-watch([language, () => preferencesStore.preferenceLoaded], ([value, preferenceLoaded]) => {
-  if (!preferenceLoaded || !value) return
-  void window.electron.ipcRenderer.invoke('mt::geogebra::configure', getGeoGebraConfiguration())
-})
+watch(
+  [language, theme, () => preferencesStore.preferenceLoaded],
+  ([value, _theme, preferenceLoaded]) => {
+    if (!preferenceLoaded || !value) return
+    nextTick(() => {
+      void window.electron.ipcRenderer.invoke('mt::geogebra::configure', getGeoGebraConfiguration())
+    })
+  }
+)
 
 watch([currentFile, () => preferencesStore.preferenceLoaded], ([file, preferenceLoaded]) => {
   window.electron.ipcRenderer.send('mt::drawio-menu-mode', !!file?.isDrawing)

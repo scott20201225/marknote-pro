@@ -86,6 +86,9 @@ export interface DrawioConfiguration {
 
 export interface GeoGebraConfiguration {
   language: string
+  dark: boolean
+  theme: string
+  colors: Record<string, string>
 }
 
 export interface DrawioExportPayload {
