@@ -1,0 +1,290 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.web.shared.mow.header;
+
+import static org.geogebra.common.euclidian.EuclidianConstants.MODE_TRANSLATE_VIEW;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.geogebra.common.euclidian.CoordSystemListener;
+import org.geogebra.common.euclidian.ModeChangeListener;
+import org.geogebra.common.gui.AccessibilityGroup;
+import org.geogebra.common.gui.SetLabels;
+import org.geogebra.common.kernel.Kernel;
+import org.geogebra.gwtutil.NavigatorUtil;
+import org.geogebra.web.full.gui.toolbar.mow.toolbox.components.IconButton;
+import org.geogebra.web.full.gui.toolbarpanel.UndoRedoProvider;
+import org.geogebra.web.html5.Browser;
+import org.geogebra.web.html5.gui.BaseWidgetFactory;
+import org.geogebra.web.html5.gui.zoompanel.FocusableWidget;
+import org.geogebra.web.html5.gui.zoompanel.ZoomPanel;
+import org.geogebra.web.html5.main.AppW;
+import org.geogebra.web.html5.main.topbar.TopBarIcon;
+import org.geogebra.web.html5.main.topbar.TopBarIconResource;
+import org.geogebra.web.html5.util.AppletParameters;
+import org.geogebra.web.shared.GlobalHeader;
+import org.gwtproject.event.dom.client.TouchStartEvent;
+import org.gwtproject.user.client.ui.FlowPanel;
+
+import elemental2.dom.DomGlobal;
+
+public final class NotesTopBar extends FlowPanel
+		implements SetLabels, CoordSystemListener, ModeChangeListener {
+	private static final int TOP_BAR_HEIGHT = 48;
+	private final AppletParameters appletParams;
+	private final TopBarController controller;
+	private final List<IconButton> buttons = new ArrayList<>();
+	private final UndoRedoProvider undoRedoProvider;
+	private IconButton homeBtn;
+	private IconButton dragBtn;
+	private IconButton fullscreenButton;
+	private final TopBarIconResource topBarIconResource;
+
+	/**
+	 * constructor
+	 * @param appW - application
+	 */
+	public NotesTopBar(AppW appW) {
+		this.appletParams = appW.getAppletParameters();
+		topBarIconResource = appW.getTopBarIconResource();
+		controller = new TopBarController(appW, topBarIconResource);
+		undoRedoProvider = new UndoRedoProvider(appW);
+
+		if (appW.getActiveEuclidianView() != null) {
+			appW.getActiveEuclidianView().getEuclidianController().addZoomerListener(this);
+		}
+
+		addStyleName("topbar");
+		buildGui();
+	}
+
+	/**
+	 * @return whether the topbar is attached
+	 */
+	public boolean wasAttached() {
+		return getElement().hasChildNodes();
+	}
+
+	/**
+	 * Heuristic for checking if the panel will be needed.
+	 * Used during file load to estimate EV size and prevent extra undo points.
+	 * @param app application
+	 * @return whether a top bar is needed
+	 */
+	public static int estimateHeight(AppW app) {
+		AppletParameters params = app.getAppletParameters();
+		return params.getDataParamEnableUndoRedo()
+						|| needsMenuButton(params)
+						|| ZoomPanel.needsZoomButtons(app)
+				? TOP_BAR_HEIGHT
+				: 0;
+	}
+
+	private void buildGui() {
+		addMenuButton();
+		addUndoRedo();
+		addZoomButtons();
+		addFullscreenButton();
+		addSettingsButton();
+
+		addPageOverviewButton();
+	}
+
+	private void addMenuButton() {
+		if (needsMenuButton(appletParams)) {
+			addSmallPressButton(
+					TopBarIcon.MENU, "Menu", controller::onMenuToggle, AccessibilityGroup.MENU);
+			addDivider();
+		}
+	}
+
+	private static boolean needsMenuButton(AppletParameters appletParams) {
+		return !GlobalHeader.isInDOM() && appletParams.getDataParamShowMenuBar(false);
+	}
+
+	private void addUndoRedo() {
+		if (appletParams.getDataParamEnableUndoRedo()) {
+			add(undoRedoProvider.getUndoButton());
+			add(undoRedoProvider.getRedoButton());
+			addDivider();
+		}
+	}
+
+	private void addZoomButtons() {
+		if (!ZoomPanel.needsZoomButtons(controller.getApp())) {
+			return;
+		}
+
+		if (!NavigatorUtil.isMobile()) {
+			addSmallPressButton(
+					TopBarIcon.ZOOM_IN,
+					"ZoomIn.Tool",
+					controller::onZoomIn,
+					AccessibilityGroup.ZOOM_NOTES_PLUS);
+			addSmallPressButton(
+					TopBarIcon.ZOOM_OUT,
+					"ZoomOut.Tool",
+					controller::onZoomOut,
+					AccessibilityGroup.ZOOM_NOTES_MINUS);
+		}
+
+		homeBtn = addSmallPressButton(
+				TopBarIcon.STANDARD_VIEW,
+				"StandardView",
+				controller::onHome,
+				AccessibilityGroup.ZOOM_NOTES_HOME);
+		homeBtn.setDisabled(true);
+
+		addZoomToFitButton();
+		addDragButton();
+		addDivider();
+	}
+
+	private void addZoomToFitButton() {
+		addSmallPressButton(
+				TopBarIcon.ZOOM_TO_FIT,
+				"ShowAllObjects",
+				controller::onZoomToFit,
+				AccessibilityGroup.ZOOM_NOTES_TO_FIT);
+	}
+
+	private void addDragButton() {
+		dragBtn = new IconButton(
+				controller.getApp(),
+				topBarIconResource.getImageResource(TopBarIcon.PAN_VIEW),
+				"PanView",
+				"PanView",
+				"",
+				null);
+		dragBtn.addFastClickHandler((event) -> controller.onDrag(dragBtn.isActive()));
+
+		registerFocusable(dragBtn, AccessibilityGroup.ZOOM_NOTES_DRAG_VIEW);
+		styleAndRegisterTopBarButton(dragBtn);
+	}
+
+	private void styleAndRegisterTopBarButton(IconButton button) {
+		button.addStyleName("small");
+		buttons.add(button);
+		add(button);
+	}
+
+	/**
+	 * update style of undo+redo buttons
+	 * @param kernel - kernel
+	 */
+	public void updateUndoRedoActions(Kernel kernel) {
+		kernel
+				.getConstruction()
+				.getUndoManager()
+				.setAllowCheckpoints(appletParams.getParamAllowUndoCheckpoints());
+		undoRedoProvider.updateUndoRedoActions();
+	}
+
+	private void addFullscreenButton() {
+		if (controller.needsFullscreenButton()) {
+			fullscreenButton = addSmallPressButton(
+					TopBarIcon.FULLSCREEN_ON, "Fullscreen", null, AccessibilityGroup.FULL_SCREEN_NOTES);
+			fullscreenButton.addFastClickHandler(source -> controller.onFullscreenOn(fullscreenButton));
+
+			controller
+					.getApp()
+					.getGlobalHandlers()
+					.addEventListener(DomGlobal.document, Browser.getFullscreenEventName(), event -> {
+						if (!Browser.isFullscreen()) {
+							controller.onFullscreenExit(fullscreenButton);
+						}
+					});
+
+			addDivider();
+		}
+	}
+
+	private void addSettingsButton() {
+		if (controller.getApp().letShowPropertiesDialog()) {
+			IconButton settingsBtn = addSmallPressButton(TopBarIcon.SETTINGS, "Settings", null, null);
+			FocusableWidget focusableSettingsBtn =
+					controller.getRegisteredFocusable(AccessibilityGroup.SETTINGS_NOTES, settingsBtn);
+
+			settingsBtn.addFastClickHandler(
+					source -> controller.onSettingsOpen(settingsBtn, focusableSettingsBtn));
+		}
+	}
+
+	private void addPageOverviewButton() {
+		if (controller.getApp().isMultipleSlidesOpen() || appletParams.getParamShowSlides()) {
+			IconButton pageOverviewBtn =
+					addSmallPressButton(TopBarIcon.PAGE_OVERVIEW, "PageControl", null, null);
+			pageOverviewBtn.addStyleName("pageOverview");
+			pageOverviewBtn.setTooltipPositionRight();
+			pageOverviewBtn.addFastClickHandler(source -> {
+				controller.togglePagePanel();
+				pageOverviewBtn.setActive(!pageOverviewBtn.isActive());
+			});
+			pageOverviewBtn.addBitlessDomHandler(
+					event -> controller.setTouchStyleForPagePreviewCards(), TouchStartEvent.getType());
+		}
+	}
+
+	private IconButton addSmallPressButton(
+			TopBarIcon icon, String ariaLabel, Runnable clickHandler, AccessibilityGroup group) {
+		IconButton button = new IconButton(
+				controller.getApp(), clickHandler, topBarIconResource.getImageResource(icon), ariaLabel);
+		add(button);
+		buttons.add(button);
+
+		if (group != null) {
+			controller.registerFocusable(button, group);
+		}
+
+		return button;
+	}
+
+	private void addDivider() {
+		add(BaseWidgetFactory.INSTANCE.newDivider(true));
+	}
+
+	@Override
+	public void setLabels() {
+		buttons.forEach(SetLabels::setLabels);
+	}
+
+	@Override
+	public void onCoordSystemChanged() {
+		controller.updateHomeButtonVisibility(homeBtn);
+	}
+
+	private void registerFocusable(IconButton button, AccessibilityGroup group) {
+		controller.registerFocusable(button, group);
+	}
+
+	@Override
+	public void onModeChange(int mode) {
+		if (dragBtn == null) {
+			return;
+		}
+
+		dragBtn.setActive(mode == MODE_TRANSLATE_VIEW);
+	}
+
+	/**
+	 * @return height based on DOM state
+	 */
+	public int getHeight() {
+		return wasAttached() ? TOP_BAR_HEIGHT : 0;
+	}
+}

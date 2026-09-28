@@ -1,0 +1,97 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.kernel.geos;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.geogebra.common.BaseUnitTest;
+import org.geogebra.common.awt.GColor;
+import org.geogebra.common.awt.GPoint2D;
+import org.geogebra.common.io.XmlTestUtil;
+import org.geogebra.common.kernel.Construction;
+import org.geogebra.common.kernel.Kernel;
+import org.junit.jupiter.api.Test;
+
+class GeoInlineTextTest extends BaseUnitTest {
+
+	private static final String COMPATIBILITY_XML = """
+			<?xml version="1.0" encoding="utf-8"?>
+			<geogebra format="5.0" version="5.0.570.0" app="notes" >
+			<gui>
+				<font size="16"/>
+			</gui>
+			<construction>
+			<expression label="text1" exp="&quot;GeoGebra Rocks&quot;"/>
+			<element type="text" label="text1">
+				<objColor r="0" g="0" b="0" alpha="0"/>
+				<font serif="false" sizeM="1" size="0" style="1"/>
+				<startPoint  x="5" y="6" z="1"/>
+				<boundingBox x="500" y="600" width="150" height="50"/>
+			</element>
+			</construction>
+			</geogebra>""";
+
+	@Test
+	void inlineTextCorrectlySavedAndLoaded() {
+		final double x = 1.2;
+		final double y = 2.5;
+		final int width = 1848;
+		final int height = 1956;
+		final double angle = 2.7182;
+		final String content = "this is a sample text; {}";
+
+		Construction cons = getApp().getKernel().getConstruction();
+
+		GPoint2D startPoint = new GPoint2D(x, y);
+
+		GeoInlineText savedInlineText = new GeoInlineText(cons, startPoint);
+		savedInlineText.setSize(width, height);
+		savedInlineText.setLabel("testText");
+		savedInlineText.setAngle(angle);
+		savedInlineText.setContent(content);
+		savedInlineText.setBorderColor(GColor.DARK_GREEN);
+		savedInlineText.setLineThickness(3);
+
+		String appXML = getApp().getXML();
+		XmlTestUtil.checkCurrentXML(getApp());
+		getApp().setXML(appXML, true);
+
+		GeoInlineText loadedInlineText = (GeoInlineText) lookup("testText");
+
+		assertEquals(x, loadedInlineText.getLocation().getX(), Kernel.MAX_PRECISION);
+		assertEquals(y, loadedInlineText.getLocation().getY(), Kernel.MAX_PRECISION);
+		assertEquals(width, loadedInlineText.getWidth(), Kernel.MAX_PRECISION);
+		assertEquals(height, loadedInlineText.getHeight(), Kernel.MAX_PRECISION);
+		assertEquals(angle, loadedInlineText.getAngle(), Kernel.MAX_PRECISION);
+		assertEquals(content, loadedInlineText.getContent());
+		assertEquals(GColor.DARK_GREEN, loadedInlineText.getBorderColor());
+		assertEquals(3, loadedInlineText.getLineThickness());
+	}
+
+	@Test
+	void loadingOldXmlShouldProduceInlineTexts() {
+		getApp().setXML(COMPATIBILITY_XML, true);
+
+		GeoInlineText loadedInlineText = (GeoInlineText) lookup("text1");
+
+		assertEquals(5, loadedInlineText.getLocation().getX(), Kernel.MAX_PRECISION);
+		assertEquals(6, loadedInlineText.getLocation().getY(), Kernel.MAX_PRECISION);
+		assertEquals(150, loadedInlineText.getWidth(), Kernel.MAX_PRECISION);
+		assertEquals(50, loadedInlineText.getHeight(), Kernel.MAX_PRECISION);
+		assertEquals("[{\"text\":\"GeoGebra Rocks\",\"bold\":true}]", loadedInlineText.getContent());
+	}
+}

@@ -1,0 +1,109 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.euclidian.draw;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+import org.geogebra.common.BaseUnitTest;
+import org.geogebra.common.awt.GGraphics2D;
+import org.geogebra.common.awt.GGraphicsCommon;
+import org.geogebra.common.euclidian.DrawableND;
+import org.geogebra.common.euclidian.draw.dropdown.DrawDropDownList;
+import org.geogebra.common.kernel.geos.GProperty;
+import org.geogebra.common.kernel.geos.GeoList;
+import org.geogebra.test.annotation.Issue;
+import org.junit.jupiter.api.Test;
+
+class DrawDropdownListTest extends BaseUnitTest {
+
+	private GGraphics2D graphics2D = new GGraphicsCommon();
+
+	@Test
+	void dropdownShouldSelectFirstItem() {
+		DrawDropDownList dropDownList = setupList("{1,2,3}");
+		assertEquals(0, dropDownList.getOptionCount());
+		dropDownList.toggleOptions();
+		dropDownList.draw(graphics2D);
+		assertEquals(3, dropDownList.getOptionCount());
+	}
+
+	@Test
+	void emptyStringShouldBeValidElement() {
+		DrawDropDownList dropDownList = setupList("{\"a\", \"\", \"c\"}");
+		assertEquals(0, dropDownList.getOptionCount());
+		dropDownList.toggleOptions();
+		dropDownList.draw(graphics2D);
+		assertEquals(3, dropDownList.getOptionCount());
+	}
+
+	@Test
+	void spaceShouldCloseDropdown() {
+		DrawDropDownList dl = setupList("{1,2,3}");
+		dl.toggleOptions();
+		dl.setHoverIndex(1);
+		getApp().handleSpaceKey();
+		assertFalse(dl.isOptionsVisible(), "Options should be hidden");
+		assertEquals(0, ((GeoList) dl.getGeoElement()).getSelectedIndex());
+	}
+
+	@Test
+	void spaceShouldSelectItem() {
+		DrawDropDownList dl = setupList("{1,2,3}");
+		dl.toggleOptions();
+		dl.setKeyboardSelectionIndex(1);
+		getApp().handleSpaceKey();
+		assertFalse(dl.isOptionsVisible(), "Options should be hidden");
+		assertEquals(1, ((GeoList) dl.getGeoElement()).getSelectedIndex());
+	}
+
+	@Test
+	@Issue("APPS-7851")
+	void shouldStayAsDropdownList() {
+		add("a=7");
+		setupList("l1={1,a}");
+		add("a=Slope(xAxis)");
+		assertInstanceOf(DrawDropDownList.class, getDrawable(lookup("l1")));
+	}
+
+	@Test
+	@Issue("APPS-7851")
+	void shouldBeReplacedOnToggle() {
+		GeoList l1 = add("l1={x,-x}");
+		l1.setEuclidianVisible(true);
+		l1.updateRepaint();
+		assertInstanceOf(DrawList.class, getDrawable(l1));
+		l1.setDrawAsComboBox(true);
+		l1.updateVisualStyleRepaint(GProperty.COMBINED);
+		assertInstanceOf(DrawDropDownList.class, getDrawable(l1));
+		l1.setDrawAsComboBox(false);
+		l1.updateVisualStyleRepaint(GProperty.COMBINED);
+		assertInstanceOf(DrawList.class, getDrawable(l1));
+	}
+
+	private DrawDropDownList setupList(String definition) {
+		GeoList dropdown = add(definition);
+		dropdown.setDrawAsComboBox(true);
+		dropdown.setEuclidianVisible(true);
+		dropdown.updateRepaint();
+		DrawableND drawableFor = getDrawable(dropdown);
+		assertNotNull(drawableFor);
+		return (DrawDropDownList) drawableFor;
+	}
+}

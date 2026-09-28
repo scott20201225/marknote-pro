@@ -1,0 +1,88 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.geogebra3D.kernel3D.algos;
+
+import org.geogebra.common.kernel.Construction;
+import org.geogebra.common.kernel.StringTemplate;
+import org.geogebra.common.kernel.algos.AlgoElement;
+import org.geogebra.common.kernel.commands.Commands;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.kernel.geos.GeoNumeric;
+import org.geogebra.common.kernel.kernelND.GeoPointND;
+import org.geogebra.common.kernel.matrix.Coords;
+import org.geogebra.common.util.MyMath;
+
+/**
+ * Distance origin to point
+ *
+ * @author mathieu
+ */
+public class AlgoLengthPoint3D extends AlgoElement {
+
+	private GeoPointND p; // input
+	private GeoNumeric num; // output
+
+	/**
+	 * @param cons
+	 *            construction
+	 * @param label
+	 *            output label
+	 * @param p
+	 *            point
+	 */
+	public AlgoLengthPoint3D(Construction cons, String label, GeoPointND p) {
+		super(cons);
+		this.p = p;
+		num = new GeoNumeric(cons);
+		setInputOutput(); // for AlgoElement
+
+		// compute length
+		compute();
+		num.setLabel(label);
+	}
+
+	@Override
+	public Commands getClassName() {
+		return Commands.Length;
+	}
+
+	// for AlgoElement
+	@Override
+	protected void setInputOutput() {
+		input = new GeoElement[1];
+		input[0] = (GeoElement) p;
+
+		setOnlyOutput(num);
+		setDependencies(); // done by AlgoElement
+	}
+
+	public GeoNumeric getLength() {
+		return num;
+	}
+
+	// calc length of vector v
+	@Override
+	public final void compute() {
+		Coords coords = p.getInhomCoordsInD3();
+		num.setValue(MyMath.length(coords.getX(), coords.getY(), coords.getZ()));
+	}
+
+	@Override
+	public final String toString(StringTemplate tpl) {
+		return getLoc().getPlain("LengthOfA", p.getLabel(tpl));
+	}
+}

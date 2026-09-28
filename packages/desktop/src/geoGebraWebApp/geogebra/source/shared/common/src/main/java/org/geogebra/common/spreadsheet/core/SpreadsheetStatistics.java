@@ -1,0 +1,253 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.spreadsheet.core;
+
+import java.util.List;
+
+import org.geogebra.common.gui.view.table.dialog.StatisticGroup;
+import org.geogebra.common.gui.view.table.regression.RegressionSpecification;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+
+import com.google.j2objc.annotations.Property;
+
+/**
+ * Calculate statistics from spreadsheet contents.
+ * <p>
+ * <em>Design Notes</em>
+ * <p>
+ * This interface exists mostly to decouple the {@code spreadsheet.core} package
+ * from the {@code kernel} package.
+ * <p>
+ * {@link SpreadsheetReference} is used as the data type for cell ranges because
+ * both the data type itself as well as corresponding parsing functions (see
+ * {@link SpreadsheetReferenceParsing}) are contained within {@code spreadsheet.core},
+ * avoiding dependencies on external packages.
+ * <p>
+ * Introducing the three input types and making the use cases generic over the
+ * input type gives us strong typing in the API, and it should (hopefully) impossible to inject
+ * values of the wrong type anywhere.
+ */
+public interface SpreadsheetStatistics {
+
+	/**
+	 * Errors for spreadsheet statistics.
+	 */
+	enum Error {
+		INVALID_INPUT("Error.InvalidInput"),
+		NUMERIC_DATA_RANGE_REQUIRED("Statistics.Error.NumericDataRangeRequired"),
+		TWO_NUMERIC_DATA_RANGES_OF_EQUAL_LENGTH_REQUIRED(
+				"Statistics.Error.TwoNumericDataRangesRequired");
+
+		/** The translation key for this error. */
+		@Property("readonly")
+		public final @NonNull String localizationKey;
+
+		Error(@NonNull String localizationKey) {
+			this.localizationKey = localizationKey;
+		}
+	}
+
+	/**
+	 * Identifies one of an {@link Input}'s data ranges.
+	 * For {@link Input.OneVarInput}, the sole {@code cellRange} maps to {@link #X}.
+	 */
+	enum DataRange {
+		X,
+		Y
+	}
+
+	/**
+	 * Grouping options for frequency table.
+	 */
+	enum Grouping {
+		VALUES,
+		INTERVALS
+	}
+
+	/**
+	 * The input type for statistics calculations.
+	 */
+	sealed interface Input {
+		/**
+		 * One-variable statistics input.
+		 * @param cellRange A spreadsheet cell range.
+		 */
+		record OneVarInput(@Nullable SpreadsheetReference cellRange) implements Input {
+			/**
+			 * Converting constructor, accepting a {@link TabularRange}.
+			 * @param range If finite (bounded in both directions), the result will be a
+			 * {@link SpreadsheetReference} truncated to {@code range}'s first column. An unbounded
+			 * {@code range} will give {@code null}.
+			 */
+			public OneVarInput(@NonNull TabularRange range) {
+				this(SpreadsheetReference.fromRange(range.firstColumn()));
+			}
+		}
+
+		/**
+		 * Two-variable statistics input.
+		 * @param cellRangeX A spreadsheet cell range for variable X.
+		 * @param cellRangeY A spreadsheet cell range for variable Y.
+		 */
+		record TwoVarInput(
+				@Nullable SpreadsheetReference cellRangeX, @Nullable SpreadsheetReference cellRangeY)
+				implements Input {
+			/**
+			 * Converting constructor, accepting a {@link TabularRange}.
+			 * @param range If finite (bounded in both directions), the result will be two
+			 * {@link SpreadsheetReference}s truncated to {@code range}'s first (X) and second (Y)
+			 * column, respectively.
+			 */
+			public TwoVarInput(@NonNull TabularRange range) {
+				this(
+						SpreadsheetReference.fromRange(range.firstColumn()),
+						SpreadsheetReference.fromRange(range.secondColumn()));
+			}
+		}
+
+		/**
+		 * Regression input.
+		 * @param cellRangeX A spreadsheet cell range for variable X.
+		 * @param cellRangeY A spreadsheet cell range for variable Y.
+		 * @param regression The regression model. If {@code null}, the default (first) regression
+		 * model will be used for calculation.
+		 */
+		record RegressionInput(
+				@Nullable SpreadsheetReference cellRangeX,
+				@Nullable SpreadsheetReference cellRangeY,
+				@Nullable RegressionSpecification regression)
+				implements Input {
+			/**
+			 * Converting constructor, accepting a {@link TabularRange}.
+			 * @param range If finite (bounded in both directions), the result will be two
+			 * {@link SpreadsheetReference}s truncated to {@code range}'s first (X) and second (Y)
+			 * column, respectively.
+			 */
+			public RegressionInput(@NonNull TabularRange range) {
+				this(
+						SpreadsheetReference.fromRange(range.firstColumn()),
+						SpreadsheetReference.fromRange(range.secondColumn()),
+						null);
+			}
+		}
+
+		/**
+		 * Frequency table input.
+		 * @param dataRange A spreadsheet cell range with the raw data.
+		 * @param classesRange A spreadsheet cell range with the class boundaries; only used when
+		 * {@code grouping} is {@link Grouping#INTERVALS}.
+		 * @param grouping Whether to group the data by value or by interval.
+		 * @param cumulative Whether to accumulate the frequencies.
+		 */
+		record FrequencyTableInput(
+				@Nullable SpreadsheetReference dataRange,
+				@Nullable SpreadsheetReference classesRange,
+				@NonNull Grouping grouping,
+				boolean cumulative)
+				implements Input {
+			/**
+			 * Converting constructor, accepting a {@link TabularRange}.
+			 * @param range If finite (bounded in both directions), the result will be the
+			 * {@link SpreadsheetReference}s of the whole selection.
+			 */
+			public FrequencyTableInput(@NonNull TabularRange range) {
+				this(SpreadsheetReference.fromRange(range), null, Grouping.VALUES, false);
+			}
+		}
+	}
+
+	/**
+	 * The result type for statistics calculations.
+	 */
+	sealed interface Result {
+		/**
+		 * Valid input, calculation results in a list of groups.
+		 * @param statisticGroups calculation result
+		 */
+		record GroupList(@NonNull List<StatisticGroup> statisticGroups) implements Result {}
+
+		/**
+		 * Valid input, calculation results in a table.
+		 * @param headings column headings
+		 * @param data table contents
+		 */
+		record Tabular(@NonNull List<String> headings, @NonNull List<List<String>> data)
+				implements Result {}
+
+		/**
+		 * Invalid input, error.
+		 * @param error what went wrong
+		 * @param dataRange the range that requires user attention
+		 */
+		record Invalid(@NonNull Error error, @Nullable DataRange dataRange) implements Result {}
+	}
+
+	/** Delegate to handle spreadsheet reference changes in the statistics view. */
+	interface StatisticsReferenceDelegate {
+		/**
+		 * Notification call when the statistics reference highlighting has changed.
+		 * @param focusedReference the focused reference, or {@code null} if the focused input is
+		 * invalid
+		 * @param unfocusedReferences the valid references of the unfocused inputs, or {@code null}
+		 * to clear the statistics references
+		 */
+		void statisticsReferencesChanged(
+				@Nullable SpreadsheetReference focusedReference,
+				@Nullable List<SpreadsheetReference> unfocusedReferences);
+	}
+
+	/**
+	 * Create an auto-updating view for one-variable statistics.
+	 * @param range The spreadsheet range used for the statistics calculation (will be validated).
+	 * @param statisticsReferenceDelegate the delegate used to handle statistics reference changes
+	 * @return a view providing auto-updating one-variable statistics
+	 */
+	SpreadsheetStatisticsView.@NonNull OneVar getOneVarStatistics(
+			@NonNull TabularRange range,
+			@NonNull StatisticsReferenceDelegate statisticsReferenceDelegate);
+
+	/**
+	 * Create an auto-updating view for two-variable statistics.
+	 * @param range The spreadsheet range used for the statistics calculation (will be validated).
+	 * @param statisticsReferenceDelegate the delegate used to handle statistics reference changes
+	 * @return a view providing auto-updating two-variable statistics
+	 */
+	SpreadsheetStatisticsView.@NonNull TwoVar getTwoVarStatistics(
+			@NonNull TabularRange range,
+			@NonNull StatisticsReferenceDelegate statisticsReferenceDelegate);
+
+	/**
+	 * Create an auto-updating view for regression metrics.
+	 * @param range The spreadsheet range used for the statistics calculation (will be validated).
+	 * @param statisticsReferenceDelegate the delegate used to handle statistics reference changes
+	 * @return a view providing auto-updating regression metrics
+	 */
+	SpreadsheetStatisticsView.@NonNull Regression getRegression(
+			@NonNull TabularRange range,
+			@NonNull StatisticsReferenceDelegate statisticsReferenceDelegate);
+
+	/**
+	 * Create an auto-updating view for frequency table.
+	 * @param range Range containing raw data and optionally a second column with class boundaries.
+	 * @param statisticsReferenceDelegate the delegate used to handle statistics reference changes
+	 * @return a view providing auto-updating frequency table
+	 */
+	SpreadsheetStatisticsView.@NonNull FrequencyTable getFrequencyTable(
+			@NonNull TabularRange range,
+			@NonNull StatisticsReferenceDelegate statisticsReferenceDelegate);
+}

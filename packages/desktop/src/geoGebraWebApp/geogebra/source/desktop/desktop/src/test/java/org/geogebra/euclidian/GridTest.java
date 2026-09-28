@@ -1,0 +1,105 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.euclidian;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
+
+import org.geogebra.common.awt.GColor;
+import org.geogebra.common.euclidian.EuclidianView;
+import org.geogebra.common.kernel.commands.AlgebraTest;
+import org.geogebra.common.kernel.geos.GeoPoint;
+import org.geogebra.common.main.settings.EuclidianSettings;
+import org.geogebra.desktop.export.GraphicExportDialog;
+import org.geogebra.desktop.headless.AppDNoGui;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+
+/**
+ * Grid test
+ *
+ * @author Zbynek
+ *
+ */
+class GridTest {
+
+	private static AppDNoGui app;
+
+	/**
+	 * Create test app
+	 */
+	@BeforeAll
+	static void setup() {
+		app = AlgebraTest.createApp();
+	}
+
+	/**
+	 * Checks the right number of gridlines in EV for 800x600 view and 50px
+	 * scale
+	 */
+	@Test
+	void thereShouldBeGridInSVGExport() {
+		EuclidianSettings settings = app.getActiveEuclidianView().getSettings();
+		app.getActiveEuclidianView()
+				.centerView(new GeoPoint(app.getKernel().getConstruction(), 0, 0, 1));
+		settings.setGridColor(GColor.BLUE);
+		settings.showGrid(true);
+		app.getActiveEuclidianView().updateBackground();
+		hasBlueLines(143, 30);
+		settings.setPositiveAxis(0, true);
+		hasBlueLines(102, 21);
+		settings.setPositiveAxis(1, true);
+		hasBlueLines(72, 15);
+		settings.setPositiveAxis(0, false);
+		hasBlueLines(113, 24);
+		settings.setPositiveAxis(1, false);
+
+		settings.setGridType(EuclidianView.GRID_CARTESIAN);
+		hasBlueLines(30, 30);
+		settings.setPositiveAxis(0, true);
+		hasBlueLines(21, 21);
+		settings.setPositiveAxis(1, true);
+		hasBlueLines(15, 15);
+		settings.setPositiveAxis(0, false);
+		hasBlueLines(24, 24);
+	}
+
+	private static void hasBlueLines(int expectMinor, int expectMajor) {
+		ByteArrayOutputStream ss = new ByteArrayOutputStream();
+		GraphicExportDialog.exportSVG(
+				app, app.getActiveEuclidianView(), ss, false, 800, 600, 8, 6, 1, false);
+		String svg = ss.toString(StandardCharsets.UTF_8);
+		int start = 0;
+		// int lines = 0;
+		String[] lines = svg.split("\n");
+		int minor = 0;
+		int major = 0;
+		for (String line : lines) {
+
+			if (line.indexOf("#0000ff", start) > 0) {
+				minor++;
+				if (line.indexOf("stroke-opacity=\"1", start) > 0) {
+					major++;
+				}
+			}
+		}
+		assertEquals(expectMinor, minor);
+		assertEquals(expectMajor, major);
+	}
+}

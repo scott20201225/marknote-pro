@@ -1,0 +1,66 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.properties.impl.facade;
+
+import java.util.List;
+import java.util.function.BinaryOperator;
+
+import org.geogebra.common.properties.util.StringPropertyWithSuggestions;
+import org.jspecify.annotations.Nullable;
+
+public class StringPropertyWithSuggestionsListFacade<T extends StringPropertyWithSuggestions>
+		extends AbstractValuedPropertyListFacade<T, String> implements StringPropertyWithSuggestions {
+	public StringPropertyWithSuggestionsListFacade(List<T> properties) {
+		super(properties);
+	}
+
+	public StringPropertyWithSuggestionsListFacade(
+			List<T> properties, BinaryOperator<String> reducer) {
+		super(properties, reducer);
+	}
+
+	@Override
+	public List<String> getSuggestions() {
+		return getFirstProperty().getSuggestions();
+	}
+
+	@Override
+	public @Nullable String validateValue(String value) {
+		for (T property : properties) {
+			String invalidMessage = property.validateValue(value);
+			if (invalidMessage != null) {
+				return invalidMessage;
+			}
+		}
+		return null;
+	}
+
+	@Override
+	public boolean isDisplayedInMathFormat() {
+		return getFirstProperty().isDisplayedInMathFormat();
+	}
+
+	@Override
+	public boolean isDisplayedAsTextArea() {
+		return getFirstProperty().isDisplayedAsTextArea();
+	}
+
+	@Override
+	public boolean restoresPreviousValueOnInvalidInput() {
+		return getFirstProperty().restoresPreviousValueOnInvalidInput();
+	}
+}

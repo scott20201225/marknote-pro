@@ -1,0 +1,414 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.euclidian.draw;
+
+import org.geogebra.common.awt.AwtFactory;
+import org.geogebra.common.awt.GColor;
+import org.geogebra.common.awt.GDimension;
+import org.geogebra.common.awt.GFont;
+import org.geogebra.common.awt.GGraphics2D;
+import org.geogebra.common.awt.GPoint;
+import org.geogebra.common.awt.GRectangle;
+import org.geogebra.common.euclidian.Drawable;
+import org.geogebra.common.euclidian.EuclidianStatic;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.kernel.geos.GeoInputBox;
+import org.geogebra.common.kernel.geos.TextProperties;
+import org.geogebra.common.main.App;
+import org.geogebra.common.main.GeoGebraColorConstants;
+import org.geogebra.common.util.StringUtil;
+
+/**
+ * Furniture drawable on canvas
+ */
+public abstract class CanvasDrawable extends Drawable {
+	private static final int HIGHLIGHT_MARGIN = 2;
+	public static final double LABEL_FONT_MULTIPLIER = 1.2;
+
+	// private boolean drawingOnCanvas;
+	private GFont labelFont;
+	protected GPoint labelSize = new GPoint(0, 0);
+	private int labelFontSize;
+	private final GRectangle hitRect = AwtFactory.getPrototype().newRectangle();
+	protected int boxLeft;
+	protected int boxTop;
+	protected int boxWidth;
+	protected int boxHeight;
+
+	/**
+	 * @param text
+	 *            text
+	 * @return whether text starts and ends with $
+	 */
+	public static boolean isLatexString(String text) {
+		return text != null
+				&& text.length() > 1
+				&& text.startsWith("$")
+				&& text.trim().endsWith("$");
+	}
+
+	/**
+	 * @param geo0
+	 *            geoelement
+	 * @param font
+	 *            font
+	 * @param text
+	 *            content
+	 * @return size
+	 */
+	protected GDimension measureLatex(GeoElement geo0, GFont font, String text, boolean isContent) {
+		return measureLatex(view.getApplication(), font, text, shouldBeSerif(text, geo0, isContent));
+	}
+
+	/**
+	 * @param g2
+	 *            graphics
+	 * @param geo0
+	 *            geoelement
+	 * @param font
+	 *            font
+	 * @param text
+	 *            content
+	 * @param x
+	 *            screen x-coord
+	 * @param y
+	 *            screen y-coord
+	 * @return size
+	 */
+	public GDimension drawLatex(
+			GGraphics2D g2, GeoElement geo0, GFont font, String text, int x, int y) {
+		return drawLatex(g2, geo0, font, text, x, y, false);
+	}
+
+	protected GDimension drawLatex(
+			GGraphics2D g2,
+			GeoElement geo0,
+			GFont font,
+			String text,
+			int x,
+			int y,
+			boolean isContentOfInputBox) {
+		App app = view.getApplication();
+		// eg $\math{x}$ for nice x
+		boolean serif = shouldBeSerif(text, geo0, isContentOfInputBox);
+
+		GDimension ret = app.getDrawEquation()
+				.drawEquation(
+						app,
+						geo0,
+						g2,
+						x,
+						y,
+						text,
+						font,
+						serif,
+						geo.usesDisabledStyle(null) ? GeoGebraColorConstants.NEUTRAL_500 : geo.getObjectColor(),
+						geo.getBackgroundColor(),
+						false,
+						false,
+						view.getCallBack(geo, firstCall));
+		firstCall = false;
+		return ret;
+	}
+
+	/**
+	 *
+	 * @param text to check
+	 * @param geo0 where text is came from
+	 * @param isContentOfInputBox if it is from input box
+	 * @return if text font should be serif or not
+	 */
+	public static boolean shouldBeSerif(String text, GeoElement geo0, boolean isContentOfInputBox) {
+		boolean serif = StringUtil.startsWithFormattingCommand(text);
+
+		if (!serif && geo0 instanceof TextProperties) {
+			serif = (geo0 instanceof GeoInputBox && isContentOfInputBox)
+					? ((GeoInputBox) geo0).isSerifContent()
+					: ((TextProperties) geo0).isSerifFont();
+		}
+		return serif;
+	}
+
+	/**
+	 * @param app
+	 *            application
+	 * @param font
+	 *            font
+	 * @param text
+	 *            text
+	 * @return size of text with given font
+	 */
+	public static GDimension measureLatex(App app, GFont font, String text) {
+		return app.getDrawEquation().measureEquation(app, text, font, false);
+	}
+
+	/**
+	 * @param app
+	 *            application
+	 * @param font
+	 *            font
+	 * @param text
+	 *            text
+	 * @param serif
+	 *            serif or sans-serif
+	 * @return size of text with given font
+	 */
+	public static GDimension measureLatex(App app, GFont font, String text, boolean serif) {
+		return app.getDrawEquation().measureEquation(app, text, font, serif);
+	}
+
+	/**
+	 * @param geo0
+	 *            construction element
+	 * @param text
+	 *            text
+	 * @return whether it's LaTeX
+	 */
+	protected boolean measureLabel(GeoElement geo0, String text) {
+		if (getDynamicCaption() != null && getDynamicCaption().isEnabled()) {
+			getDynamicCaption().measure();
+			return getDynamicCaption().setLabelSize();
+		}
+		boolean latex = false;
+		if (geo.isLabelVisible()) {
+			latex = isLatexString(text);
+			// no drawing, just measuring.
+			if (latex) {
+				GDimension d = measureLatex(geo0, getLabelFont(), text, false);
+				labelSize.x = d.getWidth();
+				labelSize.y = d.getHeight();
+			} else {
+				GGraphics2D g2 = view.getTempGraphics2D(getLabelFont());
+				setLabelSize(EuclidianStatic.drawIndexedString(
+						view.getApplication(), g2, text, 0, 0, false, false, null, null));
+			}
+			calculateBoxBounds(latex);
+		} else {
+			calculateBoxBounds();
+		}
+		return latex;
+	}
+
+	/**
+	 * Update box bounds.
+	 *
+	 * @param latex
+	 *            whether the caption is latex
+	 */
+	protected void calculateBoxBounds(boolean latex) {
+		if (labelSize == null) {
+			return;
+		}
+		boxLeft = xLabel + labelSize.x + getLabelGap();
+		boxTop = latex ? yLabel + (labelSize.y - getPreferredHeight()) / 2 : yLabel;
+		boxWidth = getPreferredWidth();
+		boxHeight = getPreferredHeight();
+	}
+
+	/**
+	 * Update box bounds.
+	 */
+	protected void calculateBoxBounds() {
+		boxLeft = xLabel + getLabelGap();
+		boxTop = yLabel;
+		boxWidth = getPreferredWidth();
+		boxHeight = getPreferredHeight();
+	}
+
+	protected abstract int getLabelGap();
+
+	/**
+	 * @param g2
+	 *            graphics
+	 * @param latex
+	 *            whether the label is latex
+	 */
+	protected void highlightLabel(GGraphics2D g2, boolean latex) {
+		if (getDynamicCaption() != null && getDynamicCaption().isEnabled()) {
+			getDynamicCaption().highlight();
+		} else if (geo.isLabelVisible() && isHighlighted()) {
+			g2.setPaint(GColor.LIGHT_GRAY);
+			int labelHeight = latex ? labelSize.y : getLabelHeight();
+			g2.fillRect(xLabel, (int) getLabelTop(), labelSize.x, labelHeight);
+		}
+	}
+
+	double getLabelTop() {
+		return yLabel + ((boxHeight - getLabelTextHeight()) / 2.0);
+	}
+
+	private int getLabelHeight() {
+		return getLabelTextHeight() + HIGHLIGHT_MARGIN;
+	}
+
+	protected int getLabelTextHeight() {
+		return getDynamicCaption() != null && getDynamicCaption().isEnabled()
+				? getDynamicCaption().getHeight()
+				: (int) (getLabelFontSize() * LABEL_FONT_MULTIPLIER + HIGHLIGHT_MARGIN);
+	}
+
+	/**
+	 * @param g2
+	 *            graphics
+	 */
+	protected void drawOnCanvas(GGraphics2D g2) {
+		g2.setFont(getLabelFont());
+		g2.setStroke(EuclidianStatic.getDefaultStroke());
+
+		g2.setPaint(geo.getObjectColor());
+
+		if (geo.isVisible()) {
+			drawWidget(g2);
+		}
+	}
+
+	/**
+	 * Draw the shape and update the widget.
+	 *
+	 * @param g2
+	 *            graphics
+	 */
+	protected abstract void drawWidget(GGraphics2D g2);
+
+	/**
+	 * was this object clicked at? (mouse pointer location (x,y) in screen
+	 * coords)
+	 */
+	@Override
+	public boolean hit(int x, int y, int hitThreshold) {
+		boolean hitDynCaption = false;
+		if (getDynamicCaption() != null) {
+			hitDynCaption = getDynamicCaption().hit(x, y, hitThreshold);
+		}
+		return hitDynCaption || hitLabelBounds(x, y) || hitWidgetBounds(x, y);
+	}
+
+	/**
+	 * @return y-coordinate of the bottom of the caption text
+	 */
+	public int getTextBottom() {
+		return (getPreferredHeight() / 2) + (int) (getLabelFontSize() * 0.4);
+	}
+
+	protected boolean hitWidgetBounds(int x, int y) {
+		int left = xLabel;
+		int top = boxTop;
+		int right = left + labelSize.x + boxWidth;
+		int bottom = top + boxHeight;
+		return x > left && x < right && y > top && y < bottom;
+	}
+
+	/**
+	 *
+	 * @param x coordinate
+	 * @param y coordinate
+	 * @return if label rectangle was hit by (x, y) pointer.
+	 */
+	protected boolean hitLabelBounds(int x, int y) {
+		if (!geo.isLabelVisible()) {
+			return false;
+		}
+		double top = getLabelTop();
+		int height = getLabelHeight();
+		return x > xLabel && x < xLabel + labelSize.x && y > top && y < top + height;
+	}
+
+	/**
+	 * @return font for label
+	 */
+	protected GFont getLabelFont() {
+		if (labelFont == null) {
+			setLabelFont("");
+		}
+		return labelFont;
+	}
+
+	/**
+	 * @param text
+	 *            label text
+	 */
+	protected void setLabelFont(String text) {
+		this.labelFont =
+				view.getApplication().getFontCanDisplay(text, false, GFont.PLAIN, getLabelFontSize());
+	}
+
+	private void setLabelSize(GPoint labelSize) {
+		this.labelSize = labelSize;
+	}
+
+	/**
+	 * @return label font size
+	 */
+	public int getLabelFontSize() {
+		return labelFontSize;
+	}
+
+	/**
+	 * @param labelFontSize
+	 *            label font size
+	 */
+	public void setLabelFontSize(int labelFontSize) {
+		this.labelFontSize = labelFontSize;
+	}
+
+	/**
+	 * @return dimension on screen
+	 */
+	public abstract int getPreferredWidth();
+
+	/**
+	 * @return height on screen
+	 */
+	public abstract int getPreferredHeight();
+
+	@Override
+	public boolean isInside(GRectangle rect) {
+		return rect.contains(labelRectangle);
+	}
+
+	@Override
+	public boolean intersectsRectangle(GRectangle rect) {
+		updateHitRect();
+		return hitRect.intersects(rect);
+	}
+
+	/**
+	 * Returns false
+	 */
+	@Override
+	public boolean hitLabel(int x, int y) {
+		return false;
+	}
+
+	@Override
+	public GRectangle getBounds() {
+		updateHitRect();
+		return hitRect;
+	}
+
+	private void updateHitRect() {
+		int left, width;
+		if (getDynamicCaption() != null) {
+			width = getDynamicCaption().getWidth() + boxWidth;
+			left = boxLeft - getDynamicCaption().getWidth();
+		} else {
+			left = xLabel;
+			width = boxWidth + boxLeft - xLabel;
+		}
+		hitRect.setBounds(left, boxTop, width, boxHeight);
+	}
+}

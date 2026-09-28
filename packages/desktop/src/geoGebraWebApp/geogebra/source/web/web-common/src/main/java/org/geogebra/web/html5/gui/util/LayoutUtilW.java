@@ -1,0 +1,97 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.web.html5.gui.util;
+
+import org.gwtproject.user.client.ui.FlowPanel;
+import org.gwtproject.user.client.ui.IsWidget;
+
+/**
+ * Utility class for widget layout.
+ */
+public class LayoutUtilW {
+
+	/**
+	 * @param widgets
+	 *            widgets
+	 * @return widgets merged in a row
+	 */
+	public static FlowPanel panelRow(IsWidget... widgets) {
+		return panelRow("panelRow", widgets);
+	}
+
+	/**
+	 * @param className class name of the resulting panel
+	 * @param widgets widgets
+	 * @return widgets merged in a row
+	 */
+	public static FlowPanel panelRow(String className, IsWidget... widgets) {
+		FlowPanel p = new FlowPanel();
+		for (IsWidget widget : widgets) {
+			p.add(widget);
+		}
+		p.setStyleName(className);
+		return p;
+	}
+
+	/**
+	 * Add widgets ito one row and add indentation CSS.
+	 *
+	 * @param widgets
+	 *            widgets
+	 * @return widgets merged in a row
+	 */
+	public static FlowPanel panelRowIndent(IsWidget... widgets) {
+		return panelRow("panelRowIndent", widgets);
+	}
+
+	/**
+	 * Replaces oldWidget with newWidget in parent.
+	 *
+	 * @param parent
+	 *            The FlowPanel replace within.
+	 * @param newWidget
+	 *            The new widget.
+	 * @param oldWidget
+	 *            The widget to be replaced.
+	 * @return true if the replacement was successful.
+	 */
+	public static boolean replace(FlowPanel parent, IsWidget newWidget, IsWidget oldWidget) {
+		int idx = parent.getWidgetIndex(oldWidget);
+		if (newWidget == null || idx == -1) {
+			return false;
+		}
+
+		parent.remove(idx);
+		parent.insert(newWidget, idx);
+
+		return true;
+	}
+
+	/**
+	 * @param xscale
+	 *            xscale
+	 * @param yscale
+	 *            yscale
+	 * @return smaller scale
+	 */
+	public static double getDeviceScale(double xscale, double yscale, boolean allowUpscale) {
+		if (xscale < 1 || yscale < 1 || !allowUpscale) {
+			return Math.min(1d, Math.min(xscale, yscale));
+		}
+		return Math.max(1d, Math.min(xscale, yscale));
+	}
+}

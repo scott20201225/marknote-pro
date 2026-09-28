@@ -1,0 +1,166 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.kernel.geos;
+
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.Objects;
+
+import org.geogebra.common.BaseUnitTest;
+import org.geogebra.common.awt.GGraphicsCommon;
+import org.geogebra.common.euclidian.draw.dropdown.DrawDropDownList;
+import org.geogebra.common.io.XMLStringBuilder;
+import org.geogebra.common.kernel.StringTemplate;
+import org.geogebra.editor.share.util.Unicode;
+import org.geogebra.test.annotation.Issue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+class GeoListTest extends BaseUnitTest {
+
+	private StringTemplate latexTemplate;
+	private StringTemplate engineeringNotationTemplate;
+
+	@BeforeEach
+	void setupTemplate() {
+		latexTemplate = StringTemplate.latexTemplate;
+		engineeringNotationTemplate = StringTemplate.defaultTemplate.deriveWithEngineeringNotation();
+	}
+
+	@Test
+	void latexValueStringShouldContainValues() {
+		add("a=1");
+		GeoList matrix = add("{{a,2},{a+2,4}}");
+		assertEquals(
+				"\\left(\\begin{array}{rr}1&2\\\\3&4\\\\ \\end{array}\\right)",
+				matrix.toLaTeXString(false, latexTemplate));
+	}
+
+	@Test
+	void latexDefinitionStringShouldContainLabels() {
+		add("a=1");
+		GeoList matrix = add("{{a,2},{a+2,4}}");
+		assertEquals(
+				"\\left(\\begin{array}{rr}a&2\\\\a + 2&4\\\\ \\end{array}\\right)",
+				matrix.toLaTeXString(true, latexTemplate));
+	}
+
+	@Test
+	void matrixDefinitionShouldWorkForSequenceOperator() {
+		add("a=3");
+		GeoList matrix = add("{0..a}");
+		assertEquals(
+				"\\left(\\begin{array}{rrrr}0&1&2&3\\\\ \\end{array}\\right)",
+				matrix.toLaTeXString(true, latexTemplate));
+		assertEquals(
+				"\\left\\{0" + Unicode.ELLIPSIS + "a\\right\\}",
+				matrix.getDefinition().unwrap().toString(latexTemplate));
+	}
+
+	@Test
+	void setShouldCopyLabeledElements() {
+		GeoList allLists = add("allLists={}");
+		add("c=1");
+		allLists.set(add("{{c}}")); // equivalent to SetValue(allLists,{{c}})
+		add("SetValue(c,42)");
+		XMLStringBuilder sb = new XMLStringBuilder();
+		allLists.getExpressionXML(sb);
+		assertThat(sb.toString(), is("<expression label=\"allLists\" exp=\"{{1}}\"/>\n"));
+	}
+
+	@Test
+	void shouldBeDrawableIfNotSelected() {
+		add("a=5");
+		GeoList list = add("Sequence(a)");
+		list.setDrawAsComboBox(true);
+		list.setEuclidianVisible(true);
+		list.setSelectedIndex(4);
+		list.updateRepaint();
+		DrawDropDownList drawList = (DrawDropDownList) getDrawable(list);
+		Objects.requireNonNull(drawList).toggleOptions();
+		add("SetValue(a,1)");
+		drawList.draw(new GGraphicsCommon());
+		assertThat(list.getSelectedElement(), hasValue("1"));
+	}
+
+	@Test
+	void listShouldDisplayCorrectEngineeringNotation1() {
+		GeoList list = add("{1, 2, 3}");
+		assertThat(
+				list.get(0).toValueString(engineeringNotationTemplate),
+				is("1 " + Unicode.CENTER_DOT + " 10" + Unicode.SUPERSCRIPT_0));
+	}
+
+	@Test
+	void listShouldDisplayCorrectEngineeringNotation2() {
+		GeoList list = add("{1 / 2, 2 / 4}");
+		assertThat(
+				list.get(1).toValueString(engineeringNotationTemplate),
+				is("500 " + Unicode.CENTER_DOT + " 10" + Unicode.SUPERSCRIPT_MINUS
+						+ Unicode.SUPERSCRIPT_3));
+	}
+
+	@Test
+	void listShouldDisplayCorrectEngineeringNotation3() {
+		GeoList list = add("{3, ?}");
+		assertThat(list.get(1).toValueString(engineeringNotationTemplate), is("?"));
+	}
+
+	@Test
+	@Issue("APPS-6583")
+	void nestedCommandList() {
+		// same issue with CSolutions, but use Sequence so that we don't need CAS
+		GeoList list = add("{Sequence(x=k,k,1,3)}");
+		assertEquals(
+				"m1\\, = \\,\\left\\{Sequence\\left(x\\, = \\,k, k, 1, 3 \\right)\\right\\}",
+				list.getLaTeXAlgebraDescription(false, StringTemplate.latexTemplate));
+	}
+
+	@Test
+	@Issue("APPS-6955")
+	void nestedCommandListValue() {
+		GeoList list = add("Sequence(Sequence(x=k,k,1,3),m,1,2)");
+		assertEquals(
+				"m1\\, = \\,\\left(\\begin{array}{rrr}x\\, = \\,1&x\\, = \\,2&x\\,"
+						+ " = \\,3\\\\x\\, = \\,1&x\\, = \\,2&x\\, = \\,3\\\\ \\end{array}\\right)",
+				list.getLaTeXAlgebraDescription(true, StringTemplate.latexTemplate));
+	}
+
+	@Test
+	void reloadSymbolicFlag() {
+		GeoList list = addAvInput("l={1/2-1/3}");
+		assertTrue(list.isSymbolicMode(), "List of fractions initially symbolic");
+		reload();
+		list = (GeoList) lookup("l");
+		assertTrue(list.isSymbolicMode(), "List stays symbolic after reload");
+		list.setSymbolicMode(false, false);
+		list = (GeoList) lookup("l");
+		assertFalse(list.isSymbolicMode(), "List stays non-symbolic after reload");
+	}
+
+	@Test
+	void emptyListSymbolicFlag() {
+		GeoList list = add("{}");
+		assertFalse(list.isSymbolicMode(), "Empty list initially non-symbolic");
+		list.setSymbolicMode(true, false);
+		assertTrue(list.isSymbolicMode(), "Symbolic flag should change");
+	}
+}

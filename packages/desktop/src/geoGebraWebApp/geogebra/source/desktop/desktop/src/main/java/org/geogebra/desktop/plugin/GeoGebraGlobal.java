@@ -1,0 +1,118 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.desktop.plugin;
+
+import org.geogebra.common.jre.plugin.GgbAPIJre;
+import org.geogebra.common.main.App;
+import org.geogebra.common.main.Localization;
+import org.geogebra.common.plugin.GgbAPI;
+import org.geogebra.common.util.debug.Log;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.IdFunctionCall;
+import org.mozilla.javascript.IdFunctionObject;
+import org.mozilla.javascript.Kit;
+import org.mozilla.javascript.NativeJavaObject;
+import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.ScriptableObject;
+
+/*
+ * @author Joel Duffin
+ */
+
+public class GeoGebraGlobal implements IdFunctionCall {
+
+	private static final Object FTAG = "Global";
+	private static final int Id_alert = 1;
+	private static final int Id_prompt = 2;
+	private static final int Id_setTimeout = 3;
+	private static final int Id_setInterval = 4;
+	private static final int Id_clearTimeout = 5;
+	private static final int Id_clearInterval = 6;
+	private static final int LAST_SCOPE_FUNCTION_ID = 6;
+	final App app;
+	final Localization loc;
+
+	GeoGebraGlobal(App app) {
+		this.app = app;
+		this.loc = app.getLocalization();
+	}
+
+	private static void init(App app, Scriptable scope) {
+		GeoGebraGlobal obj = new GeoGebraGlobal(app);
+
+		for (int id = 1; id <= LAST_SCOPE_FUNCTION_ID; ++id) {
+			String name;
+			int arity = 1;
+			name = switch (id) {
+				case Id_alert -> "alert";
+				case Id_prompt -> "prompt";
+				case Id_setTimeout -> "setTimeout";
+				case Id_setInterval -> "setInterval";
+				case Id_clearTimeout -> "clearTimeout";
+				case Id_clearInterval -> "clearInterval";
+				default -> throw Kit.codeBug();
+			};
+			IdFunctionObject f = new IdFunctionObject(obj, FTAG, id, name, arity, scope);
+			f.exportAsScopeProperty();
+		}
+	}
+
+	@Override
+	public Object execIdCall(
+			IdFunctionObject f, Context cx, Scriptable scope, Scriptable thisObj, Object[] args) {
+		if (f.hasTag(FTAG)) {
+			int methodId = f.methodId();
+			switch (methodId) {
+				case Id_alert:
+					String value = getElementAsString(args, 0);
+					((GgbAPIJre) app.getGgbApi()).alert(value);
+					return "";
+				case Id_prompt:
+					Object value0 = getElementAsString(args, 0);
+					Object value1 = getElementAsString(args, 1);
+					return ((GgbAPIJre) app.getGgbApi()).prompt(value0, value1);
+				case Id_clearInterval:
+				case Id_clearTimeout:
+				case Id_setInterval:
+				case Id_setTimeout:
+					Log.debug("ignored in desktop");
+					return null;
+			}
+		}
+		throw f.unknown();
+	}
+
+	private static String getElementAsString(Object[] args, int i) {
+		Object value = args.length > i ? args[i] : "";
+		if (value instanceof NativeJavaObject) {
+			value = ((NativeJavaObject) value).unwrap();
+		}
+		return value.toString();
+	}
+
+	/**
+	 * @param app application
+	 * @param scope scope
+	 */
+	public static void initStandardObjects(App app, Scriptable scope) {
+		GgbAPI ggbApi = app.getGgbApi();
+		Object wrappedOut = Context.javaToJS(ggbApi, scope);
+		ScriptableObject.putProperty(scope, "ggbApplet", wrappedOut);
+		// add geogebra methods as top level js methods
+		init(app, scope);
+	}
+}

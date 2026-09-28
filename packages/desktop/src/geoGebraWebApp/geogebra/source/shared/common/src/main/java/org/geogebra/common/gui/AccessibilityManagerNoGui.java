@@ -1,0 +1,174 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.gui;
+
+import org.geogebra.common.gui.compositefocus.FocusableComposite;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.kernel.geos.GeoNumeric;
+import org.geogebra.common.kernel.geos.GeoText;
+import org.geogebra.common.main.App;
+
+/**
+ * Dummy implementation for desktop/mobile
+ */
+public final class AccessibilityManagerNoGui implements AccessibilityManagerInterface {
+
+	private final App app;
+	private final AltTextTimer timer;
+
+	/**
+	 * @param app application
+	 */
+	public AccessibilityManagerNoGui(App app) {
+		this.app = app;
+		timer = new AltTextTimer(app.getActiveEuclidianView().getScreenReader(), app.getLocalization());
+	}
+
+	@Override
+	public boolean focusNext() {
+		// only tab geos
+		return false;
+	}
+
+	@Override
+	public boolean focusPrevious() {
+		// only tab geos
+		return false;
+	}
+
+	@Override
+	public void focusFirstElement() {
+		// only tab geos
+	}
+
+	@Override
+	public boolean focusInput(boolean force, boolean forceFade) {
+		return false;
+	}
+
+	@Override
+	public void focusGeo(GeoElement geo) {
+		// only called from AV
+	}
+
+	@Override
+	public void setAnchor(FocusableComponent anchor) {
+		// not needed
+	}
+
+	@Override
+	public FocusableComponent getAnchor() {
+		return null;
+	}
+
+	@Override
+	public void focusAnchor() {
+		// not needed
+	}
+
+	@Override
+	public void cancelAnchor() {
+		// not needed
+	}
+
+	@Override
+	public void focusAnchorOrMenu() {
+		// not needed
+	}
+
+	@Override
+	public void register(FocusableComponent focusable) {
+		// nothing to do
+	}
+
+	@Override
+	public void unregister(FocusableComponent focusable) {
+		// not needed
+	}
+
+	@Override
+	public void setTabOverGeos() {
+		app.getSelectionManager().resetKeyboardSelection();
+	}
+
+	@Override
+	public void resetTabOverGeos() {
+		// not needed
+	}
+
+	@Override
+	public void appendAltText(GeoText altText) {
+		// not used
+	}
+
+	@Override
+	public void cancelReadCollectedAltTexts() {
+		// not used
+	}
+
+	@Override
+	public void readSliderUpdate(GeoNumeric geo) {
+		if (!app.getKernel().getConstruction().isFileLoading() && !geo.isAnimating()) {
+			timer.feed(geo);
+		}
+	}
+
+	@Override
+	public void preloadAltText(GeoText geoText) {
+		// not used
+	}
+
+	@Override
+	public void registerCompositeFocusContainer(FocusableComposite compositeFocus) {
+		// not used
+	}
+
+	@Override
+	public void unregisterCompositeFocusContainer(FocusableComposite compositeFocus) {
+		// not used
+	}
+
+	@Override
+	public boolean hasFocusInComposite() {
+		return false;
+	}
+
+	@Override
+	public boolean focusNextInComposite() {
+		return false;
+	}
+
+	@Override
+	public boolean focusPreviousInComposite() {
+		return false;
+	}
+
+	@Override
+	public void blurCompositeFocus() {
+		// not used
+	}
+
+	@Override
+	public boolean handlesEnterInComposite() {
+		return false;
+	}
+
+	@Override
+	public void clearActiveCompositeFocus() {
+		// not used
+	}
+}

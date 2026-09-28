@@ -1,0 +1,77 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.kernel.arithmetic;
+
+import static org.apache.commons.math3.primes.Primes.primeFactors;
+
+import java.util.List;
+
+import org.geogebra.common.kernel.Kernel;
+import org.geogebra.common.kernel.StringTemplate;
+import org.geogebra.common.plugin.Operation;
+
+public class Surds {
+
+	/**
+	 * Get the surd from expression.
+	 * @param expr {@link ExpressionNode}
+	 * @param kernel {@link Kernel}
+	 * @return the surd if exists, null otherwise.
+	 */
+	public ExpressionNode getResolution(ExpressionNode expr, Kernel kernel) {
+		ExpressionValue left = expr.getLeft();
+		Operation op = expr.getOperation();
+		ExpressionValue evaluated = left.evaluate(StringTemplate.defaultTemplate).unwrap();
+		if (evaluated instanceof NumberValue && op == Operation.SQRT) {
+			// Sqrt of number
+			NumberValue number = (NumberValue) evaluated;
+			double value = number.getDouble();
+			if (value % 1 == 0 && value > 1 && value < Integer.MAX_VALUE) {
+				return getSimplifiedSurd(kernel, (int) value);
+			}
+		}
+		return null;
+	}
+
+	private ExpressionNode getSimplifiedSurd(Kernel kernel, int value) {
+		List<Integer> factors = primeFactors(value);
+		int outerValue = 1;
+		int innerValue = 1;
+
+		int currentValue = Integer.MIN_VALUE;
+		for (Integer factor : factors) {
+			if (currentValue != factor) {
+				if (currentValue != Integer.MIN_VALUE) {
+					innerValue *= currentValue;
+				}
+				currentValue = factor;
+			} else {
+				outerValue *= factor;
+				currentValue = Integer.MIN_VALUE;
+			}
+		}
+		if (currentValue != Integer.MIN_VALUE) {
+			innerValue *= currentValue;
+		}
+		if (innerValue == 1 || outerValue == 1) {
+			return null;
+		}
+		ExpressionValue innerLeft = new MyDouble(kernel, innerValue);
+		ExpressionValue sqrt = new ExpressionNode(kernel, innerLeft, Operation.SQRT, null);
+		return new ExpressionNode(kernel, new MyDouble(kernel, outerValue), Operation.MULTIPLY, sqrt);
+	}
+}

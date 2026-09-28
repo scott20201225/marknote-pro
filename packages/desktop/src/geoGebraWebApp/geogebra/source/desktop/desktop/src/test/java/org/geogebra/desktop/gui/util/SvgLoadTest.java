@@ -1,0 +1,133 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.desktop.gui.util;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.geogebra.common.BaseUnitTest;
+import org.geogebra.common.awt.MyImage;
+import org.geogebra.common.io.file.ByteArrayZipFile;
+import org.geogebra.desktop.headless.AppDNoGui;
+import org.geogebra.desktop.main.LocalizationD;
+import org.geogebra.desktop.util.UtilD;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+class SvgLoadTest extends BaseUnitTest {
+
+	private static final String RESOURCES = "src/test/resources/svg/";
+	static AppDNoGui app;
+	private static SVGImage image;
+	private int allSvgCount = 0;
+	private final List<String> unsupportedSvgNames = new ArrayList<>();
+
+	@BeforeEach
+	void setUp() {
+		allSvgCount = 0;
+		unsupportedSvgNames.clear();
+		app = new AppDNoGui(new LocalizationD(3), false) {
+			@Override
+			public void addExternalImage(String name, MyImage img) {
+				if (img.isSVG()) {
+					if (JSVGConstants.UNSUPPORTED_SVG.equals(img.getSVG())) {
+						unsupportedSvgNames.add(name.split("/")[1]);
+					}
+					allSvgCount++;
+				} else {
+					assertEquals("geogebra_thumbnail.png", name);
+				}
+			}
+		};
+	}
+
+	@Test
+	void testLoadSvgsGGB() {
+		inMaterial("svgs.ggb").shouldSupportAllBut("issue134.svg").ofSvgs(142);
+	}
+
+	private SvgLoadTest inMaterial(String fileName) {
+		byte[] array = UtilD.loadFileIntoByteArray(RESOURCES + fileName);
+		assertNotNull(array, "File error: " + fileName);
+		assertTrue(app.loadXML(new ByteArrayZipFile(array)));
+		return this;
+	}
+
+	private SvgLoadTest shouldSupportAllBut(String unsupported) {
+		assertEquals(unsupported, String.join(",", unsupportedSvgNames));
+		return this;
+	}
+
+	private SvgLoadTest ofSvgs(int all) {
+		assertEquals(all, allSvgCount);
+		return this;
+	}
+
+	@Test
+	void testLoadVrTGGB() {
+		inMaterial("material-VrT75QCK.ggb").shouldSupportAllBut("plot (1).svg").ofSvgs(5);
+	}
+
+	@Test
+	void testLoadWhiteListIssue() {
+		checkSupported("issue41.svg");
+	}
+
+	private void checkSupported(String fileName) {
+		createSvg(fileName);
+		assertNotEquals(JSVGImageBuilder.unsupportedImage(), image);
+	}
+
+	private SvgLoadTest createSvg(String svg) {
+		try {
+			image = JSVGImageBuilder.fromFile(new File(RESOURCES + svg));
+		} catch (IOException e) {
+			fail(e.getMessage());
+		}
+		return this;
+	}
+
+	@Test
+	void testLoad2() {
+		checkSupported("2.svg");
+	}
+
+	@Test
+	void imageReloadTest() {
+		createSvg("2.svg");
+		SVGImage image2 = JSVGImageBuilder.fromContent(image.getContent());
+		assertEquals(image.getContent(), image2.getContent());
+	}
+
+	@Test
+	void loadBadLink() {
+		checkNotSupported("badLink.svg");
+	}
+
+	private void checkNotSupported(String fileName) {
+		createSvg(fileName);
+		assertEquals(JSVGImageBuilder.unsupportedImage(), image);
+	}
+}

@@ -1,0 +1,109 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.web.full.gui.view.algebra;
+
+import org.geogebra.common.kernel.geos.GeoBoolean;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.web.full.gui.components.ComponentCheckbox;
+import org.gwtproject.user.client.ui.TreeItem;
+import org.gwtproject.user.client.ui.Widget;
+
+/**
+ * ReTeX based implementation of AV checkbox
+ *
+ */
+public final class CheckboxTreeItem extends LaTeXTreeItem {
+	/**
+	 * checkbox displaying boolean variables
+	 */
+	ComponentCheckbox checkBox = null;
+
+	/**
+	 * @param geo0
+	 *            boolean geo
+	 */
+	public CheckboxTreeItem(GeoElement geo0) {
+		super(geo0);
+	}
+
+	@Override
+	protected LatexTreeItemController createController() {
+		return new CheckBoxTreeItemController(this);
+	}
+
+	@Override
+	protected void createAvexWidget() {
+		checkBox = new ComponentCheckbox(loc, ((GeoBoolean) geo).getBoolean(), "");
+		content.addStyleName("noPadding");
+		main.addStyleName("checkboxElem");
+	}
+
+	@Override
+	protected void addControls() {
+		createControls();
+		// no add this time
+	}
+
+	@Override
+	protected void doUpdate() {
+		setNeedsUpdate(false);
+		if (hasMarblePanel()) {
+			marblePanel.update();
+		}
+
+		if (controls.hasAnimPanel()) {
+			controls.updateAnimPanel();
+		}
+		content.clear();
+		createAvexWidget();
+		addAVEXWidget(content);
+
+		geo.getAlgebraDescriptionTextOrHTMLDefault(
+				new DOMIndexHTMLBuilder(getDefinitionValuePanel(), app));
+		content.add(getDefinitionValuePanel());
+		checkBox.setSelected(((GeoBoolean) geo).getBoolean());
+	}
+
+	@Override
+	protected void addAVEXWidget(Widget w) {
+		main.clear();
+		main.add(marblePanel.asWidget());
+		if (checkBox != null) {
+			main.add(checkBox);
+		}
+		main.add(content);
+		main.add(controls);
+	}
+
+	/**
+	 * @param ti tree item
+	 * @return unchecked cast of the item
+	 */
+	public static CheckboxTreeItem as(TreeItem ti) {
+		return (CheckboxTreeItem) ti;
+	}
+
+	@Override
+	public boolean isCheckBoxItem() {
+		return true;
+	}
+
+	@Override
+	public boolean isInputTreeItem() {
+		return false;
+	}
+}

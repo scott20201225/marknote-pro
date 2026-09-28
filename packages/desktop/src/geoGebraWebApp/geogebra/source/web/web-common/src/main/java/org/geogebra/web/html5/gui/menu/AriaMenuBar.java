@@ -1,0 +1,552 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.web.html5.gui.menu;
+
+import java.util.ArrayList;
+
+import org.geogebra.web.html5.gui.Shades;
+import org.geogebra.web.html5.gui.view.IconSpec;
+import org.gwtproject.core.client.Scheduler;
+import org.gwtproject.core.client.Scheduler.ScheduledCommand;
+import org.gwtproject.dom.client.Document;
+import org.gwtproject.dom.client.Element;
+import org.gwtproject.event.dom.client.KeyCodes;
+import org.gwtproject.user.client.DOM;
+import org.gwtproject.user.client.Event;
+import org.gwtproject.user.client.ui.FlowPanel;
+import org.gwtproject.user.client.ui.Widget;
+import org.jspecify.annotations.Nullable;
+
+/** Accessible alternative to MenuBar */
+public class AriaMenuBar extends FlowPanel {
+	private AriaMenuItem selectedItem;
+	private final ArrayList<AriaMenuItem> allItems = new ArrayList<>();
+	private final ArrayList<AriaMenuBar> submenus = new ArrayList<>();
+	private boolean autoOpen;
+	private boolean handleArrows = true;
+	private MenuHoverListener selectListener;
+	private Runnable closeHandler;
+
+	/**
+	 * Create new accessible menu
+	 */
+	public AriaMenuBar() {
+		super("UL");
+		sinkEvents(Event.ONCLICK
+				| Event.ONMOUSEOVER
+				| Event.ONMOUSEOUT
+				| Event.ONFOCUS
+				| Event.ONKEYPRESS
+				| Event.ONKEYDOWN);
+		getElement().setAttribute("role", "menubar");
+		getElement().setTabIndex(0);
+		addStyleName("gwt-MenuBar");
+		addStyleName("gwt-MenuBar-vertical");
+	}
+
+	/**
+	 * @param handleArrows
+	 *            whether this menu should handle up/down keys on its own
+	 */
+	protected void setHandleArrows(boolean handleArrows) {
+		this.handleArrows = handleArrows;
+	}
+
+	/**
+	 * @param item
+	 *            menu item
+	 * @return the item
+	 */
+	public AriaMenuItem addItem(AriaMenuItem item) {
+		super.add(item);
+		allItems.add(item);
+		return item;
+	}
+
+	/**
+	 * Add a collapsible submenu as a new item
+	 *
+	 * @param item
+	 *            collapsible submenu
+	 */
+	public void addMenu(AriaMenuBar item) {
+		Element li = Document.get().createLIElement();
+		li.appendChild(item.getElement());
+		getElement().appendChild(li);
+		li.setAttribute("aria-hidden", "true");
+		submenus.add(item);
+	}
+
+	/**
+	 * Focus the whole menu
+	 */
+	public void focus() {
+		getElement().focus();
+	}
+
+	/**
+	 * @return selected item
+	 */
+	public @Nullable AriaMenuItem getSelectedItem() {
+		return this.selectedItem;
+	}
+
+	/**
+	 * Get a {@link AriaMenuItem} at a given index.
+	 *
+	 * @param index
+	 *            of the item to get.
+	 *
+	 * @return the item at the given index.
+	 */
+	public AriaMenuItem getItemAt(int index) {
+		return allItems.get(index);
+	}
+
+	/**
+	 * Get the index of a {@link AriaMenuItem}.
+	 *
+	 * @param item
+	 *            item we are looking for
+	 *
+	 * @return the index of the item, or -1 if it is not contained by this
+	 *         MenuBar
+	 */
+	public int getItemIndex(AriaMenuItem item) {
+		return allItems.indexOf(item);
+	}
+
+	/**
+	 * Get the index of the selected item.
+	 *
+	 * @return the index of the selected item, or -1 if it is not contained by
+	 *         this MenuBar
+	 */
+	public int getSelectedIndex() {
+		return allItems.indexOf(selectedItem);
+	}
+
+	/**
+	 * Mark item as selected and move focus to it
+	 *
+	 * @param item
+	 *            item to be selected
+	 */
+	public void selectItem(AriaMenuItem item) {
+		unselect();
+		this.selectedItem = item;
+		if (item != null) {
+			item.addStyleName("selectedItem");
+		}
+	}
+
+	/**
+	 * Returns the index of the menu item that is currently selected.
+	 *
+	 * @return returns the selected item
+	 */
+	public int getSelectedItemIndex() {
+		// The index of the currently selected item can only be
+		// obtained if the menu is showing.
+		AriaMenuItem selectedItem = getSelectedItem();
+		if (selectedItem != null) {
+			return allItems.indexOf(selectedItem);
+		}
+		return -1;
+	}
+
+	/**
+	 * Removes selection from previously selected item.
+	 */
+	public void unselect() {
+		if (selectedItem != null) {
+			selectedItem.removeStyleName("selectedItem");
+		}
+	}
+
+	/**
+	 * Selects the item at the specified index in the menu. Selecting the item
+	 * does not perform the item's associated action; it only changes the style
+	 * of the item and updates the value of SuggestionMenu.selectedItem.
+	 *
+	 * @param index
+	 *            index
+	 */
+	public void selectItem(int index) {
+		if (index >= 0 && index < allItems.size()) {
+			selectItem(allItems.get(index));
+		}
+	}
+
+	/**
+	 * Move focus to an item, may be overridden
+	 *
+	 * @param item
+	 *            item to move focus to
+	 */
+	protected void focus(AriaMenuItem item) {
+		if (item.isFocusable()) {
+			item.getElement().focus();
+		} else if (item.getStyleName().contains("fakeFocus")) {
+			item.removeStyleName("fakeFocus");
+		}
+	}
+
+	/**
+	 * Remove all items
+	 */
+	public void clearItems() {
+		allItems.clear();
+		submenus.clear();
+		for (int i = getChildren().size() - 1; i >= 0; i--) {
+			getChildren().remove(i);
+		}
+		getElement().removeAllChildren();
+		selectItem(null);
+	}
+
+	@Override
+	public void clear() {
+		super.clear();
+		clearItems();
+	}
+
+	/**
+	 * @return list of all items
+	 */
+	public ArrayList<AriaMenuItem> getItems() {
+		return allItems;
+	}
+
+	/**
+	 * Set next item as selected
+	 *
+	 * @return whether it was possible
+	 */
+	public boolean moveSelectionDown() {
+		int next = allItems.indexOf(selectedItem) + 1;
+		if (next >= allItems.size()) {
+			next = 0;
+		}
+		if (next < allItems.size()) {
+			selectAndScroll(allItems.get(next));
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Give keyboard focus to selected item if there is one,
+	 * scroll it into view, update keyboard style.
+	 */
+	public void requestKeyboardFocus() {
+		if (selectedItem != null) {
+			selectAndScroll(selectedItem);
+		}
+	}
+
+	/**
+	 * Give keyboard focus to selected item if there is one.
+	 */
+	public void focusSelectedItem() {
+		if (selectedItem != null) {
+			selectedItem.getElement().focus();
+		}
+	}
+
+	private void selectAndScroll(AriaMenuItem item) {
+		keyboardSelectItem(item);
+		item.getElement().scrollIntoView();
+	}
+
+	private void keyboardSelectItem(AriaMenuItem item) {
+		if (selectedItem != null) {
+			selectedItem.getElement().blur();
+			selectedItem.removeStyleName("fakeFocus");
+		}
+		unselect();
+		this.selectedItem = item;
+		if (item != null) {
+			if (item.isFocusable()) {
+				focus(item);
+			} else {
+				item.addStyleName("fakeFocus");
+			}
+		}
+	}
+
+	/**
+	 * Set previous item as selected
+	 *
+	 * @return whether it was possible
+	 */
+	public boolean moveSelectionUp() {
+		int next = allItems.indexOf(selectedItem) - 1;
+		if (next < 0) {
+			next = allItems.size() - 1;
+		}
+		if (next >= 0 && next < allItems.size()) {
+			selectAndScroll(allItems.get(next));
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Add separator item
+	 */
+	public void addSeparator() {
+		Element li = DOM.createElement("LI");
+		li.setClassName("menuSeparator " + Shades.NEUTRAL_300.getName());
+		li.setAttribute("role", "presentation");
+		getElement().appendChild(li);
+	}
+
+	/**
+	 * @param autoOpen
+	 *            whether submenu should open on mouseover
+	 */
+	public void setAutoOpen(boolean autoOpen) {
+		this.autoOpen = autoOpen;
+	}
+
+	/**
+	 * @return whether submenu should open on mouseover
+	 */
+	public boolean isAutoOpen() {
+		return autoOpen;
+	}
+
+	@Override
+	public void onBrowserEvent(Event event) {
+		AriaMenuItem item = findItem(DOM.eventGetTarget(event));
+		for (AriaMenuBar submenu : submenus) {
+			if (item != null) {
+				break;
+			}
+			item = submenu.findItem(DOM.eventGetTarget(event));
+		}
+		switch (DOM.eventGetType(event)) {
+			case Event.ONCLICK:
+				// Fire an item's command when the user clicks on it.
+				if (item != null) {
+					doItemAction(item);
+				}
+				break;
+			case Event.ONTOUCHSTART:
+			case Event.ONMOUSEOVER:
+				if (item != null) {
+					itemOver(item);
+				}
+				break;
+
+			case Event.ONMOUSEOUT:
+				if (item != null) {
+					itemOver(null);
+				}
+				break;
+
+			case Event.ONFOCUS: {
+				// selectFirstItemIfNoneSelected();
+				break;
+			}
+
+			case Event.ONKEYPRESS:
+				handleActionKey(event, item);
+				break;
+
+			case Event.ONKEYDOWN:
+				int keyCode = event.getKeyCode();
+				if (keyCode == KeyCodes.KEY_UP && handleArrows) {
+					moveSelectionUp();
+					eatEvent(event);
+					return;
+				} else if (keyCode == KeyCodes.KEY_DOWN && handleArrows) {
+					moveSelectionDown();
+					eatEvent(event);
+					return;
+				} else if (keyCode == KeyCodes.KEY_RIGHT && handleArrows) {
+					openSubmenu();
+					eatEvent(event);
+					return;
+				} else if (keyCode == KeyCodes.KEY_LEFT && handleArrows) {
+					if (closeHandler != null) {
+						closeHandler.run();
+					}
+					eatEvent(event);
+					return;
+				}
+				break;
+		}
+
+		super.onBrowserEvent(event);
+	}
+
+	private void openSubmenu() {
+		if (selectedItem != null && selectedItem.getSubMenu() != null) {
+			doItemAction(selectedItem);
+			Scheduler.get().scheduleFinally(() -> {
+				selectedItem.getSubMenu().focus();
+				selectedItem.getSubMenu().moveSelectionDown();
+			});
+		}
+	}
+
+	private void handleActionKey(Event event, AriaMenuItem item) {
+		if (!isActionKey(event.getKeyCode()) || item == null) {
+			return;
+		}
+
+		doItemAction(item);
+		eatEvent(event);
+	}
+
+	private boolean isActionKey(int keyCode) {
+		return keyCode == KeyCodes.KEY_ENTER || keyCode == KeyCodes.KEY_SPACE;
+	}
+
+	/**
+	 * Stops event propagation and prevents default behavior.
+	 *
+	 * @param event
+	 *            to eat.
+	 */
+	public static void eatEvent(Event event) {
+		event.stopPropagation();
+		event.preventDefault();
+	}
+
+	private AriaMenuItem findItem(Element eventTarget) {
+		for (AriaMenuItem item : allItems) {
+			if (item.getElement().isOrHasChild(eventTarget)) {
+				return item;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Executes the command associated with the item selected.
+	 */
+	public void doSelectedItemAction() {
+		if (selectedItem == null) {
+			return;
+		}
+		doItemAction(selectedItem);
+	}
+
+	private static void doItemAction(AriaMenuItem item) {
+		final ScheduledCommand cmd = item.getScheduledCommand();
+		if (!item.isEnabled() || cmd == null) {
+			return;
+		}
+
+		Scheduler.get().scheduleFinally(cmd);
+	}
+
+	/**
+	 * @param item
+	 *            item mouse is hovering over
+	 */
+	protected void itemOver(AriaMenuItem item) {
+		if (item != null) {
+			onItemHover();
+			selectItem(item);
+		}
+		if (item != null && "true".equals(item.getElement().getAttribute("hasPopup")) && autoOpen) {
+			doItemAction(item);
+		}
+	}
+
+	/**
+	 * @param newItem item with submenu
+	 * @param icon submenu arrow icon
+	 */
+	public void appendSubmenu(AriaMenuItem newItem, IconSpec icon) {
+		Element iconElement = icon.toElement();
+		iconElement.setAttribute("aria-hidden", "true");
+		iconElement.addClassName("submenuArrow");
+		newItem.getElement().appendChild(iconElement);
+	}
+
+	/**
+	 * @param item
+	 *            item
+	 * @param submenuLeft
+	 *            whether submenu icon is on the left
+	 * @return horizontal coordinate of menu
+	 */
+	public int getAbsoluteHorizontalPos(AriaMenuItem item, boolean submenuLeft) {
+		return submenuLeft
+				? item.getElement().getAbsoluteLeft()
+				: item.getElement().getAbsoluteRight() + 8;
+	}
+
+	/**
+	 * @param selectionListener selection listener
+	 */
+	public void setSelectionListener(MenuHoverListener selectionListener) {
+		this.selectListener = selectionListener;
+	}
+
+	/**
+	 * Remove currently open submenu from DOM
+	 */
+	public void onItemHover() {
+		if (selectListener != null) {
+			selectListener.onItemHover();
+		}
+	}
+
+	/**
+	 * Clears default menu role. Useful for submenus.
+	 */
+	public void clearRole() {
+		getElement().setAttribute("role", "");
+	}
+
+	/**
+	 * Selects the last item of the menubar.
+	 */
+	public void selectLastItem() {
+		if (!allItems.isEmpty()) {
+			selectItem(allItems.get(allItems.size() - 1));
+		}
+	}
+
+	/**
+	 * Style popup menu appears
+	 * @param widget to style.
+	 */
+	public void stylePopup(Widget widget) {
+		// implement in subclasses if needed
+	}
+
+	/**
+	 * focus menu in a deferred way.
+	 */
+	public void focusDeferred() {
+		Scheduler.get().scheduleDeferred(getElement()::focus);
+	}
+
+	/**
+	 * @param closeHandler called when this (sub)menu is closed by keyboard
+	 */
+	public void setCloseHandler(Runnable closeHandler) {
+		this.closeHandler = closeHandler;
+	}
+}

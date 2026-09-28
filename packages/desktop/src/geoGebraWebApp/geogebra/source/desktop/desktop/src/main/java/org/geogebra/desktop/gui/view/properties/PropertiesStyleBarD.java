@@ -1,0 +1,342 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.desktop.gui.view.properties;
+
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Point;
+import java.awt.SystemColor;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.util.HashMap;
+
+import javax.swing.AbstractButton;
+import javax.swing.BorderFactory;
+import javax.swing.ButtonGroup;
+import javax.swing.Icon;
+import javax.swing.JMenuItem;
+import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
+import javax.swing.JToggleButton;
+import javax.swing.JToolBar;
+import javax.swing.JToolTip;
+import javax.swing.SwingConstants;
+import javax.swing.ToolTipManager;
+
+import org.geogebra.common.main.App;
+import org.geogebra.common.main.OptionType;
+import org.geogebra.common.util.debug.Log;
+import org.geogebra.desktop.gui.util.PopupMenuButtonD;
+import org.geogebra.desktop.main.AppD;
+
+public class PropertiesStyleBarD {
+	protected static final String downTriangle = "  \u25BE  ";
+	private static final int MARGIN_Y = 5;
+	PropertiesViewD propertiesView;
+	protected AppD app;
+
+	protected PopupMenuButtonD btnOption;
+	private JPopupMenu menu;
+
+	private JToolBar toolbar;
+	private JPanel wrappedPanel;
+
+	protected HashMap<OptionType, AbstractButton> buttonMap;
+
+	private AbstractButton objectButton;
+
+	/**
+	 * @param propertiesView properties view
+	 * @param app app
+	 */
+	public PropertiesStyleBarD(PropertiesViewD propertiesView, AppD app) {
+		this.propertiesView = propertiesView;
+		this.app = app;
+
+		this.wrappedPanel = new JPanel();
+
+		btnOption = new PopupMenuButtonD(app);
+		buildMenu();
+		menu.getSelectionModel().setSelectedIndex(0);
+		btnOption.setPopupMenu(menu);
+		btnOption.setKeepVisible(true);
+		btnOption.setStandardButton(true); // mouse clicks over total
+		// button region
+		btnOption.setHorizontalTextPosition(SwingConstants.RIGHT);
+		Dimension d = btnOption.getPreferredSize();
+		d.width = menu.getPreferredSize().width;
+		btnOption.setPreferredSize(d);
+
+		buildGUI();
+		updateGUI();
+
+		// add(btnOption);
+		// add(Box.createVerticalStrut(28));
+	}
+
+	void buildGUI() {
+
+		toolbar = new JToolBar();
+		toolbar.setFloatable(false);
+
+		buttonMap = new HashMap<>();
+
+		ButtonGroup btnGroup = new ButtonGroup();
+		for (final OptionType type : OptionType.values()) {
+			final PropertiesButton btn = newPropertiesButton(type);
+			if (btn != null) {
+				btn.setFont(app.getPlainFont());
+				btn.setToolTipText(propertiesView.getTypeString(type));
+				Icon icon = PropertiesViewD.getTypeIcon(app, type);
+				if (icon == null) {
+					Log.error("No icon for" + type);
+				} else {
+					btn.setIcon(icon);
+					btn.setPreferredSize(new Dimension(icon.getIconWidth(), icon.getIconHeight()));
+					btn.addActionListener(e -> propertiesView.setOptionPanel(type));
+					btnGroup.add(btn);
+					toolbar.add(btn);
+					buttonMap.put(type, btn);
+					// mi.setSelected(type ==
+					// propertiesView.getSelectedOptionType());
+					if (type == OptionType.OBJECTS || type == OptionType.SPREADSHEET) {
+						toolbar.addSeparator();
+					}
+				}
+			}
+		}
+		objectButton = buttonMap.get(OptionType.OBJECTS);
+
+		// disable object button if no object
+		if (app.getKernel().isEmpty()) {
+			setObjectButtonEnable(false);
+		}
+
+		this.wrappedPanel.setLayout(new BorderLayout());
+		this.wrappedPanel.add(toolbar, BorderLayout.NORTH);
+		// this.add(titlePanel, BorderLayout.SOUTH);
+		this.wrappedPanel.setBorder(BorderFactory.createCompoundBorder(
+				BorderFactory.createMatteBorder(0, 0, 0, 0, SystemColor.controlShadow),
+				BorderFactory.createMatteBorder(0, 0, 1, 0, SystemColor.controlLtHighlight)));
+		// this.setBorder(BorderFactory.createBevelBorder(BevelBorder.LOWERED));
+	}
+
+	/**
+	 * create a new properties button if type is compatible
+	 *
+	 * @param type
+	 *            type
+	 * @return new properties button
+	 */
+	protected PropertiesButton newPropertiesButton(OptionType type) {
+		if (supportsPropertyType(type)) {
+			return new PropertiesButton();
+		}
+		return null;
+	}
+
+	protected boolean supportsPropertyType(OptionType type) {
+		return type != OptionType.EUCLIDIAN3D && type != OptionType.EUCLIDIAN_FOR_PLANE;
+	}
+
+	public PopupMenuButtonD getBtnOption() {
+		return btnOption;
+	}
+
+	/**
+	 * Update the UI
+	 */
+	public void updateGUI() {
+
+		OptionType seltype = propertiesView.getSelectedOptionType();
+		btnOption.setFixedIcon(
+				PropertiesViewD.getTypeIcon(app, propertiesView.getSelectedOptionType()));
+		btnOption.setText(
+				propertiesView.getTypeString(propertiesView.getSelectedOptionType()) + downTriangle);
+
+		buttonMap.get(seltype).setSelected(true);
+
+		buttonMap
+				.get(OptionType.EUCLIDIAN)
+				.setVisible(app.getGuiManager().showView(App.VIEW_EUCLIDIAN));
+
+		buttonMap
+				.get(OptionType.EUCLIDIAN2)
+				.setVisible(app.getGuiManager().showView(App.VIEW_EUCLIDIAN2));
+
+		buttonMap
+				.get(OptionType.SPREADSHEET)
+				.setVisible(app.getGuiManager().showView(App.VIEW_SPREADSHEET));
+
+		buttonMap.get(OptionType.CAS).setVisible(app.getGuiManager().showView(App.VIEW_CAS));
+	}
+
+	/**
+	 * create a new menu item if type is compatible
+	 *
+	 * @param type
+	 *            type
+	 * @return new menu item
+	 */
+	protected JMenuItem newJMenuItem(OptionType type) {
+
+		if (type == OptionType.EUCLIDIAN3D) { // used only for 3D
+			return null;
+		}
+
+		if (type == OptionType.EUCLIDIAN_FOR_PLANE) { // used only for 3D
+			return null;
+		}
+
+		return new JMenuItem();
+	}
+
+	void buildMenu() {
+
+		if (menu == null) {
+			menu = new JPopupMenu();
+		}
+		menu.removeAll();
+
+		for (final OptionType type : OptionType.values()) {
+			final JMenuItem mi = newJMenuItem(type);
+			if (mi != null) {
+				mi.setFont(app.getPlainFont());
+				mi.setBackground(Color.white);
+				mi.setText(propertiesView.getTypeString(type));
+				mi.setIcon(PropertiesViewD.getTypeIcon(app, type));
+				mi.addActionListener(e -> {
+					propertiesView.setOptionPanel(type);
+					buildMenu();
+					btnOption.setFixedIcon(mi.getIcon());
+					btnOption.setText(mi.getText() + downTriangle);
+				});
+				menu.add(mi);
+				// mi.setSelected(type ==
+				// propertiesView.getSelectedOptionType());
+				if (type == OptionType.OBJECTS || type == OptionType.SPREADSHEET) {
+					menu.addSeparator();
+				}
+			}
+		}
+
+		app.setComponentOrientation(menu);
+	}
+
+	/**
+	 * Update the labels of the components (e.g. if the language changed).
+	 */
+	public void setLabels() {
+
+		for (final OptionType type : OptionType.values()) {
+			AbstractButton button = buttonMap.get(type);
+			if (button != null) {
+				button.setToolTipText(propertiesView.getTypeString(type));
+			}
+		}
+	}
+
+	/**
+	 *
+	 */
+	public void setObjectsToolTip() {
+
+		objectButton.setToolTipText(propertiesView.getTypeString(OptionType.OBJECTS));
+	}
+
+	/**
+	 * sets if object button is enabled
+	 *
+	 * @param flag
+	 *            flag
+	 */
+	public void setObjectButtonEnable(boolean flag) {
+		objectButton.setEnabled(flag);
+	}
+
+	protected static final class PropertiesButton extends JToggleButton {
+
+		private static final long serialVersionUID = 1L;
+
+		private JToolTip tip;
+
+		private PropertiesButton() {
+			super();
+			this.addMouseListener(new ToolTipMouseAdapter());
+		}
+
+		@Override
+		public JToolTip createToolTip() {
+			tip = super.createToolTip();
+			tip.setBorder(BorderFactory.createCompoundBorder(
+					tip.getBorder(), BorderFactory.createEmptyBorder(5, 5, 5, 5)));
+
+			return tip;
+		}
+
+		@Override
+		public Point getToolTipLocation(MouseEvent event) {
+			Point p = new Point();
+			p.y = this.getY();
+			p.x = 0;
+			if (tip != null) {
+				p.y -= tip.getHeight();
+			} else {
+				p.y -= this.getHeight() + 5;
+			}
+			return p;
+		}
+	}
+
+	/**
+	 * Listeners that give the tool tip a custom initial delay = 0
+	 */
+	public static class ToolTipMouseAdapter extends MouseAdapter {
+		private int defaultInitialDelay;
+		private boolean preventToolTipDelay = true;
+
+		@Override
+		public void mouseEntered(MouseEvent e) {
+			defaultInitialDelay = ToolTipManager.sharedInstance().getInitialDelay();
+			if (preventToolTipDelay) {
+				ToolTipManager.sharedInstance().setInitialDelay(0);
+			}
+		}
+
+		@Override
+		public void mouseExited(MouseEvent e) {
+			ToolTipManager.sharedInstance().setInitialDelay(defaultInitialDelay);
+		}
+	}
+
+	public JPanel getWrappedPanel() {
+		return wrappedPanel;
+	}
+
+	/**
+	 * Rebuild the stylebar
+	 */
+	public void reinit() {
+		wrappedPanel.removeAll();
+		buildGUI();
+		updateGUI();
+		Dimension d = wrappedPanel.getPreferredSize();
+		d.height = app.getScaledIconSize() + 2 * MARGIN_Y;
+		wrappedPanel.setPreferredSize(d);
+	}
+}

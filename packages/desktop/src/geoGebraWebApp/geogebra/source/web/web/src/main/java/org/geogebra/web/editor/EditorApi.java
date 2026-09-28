@@ -1,0 +1,126 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.web.editor;
+
+import org.geogebra.common.GeoGebraConstants;
+import org.geogebra.editor.share.serializer.SolverSerializer;
+import org.geogebra.editor.share.serializer.TeXSerializer;
+import org.geogebra.editor.web.MathFieldW;
+import org.geogebra.keyboard.web.TabbedKeyboard;
+
+import com.himamis.retex.renderer.share.TeXFormula;
+import com.himamis.retex.renderer.share.serialize.TeXAtomSerializer;
+
+import elemental2.core.Function;
+import jsinterop.annotations.JsIgnore;
+import jsinterop.annotations.JsType;
+import jsinterop.base.Js;
+import jsinterop.base.JsPropertyMap;
+
+@JsType
+public final class EditorApi {
+	private final MathFieldW mathField;
+	private final TabbedKeyboard kb;
+	private final EditorListener listener;
+
+	/**
+	 * @param mathField math input field
+	 * @param kb keyboard
+	 * @param listener editor input listener
+	 */
+	@JsIgnore
+	public EditorApi(MathFieldW mathField, TabbedKeyboard kb, EditorListener listener) {
+		this.mathField = mathField;
+		this.kb = kb;
+		this.listener = listener;
+	}
+
+	/**
+	 * Remove from DOM
+	 */
+	public void remove() {
+		mathField.asWidget().removeFromParent();
+		kb.removeFromParent();
+	}
+
+	/**
+	 * @return state, contains formula in LaTeX, AsciiMath and solver syntax
+	 */
+	public Object getEditorState() {
+		JsPropertyMap<Object> jsObject = JsPropertyMap.of();
+		jsObject.set("latex", new TeXSerializer().serialize(mathField.getFormula()));
+		jsObject.set("solver", new SolverSerializer().serialize(mathField.getFormula()));
+		jsObject.set("content", mathField.getText());
+		return jsObject;
+	}
+
+	/**
+	 * Converts LaTeX input to editor syntax and loads into editor
+	 * @param formula input as LaTeX
+	 */
+	public void evalLaTeX(String formula) {
+		TeXFormula tf = new TeXFormula(formula);
+		mathField.parse(new TeXAtomSerializer(null).serialize(tf.root));
+	}
+
+	/**
+	 * Load state into editor
+	 * @param state JS object {content: "foo"}
+	 */
+	public void setEditorState(Object state) {
+		JsPropertyMap<String> json = Js.uncheckedCast(state);
+		mathField.parse(json.get("content"));
+	}
+
+	/**
+	 * @param options {type: string, transparent: boolean}
+	 * @param callback called with {svg: base64 encoded SVG,
+	 *             baseline: relative baseline position} or error
+	 */
+	public void exportImage(JsPropertyMap<String> options, MathFieldExporter.ImageConsumer callback) {
+		new MathFieldExporter(mathField)
+				.export(options.get("type"), Js.isTruthy(options.get("transparent")), callback);
+	}
+
+	/**
+	 * Register client listener.
+	 * @param fn client listener
+	 */
+	public void registerClientListener(Function fn) {
+		listener.registerClientListener(fn);
+	}
+
+	/**
+	 * open keyboard
+	 */
+	public void openKeyboard() {
+		kb.setVisible(true);
+		listener.notifyKeyboardVisibilityChange(true);
+	}
+
+	/**
+	 * close keyboard
+	 */
+	public void closeKeyboard() {
+		kb.setVisible(false);
+		listener.notifyKeyboardVisibilityChange(false);
+	}
+
+	public String getVersion() {
+		return GeoGebraConstants.VERSION_STRING;
+	}
+}

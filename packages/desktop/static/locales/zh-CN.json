@@ -229,6 +229,7 @@
       "newArea": "新建分区",
       "newDocument": "新建笔记",
       "newDrawing": "新建绘图",
+      "newGeoGebra": "新建 GeoGebra",
       "expandAll": "全部展开",
       "collapseAll": "全部折叠",
       "copy": "复制",
@@ -301,7 +302,14 @@
       "noNotesInArea": "当前分区还没有笔记",
       "groupNamePlaceholder": "输入分区组名称",
       "areaNamePlaceholder": "输入分区名称",
-      "documentNamePlaceholder": "输入笔记名称"
+      "documentNamePlaceholder": "输入笔记名称",
+      "geoGebraMode": "GeoGebra 模式",
+      "geoGebraGraphing": "绘图计算",
+      "geoGebra3d": "3D 计算器",
+      "geoGebraGeometry": "几何",
+      "geoGebraCas": "CAS",
+      "geoGebraProbability": "概率",
+      "geoGebraScientific": "Scientific"
     },
     "toc": {
       "title": "目录"

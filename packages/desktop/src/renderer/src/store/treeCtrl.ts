@@ -28,6 +28,7 @@ interface TreeFile {
   isFile: true
   isMarkdown: boolean
   isDrawing?: boolean
+  isGeoGebra?: boolean
 }
 
 type AddFileInput = Omit<TreeFile, 'id'>
@@ -128,6 +129,7 @@ export const addFile = (
     existingFile.mtimeMs = file.mtimeMs
     existingFile.isMarkdown = file.isMarkdown
     existingFile.isDrawing = file.isDrawing
+    existingFile.isGeoGebra = file.isGeoGebra
   } else {
     // Remove file content from object.
     const fileCopy: TreeFile = {
@@ -138,6 +140,7 @@ export const addFile = (
       isFile: file.isFile,
       isMarkdown: file.isMarkdown,
       isDrawing: file.isDrawing,
+      isGeoGebra: file.isGeoGebra,
       name: file.name,
       pathname: file.pathname
     }

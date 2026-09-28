@@ -1,0 +1,136 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.geogebra3D.euclidian3D.openGL;
+
+import org.geogebra.common.geogebra3D.euclidian3D.openGL.ManagerShaders.TypeElement;
+
+/**
+ * manager for packing buffers (for surfaces)
+ */
+public class GLBufferManagerSurfaces extends GLBufferManager {
+
+	// complex materials need not more than 100
+	private static final int ELEMENTS_SIZE_START = 128;
+	// use 1.5 empirical factor observed from materials
+	private static final int INDICES_SIZE_START = ELEMENTS_SIZE_START * 3 / 2;
+
+	/**
+	 * constructor
+	 *
+	 * @param manager
+	 *            geometries manager
+	 */
+	public GLBufferManagerSurfaces(ManagerShaders manager) {
+		super(manager);
+	}
+
+	@Override
+	protected int calculateIndicesLength(int size, TypeElement type) {
+		return switch (type) {
+			case FAN_DIRECT, FAN_INDIRECT -> 3 * (size - 2);
+			case SURFACE -> size;
+			case TRIANGLE_FAN, TRIANGLE_STRIP, TRIANGLES -> 3 * size;
+			default -> 0; // should not happen
+		};
+	}
+
+	@Override
+	protected void putIndices(int size, TypeElement type, boolean reuseSegment) {
+		switch (type) {
+			case FAN_DIRECT:
+				short k = 1;
+				short zero = 0;
+				while (k < size - 1) {
+					putToIndices(zero);
+					putToIndices(k);
+					k++;
+					putToIndices(k);
+				}
+				break;
+			case FAN_INDIRECT:
+				short k2 = 2;
+				k = 1;
+				zero = 0;
+				while (k < size - 1) {
+					putToIndices(zero);
+					putToIndices(k2);
+					putToIndices(k);
+					k++;
+					k2++;
+				}
+				break;
+			case SURFACE:
+				ReusableArrayList<Short> indices = manager.getIndices();
+				for (int i = 0; i < indices.getLength(); i++) {
+					putToIndices(indices.get(i));
+				}
+				break;
+			case TRIANGLE_FAN:
+				// TODO: simplify Manager.triangleFanVertex() when possible to
+				// minimize vertex count
+				for (int i = 0; i < size; i++) {
+					putToIndices(0);
+					putToIndices(2 * i + 1);
+					putToIndices(2 * i + 3);
+				}
+				break;
+			case TRIANGLE_STRIP:
+				for (int i = 0; i < size; i++) {
+					putToIndices(i);
+					putToIndices(i + 1 + (i % 2));
+					putToIndices(i + 2 - (i % 2));
+				}
+				break;
+			case TRIANGLES:
+				for (int i = 0; i < 3 * size; i++) {
+					putToIndices(i);
+				}
+				break;
+			default:
+				// should not happen
+				break;
+		}
+	}
+
+	/**
+	 * draw
+	 *
+	 * @param r
+	 *            renderer
+	 */
+	public void draw(Renderer r) {
+		drawBufferPacks(r);
+	}
+
+	@Override
+	protected boolean checkCurrentBufferSegmentDoesNotFit(int indicesLength, TypeElement type) {
+		return type == TypeElement.SURFACE
+				|| currentBufferSegment.type == TypeElement.SURFACE
+				|| type != currentBufferSegment.type
+				|| super.checkCurrentBufferSegmentDoesNotFit(indicesLength, type);
+	}
+
+	@Override
+	protected int getElementSizeStart() {
+		return ELEMENTS_SIZE_START;
+	}
+
+	@Override
+	protected int getIndicesSizeStart() {
+		return INDICES_SIZE_START;
+	}
+}

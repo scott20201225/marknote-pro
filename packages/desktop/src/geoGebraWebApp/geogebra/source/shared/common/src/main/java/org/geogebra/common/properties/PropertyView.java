@@ -1,0 +1,1795 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.properties;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
+import org.geogebra.common.awt.GColor;
+import org.geogebra.common.awt.MyImage;
+import org.geogebra.common.euclidian.EuclidianViewInterfaceCommon;
+import org.geogebra.common.euclidian3D.EuclidianView3DInterface;
+import org.geogebra.common.gui.view.probcalculator.ProbabilityCalculatorView;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.main.settings.AbstractSettings;
+import org.geogebra.common.main.settings.SettingListener;
+import org.geogebra.common.plugin.Event;
+import org.geogebra.common.plugin.EventListener;
+import org.geogebra.common.plugin.EventType;
+import org.geogebra.common.properties.aliases.ActionableIconProperty;
+import org.geogebra.common.properties.aliases.ActionableIconPropertyCollection;
+import org.geogebra.common.properties.aliases.BooleanProperty;
+import org.geogebra.common.properties.aliases.ColorProperty;
+import org.geogebra.common.properties.aliases.ImageProperty;
+import org.geogebra.common.properties.aliases.StringProperty;
+import org.geogebra.common.properties.factory.PropertiesArray;
+import org.geogebra.common.properties.impl.AbstractEnumeratedProperty;
+import org.geogebra.common.properties.impl.collections.AbstractPropertyCollection;
+import org.geogebra.common.properties.impl.collections.ActionablePropertyCollection;
+import org.geogebra.common.properties.impl.distribution.ProbabilityCalculatorViewDependentProperty;
+import org.geogebra.common.properties.impl.distribution.ProbabilityResultValuesProperty;
+import org.geogebra.common.properties.impl.facade.AbstractPropertyListFacade;
+import org.geogebra.common.properties.impl.facade.ImagePropertyListFacade;
+import org.geogebra.common.properties.impl.facade.NamedEnumeratedPropertyListFacade;
+import org.geogebra.common.properties.impl.general.RestoreSettingsAction;
+import org.geogebra.common.properties.impl.general.SaveSettingsAction;
+import org.geogebra.common.properties.impl.graphics.ARRatioPropertyCollection;
+import org.geogebra.common.properties.impl.graphics.AxisCrossPropertyCollection;
+import org.geogebra.common.properties.impl.graphics.AxisDistancePropertyCollection;
+import org.geogebra.common.properties.impl.graphics.AxisUnitPropertyCollection;
+import org.geogebra.common.properties.impl.graphics.ClippingPropertyCollection;
+import org.geogebra.common.properties.impl.graphics.Dimension2DPropertiesCollection;
+import org.geogebra.common.properties.impl.graphics.Dimension3DPropertiesCollection;
+import org.geogebra.common.properties.impl.graphics.DimensionMinMaxProperty;
+import org.geogebra.common.properties.impl.graphics.DimensionRatioProperty;
+import org.geogebra.common.properties.impl.graphics.EuclidianView3DDependentProperty;
+import org.geogebra.common.properties.impl.graphics.EuclidianViewDimensionDependentProperty;
+import org.geogebra.common.properties.impl.graphics.GridAngleProperty;
+import org.geogebra.common.properties.impl.graphics.GridDistanceProperty;
+import org.geogebra.common.properties.impl.graphics.GridDistancePropertyCollection;
+import org.geogebra.common.properties.impl.graphics.GridFixedDistanceProperty;
+import org.geogebra.common.properties.impl.graphics.NavigationBarPropertiesCollection;
+import org.geogebra.common.properties.impl.graphics.SettingsDependentProperty;
+import org.geogebra.common.properties.impl.objects.AbsoluteScreenPositionPropertyCollection;
+import org.geogebra.common.properties.impl.objects.AlgebraViewVisibilityPropertyCollection;
+import org.geogebra.common.properties.impl.objects.AlignmentPropertyCollection;
+import org.geogebra.common.properties.impl.objects.BackgroundColorPropertyCollection;
+import org.geogebra.common.properties.impl.objects.BorderStylePropertyCollection;
+import org.geogebra.common.properties.impl.objects.ChartDataPropertyCollection;
+import org.geogebra.common.properties.impl.objects.ChartSegmentFillCategoryProperty;
+import org.geogebra.common.properties.impl.objects.ChartSegmentSelection;
+import org.geogebra.common.properties.impl.objects.ChartSegmentSelectionDependentProperty;
+import org.geogebra.common.properties.impl.objects.CustomButtonImageProperty;
+import org.geogebra.common.properties.impl.objects.DynamicColorSpaceProperty;
+import org.geogebra.common.properties.impl.objects.ElementColorProperty;
+import org.geogebra.common.properties.impl.objects.FillCategoryProperty;
+import org.geogebra.common.properties.impl.objects.FontProperty;
+import org.geogebra.common.properties.impl.objects.GeoElementDependentProperty;
+import org.geogebra.common.properties.impl.objects.LayoutPropertyCollection;
+import org.geogebra.common.properties.impl.objects.LocationPropertyCollection;
+import org.geogebra.common.properties.impl.objects.ScriptPropertyCollection;
+import org.geogebra.common.properties.impl.objects.SliderTrackColorPropertyCollection;
+import org.geogebra.common.properties.impl.objects.StyledItemProperty;
+import org.geogebra.common.properties.util.StringPropertyWithSuggestions;
+import org.geogebra.common.util.TextFormat;
+import org.geogebra.editor.share.util.Unicode;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+
+import com.google.j2objc.annotations.Weak;
+
+/**
+ * Represents a widget/view in the settings view.
+ * <p>
+ * Each {@code PropertyView} corresponds to a specific type of UI element. They provide getters to
+ * read the UI's state, setters to handle user interactions, and delegates to notify the UI layer
+ * when a view's configuration or visibility has been modified.
+ * </p>
+ */
+public abstract class PropertyView {
+	protected @Weak @Nullable ConfigurationUpdateDelegate configurationUpdateDelegate;
+	protected @Weak @Nullable VisibilityUpdateDelegate visibilityUpdateDelegate;
+	// Prevents overriding the visibility delegate when it relies solely on the parent's visibility.
+	protected boolean disableVisibilityUpdateDelegateSetter = false;
+	private static final char LEQ = Unicode.LESS_EQUAL;
+	private static final char GEQ = Unicode.GREATER_EQUAL;
+
+	/**
+	 * Delegate interface for receiving notifications about configuration updates.
+	 * <p>
+	 * The configuration defines how the view appears. Depending on the view, it may include text,
+	 * color, selection, whether the view is enabled, and more.
+	 * </p>
+	 */
+	public interface ConfigurationUpdateDelegate {
+		/**
+		 * Called when the configuration of a {@code PropertyView} has been updated.
+		 */
+		void configurationUpdated();
+	}
+
+	/**
+	 * Delegate interface for receiving notifications about visibility updates.
+	 */
+	public interface VisibilityUpdateDelegate {
+		/**
+		 * Called when the visibility of a {@code PropertyView} has been updated.
+		 */
+		void visibilityUpdated();
+	}
+
+	/**
+	 * Assigns the delegate to receive configuration update notifications.
+	 * @param configurationUpdateDelegate the delegate or {@code null} to remove it
+	 */
+	public final void setConfigurationUpdateDelegate(
+			@Nullable ConfigurationUpdateDelegate configurationUpdateDelegate) {
+		this.configurationUpdateDelegate = configurationUpdateDelegate;
+	}
+
+	/**
+	 * Assigns the delegate to receive visibility update notifications.
+	 * @param visibilityUpdateDelegate the delegate or {@code null} to remove it
+	 */
+	public final void setVisibilityUpdateDelegate(
+			@Nullable VisibilityUpdateDelegate visibilityUpdateDelegate) {
+		if (disableVisibilityUpdateDelegateSetter) {
+			return;
+		}
+		this.visibilityUpdateDelegate = visibilityUpdateDelegate;
+	}
+
+	/**
+	 * Checks whether the view is visible.
+	 * @return {@code true} if the view is visible, {@code false} otherwise
+	 */
+	public boolean isVisible() {
+		return true;
+	}
+
+	/**
+	 * Detaches this view from its delegates and listeners, removing all references to allow
+	 * proper garbage collection. Should be called when the view is no longer needed.
+	 */
+	public void detach() {
+		visibilityUpdateDelegate = null;
+		configurationUpdateDelegate = null;
+	}
+
+	public abstract static class PropertyBackedView<T extends Property> extends PropertyView
+			implements PropertyValueObserver<Object>,
+					EuclidianView3DInterface.Listener,
+					GeoElementDependentProperty.RedefinitionObserver,
+					ProbabilityCalculatorView.Listener,
+					ValueFilter.Observer,
+					ChartSegmentSelection.Listener,
+					SettingListener,
+					EventListener,
+					EuclidianViewInterfaceCommon.DimensionListener {
+		protected final @NonNull T property;
+		private boolean previousAvailability;
+		private @Nullable List<GeoElement> dependentGeoElements;
+		private @Nullable List<ChartSegmentSelectionDependentProperty>
+				chartSelectionDependentProperties;
+
+		protected PropertyBackedView(@NonNull T property) {
+			this.property = property;
+			this.previousAvailability = property.isAvailable();
+			if (property instanceof SettingsDependentProperty settingsDependentProperty) {
+				settingsDependentProperty.getSettings().addListener(this);
+			}
+			if (property instanceof ProbabilityCalculatorViewDependentProperty dependentProperty) {
+				dependentProperty.getProbabilityCalculatorView().addListener(this);
+			}
+			if (property instanceof EuclidianView3DDependentProperty dependentProperty) {
+				dependentProperty.getEuclidianView3D().addListener(this);
+			}
+			if (property instanceof EuclidianViewDimensionDependentProperty dependentProperty) {
+				dependentProperty.getEuclidianView().addDimensionListener(this);
+			}
+			if (property instanceof AbstractPropertyListFacade<?> abstractPropertyListFacade) {
+				List<?> properties = abstractPropertyListFacade.getPropertyList();
+				chartSelectionDependentProperties = properties.stream()
+						.filter(p -> p instanceof ChartSegmentSelectionDependentProperty)
+						.map(p -> (ChartSegmentSelectionDependentProperty) p)
+						.collect(Collectors.toList());
+				chartSelectionDependentProperties.forEach(dependentProperty ->
+						dependentProperty.getChartSegmentSelection().registerListener(this));
+				dependentGeoElements = properties.stream()
+						.filter(p -> p instanceof GeoElementDependentProperty)
+						.map(p -> (GeoElementDependentProperty) p)
+						.map(GeoElementDependentProperty::getGeoElement)
+						.collect(Collectors.toList());
+				properties.stream()
+						.filter(p -> p instanceof GeoElementDependentProperty)
+						.map(p -> (GeoElementDependentProperty) p)
+						.forEach(p -> p.addRedefinitionObserver(this));
+				if (dependentGeoElements != null) {
+					dependentGeoElements.forEach(
+							element -> element.getApp().getEventDispatcher().addEventListener(this));
+				}
+			}
+			if (property instanceof ValuedProperty<?> valuedProperty) {
+				valuedProperty.addValueObserver(this);
+			}
+			if (property instanceof AbstractEnumeratedProperty<?> abstractEnumeratedProperty) {
+				abstractEnumeratedProperty.addValueFilterObserver(this);
+			}
+		}
+
+		protected void updatePropertyViewValues() {
+			// Do nothing by default
+		}
+
+		@Override
+		public void detach() {
+			super.detach();
+			if (property instanceof SettingsDependentProperty settingsDependentProperty) {
+				settingsDependentProperty.getSettings().removeListener(this);
+			}
+			if (property instanceof ProbabilityCalculatorViewDependentProperty dependentProperty) {
+				dependentProperty.getProbabilityCalculatorView().removeListener(this);
+			}
+			if (property instanceof EuclidianView3DDependentProperty dependentProperty) {
+				dependentProperty.getEuclidianView3D().removeListener(this);
+			}
+			if (property instanceof EuclidianViewDimensionDependentProperty dependentProperty) {
+				dependentProperty.getEuclidianView().removeDimensionListener(this);
+			}
+			if (chartSelectionDependentProperties != null) {
+				chartSelectionDependentProperties.forEach(dependentProperty ->
+						dependentProperty.getChartSegmentSelection().unregisterListener(this));
+			}
+			if (dependentGeoElements != null) {
+				dependentGeoElements.forEach(
+						element -> element.getApp().getEventDispatcher().removeEventListener(this));
+				dependentGeoElements = null;
+			}
+			if (property instanceof ValuedProperty<?> valuedProperty) {
+				valuedProperty.removeValueObserver(this);
+			}
+			if (property instanceof AbstractEnumeratedProperty<?> abstractEnumeratedProperty) {
+				abstractEnumeratedProperty.removeValueFilterObserver(this);
+			}
+		}
+
+		@Override
+		public void onGeoElementRedefined(
+				@NonNull GeoElement originalElement, @NonNull GeoElement newElement) {
+			if (dependentGeoElements == null) {
+				return;
+			}
+			dependentGeoElements.remove(originalElement);
+			dependentGeoElements.add(newElement);
+			notifyUpdateDelegates();
+		}
+
+		@Override
+		public void chartSegmentSelectionUpdated() {
+			notifyUpdateDelegates();
+		}
+
+		/**
+		 * @return the backing property's name (e.g., for diagnostics).
+		 */
+		public final String getPropertyName() {
+			return property.getName();
+		}
+
+		/**
+		 * Checks whether the view is enabled.
+		 * @return {@code true} if the view is enabled, {@code false} otherwise
+		 */
+		public final boolean isEnabled() {
+			return property.isEnabled() && !property.isFrozen();
+		}
+
+		@Override
+		public final boolean isVisible() {
+			return property.isAvailable() && !property.isFrozen();
+		}
+
+		@Override
+		public void settingsChanged(AbstractSettings settings) {
+			notifyUpdateDelegates();
+		}
+
+		@Override
+		public void probabilityCalculatorViewChanged() {
+			notifyUpdateDelegates();
+		}
+
+		@Override
+		public void arRatioVisibilityUpdated() {
+			notifyUpdateDelegates();
+		}
+
+		@Override
+		public void onDidSetValue(ValuedProperty<Object> property) {
+			notifyUpdateDelegates();
+		}
+
+		@Override
+		public void onValueFiltersChanged() {
+			notifyUpdateDelegates();
+		}
+
+		@Override
+		public void sendEvent(Event evt) {
+			if (dependentGeoElements != null && dependentGeoElements.contains(evt.target)) {
+				if (evt.type == EventType.UPDATE || evt.type == EventType.UPDATE_STYLE) {
+					updatePropertyViewValues();
+					notifyUpdateDelegates();
+				}
+			}
+		}
+
+		@Override
+		public void dimensionsUpdated() {
+			updatePropertyViewValues();
+			notifyUpdateDelegates();
+		}
+
+		@Override
+		public String toString() {
+			return property.getName() + " (" + getClass().getSimpleName() + ")";
+		}
+
+		private void notifyUpdateDelegates() {
+			boolean visibilityChanged = property.isAvailable() != previousAvailability;
+			previousAvailability = property.isAvailable();
+			if (visibilityUpdateDelegate != null && visibilityChanged) {
+				visibilityUpdateDelegate.visibilityUpdated();
+			}
+
+			if (configurationUpdateDelegate != null) {
+				configurationUpdateDelegate.configurationUpdated();
+			}
+		}
+	}
+
+	/**
+	 * Representation of a checkbox with an optional label.
+	 */
+	public static final class Checkbox extends PropertyBackedView<BooleanProperty> {
+		Checkbox(BooleanProperty booleanProperty) {
+			super(booleanProperty);
+		}
+
+		/**
+		 * @return the label for the checkbox
+		 */
+		public @NonNull String getLabel() {
+			return property.getName();
+		}
+
+		/**
+		 * @return {@code true} if the checkbox is selected, {@code false} otherwise.
+		 */
+		public boolean isSelected() {
+			return property.getValue();
+		}
+
+		/**
+		 * Sets whether the checkbox is selected or not.
+		 * @param selected {@code true} to select, {@code false} to deselect the checkbox
+		 */
+		public void setSelected(boolean selected) {
+			property.setValue(selected);
+		}
+	}
+
+	/**
+	 * Representation of a dropdown menu with a label and a list of possible items.
+	 */
+	public static final class Dropdown extends PropertyBackedView<NamedEnumeratedProperty<?>> {
+		private final Map<Integer, FontProperty.FontFamily> fontFamilies;
+
+		Dropdown(NamedEnumeratedProperty<?> namedEnumeratedProperty) {
+			super(namedEnumeratedProperty);
+			fontFamilies = Map.of();
+		}
+
+		Dropdown(
+				NamedEnumeratedProperty<?> namedEnumeratedProperty,
+				Map<Integer, FontProperty.FontFamily> fontFamilies) {
+			super(namedEnumeratedProperty);
+			this.fontFamilies = fontFamilies;
+		}
+
+		/**
+		 * @return the label of the dropdown
+		 */
+		public @NonNull String getLabel() {
+			return property.getName();
+		}
+
+		/**
+		 * @return the list of possible items
+		 */
+		public @NonNull List<String> getItems() {
+			return List.of(property.getValueNames());
+		}
+
+		public @NonNull Map<Integer, FontProperty.FontFamily> getFontFamilies() {
+			return fontFamilies;
+		}
+
+		/**
+		 * @return the index of the currently selected item, or {@code null} if none is selected
+		 */
+		public @Nullable Integer getSelectedItemIndex() {
+			int index = property.getIndex();
+			return index != -1 ? index : null;
+		}
+
+		/**
+		 * Sets the index of the selected item.
+		 * @param newIndex the new index of the selected item
+		 */
+		public void setSelectedItemIndex(int newIndex) {
+			property.setIndex(newIndex);
+		}
+
+		/**
+		 * @return an array of indices where a divider must be inserted
+		 * or {@code null} if no dividers should be inserted.
+		 */
+		public @Nullable int[] getGroupDividerIndices() {
+			return property.getGroupDividerIndices();
+		}
+	}
+
+	/**
+	 * Representation of a combo box with a label, a dropdown for suggestions, an input field for
+	 * custom values, displaying the current value and an optional error message.
+	 */
+	public static final class ComboBox
+			extends ValidatablePropertyBackedView<StringPropertyWithSuggestions> {
+		ComboBox(StringPropertyWithSuggestions stringPropertyWithSuggestions) {
+			super(stringPropertyWithSuggestions);
+		}
+
+		/**
+		 * @return the label
+		 */
+		public @NonNull String getLabel() {
+			return property.getName();
+		}
+
+		/**
+		 * @return the suggested items for the dropdown menu
+		 */
+		public @NonNull List<String> getItems() {
+			return property.getSuggestions();
+		}
+
+		/**
+		 * @return Whether invalid input should be replaced with the previous valid value
+		 */
+		public boolean restoresPreviousValueOnInvalidInput() {
+			return property.restoresPreviousValueOnInvalidInput();
+		}
+
+		/**
+		 * @return The format of the text
+		 */
+		public @NonNull TextFormat getFormat() {
+			return property.isDisplayedInMathFormat() ? TextFormat.MATH : TextFormat.PLAIN;
+		}
+	}
+
+	/**
+	 * Representation of a horizontal view with two inner views,
+	 * each occupying half the total width.
+	 * @implNote The class implements {@link VisibilityUpdateDelegate} because it manages the
+	 * visibility of its child views, ensuring that either this class and all of its children are
+	 * visible or none are. Therefore, setting the visibility update delegate with
+	 * {@link PropertyView#setVisibilityUpdateDelegate} on its children will have no effect.
+	 */
+	public static final class HorizontalSplitView extends PropertyView
+			implements VisibilityUpdateDelegate {
+		private final PropertyView leadingPropertyView;
+		private final PropertyView trailingPropertyView;
+
+		HorizontalSplitView(PropertyView leadingPropertyView, PropertyView trailingPropertyView) {
+			this.leadingPropertyView = leadingPropertyView;
+			this.trailingPropertyView = trailingPropertyView;
+
+			leadingPropertyView.setVisibilityUpdateDelegate(this);
+			trailingPropertyView.setVisibilityUpdateDelegate(this);
+			// Prevent overriding visibility delegates, as they depend solely on this view.
+			leadingPropertyView.disableVisibilityUpdateDelegateSetter = true;
+			trailingPropertyView.disableVisibilityUpdateDelegateSetter = true;
+		}
+
+		/**
+		 * @return the first property view
+		 */
+		public @NonNull PropertyView getLeadingPropertyView() {
+			return leadingPropertyView;
+		}
+
+		/**
+		 * @return the second property view
+		 */
+		public @NonNull PropertyView getTrailingPropertyView() {
+			return trailingPropertyView;
+		}
+
+		@Override
+		public boolean isVisible() {
+			return leadingPropertyView.isVisible() && trailingPropertyView.isVisible();
+		}
+
+		@Override
+		public void visibilityUpdated() {
+			if (visibilityUpdateDelegate != null) {
+				visibilityUpdateDelegate.visibilityUpdated();
+			}
+		}
+
+		@Override
+		public void detach() {
+			super.detach();
+			leadingPropertyView.detach();
+			trailingPropertyView.detach();
+		}
+	}
+
+	/**
+	 * {@code PropertyView} responsible for setting, retrieving, and validating the value of a
+	 * {@link StringProperty} depending on whether the user is currently editing.
+	 */
+	public abstract static sealed class ValidatablePropertyBackedView<T extends StringProperty>
+			extends PropertyBackedView<T> {
+		private String value;
+		private String errorMessage;
+		private boolean isEditing;
+
+		protected ValidatablePropertyBackedView(@NonNull T stringProperty) {
+			super(stringProperty);
+			value = stringProperty.getValue() != null ? stringProperty.getValue() : "";
+			errorMessage = null;
+			isEditing = false;
+		}
+
+		@Override
+		protected void updatePropertyViewValues() {
+			refreshCachedValue();
+		}
+
+		@Override
+		public void probabilityCalculatorViewChanged() {
+			updatePropertyViewValues();
+			super.probabilityCalculatorViewChanged();
+		}
+
+		private void refreshCachedValue() {
+			value = property.getValue() != null ? property.getValue() : "";
+			errorMessage = null;
+		}
+
+		/**
+		 * @return the current value
+		 */
+		public @NonNull String getValue() {
+			return value;
+		}
+
+		/**
+		 * Sets the value.
+		 * @param newValue the new value
+		 */
+		public void setValue(@NonNull String newValue) {
+			boolean valueShouldUpdate = !Objects.equals(value, newValue);
+			boolean errorMessageShouldUpdate =
+					!Objects.equals(errorMessage, property.validateValue(newValue));
+			if (!valueShouldUpdate && !errorMessageShouldUpdate) {
+				return;
+			}
+
+			value = newValue;
+			errorMessage = property.validateValue(newValue);
+
+			if (isEditing || errorMessage != null) {
+				if (configurationUpdateDelegate != null) {
+					configurationUpdateDelegate.configurationUpdated();
+				}
+			} else {
+				commitValue();
+			}
+		}
+
+		/**
+		 * @return the error message for invalid inputs or {@code null} if there is no error
+		 */
+		public @Nullable String getErrorMessage() {
+			return errorMessage;
+		}
+
+		/**
+		 * Marks the beginning of an editing session.
+		 */
+		public void startEditing() {
+			isEditing = true;
+		}
+
+		/**
+		 * Marks the end of an editing session.
+		 */
+		public void stopEditing() {
+			isEditing = false;
+			commitValue();
+		}
+
+		private void commitValue() {
+			String propertyValue = property.getValue() != null ? property.getValue() : "";
+			if (errorMessage == null && !Objects.equals(propertyValue, value)) {
+				property.setValue(value);
+			}
+		}
+	}
+
+	/**
+	 * Representation of an input text field with a label, an optional error message, and a
+	 * formatted input displayed in {@link org.geogebra.editor.share.editor.MathField}.
+	 */
+	public static final class TextField extends ValidatablePropertyBackedView<StringProperty> {
+		TextField(StringProperty stringProperty) {
+			super(stringProperty);
+		}
+
+		/**
+		 * @return the label
+		 */
+		public @NonNull String getLabel() {
+			return property.getName();
+		}
+
+		/**
+		 * @return the format of the text
+		 */
+		public @NonNull TextFormat getFormat() {
+			return property.isDisplayedInMathFormat() ? TextFormat.MATH : TextFormat.PLAIN;
+		}
+	}
+
+	/**
+	 * Representation of a text area with a resizable input, a label, and text displayed in
+	 * raw string format.
+	 * @implNote It supports error handling, but the current single use case (scripting)
+	 * will never produce an error message.
+	 */
+	public static final class TextArea extends ValidatablePropertyBackedView<StringProperty> {
+		TextArea(StringProperty property) {
+			super(property);
+		}
+
+		/**
+		 * @return the label above the text area
+		 */
+		public @NonNull String getLabel() {
+			return property.getName();
+		}
+	}
+
+	/**
+	 * Representation of a row of icons to select from, with one selected icon and a label above.
+	 */
+	public static final class SingleSelectionIconRow
+			extends PropertyBackedView<IconsEnumeratedProperty<?>> {
+		public SingleSelectionIconRow(IconsEnumeratedProperty<?> iconsEnumeratedProperty) {
+			super(iconsEnumeratedProperty);
+		}
+
+		/**
+		 * @return the label above the icons or {@code null} when there is no label
+		 */
+		public @Nullable String getLabel() {
+			String name = property.getName();
+			return name.isEmpty() ? null : name;
+		}
+
+		/**
+		 * @return the list of icons to select from
+		 */
+		public @NonNull List<PropertyResource> getIcons() {
+			return List.of(property.getValueIcons());
+		}
+
+		/**
+		 * @return the labels of buttons, which is used as tooltip or/and aria-label
+		 */
+		public @Nullable String[] getToolTipLabels() {
+			return property.getToolTipLabels();
+		}
+
+		/**
+		 * @return the index of the currently selected icon, or {@code null} if none is selected
+		 */
+		public @Nullable Integer getSelectedIconIndex() {
+			int index = property.getIndex();
+			return index != -1 ? index : null;
+		}
+
+		/**
+		 * Sets the index of the selected icon.
+		 * @param newIndex the new index
+		 */
+		public void setSelectedIconIndex(int newIndex) {
+			property.setIndex(newIndex);
+		}
+	}
+
+	/**
+	 * Representation of a row of colors to select from,
+	 * with zero or one selected color and a label above.
+	 */
+	public static final class ColorSelectorRow extends PropertyBackedView<ColorProperty> {
+		ColorSelectorRow(ColorProperty colorProperty) {
+			super(colorProperty);
+		}
+
+		/**
+		 * @return the label above the colors
+		 */
+		public @NonNull String getLabel() {
+			return property.getName();
+		}
+
+		/**
+		 * @return the list of colors available for selection
+		 */
+		public @NonNull List<GColor> getColors() {
+			return property.getValues();
+		}
+
+		/**
+		 * @return an extended list of custom colors to show in a color picker.
+		 */
+		public @NonNull List<GColor> getCustomColors() {
+			return ElementColorProperty.createColorValues();
+		}
+
+		/**
+		 * Sets a custom color resulting from custom color chooser.
+		 * @param color the new custom color
+		 */
+		public void setCustomColor(@NonNull GColor color) {
+			property.setValue(color);
+		}
+
+		/**
+		 * @return the index of the currently selected color, or {@code null} if none is selected
+		 */
+		public @Nullable Integer getSelectedColorIndex() {
+			int index = property.getIndex();
+			return index != -1 ? index : null;
+		}
+
+		/**
+		 * Sets the index of the newly selected color.
+		 * @param newSelectedColorIndex the new index of the selected color
+		 */
+		public void setSelectedColorIndex(int newSelectedColorIndex) {
+			property.setIndex(newSelectedColorIndex);
+		}
+	}
+
+	/**
+	 * Representation of a slider with a label and it's value.
+	 */
+	public static final class Slider extends PropertyBackedView<RangeProperty<Integer>> {
+		Slider(RangeProperty<Integer> rangeProperty) {
+			super(rangeProperty);
+		}
+
+		/**
+		 * @return the label
+		 */
+		public @NonNull String getLabel() {
+			return property.getName();
+		}
+
+		/**
+		 * @return the value that can be displayed
+		 */
+		public @NonNull String getDisplayValue() {
+			String value = String.valueOf(getValue());
+			if (property.isValueDisplayedAsPercentage()) {
+				return value + "%";
+			}
+			return value;
+		}
+
+		/**
+		 * @return the value of the slider
+		 */
+		public int getValue() {
+			Integer value = property.getValue();
+			return value != null ? value : 0;
+		}
+
+		/**
+		 * Sets the value of the slider.
+		 * @param newValue the new value of the slider
+		 */
+		public void setValue(int newValue) {
+			property.setValue(newValue);
+		}
+
+		/**
+		 * Signals the start of a slider drag interaction.
+		 * Subsequent {@link #setValue(int)} calls are treated as part of one
+		 * continuous update sequence until {@link #onDragStopped()} is called.
+		 */
+		public void onDragStarted() {
+			property.beginSetValue();
+		}
+
+		/**
+		 * Signals the end of a slider drag interaction.
+		 * Completes the update sequence started by {@link #onDragStarted()}.
+		 */
+		public void onDragStopped() {
+			property.endSetValue();
+		}
+
+		/**
+		 * @return the minimum value
+		 */
+		public int getMin() {
+			Integer min = property.getMin();
+			return min != null ? min : 0;
+		}
+
+		/**
+		 * @return the maximum value
+		 */
+		public int getMax() {
+			Integer max = property.getMax();
+			return max != null ? max : 100;
+		}
+
+		/**
+		 * @return the step or increment between values
+		 */
+		public int getStep() {
+			Integer step = property.getStep();
+			return step != null ? step : 1;
+		}
+	}
+
+	/**
+	 * Representation of an expandable list with a title, an optional checkbox,
+	 * and a dropdown button that expands the item to show other {@code PropertyView}s.
+	 */
+	public static final class ExpandableList extends PropertyView {
+		private final PropertyCollection<?> propertyCollection;
+		private final List<PropertyView> propertyViews;
+		private final @Nullable Checkbox checkbox;
+		OrdinalPosition ordinalPosition = OrdinalPosition.Alone;
+
+		/**
+		 * Positional value used to determine the relative position of {@code ExpandableList}s
+		 * in a sequence.
+		 */
+		public enum OrdinalPosition {
+			First,
+			InBetween,
+			Last,
+			Alone,
+		}
+
+		ExpandableList(PropertyCollection<?> propertyCollection, List<PropertyView> propertyViews) {
+			this.propertyCollection = propertyCollection;
+			this.propertyViews = propertyViews;
+			this.checkbox = propertyCollection instanceof PropertyCollectionWithLead
+					? new Checkbox(((PropertyCollectionWithLead) propertyCollection).leadProperty)
+					: null;
+		}
+
+		/**
+		 * @return the representation of the checkbox if it should be shown, {@code null} otherwise
+		 */
+		public @Nullable Checkbox getCheckbox() {
+			return checkbox;
+		}
+
+		/**
+		 * @return the title of the expandable list
+		 */
+		public @NonNull String getTitle() {
+			return propertyCollection.getName();
+		}
+
+		/**
+		 * @return the relative position compared to other expandable lists in the same sequence
+		 */
+		public @NonNull OrdinalPosition getOrdinalPosition() {
+			return ordinalPosition;
+		}
+
+		/**
+		 * @return the list of {@code PropertyView}s displayed when the expandable list is open
+		 */
+		public @NonNull List<PropertyView> getItems() {
+			return propertyViews;
+		}
+
+		@Override
+		public boolean isVisible() {
+			return propertyViews.stream().anyMatch(PropertyView::isVisible);
+		}
+
+		@Override
+		public void detach() {
+			super.detach();
+			propertyViews.forEach(PropertyView::detach);
+			if (checkbox != null) {
+				checkbox.detach();
+			}
+		}
+	}
+
+	/**
+	 * Representation of a list of {@code PropertyView}s that are related to each other,
+	 * displayed closer together with smaller spacing with an optional title.
+	 */
+	public static final class RelatedPropertyViewCollection extends PropertyView {
+		private final @Nullable String title;
+		private final List<PropertyView> propertyViews;
+		private final int contentSpacing;
+
+		RelatedPropertyViewCollection(
+				@Nullable String title, @NonNull List<PropertyView> propertyViews, int contentSpacing) {
+			this.title = title;
+			this.propertyViews = propertyViews;
+			this.contentSpacing = contentSpacing;
+		}
+
+		/**
+		 * @return the title before the list of {@code PropertyView}s
+		 * or {@code null} if there is no title
+		 */
+		public @Nullable String getTitle() {
+			return title;
+		}
+
+		/**
+		 * @return the necessary spacing between the {@code PropertyView}s
+		 */
+		public int getContentSpacing() {
+			return contentSpacing;
+		}
+
+		/**
+		 * @return the list of related {@code PropertyView}s
+		 */
+		public @NonNull List<PropertyView> getPropertyViews() {
+			return propertyViews;
+		}
+
+		@Override
+		public boolean isVisible() {
+			return propertyViews.stream().anyMatch(PropertyView::isVisible);
+		}
+
+		@Override
+		public void detach() {
+			super.detach();
+			propertyViews.forEach(PropertyView::detach);
+		}
+	}
+
+	/**
+	 * Representation of a row of icons that can be toggled independently, with a label above them.
+	 */
+	public static final class MultiSelectionIconRow extends PropertyView {
+		private final PropertyCollection<ToggleableIconProperty> toggleableIconPropertyCollection;
+		private final List<ToggleableIcon> toggleableIcons;
+
+		/**
+		 * Representation of a single toggleable icon used in {@code MultiSelectionIconRow}.
+		 */
+		public static final class ToggleableIcon extends PropertyBackedView<ToggleableIconProperty> {
+			ToggleableIcon(@NonNull ToggleableIconProperty property) {
+				super(property);
+			}
+
+			/**
+			 * @return the icon to display
+			 */
+			public @NonNull PropertyResource getIcon() {
+				return property.getIcon();
+			}
+
+			/**
+			 * @return the tooltip label of the icon
+			 */
+			public @NonNull String getTooltipLabel() {
+				return property.getName();
+			}
+
+			/**
+			 * @return {@code true} if the icon is selected and {@code false} otherwise
+			 */
+			public boolean isSelected() {
+				return property.getValue();
+			}
+
+			/**
+			 * Sets whether the icon is selected
+			 * @param selected {@code true} to select the icon, {@code false} to deselect
+			 */
+			public void setSelected(boolean selected) {
+				property.setValue(selected);
+			}
+		}
+
+		MultiSelectionIconRow(
+				PropertyCollection<ToggleableIconProperty> toggleableIconPropertyCollection) {
+			this.toggleableIconPropertyCollection = toggleableIconPropertyCollection;
+			this.toggleableIcons = Arrays.stream(toggleableIconPropertyCollection.getProperties())
+					.map(ToggleableIcon::new)
+					.collect(Collectors.toList());
+		}
+
+		/**
+		 * @return the label above the icons
+		 */
+		public @NonNull String getLabel() {
+			return toggleableIconPropertyCollection.getName();
+		}
+
+		/**
+		 * @return the toggleable icons to display
+		 */
+		public @NonNull List<ToggleableIcon> getToggleableIcons() {
+			return toggleableIcons;
+		}
+	}
+
+	/**
+	 * A row of icon buttons, each with an icon, a title, and an action triggered when tapped.
+	 */
+	public static final class IconButtonRow
+			extends PropertyBackedView<ActionableIconPropertyCollection> {
+		IconButtonRow(ActionableIconPropertyCollection actionableIconPropertyCollection) {
+			super(actionableIconPropertyCollection);
+		}
+
+		/**
+		 * @return the number of icon buttons
+		 */
+		public int count() {
+			return property.getProperties().length;
+		}
+
+		/**
+		 * @param index the index of the button to query
+		 * @return the icon resource for the given index
+		 */
+		public @NonNull PropertyResource getIcon(int index) {
+			return property.getProperties()[index].getIcon();
+		}
+
+		/**
+		 * @param index the index of the button to query
+		 * @return the title of the button for the given index
+		 */
+		public @NonNull String getTitle(int index) {
+			return property.getProperties()[index].getName();
+		}
+
+		/**
+		 * Triggers the action associated with the button at the given index.
+		 * @param index the index of the button to trigger
+		 */
+		public void selectButton(int index) {
+			property.getProperties()[index].performAction();
+		}
+	}
+
+	/**
+	 * Representation of a list of tabs with names in a horizontal scroll view with a selection
+	 * and per-tab content.
+	 */
+	public static final class TabList extends PropertyBackedView<NamedEnumeratedProperty<?>> {
+		private final List<String> tabTitles;
+		private final List<List<PropertyView>> tabContents;
+
+		TabList(
+				NamedEnumeratedProperty<?> namedEnumeratedProperty,
+				List<? extends PropertyCollection<?>> propertyCollections) {
+			super(namedEnumeratedProperty);
+			this.tabTitles = List.of(namedEnumeratedProperty.getValueNames());
+			this.tabContents =
+					propertyCollections.stream().map(PropertyView::propertyViewListOf).toList();
+		}
+
+		/**
+		 * @return the list of tab titles
+		 */
+		public @NonNull List<String> getTabTitles() {
+			return tabTitles;
+		}
+
+		/**
+		 * @return the per-tab content views
+		 */
+		public @NonNull List<List<PropertyView>> getTabContents() {
+			return tabContents;
+		}
+
+		/**
+		 * @return the index of the currently selected tab
+		 */
+		public int getSelectedTabIndex() {
+			return property.getIndex();
+		}
+
+		/**
+		 * Sets the index of the selected tab.
+		 * @param newIndex the new index of the selected tab
+		 */
+		public void setSelectedTabIndex(int newIndex) {
+			property.setIndex(newIndex);
+		}
+
+		@Override
+		public void detach() {
+			super.detach();
+			tabContents.forEach(views -> views.forEach(PropertyView::detach));
+		}
+	}
+
+	/**
+	 * Representation of a property-specific view, displaying two text fields separated by a colon
+	 * in a row with a trailing lock icon that can be either open or closed, and a label above.
+	 */
+	public static final class DimensionRatioEditor extends PropertyBackedView<BooleanProperty> {
+		private final TextField leadingTextField;
+		private final TextField trailingTextField;
+		private final DimensionRatioProperty dimensionRatioProperty;
+
+		DimensionRatioEditor(DimensionRatioProperty dimensionRatioProperty) {
+			super((BooleanProperty) dimensionRatioProperty.getProperties()[2]);
+			this.dimensionRatioProperty = dimensionRatioProperty;
+			this.leadingTextField =
+					new PropertyView.TextField((StringProperty) dimensionRatioProperty.getProperties()[0]);
+			this.trailingTextField =
+					new PropertyView.TextField((StringProperty) dimensionRatioProperty.getProperties()[1]);
+		}
+
+		/**
+		 * @return {@code true} if the lock icon is closed, {@code false} otherwise
+		 */
+		public boolean isLocked() {
+			return property.getValue();
+		}
+
+		/**
+		 * Set the lock to either closed or open.
+		 * @param locked {@code true} to set the lock's state to closed, {@code false} to open
+		 */
+		public void setLocked(boolean locked) {
+			property.setValue(locked);
+		}
+
+		/**
+		 * @return the first text field
+		 */
+		public TextField getLeadingTextField() {
+			return leadingTextField;
+		}
+
+		/**
+		 * @return the second text field
+		 */
+		public TextField getTrailingTextField() {
+			return trailingTextField;
+		}
+
+		/**
+		 * @return the label above the text fields and the icon
+		 */
+		public @NonNull String getLabel() {
+			return dimensionRatioProperty.getName();
+		}
+
+		@Override
+		public void detach() {
+			super.detach();
+			leadingTextField.detach();
+			trailingTextField.detach();
+		}
+	}
+
+	/**
+	 * Representation of a page selector with a title, a list of tabs,
+	 * and a list of {@code PropertyView} groups corresponding to each tab.
+	 * Each tab displays its own collection of {@code PropertyView}s.
+	 */
+	public static final class TabbedPageSelector extends PropertyView {
+		private final String title;
+		private final List<String> tabTitles;
+		private final List<List<PropertyView>> pageContents;
+		private int selectedTabIndex;
+
+		TabbedPageSelector(
+				@NonNull String title,
+				@NonNull List<PropertiesArray> pagePropertyArrays,
+				int initialSelectedTabIndex) {
+			this.title = title;
+			this.tabTitles =
+					pagePropertyArrays.stream().map(PropertiesArray::getName).collect(Collectors.toList());
+			this.pageContents = pagePropertyArrays.stream()
+					.map(PropertyViewFactory::propertyViewListOf)
+					.collect(Collectors.toList());
+			this.selectedTabIndex = initialSelectedTabIndex;
+		}
+
+		/**
+		 * @return the view's title
+		 */
+		public @NonNull String getTitle() {
+			return title;
+		}
+
+		/**
+		 * @return the tab titles
+		 */
+		public @NonNull List<String> getTabTitles() {
+			return tabTitles;
+		}
+
+		/**
+		 * @param pageIndex the index of the tab for which to retrieve the page contents
+		 * @return list of {@code PropertyView}s for the specified tab
+		 */
+		public @NonNull List<PropertyView> getPageContents(int pageIndex) {
+			return pageContents.get(pageIndex);
+		}
+
+		/**
+		 * @return the index of the currently selected tab
+		 */
+		public int getSelectedTabIndex() {
+			return selectedTabIndex;
+		}
+
+		/**
+		 * Sets the index of the newly selected tab.
+		 * @param newSelectedTabIndex the new index of the selected tab
+		 */
+		public void setSelectedTabIndex(int newSelectedTabIndex) {
+			selectedTabIndex = newSelectedTabIndex;
+			if (configurationUpdateDelegate != null) {
+				configurationUpdateDelegate.configurationUpdated();
+			}
+		}
+
+		@Override
+		public void detach() {
+			super.detach();
+			pageContents.forEach(propertyViews -> propertyViews.forEach(PropertyView::detach));
+		}
+	}
+
+	/** Representation of a button with an icon, a label, and an action triggered when tapped. */
+	public static final class ButtonWithIcon extends PropertyBackedView<ActionableIconProperty> {
+		/** The possible style options to display the button with. */
+		public enum Style {
+			BORDERLESS,
+			OUTLINED,
+		}
+
+		ButtonWithIcon(ActionableIconProperty property) {
+			super(property);
+		}
+
+		/**
+		 * Triggers the action associated with this button.
+		 */
+		public void performAction() {
+			property.performAction();
+		}
+
+		/**
+		 * @return the label of the button
+		 */
+		public @NonNull String getLabel() {
+			return property.getName();
+		}
+
+		/**
+		 * @return the icon of the button
+		 */
+		public @NonNull PropertyResource getIcon() {
+			return property.getIcon();
+		}
+
+		/**
+		 * @return the style of the button
+		 */
+		public @NonNull Style getStyle() {
+			return property.isDisplayedAsOutlinedButton() ? Style.OUTLINED : Style.BORDERLESS;
+		}
+	}
+
+	/**
+	 * Representation of a row of buttons, each with a label, one of which can be selected.
+	 */
+	public static final class ConnectedButtonGroup
+			extends PropertyBackedView<NamedEnumeratedProperty<?>> {
+		ConnectedButtonGroup(@NonNull NamedEnumeratedProperty<?> property) {
+			super(property);
+		}
+
+		/**
+		 * @return the number of buttons
+		 */
+		public int count() {
+			return getButtonLabels().size();
+		}
+
+		/**
+		 * @return the label of each button
+		 */
+		public List<String> getButtonLabels() {
+			return List.of(property.getValueNames());
+		}
+
+		/**
+		 * @return the index of the currently selected button, or {@code null} if none is selected
+		 */
+		public @Nullable Integer getSelectedButtonIndex() {
+			int index = property.getIndex();
+			return index != -1 ? index : null;
+		}
+
+		/**
+		 * Sets the index of the newly selected button
+		 * @param newSelectedButtonIndex the new index of the selected button
+		 */
+		public void setSelectedButtonIndex(int newSelectedButtonIndex) {
+			property.setIndex(newSelectedButtonIndex);
+		}
+	}
+
+	/**
+	 * A row of action buttons, each with a text and an action triggered when tapped.
+	 */
+	public static final class ActionableButtonRow
+			extends PropertyBackedView<ActionablePropertyCollection<?>> {
+		private final ActionablePropertyCollection<?> actionablePropertyCollection;
+
+		ActionableButtonRow(ActionablePropertyCollection<?> actionablePropertyCollection) {
+			super(actionablePropertyCollection);
+			this.actionablePropertyCollection = actionablePropertyCollection;
+		}
+
+		/**
+		 * @return the number of actionable buttons
+		 */
+		public int count() {
+			return property.getProperties().length;
+		}
+
+		/**
+		 * Perform action of button with given index.
+		 * @param index the index of the button to query
+		 */
+		public void performAction(int index) {
+			actionablePropertyCollection.getProperties()[index].performAction();
+		}
+
+		/**
+		 * @param index the index of the button to query
+		 * @return the label for the given index
+		 */
+		public @NonNull String getLabel(int index) {
+			return actionablePropertyCollection.getProperties()[index].getName();
+		}
+
+		/**
+		 * @param index the index of the button to query
+		 * @return the style name for the given index
+		 */
+		public @NonNull String getStyleName(int index) {
+			ActionableProperty actionableProperty = actionablePropertyCollection.getProperties()[index];
+			if (actionableProperty instanceof SaveSettingsAction) {
+				return "materialFilledButton";
+			} else if (actionableProperty instanceof RestoreSettingsAction) {
+				return "materialOutlinedButton";
+			}
+			return "";
+		}
+	}
+
+	/** Representation of multiple single-selection icon rows displayed as one group. */
+	public static final class GroupedIconButtonRow extends PropertyView {
+		private final AbstractPropertyCollection<?> propertyCollection;
+		private final List<SingleSelectionIconRow> iconRowList = new ArrayList<>();
+
+		GroupedIconButtonRow(AbstractPropertyCollection<?> propertyCollection) {
+			this.propertyCollection = propertyCollection;
+			for (Property property : propertyCollection.getProperties()) {
+				if (property instanceof IconsEnumeratedProperty<?> iconsEnumeratedProperty) {
+					iconRowList.add((SingleSelectionIconRow) of(iconsEnumeratedProperty));
+				}
+			}
+		}
+
+		/**
+		 * @return the label above the grouped icon rows
+		 */
+		public String getLabel() {
+			return propertyCollection.getName();
+		}
+
+		/**
+		 * @return the grouped icon-selection rows
+		 */
+		public List<SingleSelectionIconRow> getIconRowList() {
+			return iconRowList;
+		}
+	}
+
+	/**
+	 * Representation of an image picker that displays either a "choose from file" button
+	 * or a preview of the selected image with its name and actions to change or remove it.
+	 */
+	public static final class ImagePicker extends PropertyBackedView<ImageProperty> {
+		/** Horizontal alignment for the image picker button. */
+		public enum ButtonAlignment {
+			CENTER,
+			START
+		}
+
+		ImagePicker(@NonNull ImageProperty property) {
+			super(property);
+		}
+
+		/**
+		 * @return horizontal alignment for the image picker button
+		 */
+		public @NonNull ButtonAlignment getButtonAlignment() {
+			if (property instanceof AbstractPropertyListFacade<?> facade
+					&& facade.getFirstProperty() instanceof CustomButtonImageProperty) {
+				return ButtonAlignment.START;
+			}
+			return ButtonAlignment.CENTER;
+		}
+
+		/**
+		 * @return the label for the file chooser button.
+		 */
+		public @NonNull String getChooseFromFileLabel() {
+			return property.getChooseFromFileLabel();
+		}
+
+		/**
+		 * Sets the file path of the selected image.
+		 * @param filePath the path of the selected file
+		 */
+		public void setImage(@NonNull MyImage image, @NonNull String filePath) {
+			property.setValue(new ImageProperty.Value(image, filePath));
+		}
+
+		/**
+		 * Gets the selected image.
+		 * @return image or {@code null}
+		 */
+		public @Nullable MyImage getImage() {
+			ImageProperty.Value value = property.getValue();
+			if (value == null) {
+				return null;
+			}
+			return value.image();
+		}
+
+		/** Clears the currently selected image. */
+		public void clearImage() {
+			property.setValue(null);
+		}
+
+		/**
+		 * @return the file name extracted from the path, or {@code null} if no image is set
+		 */
+		public @Nullable String getFileName() {
+			ImageProperty.Value value = property.getValue();
+			if (value == null || value.path().isEmpty()) {
+				return null;
+			}
+			String filePath = value.path();
+			int index = value.path().lastIndexOf('/');
+			if (index == -1) {
+				return filePath;
+			}
+			return filePath.substring(index + 1);
+		}
+	}
+
+	/**
+	 * Representation of a probability result row, containing a sequence of {@link Item.Text} and
+	 * {@link Item.InputField} items to be displayed in a flow row.
+	 */
+	public static final class ProbabilityResultRow
+			extends PropertyBackedView<ProbabilityResultValuesProperty> {
+		private final Item.InputField lowerBoundInputField;
+		private final Item.InputField upperBoundInputField;
+		private final Item.InputField probabilityResultInputField;
+
+		/** Item to be displayed in sequence in the row. */
+		public sealed interface Item permits Item.Text, Item.InputField {
+			/** Editable text input item. */
+			final class InputField extends ValidatablePropertyBackedView<StringProperty> implements Item {
+				private final StringProperty stringProperty;
+
+				InputField(StringProperty stringProperty) {
+					super(stringProperty);
+					this.stringProperty = stringProperty;
+				}
+
+				/**
+				 * @return the accessible (aria) label for this input field
+				 */
+				public String getAriaLabel() {
+					return stringProperty.getAriaLabel();
+				}
+			}
+
+			record Text(String text, String ariaLabel) implements Item {
+				Text(String text) {
+					this(text, null);
+				}
+			}
+		}
+
+		ProbabilityResultRow(ProbabilityResultValuesProperty property) {
+			super(property);
+			lowerBoundInputField = new Item.InputField(property.getLowerBoundProperty());
+			upperBoundInputField = new Item.InputField(property.getUpperBoundProperty());
+			probabilityResultInputField = new Item.InputField(property.getProbabilityResultProperty());
+		}
+
+		@Override
+		public void detach() {
+			super.detach();
+			lowerBoundInputField.detach();
+			upperBoundInputField.detach();
+			probabilityResultInputField.detach();
+		}
+
+		/**
+		 * @return the probability calculator view this property depends on
+		 */
+		public ProbabilityCalculatorView getView() {
+			return property.getProbabilityCalculatorView();
+		}
+
+		/**
+		 * @return the sequence of items to be displayed in the probability result row
+		 */
+		public @NonNull List<Item> getItems() {
+			return switch (property.getMode()) {
+				case ProbabilityCalculatorView.PROB_LEFT ->
+					List.of(
+							new Item.Text(property.getProbabilityExpressionPrefix() + "X " + LEQ + " "),
+							upperBoundInputField,
+							new Item.Text(property.getProbabilityExpressionSuffix() + " = "),
+							probabilityResultInputField);
+				case ProbabilityCalculatorView.PROB_RIGHT ->
+					List.of(
+							new Item.Text(property.getProbabilityExpressionPrefix()),
+							lowerBoundInputField,
+							new Item.Text(" " + LEQ + " X" + property.getProbabilityExpressionSuffix() + " = "),
+							probabilityResultInputField);
+				case ProbabilityCalculatorView.PROB_TWO_TAILED ->
+					List.of(
+							new Item.Text(property.getProbabilityExpressionPrefix() + "X " + LEQ + " "),
+							lowerBoundInputField,
+							new Item.Text(property.getProbabilityExpressionSuffix() + " + "
+									+ property.getProbabilityExpressionPrefix() + "X " + GEQ + " "),
+							upperBoundInputField,
+							new Item.Text(property.getProbabilityExpressionSuffix() + " = "),
+							new Item.Text(property.getLeftProbability()),
+							new Item.Text("+"),
+							new Item.Text(property.getRightProbability()),
+							new Item.Text("="),
+							new Item.Text(property.getTotalProbability(), "Probability"));
+				default ->
+					List.of(
+							new Item.Text(property.getProbabilityExpressionPrefix()),
+							lowerBoundInputField,
+							new Item.Text(" " + LEQ + " X " + LEQ + " "),
+							upperBoundInputField,
+							new Item.Text(property.getProbabilityExpressionSuffix() + " = "),
+							new Item.Text(property.getProbabilityResultProperty().getValue(), "Probability"));
+			};
+		}
+	}
+
+	/**
+	 * Factory method that returns the appropriate {@code PropertyView}
+	 * for the given {@link Property}.
+	 * @param property the property for which to create the view
+	 * @return the {@code PropertyView} matching the given {@code Property},
+	 * or {@code null} if the given {@code Property} is not supported
+	 */
+	public static @Nullable PropertyView of(Property property) {
+		if (property instanceof BooleanProperty booleanProperty) {
+			return new Checkbox(booleanProperty);
+		} else if (property instanceof AlignmentPropertyCollection
+				|| property instanceof LayoutPropertyCollection
+				|| property instanceof BorderStylePropertyCollection) {
+			return new GroupedIconButtonRow((AbstractPropertyCollection<?>) property);
+		} else if (property instanceof DynamicColorSpaceProperty
+				|| (property instanceof NamedEnumeratedPropertyListFacade<?, ?> facade
+						&& (facade.getFirstProperty() instanceof DynamicColorSpaceProperty
+								|| facade.getFirstProperty() instanceof FillCategoryProperty
+								|| facade.getFirstProperty() instanceof ChartSegmentFillCategoryProperty))) {
+			return new ConnectedButtonGroup((NamedEnumeratedProperty<?>) property);
+		} else if (property instanceof ScriptPropertyCollection scriptPropertyCollection) {
+			return new TabList(
+					scriptPropertyCollection.getScriptEventSelectionProperty(),
+					scriptPropertyCollection.getScriptEventPropertyCollections());
+		} else if (property instanceof NamedEnumeratedProperty<?> namedEnumeratedProperty) {
+			return createDropdown(namedEnumeratedProperty);
+		} else if (property instanceof StringPropertyWithSuggestions stringProperty) {
+			return new ComboBox(stringProperty);
+		} else if (property instanceof ImagePropertyListFacade imagePropertyListFacade) {
+			return new ImagePicker(imagePropertyListFacade);
+		} else if (property instanceof StringProperty stringProperty) {
+			return stringProperty.isDisplayedAsTextArea()
+					? new TextArea(stringProperty)
+					: new TextField(stringProperty);
+		} else if (property instanceof IconsEnumeratedProperty<?> iconsEnumeratedProperty) {
+			return new SingleSelectionIconRow(iconsEnumeratedProperty);
+		} else if (property instanceof RangeProperty<?>) {
+			return new Slider((RangeProperty<Integer>) property);
+		} else if (property instanceof AxisDistancePropertyCollection
+				|| property instanceof AxisCrossPropertyCollection
+				|| property instanceof AxisUnitPropertyCollection
+				|| property instanceof SliderTrackColorPropertyCollection) {
+			return new RelatedPropertyViewCollection(
+					null, propertyViewListOf((PropertyCollection<?>) property), 0);
+		} else if (property instanceof NavigationBarPropertiesCollection collection) {
+			return new RelatedPropertyViewCollection(null, propertyViewListOf(collection), 16);
+		} else if (property instanceof ChartDataPropertyCollection collection) {
+			return new RelatedPropertyViewCollection(null, propertyViewListOf(collection), 16);
+		} else if (property instanceof ClippingPropertyCollection
+				|| property instanceof LocationPropertyCollection
+				|| property instanceof AlgebraViewVisibilityPropertyCollection) {
+			return new RelatedPropertyViewCollection(
+					property.getName(), propertyViewListOf((PropertyCollection<?>) property), 4);
+		} else if (property instanceof PropertyCollection<?> propertyCollection
+				&& propertyCollection.getProperties()[0] instanceof ToggleableIconProperty) {
+			return new MultiSelectionIconRow((PropertyCollection<ToggleableIconProperty>) property);
+		} else if (property instanceof BackgroundColorPropertyCollection
+				|| property instanceof ARRatioPropertyCollection) {
+			return new RelatedPropertyViewCollection(
+					null, propertyViewListOf((PropertyCollection<?>) property), 8);
+		} else if (property instanceof ActionableIconPropertyCollection actionableIconProperty) {
+			return new IconButtonRow(actionableIconProperty);
+		} else if (property instanceof ColorProperty colorProperty) {
+			return new ColorSelectorRow(colorProperty);
+		} else if (property instanceof GridDistancePropertyCollection propertyCollection) {
+			GridFixedDistanceProperty gridFixedDistanceProperty =
+					(GridFixedDistanceProperty) propertyCollection.getProperties()[0];
+			GridDistanceProperty gridDistancePropertyX =
+					(GridDistanceProperty) propertyCollection.getProperties()[1];
+			GridDistanceProperty gridDistancePropertyY =
+					(GridDistanceProperty) propertyCollection.getProperties()[2];
+			GridDistanceProperty gridDistancePropertyR =
+					(GridDistanceProperty) propertyCollection.getProperties()[3];
+			GridAngleProperty gridAngleProperty =
+					(GridAngleProperty) propertyCollection.getProperties()[4];
+			return new RelatedPropertyViewCollection(
+					null,
+					List.of(
+							new Checkbox(gridFixedDistanceProperty),
+							new HorizontalSplitView(
+									new ComboBox(gridDistancePropertyX), new ComboBox(gridDistancePropertyY)),
+							new HorizontalSplitView(
+									new ComboBox(gridDistancePropertyR), new ComboBox(gridAngleProperty))),
+					0);
+		} else if (property instanceof Dimension2DPropertiesCollection propertyCollection) {
+			DimensionRatioProperty dimensionRatioProperty =
+					(DimensionRatioProperty) propertyCollection.getProperties()[0];
+			DimensionMinMaxProperty dimensionPropertyMinX =
+					(DimensionMinMaxProperty) propertyCollection.getProperties()[1];
+			DimensionMinMaxProperty dimensionPropertyMaxX =
+					(DimensionMinMaxProperty) propertyCollection.getProperties()[2];
+			DimensionMinMaxProperty dimensionPropertyMinY =
+					(DimensionMinMaxProperty) propertyCollection.getProperties()[3];
+			DimensionMinMaxProperty dimensionPropertyMaxY =
+					(DimensionMinMaxProperty) propertyCollection.getProperties()[4];
+			return new ExpandableList(
+					propertyCollection,
+					List.of(
+							new DimensionRatioEditor(dimensionRatioProperty),
+							new RelatedPropertyViewCollection(
+									property.getName(),
+									List.of(
+											new HorizontalSplitView(
+													new TextField(dimensionPropertyMinX),
+													new TextField(dimensionPropertyMaxX)),
+											new HorizontalSplitView(
+													new TextField(dimensionPropertyMinY),
+													new TextField(dimensionPropertyMaxY))),
+									10)));
+		} else if (property instanceof Dimension3DPropertiesCollection propertyCollection) {
+			DimensionMinMaxProperty dimensionPropertyMinX = propertyCollection.getProperties()[0];
+			DimensionMinMaxProperty dimensionPropertyMaxX = propertyCollection.getProperties()[1];
+			DimensionMinMaxProperty dimensionPropertyMinY = propertyCollection.getProperties()[2];
+			DimensionMinMaxProperty dimensionPropertyMaxY = propertyCollection.getProperties()[3];
+			DimensionMinMaxProperty dimensionPropertyMinZ = propertyCollection.getProperties()[4];
+			DimensionMinMaxProperty dimensionPropertyMaxZ = propertyCollection.getProperties()[5];
+			return new RelatedPropertyViewCollection(
+					property.getName(),
+					List.of(
+							new HorizontalSplitView(
+									new TextField(dimensionPropertyMinX), new TextField(dimensionPropertyMaxX)),
+							new HorizontalSplitView(
+									new TextField(dimensionPropertyMinY), new TextField(dimensionPropertyMaxY)),
+							new HorizontalSplitView(
+									new TextField(dimensionPropertyMinZ), new TextField(dimensionPropertyMaxZ))),
+					10);
+		} else if (property instanceof AbsoluteScreenPositionPropertyCollection collection) {
+			return new HorizontalSplitView(
+					new TextField(collection.getProperties()[0]),
+					new TextField(collection.getProperties()[1]));
+		} else if (property instanceof ActionablePropertyCollection<?> propertyCollection) {
+			return new ActionableButtonRow(propertyCollection);
+		} else if (property instanceof ActionableIconProperty actionableIconProperty) {
+			return new ButtonWithIcon(actionableIconProperty);
+		} else if (property
+				instanceof ProbabilityResultValuesProperty probabilityResultValuesProperty) {
+			return new ProbabilityResultRow(probabilityResultValuesProperty);
+		} else if (property instanceof PropertyCollection<?> propertyCollection) {
+			return new ExpandableList(propertyCollection, propertyViewListOf(propertyCollection));
+		} else {
+			return null;
+		}
+	}
+
+	/**
+	 * @param namedEnumeratedProperty property
+	 * @return dropdown for given property
+	 */
+	public static Dropdown createDropdown(NamedEnumeratedProperty<?> namedEnumeratedProperty) {
+		if (namedEnumeratedProperty instanceof StyledItemProperty styled) {
+			return new Dropdown(namedEnumeratedProperty, styled.getFontFamilies());
+		}
+		return new Dropdown(namedEnumeratedProperty);
+	}
+
+	private static List<PropertyView> propertyViewListOf(PropertyCollection<?> propertyCollection) {
+		return Arrays.stream(propertyCollection.getProperties())
+				.map(PropertyView::of)
+				.filter(Objects::nonNull)
+				.collect(Collectors.toList());
+	}
+}

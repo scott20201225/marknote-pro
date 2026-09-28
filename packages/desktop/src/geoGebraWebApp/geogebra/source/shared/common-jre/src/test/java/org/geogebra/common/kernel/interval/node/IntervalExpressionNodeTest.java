@@ -1,0 +1,101 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.kernel.interval.node;
+
+import static org.geogebra.common.kernel.interval.IntervalConstants.one;
+import static org.geogebra.common.kernel.interval.IntervalHelper.interval;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import org.geogebra.common.BaseUnitTest;
+import org.geogebra.common.kernel.interval.IntervalConstants;
+import org.geogebra.common.kernel.interval.operators.IntervalNodeEvaluator;
+import org.junit.jupiter.api.Test;
+
+class IntervalExpressionNodeTest extends BaseUnitTest {
+
+	private final IntervalNodeEvaluator evaluator = new IntervalNodeEvaluator();
+
+	@Test
+	void testCreation() {
+		IntervalFunctionVariable functionVariable = new IntervalFunctionVariable();
+		IntervalExpressionNode node =
+				new IntervalExpressionNode(evaluator, functionVariable, IntervalOperation.SIN);
+		functionVariable.set(Math.PI);
+		assertEquals(IntervalConstants.zero(), node.evaluate().value());
+		functionVariable.set(Math.PI / 2);
+		assertEquals(one(), node.value());
+	}
+
+	@Test
+	void testConstant() {
+		IntervalFunctionValue constant = new IntervalFunctionValue(one());
+		IntervalExpressionNode node = new IntervalExpressionNode(evaluator, constant);
+		assertEquals(one(), node.value());
+	}
+
+	@Test
+	void testNoFunctionVariable() {
+		IntervalFunctionValue constant = new IntervalFunctionValue(one());
+		IntervalExpressionNode node = new IntervalExpressionNode(evaluator, constant);
+		assertFalse(node.hasFunctionVariable());
+	}
+
+	@Test
+	void testHasFunctionVariable() {
+		IntervalFunctionVariable functionVariable = new IntervalFunctionVariable();
+		IntervalFunctionValue constant = new IntervalFunctionValue(one());
+		IntervalExpressionNode inner =
+				new IntervalExpressionNode(evaluator, functionVariable, IntervalOperation.PLUS, constant);
+		IntervalExpressionNode node =
+				new IntervalExpressionNode(evaluator, inner, IntervalOperation.SIN);
+		assertTrue(node.hasFunctionVariable());
+		assertFalse(node.getLeft().asExpressionNode().getRight().hasFunctionVariable());
+	}
+
+	@Test
+	void testLnExpXShouldBeX() {
+		IntervalFunctionVariable functionVariable = new IntervalFunctionVariable();
+		functionVariable.set(1000);
+		IntervalExpressionNode exp =
+				new IntervalExpressionNode(evaluator, functionVariable, IntervalOperation.EXP);
+		IntervalExpressionNode log = new IntervalExpressionNode(evaluator, exp, IntervalOperation.LOG);
+
+		IntervalNode actual = log.simplify();
+
+		assertEquals(interval(1000), actual.value());
+	}
+
+	@Test
+	void testNestedLnExpShouldSimplifyPairwise() {
+		IntervalFunctionVariable functionVariable = new IntervalFunctionVariable();
+		functionVariable.set(1000);
+		IntervalExpressionNode innerExp =
+				new IntervalExpressionNode(evaluator, functionVariable, IntervalOperation.EXP);
+		IntervalExpressionNode outerExp =
+				new IntervalExpressionNode(evaluator, innerExp, IntervalOperation.EXP);
+		IntervalExpressionNode innerLog =
+				new IntervalExpressionNode(evaluator, outerExp, IntervalOperation.LOG);
+		IntervalExpressionNode outerLog =
+				new IntervalExpressionNode(evaluator, innerLog, IntervalOperation.LOG);
+
+		IntervalNode actual = outerLog.simplify();
+
+		assertEquals(interval(1000), actual.value());
+	}
+}

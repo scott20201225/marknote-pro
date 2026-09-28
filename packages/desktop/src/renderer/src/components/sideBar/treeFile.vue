@@ -75,8 +75,12 @@ const displayName = computed<string>(() => getNoteDisplayName(props.file, rootPa
 // from fileMixins
 const handleFileClick = (): void => {
   const { isMarkdown, isDrawing, pathname } = props.file
+  const isMarkdownFile = isMarkdown || /\.md$/i.test(pathname)
+
+  projectStore.SELECT_NOTE_PATH(window.path.dirname(pathname))
+  projectStore.CHANGE_ACTIVE_ITEM(props.file)
+
   if (isDrawing || /\.drawio$/i.test(pathname)) {
-    projectStore.CHANGE_ACTIVE_ITEM(props.file)
     void window.electron.ipcRenderer.invoke(
       'mt::drawio::open',
       pathname,
@@ -84,7 +88,11 @@ const handleFileClick = (): void => {
     )
     return
   }
-  if (!isMarkdown) return
+  if (props.file.isGeoGebra || /\.ggb$/i.test(pathname)) {
+    void window.electron.ipcRenderer.invoke('mt::geogebra::open', pathname)
+    return
+  }
+  if (!isMarkdownFile) return
   const openedTab = tabs.value.find((f) => window.fileUtils.isSamePathSync(f.pathname, pathname))
   if (openedTab) {
     if (currentFile.value?.pathname === openedTab.pathname) {

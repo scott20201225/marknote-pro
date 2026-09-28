@@ -20,6 +20,7 @@ export interface TreeFileNode {
   isFile: true
   isMarkdown: boolean
   isDrawing?: boolean
+  isGeoGebra?: boolean
 }
 
 export interface TreeFolderNode {

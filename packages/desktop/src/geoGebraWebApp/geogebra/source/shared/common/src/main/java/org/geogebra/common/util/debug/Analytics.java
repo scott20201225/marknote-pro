@@ -1,0 +1,258 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.util.debug;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.LongSupplier;
+
+import org.geogebra.common.GeoGebraConstants;
+import org.geogebra.common.SuiteSubApp;
+import org.geogebra.common.awt.annotations.HasNativeSubclass;
+import org.geogebra.common.main.AppConfig;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
+/** Subclass this and set the instance to use it for logging analytics events. */
+@HasNativeSubclass
+public abstract class Analytics {
+	private static Analytics INSTANCE = null;
+	private static String lastSelectedToolName = null;
+	private static long lastToolActionTime = 0;
+	private static int toolUseCount = 0;
+	private static LongSupplier timeSupplier = System::currentTimeMillis;
+
+	/** Set the Analytics instance to log events */
+	@SuppressFBWarnings("EI_EXPOSE_STATIC_REP2")
+	public static void setInstance(Analytics analytics) {
+		INSTANCE = analytics;
+	}
+
+	/**
+	 * Logs an analytics event, if the instance is already set.
+	 * @param name event name
+	 */
+	public static void logEvent(String name) {
+		logEvent(name, null);
+	}
+
+	/**
+	 * Logs an analytics event, if the instance is already set.
+	 * @param name event name
+	 * @param param parameter name
+	 * @param value parameter value
+	 */
+	public static void logEvent(String name, String param, Object value) {
+		Map<String, Object> params = new HashMap<>();
+		params.put(param, value);
+		logEvent(name, params);
+	}
+
+	/**
+	 * Logs an analytics event, if the instance is already set.
+	 * @param name event name
+	 * @param params parameters
+	 */
+	public static void logEvent(String name, @Nullable Map<String, Object> params) {
+		if (INSTANCE == null) {
+			Log.trace("Analytics is not set, event with name '" + name + "' cannot be recorded");
+			return;
+		}
+		INSTANCE.recordEvent(name, params);
+	}
+
+	/**
+	 * Logs tool selection and resets tool creation tracking state.
+	 * @param toolName internal tool name
+	 */
+	public static void logToolSelected(String toolName) {
+		logEvent(Event.TOOL_SELECTED, Param.TOOL_NAME, toolName);
+		lastSelectedToolName = toolName;
+		lastToolActionTime = timeSupplier.getAsLong();
+		toolUseCount = 0;
+	}
+
+	/**
+	 * Logs successful tool-based object creation for the currently selected tool.
+	 */
+	public static void logToolCreated() {
+		if (lastSelectedToolName == null || lastSelectedToolName.isEmpty()) {
+			return;
+		}
+
+		long now = timeSupplier.getAsLong();
+		Map<String, Object> params = new HashMap<>();
+		params.put(Param.TOOL_NAME, lastSelectedToolName);
+		params.put(Param.DURATION_MS, Math.max(0L, now - lastToolActionTime));
+		params.put(Param.USE_COUNT, ++toolUseCount);
+		logEvent(Event.TOOL_CREATED, params);
+		lastToolActionTime = now;
+	}
+
+	/**
+	 * Updates the default analytics parameters from the given app configuration.
+	 * @param config app config
+	 */
+	public static void updateDefaultAnalyticsParameters(@NonNull AppConfig config) {
+		if (INSTANCE == null) {
+			Log.trace("Analytics is not set, default event parameters cannot be updated");
+			return;
+		}
+		Map<String, Object> params = new HashMap<>();
+		params.put(Param.GEOGEBRA_APP, config.getAppCode());
+		if (GeoGebraConstants.SUITE_APPCODE.equals(config.getAppCode())) {
+			SuiteSubApp subApp = SuiteSubApp.forCode(config.getSubAppCode());
+			if (subApp != null) {
+				params.put(Param.SUB_APP, Param.convertToSubAppParam(subApp));
+			}
+		}
+		INSTANCE.setDefaultEventParametersInternal(params);
+	}
+
+	/**
+	 * Log the analytics event, and optionally send it to a remote device.
+	 * @param name event name
+	 * @param params event parameters
+	 */
+	protected abstract void recordEvent(@NonNull String name, @Nullable Map<String, Object> params);
+
+	/**
+	 * Sets analytics parameters that should be attached to all future events.
+	 * @param params default parameters
+	 */
+	protected abstract void setDefaultEventParametersInternal(@NonNull Map<String, Object> params);
+
+	/**
+	 * Analytics events.
+	 */
+	public static final class Event {
+		public static final String COMMAND_ERROR = "command_error";
+		public static final String COMMAND_VALIDATED = "command_validated";
+		public static final String COMMAND_HELP_ICON = "command_help_icon";
+		public static final String EXAM_MODE_INITIATED = "exam_mode_initiated";
+		public static final String APP_SWITCHED = "switch_app";
+		public static final String LOGIN = "login";
+		public static final String SEARCH = "search";
+		public static final String TOOL_SELECTED = "tool_selected";
+		public static final String TOOL_CREATED = "tool_created";
+		public static final String KEYBOARD = "keyboard";
+		public static final String INSERT_IMAGE = "insert_image";
+
+		private Event() {}
+	}
+
+	/**
+	 * Parameters to the analytics events.
+	 */
+	public static final class Param {
+		public static final String COMMAND = "command";
+		public static final String AV_INPUT = "av_input";
+		public static final String ERROR_TYPE = "error_type";
+		public static final String STATUS = "status";
+		public static final String OBJECT_CREATION = "object_creation";
+		public static final String REDEFINED = "redefined";
+		public static final String NEW = "new";
+		public static final String OK = "ok";
+		public static final String ERROR = "error";
+		public static final String GEOGEBRA_APP = "geogebra_app";
+		public static final String SUB_APP = "sub_app";
+		public static final String SUB_APP_GRAPHING = "graphing";
+		public static final String SUB_APP_GEOMETRY = "geometry";
+		public static final String SUB_APP_CAS = "CAS";
+		public static final String SUB_APP_3D = "3D";
+		public static final String SUB_APP_PROBABILITY = "probability";
+		public static final String SUB_APP_SCIENTIFIC_CALCULATOR = "sciCalc";
+		public static final String SEARCH_TERM = "search_term";
+		public static final String TOOL_NAME = "tool_name";
+		public static final String DURATION_MS = "duration_ms";
+		public static final String USE_COUNT = "use_count";
+		public static final String KEY = "key";
+		public static final String TAB = "tab";
+		public static final String INPUT_SOURCE = "input_source";
+
+		/**
+		 * Convert sub app code to analytics sub app parameter
+		 * @param subAppName sub app name
+		 * @return sub app parameter
+		 */
+		public static String convertToSubAppParam(SuiteSubApp subAppName) {
+			switch (subAppName) {
+				case GEOMETRY:
+					return SUB_APP_GEOMETRY;
+				case CAS:
+					return SUB_APP_CAS;
+				case G3D:
+					return SUB_APP_3D;
+				case PROBABILITY:
+					return SUB_APP_PROBABILITY;
+				case SCIENTIFIC:
+					return SUB_APP_SCIENTIFIC_CALCULATOR;
+				case GRAPHING:
+				default:
+					return SUB_APP_GRAPHING;
+			}
+		}
+
+		private Param() {}
+	}
+
+	public static class Keyboard {
+		public static final String ABC = "ABC";
+		public static final String FUNCTIONS = "f(x)";
+		public static final String GREEK = "Greek";
+		public static final String NUMBERS = "123";
+		public static final String SYMBOLS = "symbols";
+	}
+
+	/** Event sources */
+	public enum InputSource {
+		ALGEBRA("Algebra"),
+		DATA_TABLE("Data Table"),
+		DISTRIBUTION("Distribution"),
+		SETTINGS("Settings"),
+		DIALOG("Dialog");
+
+		private final String value;
+
+		InputSource(String value) {
+			this.value = value;
+		}
+
+		public String getValue() {
+			return value;
+		}
+	}
+
+	public static class ImageInputSource {
+		public static final String GALLERY = "gallery";
+		public static final String CAMERA = "camera";
+	}
+
+	// -- Test support --
+
+	static void setTimeSupplier(LongSupplier supplier) {
+		timeSupplier = supplier;
+	}
+
+	static void resetToolCreationTracking() {
+		lastSelectedToolName = null;
+		lastToolActionTime = 0;
+		toolUseCount = 0;
+	}
+}

@@ -1,0 +1,155 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.kernel.geos;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
+import org.geogebra.common.BaseUnitTest;
+import org.geogebra.common.GeoElementFactory;
+import org.geogebra.common.gui.dialog.options.model.ConicEqnModel;
+import org.geogebra.common.gui.dialog.options.model.LineEqnModel;
+import org.geogebra.common.kernel.LinearEquationRepresentable;
+import org.geogebra.common.kernel.QuadraticEquationRepresentable;
+import org.geogebra.common.main.settings.config.AppConfigGeometry;
+import org.geogebra.common.main.settings.config.AppConfigGraphing;
+import org.geogebra.common.properties.impl.objects.LinearEquationFormProperty;
+import org.geogebra.common.properties.impl.objects.delegate.NotApplicablePropertyException;
+import org.junit.jupiter.api.Test;
+
+class ForceInputFormTest extends BaseUnitTest {
+
+	@Test
+	void testLinesConicsRaysToStringModeInGraphing() {
+		getApp().setConfig(new AppConfigGraphing());
+
+		GeoElementFactory factory = getElementFactory();
+		GeoLine line = factory.createGeoLine();
+		GeoLine lineWithCommand = factory.createGeoLineWithCommand();
+		GeoConic parabola = (GeoConic) factory.create("y=xx");
+		GeoConic hyperbola = (GeoConic) factory.create("yy-xx=1");
+		GeoRay geoRay = factory.createGeoRayWithCommand();
+
+		assertEquals(LinearEquationRepresentable.Form.USER, line.getEquationForm());
+		assertEquals(LinearEquationRepresentable.Form.EXPLICIT, lineWithCommand.getEquationForm());
+		assertEquals(LinearEquationRepresentable.Form.USER, geoRay.getEquationForm());
+		assertEquals(QuadraticEquationRepresentable.Form.USER, parabola.getEquationForm());
+		assertEquals(QuadraticEquationRepresentable.Form.USER, hyperbola.getEquationForm());
+	}
+
+	@Test
+	void testLinesLoadedFromXMLGraphing() {
+		getApp().setConfig(new AppConfigGraphing());
+
+		GeoElementFactory factory = getElementFactory();
+		GeoLine line = factory.createGeoLine();
+		line.setLabel("line");
+
+		GeoLine lineWithCommand = factory.createGeoLineWithCommand();
+		lineWithCommand.setLabel("lineCmd");
+		lineWithCommand.setEquationForm(LinearEquationRepresentable.Form.PARAMETRIC);
+		assertEquals(LinearEquationRepresentable.Form.PARAMETRIC, lineWithCommand.getEquationForm());
+
+		getApp().setXML(getApp().getXML(), true);
+
+		GeoLine loadedLine = (GeoLine) lookup("line");
+		GeoLine loadedLineWithCommand = (GeoLine) lookup("lineCmd");
+
+		assertEquals(LinearEquationRepresentable.Form.USER, loadedLine.getEquationForm());
+		assertEquals(
+				LinearEquationRepresentable.Form.PARAMETRIC, loadedLineWithCommand.getEquationForm());
+	}
+
+	@Test
+	void testLinesConicsRaysToStringModeInGeometry() {
+		getApp().setConfig(new AppConfigGeometry());
+
+		GeoElementFactory factory = getElementFactory();
+		GeoLine line = factory.createGeoLine();
+		GeoLine lineWithCommand = factory.createGeoLineWithCommand();
+		GeoRay ray = factory.createGeoRayWithCommand();
+		GeoConic parabola = (GeoConic) factory.create("y=xx");
+		GeoConic hyperbola = (GeoConic) factory.create("yy-xx=1");
+
+		assertEquals(LinearEquationRepresentable.Form.USER, line.getEquationForm());
+		assertEquals(LinearEquationRepresentable.Form.EXPLICIT, lineWithCommand.getEquationForm());
+		assertEquals(LinearEquationRepresentable.Form.EXPLICIT, ray.getEquationForm());
+		assertEquals(QuadraticEquationRepresentable.Form.USER, parabola.getEquationForm());
+		assertEquals(QuadraticEquationRepresentable.Form.USER, hyperbola.getEquationForm());
+	}
+
+	@Test
+	void testHideOutputRowGraphing() {
+		getApp().setGraphingConfig();
+		GeoRay ray = getElementFactory().createGeoRayWithCommand();
+
+		assertFalse(ray.isAllowedToShowValue());
+		assertEquals(DescriptionMode.DEFINITION, ray.getDescriptionMode());
+	}
+
+	@Test
+	void testShowOutputRowGeometry() {
+		getApp().setConfig(new AppConfigGeometry());
+		GeoRay ray = getElementFactory().createGeoRayWithCommand();
+
+		assertTrue(ray.isAllowedToShowValue());
+		assertEquals(DescriptionMode.DEFINITION_VALUE, ray.getDescriptionMode());
+	}
+
+	@Test
+	void testEquationPropertyIsHiddenGraphing() {
+		getApp().setConfig(new AppConfigGraphing());
+		getApp().getSettings().getCasSettings().setEnabled(getApp().getConfig().isCASEnabled());
+
+		GeoElementFactory factory = getElementFactory();
+		GeoLine line = factory.createGeoLine();
+		GeoRay rayWithCommand = getElementFactory().createGeoRayWithCommand();
+		GeoConic parabola = (GeoConic) factory.create("y=xx");
+		GeoConic hyperbola = (GeoConic) factory.create("yy-xx=1");
+
+		assertTrue(LineEqnModel.forceInputForm(line));
+		assertTrue(LineEqnModel.forceInputForm(rayWithCommand));
+		assertTrue(ConicEqnModel.forceInputForm(parabola));
+		assertTrue(ConicEqnModel.forceInputForm(hyperbola));
+	}
+
+	@Test
+	void testEquationPropertyIsHiddenGeometry() {
+		getApp().setConfig(new AppConfigGeometry());
+		getApp().getSettings().getCasSettings().setEnabled(getApp().getConfig().isCASEnabled());
+
+		GeoElementFactory factory = getElementFactory();
+		GeoLine line = (GeoLine) factory.create("Line((0,0),(1,1))");
+		GeoRay rayWithCommand = getElementFactory().createGeoRayWithCommand();
+		GeoConic parabola = (GeoConic) factory.create("y=xx");
+		GeoConic hyperbola = (GeoConic) factory.create("yy-xx=1");
+
+		assertFalse(LineEqnModel.forceInputForm(line));
+		assertFalse(LineEqnModel.forceInputForm(rayWithCommand));
+		assertFalse(ConicEqnModel.forceInputForm(parabola));
+		assertFalse(ConicEqnModel.forceInputForm(hyperbola));
+
+		try {
+			new LinearEquationFormProperty(getLocalization(), line);
+			new LinearEquationFormProperty(getLocalization(), rayWithCommand);
+		} catch (NotApplicablePropertyException e) {
+			fail(e.getMessage());
+		}
+	}
+}

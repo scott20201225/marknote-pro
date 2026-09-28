@@ -68,6 +68,10 @@ extraResources:
     to: drawio
     filter:
       - '**/*'
+  - from: src/geoGebraWebApp/webapp
+    to: geogebra
+    filter:
+      - '**/*'
 npmRebuild: false
 electronLanguages: # Keep Chromium/AppKit locales for the UI languages MarkText supports
   # Values must cover both spellings: "xx-YY" .pak files on Windows/Linux and

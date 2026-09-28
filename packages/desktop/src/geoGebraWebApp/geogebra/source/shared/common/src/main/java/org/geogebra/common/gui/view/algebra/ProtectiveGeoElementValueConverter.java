@@ -1,0 +1,85 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.gui.view.algebra;
+
+import static org.geogebra.common.kernel.kernelND.GeoElementND.LABEL_CAPTION;
+import static org.geogebra.common.kernel.kernelND.GeoElementND.LABEL_NAME;
+import static org.geogebra.common.kernel.kernelND.GeoElementND.LABEL_VALUE;
+
+import org.geogebra.common.gui.view.algebra.filter.AlgebraOutputFilter;
+import org.geogebra.common.kernel.StringTemplate;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.kernel.geos.LabelManager;
+import org.geogebra.common.util.ToStringConverter;
+import org.jspecify.annotations.NonNull;
+
+/**
+ * Converts a GeoElement to string that can be used in the Algebra view, while
+ * hiding some values.
+ */
+public class ProtectiveGeoElementValueConverter implements ToStringConverter {
+
+	private final ToStringConverter defaultConverter = new GeoElementValueConverter();
+	private final AlgebraOutputFilter functionAndEquationFilter;
+
+	public ProtectiveGeoElementValueConverter(AlgebraOutputFilter filter) {
+		this.functionAndEquationFilter = filter;
+	}
+
+	@Override
+	public @NonNull String toOutputValueString(GeoElement element, StringTemplate template) {
+		if (functionAndEquationFilter.isAllowed(element)) {
+			return defaultConverter.toOutputValueString(element, template);
+		} else {
+			return element.getDefinition(template);
+		}
+	}
+
+	@Override
+	public @NonNull String toValueString(GeoElement element, StringTemplate template) {
+		if (functionAndEquationFilter.isAllowed(element)) {
+			return defaultConverter.toValueString(element, template);
+		} else {
+			return element.getDefinition(template);
+		}
+	}
+
+	@Override
+	public @NonNull String toLabelAndDescription(GeoElement element, StringTemplate template) {
+		if (!functionAndEquationFilter.isAllowed(element)) {
+			return convertProtective(element, template);
+		} else {
+			return defaultConverter.toLabelAndDescription(element, template);
+		}
+	}
+
+	private String convertProtective(GeoElement element, StringTemplate template) {
+		String caption;
+		switch (element.getLabelMode()) {
+			case LABEL_NAME:
+			case LABEL_CAPTION:
+				caption = element.getLabel(template);
+				break;
+			case LABEL_VALUE:
+				caption = element.getDefinition(template);
+				break;
+			default:
+				caption = element.getNameAndDefinition(template);
+		}
+		return caption.startsWith(LabelManager.HIDDEN_PREFIX) ? "" : caption;
+	}
+}

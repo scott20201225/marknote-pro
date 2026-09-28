@@ -26,13 +26,20 @@ const buildMenu = (template: MenuTemplate | undefined, windowId: number): Menu =
       continue
     }
     const id = item.id
-    menu.append(
-      new MenuItem({
-        label: item.label,
-        type: item.type as 'normal' | 'submenu' | 'checkbox' | 'radio' | undefined,
-        accelerator: item.accelerator,
-        enabled: item.enabled !== false,
-        checked: !!item.checked,
+    const menuItemOptions = {
+      label: item.label,
+      type: item.type as 'normal' | 'submenu' | 'checkbox' | 'radio' | undefined,
+      accelerator: item.accelerator,
+      enabled: item.enabled !== false,
+      checked: !!item.checked,
+      submenu: item.submenu ? buildMenu(item.submenu as MenuTemplateItem[], windowId) : undefined
+    }
+
+    // Electron does not accept a click handler on a submenu container. The
+    // submenu's leaf items own the actions; attaching a handler to the parent
+    // makes Menu.popup fail for the entire context menu.
+    if (!item.submenu) {
+      Object.assign(menuItemOptions, {
         click: () => {
           const sender = popups.get(windowId)?.sender
           try {
@@ -40,10 +47,11 @@ const buildMenu = (template: MenuTemplate | undefined, windowId: number): Menu =
           } catch {
             /* sender destroyed */
           }
-        },
-        submenu: item.submenu ? buildMenu(item.submenu as MenuTemplateItem[], windowId) : undefined
+        }
       })
-    )
+    }
+
+    menu.append(new MenuItem(menuItemOptions))
   }
   return menu
 }
@@ -100,8 +108,8 @@ export const registerWindowHandlers = (): void => {
       const menu = buildMenu(template, win.id)
       menu.popup({
         window: win,
-        x: position?.x,
-        y: position?.y,
+        x: Number.isFinite(position?.x) ? Math.round(position!.x) : undefined,
+        y: Number.isFinite(position?.y) ? Math.round(position!.y) : undefined,
         callback: () => {
           popups.delete(win.id)
           try {

@@ -1,0 +1,2857 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.io;
+
+import static org.geogebra.common.kernel.geos.GeoButton.DEFAULT_BUTTON_HEIGHT;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+
+import org.geogebra.common.awt.AwtFactory;
+import org.geogebra.common.awt.GColor;
+import org.geogebra.common.awt.GFont;
+import org.geogebra.common.awt.GPoint2D;
+import org.geogebra.common.awt.GRectangle2D;
+import org.geogebra.common.euclidian.EuclidianView;
+import org.geogebra.common.kernel.CircularDefinitionException;
+import org.geogebra.common.kernel.Kernel;
+import org.geogebra.common.kernel.LinearEquationRepresentable;
+import org.geogebra.common.kernel.Locateable;
+import org.geogebra.common.kernel.MacroConstruction;
+import org.geogebra.common.kernel.MyPoint;
+import org.geogebra.common.kernel.QuadraticEquationRepresentable;
+import org.geogebra.common.kernel.SetRandomValue;
+import org.geogebra.common.kernel.algos.ChartStyle;
+import org.geogebra.common.kernel.arithmetic.Equation;
+import org.geogebra.common.kernel.arithmetic.EquationValue;
+import org.geogebra.common.kernel.arithmetic.ExpressionNode;
+import org.geogebra.common.kernel.arithmetic.FunctionVariable;
+import org.geogebra.common.kernel.arithmetic.NumberValue;
+import org.geogebra.common.kernel.arithmetic.ValidExpression;
+import org.geogebra.common.kernel.arithmetic.VectorNDValue;
+import org.geogebra.common.kernel.commands.AlgebraProcessor;
+import org.geogebra.common.kernel.geos.AbsoluteScreenLocateable;
+import org.geogebra.common.kernel.geos.AlgebraicExpression;
+import org.geogebra.common.kernel.geos.AngleProperties;
+import org.geogebra.common.kernel.geos.ChartStyleGeo;
+import org.geogebra.common.kernel.geos.GProperty;
+import org.geogebra.common.kernel.geos.GeoAngle;
+import org.geogebra.common.kernel.geos.GeoAudio;
+import org.geogebra.common.kernel.geos.GeoBoolean;
+import org.geogebra.common.kernel.geos.GeoButton;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.kernel.geos.GeoEmbed;
+import org.geogebra.common.kernel.geos.GeoFunction;
+import org.geogebra.common.kernel.geos.GeoFunctionNVar;
+import org.geogebra.common.kernel.geos.GeoImage;
+import org.geogebra.common.kernel.geos.GeoInline;
+import org.geogebra.common.kernel.geos.GeoInlineTable;
+import org.geogebra.common.kernel.geos.GeoInlineText;
+import org.geogebra.common.kernel.geos.GeoInputBox;
+import org.geogebra.common.kernel.geos.GeoList;
+import org.geogebra.common.kernel.geos.GeoLocus;
+import org.geogebra.common.kernel.geos.GeoLocusStroke;
+import org.geogebra.common.kernel.geos.GeoMindMapNode;
+import org.geogebra.common.kernel.geos.GeoMindMapNode.NodeAlignment;
+import org.geogebra.common.kernel.geos.GeoNumberValue;
+import org.geogebra.common.kernel.geos.GeoNumeric;
+import org.geogebra.common.kernel.geos.GeoPolyLine;
+import org.geogebra.common.kernel.geos.GeoSymbolic;
+import org.geogebra.common.kernel.geos.GeoText;
+import org.geogebra.common.kernel.geos.GeoVec3D;
+import org.geogebra.common.kernel.geos.GeoVector;
+import org.geogebra.common.kernel.geos.GeoVideo;
+import org.geogebra.common.kernel.geos.HasAlignment;
+import org.geogebra.common.kernel.geos.HasSegmentStyle;
+import org.geogebra.common.kernel.geos.HasSymbolicMode;
+import org.geogebra.common.kernel.geos.HasVerticalAlignment;
+import org.geogebra.common.kernel.geos.LimitedPath;
+import org.geogebra.common.kernel.geos.PointProperties;
+import org.geogebra.common.kernel.geos.RectangleTransformable;
+import org.geogebra.common.kernel.geos.SegmentStyle;
+import org.geogebra.common.kernel.geos.TextProperties;
+import org.geogebra.common.kernel.geos.Traceable;
+import org.geogebra.common.kernel.geos.VectorHeadStyle;
+import org.geogebra.common.kernel.geos.properties.Auxiliary;
+import org.geogebra.common.kernel.geos.properties.FillType;
+import org.geogebra.common.kernel.geos.properties.HorizontalAlignment;
+import org.geogebra.common.kernel.geos.properties.VerticalAlignment;
+import org.geogebra.common.kernel.implicit.GeoImplicit;
+import org.geogebra.common.kernel.implicit.GeoImplicitCurve;
+import org.geogebra.common.kernel.kernelND.CoordStyle;
+import org.geogebra.common.kernel.kernelND.GeoConicND;
+import org.geogebra.common.kernel.kernelND.GeoEvaluatable;
+import org.geogebra.common.kernel.kernelND.GeoPlaneND;
+import org.geogebra.common.kernel.kernelND.GeoPointND;
+import org.geogebra.common.kernel.kernelND.GeoQuadric3DInterface;
+import org.geogebra.common.kernel.kernelND.SurfaceEvaluable;
+import org.geogebra.common.kernel.kernelND.SurfaceEvaluable.LevelOfDetail;
+import org.geogebra.common.kernel.prover.AlgoProve;
+import org.geogebra.common.main.App;
+import org.geogebra.common.main.error.ErrorHelper;
+import org.geogebra.common.main.settings.EuclidianSettings;
+import org.geogebra.common.main.settings.FontSettings;
+import org.geogebra.common.move.ggtapi.models.json.JSONArray;
+import org.geogebra.common.move.ggtapi.models.json.JSONException;
+import org.geogebra.common.move.ggtapi.models.json.JSONObject;
+import org.geogebra.common.plugin.EuclidianStyleConstants;
+import org.geogebra.common.plugin.EventType;
+import org.geogebra.common.plugin.GeoClass;
+import org.geogebra.common.plugin.ScriptManager;
+import org.geogebra.common.plugin.ScriptType;
+import org.geogebra.common.plugin.script.Script;
+import org.geogebra.common.util.SpreadsheetTraceSettings;
+import org.geogebra.common.util.StringUtil;
+import org.geogebra.common.util.debug.Log;
+
+import com.google.j2objc.annotations.Weak;
+
+/**
+ * XML handler for GeoElement properties
+ */
+public class ConsElementXMLHandler {
+	/**
+	 * we used minimal text size of 4px until 4.0 for texts, because the font
+	 * size setting was additive. Not needed with current multiplicative
+	 * approach, just for opening old files.
+	 */
+	private static final double MIN_TEXT_SIZE = 4;
+
+	private GeoElement geo;
+	// List of LocateableExpPair objects
+	// for setting the start points at the end of the construction
+	// (needed for GeoText and GeoVector)
+	private final LinkedList<LocateableExpPair> startPointList = new LinkedList<>();
+
+	// List of GeoExpPair objects
+	// for setting the linked geos needed for GeoTextFields
+	private final DynamicPropertyList linkedGeoList = new DynamicPropertyList();
+
+	// List of GeoExpPair condition objects
+	// for setting the conditions at the end of the construction
+	// (needed for GeoText and GeoVector)
+	private final DynamicPropertyList showObjectConditionList = new DynamicPropertyList();
+	private final DynamicPropertyList dynamicColorList = new DynamicPropertyList();
+	private final DynamicPropertyList animationSpeedList = new DynamicPropertyList();
+	private final DynamicPropertyList animationStepList = new DynamicPropertyList();
+	private final DynamicPropertyList verticalIncrementList = new DynamicPropertyList();
+	private final DynamicPropertyList dynamicCaptionList = new DynamicPropertyList();
+	private final LinkedList<GeoElement> animatingList = new LinkedList<>();
+	private final LinkedList<GeoNumericMinMax> minMaxList = new LinkedList<>();
+	private boolean lineStyleTagProcessed;
+	private boolean lineOpacityTagProcessed;
+	private boolean symbolicTagProcessed;
+	private boolean sliderTagProcessed;
+	private boolean fontTagProcessed;
+	private boolean setEigenvectorsCalled = false;
+	private double embedX;
+	private double embedY;
+	/**
+	 * The point style of the document, for versions < 3.3
+	 */
+	private int docPointStyle;
+
+	@Weak
+	private final App app;
+
+	@Weak
+	private final MyXMLHandler xmlHandler;
+
+	private boolean needsConstructionDefaults;
+	private String pendingLabel;
+
+	private static class GeoNumericMinMax {
+		private GeoElement geoElement;
+		String min;
+		String max;
+
+		GeoNumericMinMax(GeoElement g, String min, String max) {
+			setGeo(g);
+			this.min = min;
+			this.max = max;
+		}
+
+		GeoElement getGeo() {
+			return geoElement;
+		}
+
+		void setGeo(GeoElement geo) {
+			this.geoElement = geo;
+		}
+	}
+
+	private static class LocateableExpPair {
+		Locateable locateable;
+		String exp; // String with expression to create point
+		GeoPointND point; // free point
+		int number; // number of startPoint
+
+		LocateableExpPair(Locateable g, String s, int n) {
+			locateable = g;
+			exp = s;
+			number = n;
+		}
+
+		LocateableExpPair(Locateable g, GeoPointND p, int n) {
+			locateable = g;
+			point = p;
+			number = n;
+		}
+	}
+
+	/**
+	 * @param myXMLHandler
+	 *            XML handler
+	 * @param app
+	 *            app
+	 */
+	public ConsElementXMLHandler(MyXMLHandler myXMLHandler, App app) {
+		this.xmlHandler = myXMLHandler;
+		this.app = app;
+	}
+
+	public void setNeedsConstructionDefaults(boolean needsConstructionDefaults) {
+		this.needsConstructionDefaults = needsConstructionDefaults;
+	}
+
+	private boolean handleCurveParam(Map<String, String> attrs) {
+		if (!(geo instanceof GeoVec3D v)) {
+			Log.debug("wrong element type for <curveParam>: " + geo.getClass());
+			return false;
+		}
+
+		try {
+			String tAttr = attrs.get("t");
+
+			if (tAttr != null) {
+				// AlgoPointOnPath
+				double t = StringUtil.parseDouble(tAttr);
+				((GeoPointND) v).getPathParameter().setT(t);
+			}
+
+			return true;
+
+		} catch (RuntimeException e) {
+			Log.error("problem in <curveParam>: " + e.getMessage());
+			return false;
+		}
+	}
+
+	private boolean handleCoords(Map<String, String> attrs) {
+		ExpressionNode def = geo.getDefinition();
+		boolean success = xmlHandler.kernel.handleCoords(geo, attrs);
+		geo.setDefinition(def);
+		return success;
+	}
+
+	private boolean handleDimensions(Map<String, String> attrs) {
+		String width = attrs.get("width");
+		String height = attrs.get("height");
+		if (width != null && height != null) {
+			double widthD = -1;
+			double heightD = -1;
+			try {
+				widthD = StringUtil.parseDouble(width);
+				heightD = StringUtil.parseDouble(height);
+			} catch (Exception e) {
+				Log.warn(e.getMessage());
+			}
+			if (geo.isGeoButton()) {
+				GeoButton button = (GeoButton) geo;
+				if (widthD > 10 && heightD > 10) {
+					button.setWidth(widthD);
+					button.setHeight(heightD);
+				}
+				button.setFixedSize(true);
+				return true;
+			} else if (geo instanceof RectangleTransformable transformable) {
+				setTransformableSize(transformable, widthD, heightD, attrs);
+			}
+
+			return true;
+		}
+		return false;
+	}
+
+	private void setTransformableSize(
+			RectangleTransformable transformable,
+			double widthD,
+			double heightD,
+			Map<String, String> attrs) {
+		String angle = attrs.get("angle");
+		boolean unscaled = attrs.get("unscaled") != null;
+		if (angle == null && transformable instanceof GeoEmbed) {
+			// we have an old GeoEmbed
+			((GeoEmbed) transformable).setContentWidth(widthD);
+			((GeoEmbed) transformable).setContentHeight(heightD);
+		} else {
+			double angleD = StringUtil.parseDouble(angle);
+			transformable.setAngle(angleD);
+			EuclidianSettings settings = app.getActiveEuclidianView().getSettings();
+			double pixelWidth = unscaled ? widthD * settings.getXscale() : widthD;
+			double normedPixelWidth = unscaled ? widthD * EuclidianView.SCALE_STANDARD : widthD;
+			double pixelHeight = unscaled ? heightD * settings.getYscale() : heightD;
+			if (transformable instanceof GeoInline inline) {
+				inline.setSizeOnly(pixelWidth, pixelHeight);
+				if (inline.isZoomingEnabled()) {
+					inline.setContentWidth(widthD);
+					inline.setContentHeight(heightD);
+				} else if (inline.getContentWidth() > 0) {
+					inline.setScale(normedPixelWidth / inline.getContentWidth());
+				}
+			} else {
+				transformable.setSize(pixelWidth, pixelHeight);
+			}
+		}
+	}
+
+	private boolean handleScript(Map<String, String> attrs, ScriptType type) {
+		try {
+			handleScript(attrs, type, "val", EventType.CLICK);
+			handleScript(attrs, type, "onUpdate", EventType.UPDATE);
+			handleScript(attrs, type, "onDragEnd", EventType.DRAG_END);
+			handleScript(attrs, type, "onChange", EventType.EDITOR_KEY_TYPED);
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private void handleScript(
+			Map<String, String> attrs, ScriptType type, String attrName, EventType evtType) {
+		String text = attrs.get(attrName);
+		if (text != null && !text.isEmpty()) {
+			Script script = app.createScript(type, text, false);
+			geo.setScript(script, evtType);
+		}
+	}
+
+	private boolean handleCondition(Map<String, String> attrs) {
+		try {
+			// condition for visibility of object
+			String strShowObjectCond = attrs.get("showObject");
+			if (strShowObjectCond != null) {
+				// store (geo, expression) values
+				// they will be processed in processShowObjectConditionList()
+				// later
+				showObjectConditionList.add(geo, strShowObjectCond);
+			}
+
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handleCheckbox(Map<String, String> attrs) {
+		if (!geo.isGeoBoolean()) {
+			Log.error("wrong element type for <checkbox>: " + geo.getClass());
+			return false;
+		}
+
+		try {
+			GeoBoolean bool = (GeoBoolean) geo;
+			bool.setCheckboxFixed(MyXMLHandler.parseBoolean(attrs.get("fixed")));
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private void handleContentParam(Map<String, String> attrs) {
+		if (!(geo instanceof GeoInline inlineText)) {
+			Log.error("wrong element type for <content>: " + geo.getClass());
+			return;
+		}
+		String content = attrs.get("val");
+		int appFontSize = app.getSettings().getFontSettings().getAppFontSize();
+		if (appFontSize != FontSettings.DEFAULT_FONT_SIZE) {
+			try {
+				if (inlineText instanceof GeoInlineText || inlineText instanceof GeoMindMapNode) {
+					JSONArray words = new JSONArray(content);
+					CarotaJSONUtil.setExplicitSize(words, appFontSize);
+					content = words.toString();
+				}
+				if (inlineText instanceof GeoInlineTable) {
+					JSONObject parsed = new JSONObject(content);
+					CarotaJSONUtil.forEachCell(parsed, cellContent -> {
+						CarotaJSONUtil.setExplicitSize(cellContent, appFontSize);
+					});
+					content = parsed.toString();
+				}
+			} catch (JSONException ex) {
+				Log.debug(ex);
+			}
+		}
+		inlineText.setContent(content);
+	}
+
+	private boolean handleValue(Map<String, String> attrs, ArrayList<String> errors) {
+		boolean isBoolean = geo.isGeoBoolean();
+		boolean isNumber = geo.isGeoNumeric();
+		// GGB-244 something that was formerly just a number is now a segment:
+		// hide it!
+		if (geo.isNumberValue() && !isNumber && !isBoolean) {
+			geo.setEuclidianVisible(false);
+			return true;
+		}
+		// set value even when definition exists; might be needed if value
+		// depends on Corner
+		ExpressionNode oldDef = geo.getDefinition();
+		if (!(isNumber || isBoolean || geo.isGeoButton())) {
+			Log.debug("wrong element type for <value>: " + geo.getClass());
+			return false;
+		}
+		if (!needsValuesFromXML(geo)) {
+			return true;
+		}
+
+		try {
+			String strVal = attrs.get("val");
+			if (isNumber) {
+				GeoNumeric n = (GeoNumeric) geo;
+				n.setValue(StringUtil.parseDouble(strVal));
+
+				// random
+				n.setRandom("true".equals(attrs.get("random")));
+				n.setDefinition(oldDef);
+
+			} else if (isBoolean) {
+				GeoBoolean bool = (GeoBoolean) geo;
+				/*
+				 * GGB-1372: use the recently computed value instead of the
+				 * saved one for the Prove command
+				 */
+				if (!(geo.getParentAlgorithm() instanceof AlgoProve)) {
+					bool.setValue(MyXMLHandler.parseBoolean(strVal));
+				}
+				bool.setDefinition(oldDef);
+			} else if (geo.isGeoButton()) {
+				// XXX What's this javascript doing here? (Arnaud)
+				GeoButton button = (GeoButton) geo;
+				Script script = app.createScript(ScriptType.JAVASCRIPT, strVal, false);
+				button.setClickScript(script);
+			}
+			return true;
+		} catch (RuntimeException e) {
+			errors.add(e.getLocalizedMessage());
+			Log.debug(e);
+			return false;
+		}
+	}
+
+	private boolean handleVariables(Map<String, String> attrs) {
+		if (!(geo instanceof GeoSymbolic symbolic)) {
+			return false;
+		}
+		String variableString = attrs.get("val");
+		if (variableString.isEmpty()) {
+			return false;
+		}
+		String[] variables = variableString.split(",");
+		FunctionVariable[] fVars = new FunctionVariable[variables.length];
+		for (int i = 0; i < variables.length; i++) {
+			fVars[i] = new FunctionVariable(xmlHandler.kernel, variables[i]);
+		}
+		symbolic.setVariables(Arrays.asList(fVars));
+		return true;
+	}
+
+	protected void init(Map<String, String> attrs) {
+		sliderTagProcessed = false;
+		fontTagProcessed = false;
+		symbolicTagProcessed = false;
+		lineStyleTagProcessed = false;
+		lineOpacityTagProcessed = false;
+		geo = getGeoElement(attrs);
+		if (needsConstructionDefaults) {
+			// don't set auxiliary prop here, it will be loaded from XML
+			geo.setConstructionDefaults(true, false);
+		}
+		geo.setLineOpacity(255);
+		if (geo instanceof VectorNDValue) {
+			((VectorNDValue) geo)
+					.setMode(
+							((VectorNDValue) geo).getDimension() == 3
+									? Kernel.COORD_CARTESIAN_3D
+									: Kernel.COORD_CARTESIAN);
+		} else if (geo instanceof GeoPolyLine) {
+			geo.setVisibleInView3D(false);
+		} else if (geo instanceof GeoFunction || geo instanceof EquationValue) {
+			geo.setFixed(false);
+			if (geo instanceof GeoFunction function) {
+				function.setSimplifyCoefficients(false);
+			}
+		} else if (geo instanceof GeoAngle) {
+			((GeoAngle) geo).setEmphasizeRightAngle(true);
+		} else if (geo instanceof GeoText) {
+			geo.setBackgroundColor(null);
+		} else if (geo instanceof GeoInputBox) {
+			geo.setBackgroundColor(null);
+		} else if (geo instanceof GeoButton) {
+			geo.setBackgroundColor(GColor.WHITE);
+			geo.setObjColor(GColor.BLACK);
+			((GeoButton) geo).setHeight(DEFAULT_BUTTON_HEIGHT);
+		}
+	}
+
+	// for point or vector
+	private boolean handleCoordStyle(Map<String, String> attrs) {
+		if (!(geo instanceof CoordStyle v)) {
+			Log.error("wrong element type for <coordStyle>: " + geo.getClass());
+			return false;
+		}
+		String style = attrs.get("style");
+		switch (style) {
+			case "cartesian":
+				v.setCartesian();
+				break;
+			case "polar":
+				v.setPolar();
+				break;
+			case "complex":
+				v.setComplex();
+				break;
+			case "cartesian3d":
+				v.setCartesian3D();
+				break;
+			case "spherical":
+				v.setSpherical();
+				break;
+			default:
+				Log.error("unknown style in <coordStyle>: " + style);
+				return false;
+		}
+		return true;
+	}
+
+	private boolean handleListeners(Map<String, String> attrs) {
+		try {
+			ScriptManager scriptManager = app.getScriptManager();
+			if ("objectUpdate".equals(attrs.get("type"))) {
+				scriptManager.getUpdateListenerMap().put(geo, scriptManager.fromName(attrs.get("val")));
+			}
+			if ("objectClick".equals(attrs.get("type"))) {
+				scriptManager.getClickListenerMap().put(geo, scriptManager.fromName(attrs.get("val")));
+			}
+			return true;
+		} catch (RuntimeException e) {
+			Log.error(e.getMessage());
+			return false;
+		}
+	}
+
+	private boolean handleCaption(Map<String, String> attrs) {
+		try {
+			geo.setCaption(attrs.get("val"));
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handlePointSize(Map<String, String> attrs) {
+		if (geo.isGeoNumeric()) {
+			((GeoNumeric) geo).setSliderBlobSize(StringUtil.parseDouble(attrs.get("val")));
+			return true;
+		}
+		if (!(geo instanceof PointProperties p)) {
+			Log.debug("wrong element type for <pointSize>: " + geo.getClass());
+			return false;
+		}
+
+		try {
+			p.setPointSize(Integer.parseInt(attrs.get("val")));
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handlePointStyle(Map<String, String> attrs) {
+		if (!(geo instanceof PointProperties p)) {
+			Log.debug("wrong element type for <pointStyle>: " + geo.getClass());
+			return false;
+		}
+
+		try {
+
+			int style = Integer.parseInt(attrs.get("val"));
+
+			if (style == -1) {
+				style = docPointStyle;
+			}
+			p.setPointStyle(style);
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handleLayer(Map<String, String> attrs) {
+
+		try {
+			geo.setLayer(Integer.parseInt(attrs.get("val")));
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handleAnimation(Map<String, String> attrs) {
+		try {
+
+			String strStep = attrs.get("step");
+			if (strStep != null) {
+				// store speed expression to be processed later
+				animationStepList.add(geo, strStep);
+			}
+			String strSpeed = attrs.get("speed");
+			if (strSpeed != null && !strSpeed.equals("1")) {
+				// store speed expression to be processed later
+				animationSpeedList.add(geo, strSpeed);
+			}
+
+			String type = attrs.get("type");
+			if (type != null) {
+				geo.setAnimationType(Integer.parseInt(type));
+			}
+
+			// doesn't work for hidden sliders now that intervalMin/Max are set
+			// at end of XML (dynamic slider range(
+			// geo.setAnimating(MyXMLHandler.parseBoolean((String)
+			// attrs.get("playing")));
+
+			// replacement
+			if (MyXMLHandler.parseBoolean(attrs.get("playing"))) {
+				animatingList.add(geo);
+			} else {
+				geo.setAnimating(false); // evalXML should act on existing objects
+			}
+
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handleFixed(Map<String, String> attrs) {
+		try {
+			geo.setFixed(MyXMLHandler.parseBoolean(attrs.get("val")));
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handleIsMask(Map<String, String> attrs) {
+		try {
+			geo.setIsMask(MyXMLHandler.parseBoolean(attrs.get("val")));
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handleBreakpoint(Map<String, String> attrs) {
+		try {
+			geo.setConsProtocolBreakpoint(MyXMLHandler.parseBoolean(attrs.get("val")));
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handleFile(Map<String, String> attrs) {
+		if (!(geo.isGeoImage() || geo.isGeoButton() || geo.isGeoTurtle())) {
+			Log.error("wrong element type for <file>: " + geo.getClass());
+			return false;
+		}
+
+		try {
+			geo.setImageFileName(attrs.get("name"));
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handleSerifContent(Map<String, String> attrs) {
+		if (!(geo instanceof GeoInputBox)) {
+			Log.error("wrong element type for <contentSerif>: " + geo.getClass());
+			return false;
+		}
+		String serif = attrs.get("val");
+
+		if (serif != null) {
+			((GeoInputBox) geo).setSerifContent(MyXMLHandler.parseBoolean(serif));
+		}
+		return true;
+	}
+
+	// <font serif="false" size="12" style="0">
+	private boolean handleTextFont(Map<String, String> attrs) {
+		this.fontTagProcessed = true;
+		if (!(geo instanceof TextProperties text)) {
+			Log.error("wrong element type for <font>: " + geo.getClass());
+			return false;
+		}
+		String serif = attrs.get("serif");
+		String style = attrs.get("style");
+
+		try {
+
+			String oldSize = attrs.get("size");
+			// multiplier, new from ggb42
+			String size = attrs.get("sizeM");
+
+			if (size == null) {
+				double appSize = app.getFontSize();
+				double oldSizeInt = Integer.parseInt(oldSize);
+				text.setFontSizeMultiplier(Math.max(appSize + oldSizeInt, MIN_TEXT_SIZE) / appSize);
+			} else {
+				text.setFontSizeMultiplier(StringUtil.parseDouble(size));
+			}
+			if (serif != null) {
+				text.setSerifFont(MyXMLHandler.parseBoolean(serif));
+			}
+			if (style != null) {
+				text.setFontStyle(Integer.parseInt(style));
+			}
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handleTextDecimals(Map<String, String> attrs) {
+		if (!(geo instanceof TextProperties text)) {
+			Log.error("wrong element type for <decimals>: " + geo.getClass());
+			return false;
+		}
+
+		try {
+			text.setPrintDecimals(Integer.parseInt(attrs.get("val")), true);
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handleTextFigures(Map<String, String> attrs) {
+		if (!(geo instanceof TextProperties text)) {
+			Log.error("wrong element type for <decimals>: " + geo.getClass());
+			return false;
+		}
+
+		try {
+			text.setPrintFigures(Integer.parseInt(attrs.get("val")), true);
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handleInBackground(Map<String, String> attrs) {
+		if (!geo.isGeoImage()) {
+			Log.error("wrong element type for <inBackground>: " + geo.getClass());
+			return false;
+		}
+
+		try {
+			((GeoImage) geo).setInBackground(MyXMLHandler.parseBoolean(attrs.get("val")));
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handleCentered(Map<String, String> attrs) {
+		if (!geo.isGeoImage()) {
+			Log.error("wrong element type for <centered>: " + geo.getClass());
+			return false;
+		}
+
+		try {
+			((GeoImage) geo).setCentered(MyXMLHandler.parseBoolean(attrs.get("val")));
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handleInterpolate(Map<String, String> attrs) {
+		if (!geo.isGeoImage()) {
+			Log.error("wrong element type for <interpolate>: " + geo.getClass());
+			return false;
+		}
+
+		try {
+			((GeoImage) geo).setInterpolate(MyXMLHandler.parseBoolean(attrs.get("val")));
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handleAuxiliary(Map<String, String> attrs) {
+		try {
+			geo.setAuxiliaryObject(
+					MyXMLHandler.parseBoolean(attrs.get("val")) ? Auxiliary.YES_SAVE : Auxiliary.NO_SAVE);
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handleAutocolor(Map<String, String> attrs) {
+		try {
+			geo.setAutoColor(MyXMLHandler.parseBoolean(attrs.get("val")));
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handleHeadStyle(Map<String, String> attrs) {
+		if (!(geo instanceof GeoVector)) {
+			Log.error("wrong element type for <headStyle>: " + geo.getClass());
+			return false;
+		}
+		try {
+			int styleIndex = Integer.parseInt(attrs.get("val"));
+			((GeoVector) geo).setHeadStyle(VectorHeadStyle.values()[styleIndex]);
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handleIsLaTeX(Map<String, String> attrs) {
+		try {
+			((GeoText) geo).setLaTeX(MyXMLHandler.parseBoolean(attrs.get("val")), false);
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private void handleVerticalIncrement(Map<String, String> attrs) {
+		verticalIncrementList.add(geo, attrs.get("val"));
+	}
+
+	private boolean handleArcSize(Map<String, String> attrs) {
+		if (!(geo instanceof AngleProperties angle)) {
+			Log.error("wrong element type for <arcSize>: " + geo.getClass());
+			return false;
+		}
+
+		try {
+			angle.setArcSize(Integer.parseInt(attrs.get("val")));
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handleAbsoluteScreenLocation(Map<String, String> attrs, boolean absolute) {
+		if (geo.isDefaultGeo()) {
+			return false;
+		}
+		if (!(geo instanceof AbsoluteScreenLocateable absLoc)) {
+			Log.error("wrong element type for <absoluteScreenLocation>: " + geo.getClass());
+			return false;
+		}
+
+		try {
+			double x = Double.parseDouble(attrs.get("x"));
+			double y = Double.parseDouble(attrs.get("y"));
+			if (absolute) {
+				absLoc.setAbsoluteScreenLoc((int) x, (int) y);
+				absLoc.setAbsoluteScreenLocActive(true);
+			} else {
+				absLoc.setRealWorldLoc(x, y);
+			}
+
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handleAllowReflexAngle(Map<String, String> attrs) {
+		if (!(geo instanceof AngleProperties angle)) {
+			Log.error("wrong element type for <allowReflexAngle>: " + geo.getClass());
+			return false;
+		}
+
+		try {
+			angle.setAllowReflexAngle(MyXMLHandler.parseBoolean(attrs.get("val")));
+			return true;
+		} catch (RuntimeException e) {
+
+			return false;
+		}
+	}
+
+	private boolean handleEmphasizeRightAngle(Map<String, String> attrs) {
+		if (!(geo instanceof AngleProperties angle)) {
+			Log.error("wrong element type for <emphasizeRightAngle>: " + geo.getClass());
+			return false;
+		}
+
+		try {
+			angle.setEmphasizeRightAngle(MyXMLHandler.parseBoolean(attrs.get("val")));
+			return true;
+		} catch (RuntimeException e) {
+
+			return false;
+		}
+	}
+
+	private boolean handleComboBox(Map<String, String> attrs) {
+		if (!geo.isGeoList()) {
+			Log.error("wrong element type for <comboBox>: " + geo.getClass());
+			return false;
+		}
+
+		try {
+			GeoList list = (GeoList) geo;
+			list.setDrawAsComboBox(MyXMLHandler.parseBoolean(attrs.get("val")));
+			return true;
+		} catch (RuntimeException e) {
+
+			return false;
+		}
+	}
+
+	private boolean handleCropBox(Map<String, String> attrs) {
+		if (!geo.isGeoImage()) {
+			Log.error("wrong element type for <cropBox>: " + geo.getClass());
+			return false;
+		}
+
+		try {
+			double x = Double.parseDouble(attrs.get("x"));
+			double y = Double.parseDouble(attrs.get("y"));
+			double w = Double.parseDouble(attrs.get("width"));
+			double h = Double.parseDouble(attrs.get("height"));
+			boolean cropped = MyXMLHandler.parseBoolean(attrs.get("cropped"));
+			GRectangle2D rect = AwtFactory.getPrototype().newRectangle2D();
+			rect.setRect(x, y, w, h);
+			GeoImage img = (GeoImage) geo;
+			img.setCropBoxRelative(rect);
+			img.setCropped(cropped);
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handleAngleStyle(Map<String, String> attrs) {
+		if (!(geo instanceof AngleProperties angle)) {
+			Log.error("wrong element type for <angleStyle>: " + geo.getClass());
+			return false;
+		}
+
+		try {
+			angle.setAngleStyle(Integer.parseInt(attrs.get("val")));
+			return true;
+		} catch (RuntimeException e) {
+
+			return false;
+		}
+	}
+
+	private boolean handleAudio(Map<String, String> attrs) {
+		if (!(geo instanceof GeoAudio audio)) {
+			Log.error("wrong element type for <audio>: " + geo.getClass());
+			return false;
+		}
+		try {
+			audio.setSrc(attrs.get("src"));
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handleAlgebra(Map<String, String> attrs) {
+		try {
+			geo.setAlgebraLabelVisible(MyXMLHandler.parseBooleanRev(attrs.get("labelVisible")));
+			return true;
+		} catch (RuntimeException e) {
+			Log.debug(e);
+			return false;
+		}
+	}
+
+	private boolean handleTableView(Map<String, String> attrs) {
+		try {
+			((GeoEvaluatable) geo).setTableColumn((int) MyXMLHandler.parseDoubleNaN(attrs.get("column")));
+			((GeoEvaluatable) geo).setPointsVisible(MyXMLHandler.parseBoolean(attrs.get("points")));
+			return true;
+		} catch (RuntimeException e) {
+			Log.debug(e);
+			return false;
+		}
+	}
+
+	private boolean handleVideo(Map<String, String> attrs) {
+		if (!(geo instanceof GeoVideo video)) {
+			Log.error("wrong element type for <video>: " + geo.getClass());
+			return false;
+		}
+		try {
+			video.setSrc(attrs.get("src"), attrs.get("type"));
+			video.setSize(Integer.parseInt(attrs.get("width")), Integer.parseInt(attrs.get("height")));
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	/*
+	 * needed for old files (4.2 and earlier)
+	 */
+	private boolean handleForceReflexAngle(Map<String, String> attrs) {
+		if (!(geo instanceof AngleProperties angle)) {
+			Log.error("wrong element type for <forceReflexAngle>: " + geo.getClass());
+			return false;
+		}
+
+		try {
+			angle.setForceReflexAngle(MyXMLHandler.parseBoolean(attrs.get("val")));
+			return true;
+		} catch (RuntimeException e) {
+
+			return false;
+		}
+	}
+
+	private boolean handleOutlyingIntersections(Map<String, String> attrs) {
+		if (!(geo instanceof LimitedPath lpath)) {
+			Log.debug("wrong element type for <outlyingIntersections>: " + geo.getClass());
+			return false;
+		}
+
+		try {
+			lpath.setAllowOutlyingIntersections(MyXMLHandler.parseBoolean(attrs.get("val")));
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handleKeepTypeOnTransform(Map<String, String> attrs) {
+		if (!(geo instanceof LimitedPath lpath)) {
+			Log.debug("wrong element type for <outlyingIntersections>: " + geo.getGeoClassType());
+			return false;
+		}
+
+		try {
+			lpath.setKeepTypeOnGeometricTransform(MyXMLHandler.parseBoolean(attrs.get("val")));
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handleSegmentStartStyle(Map<String, String> attrs) {
+		if (!(geo instanceof HasSegmentStyle)) {
+			Log.debug("wrong element type for segment style: " + geo.getGeoClassType());
+			return false;
+		}
+
+		try {
+			((HasSegmentStyle) geo).setStartStyle(SegmentStyle.fromString(attrs.get("val")));
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handleSegmentEndStyle(Map<String, String> attrs) {
+		if (!(geo instanceof HasSegmentStyle)) {
+			Log.debug("wrong element type for segment style: " + geo.getGeoClassType());
+			return false;
+		}
+
+		try {
+			((HasSegmentStyle) geo).setEndStyle(SegmentStyle.fromString(attrs.get("val")));
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handleSymbolic(Map<String, String> attrs) {
+		if (!(geo instanceof HasSymbolicMode hasSymbolicMode)) {
+			Log.error("wrong element type for <symbolic>: " + geo.getClass());
+			return false;
+		}
+		symbolicTagProcessed = true;
+		try {
+			hasSymbolicMode.setSymbolicMode(MyXMLHandler.parseBoolean(attrs.get("val")), false);
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handleSlopeTriangleSize(Map<String, String> attrs) {
+		if (!geo.isGeoNumeric()) {
+			Log.error("wrong element type for <slopeTriangleSize>: " + geo.getClass());
+			return false;
+		}
+
+		try {
+			GeoNumeric num = (GeoNumeric) geo;
+			num.setSlopeTriangleSize(Integer.parseInt(attrs.get("val")));
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handleExtraTag(Map<String, String> attrs) {
+		ChartStyle algo = ((ChartStyleGeo) geo).getStyle();
+		if (!"".equals(attrs.get("key"))
+				&& !"".equals(attrs.get("value"))
+				&& !"".equals(attrs.get("barNumber"))) {
+			switch (attrs.get("key")) {
+				case "barAlpha":
+					algo.setBarAlpha(
+							Float.parseFloat(attrs.get("value")), Integer.parseInt(attrs.get("barNumber")));
+					return true;
+				case "barHatchDistance":
+					algo.setBarHatchDistance(
+							Integer.parseInt(attrs.get("value")), Integer.parseInt(attrs.get("barNumber")));
+					return true;
+				case "barFillType":
+					algo.setBarFillType(
+							FillType.values()[Integer.parseInt(attrs.get("value"))],
+							Integer.parseInt(attrs.get("barNumber")));
+					return true;
+				case "barHatchAngle":
+					algo.setBarHatchAngle(
+							Integer.parseInt(attrs.get("value")), Integer.parseInt(attrs.get("barNumber")));
+					return true;
+				case "barImage":
+					algo.setBarImage(attrs.get("value"), Integer.parseInt(attrs.get("barNumber")));
+					return true;
+				case "barSymbol":
+					algo.setBarSymbol(attrs.get("value"), Integer.parseInt(attrs.get("barNumber")));
+					return true;
+				case "barColor":
+					String[] c = attrs.get("value").split(",");
+					algo.setBarColor(
+							GColor.newColor(
+									Integer.parseInt(c[0].substring(5)),
+									Integer.parseInt(c[1]),
+									Integer.parseInt(c[2])),
+							Integer.parseInt(attrs.get("barNumber")));
+					return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Start Points have to be handled at the end of the construction, because
+	 * they could depend on objects that are defined after this GeoElement.
+	 *
+	 * So we store all (geo, startpoint expression) pairs and process them at
+	 * the end of the construction.
+	 *
+	 * @see #processStartPointList()
+	 */
+	private void handleStartPoint(Map<String, String> attrs) {
+		if (geo instanceof RectangleTransformable && !geo.isGeoImage()) {
+			double x = 0;
+			double y = 0;
+
+			try {
+				x = Double.parseDouble(attrs.get("x"));
+				y = Double.parseDouble(attrs.get("y"));
+			} catch (NumberFormatException e) {
+				Log.error("Incorrect start point for RectangleTransformable");
+			}
+
+			// old GeoEmbeds are represented by three rw points
+			String number = attrs.get("number");
+			if (geo instanceof GeoEmbed embed && number != null) {
+
+				if ("0".equals(number)) {
+					embedY = y;
+					return;
+				} else if ("1".equals(number)) {
+					embedX = x;
+					return;
+				} else if ("2".equals(number)) {
+					embed.setRealWidth(embedX - x);
+					embed.setRealHeight(y - embedY);
+				}
+			}
+
+			GPoint2D startPoint = new GPoint2D(x, y);
+			((RectangleTransformable) geo).setLocation(startPoint);
+			return;
+		}
+
+		if (!(geo instanceof Locateable locGeo)) {
+			Log.error("wrong element type for <startPoint>: " + geo.getClass());
+			return;
+		}
+
+		if (locGeo instanceof AbsoluteScreenLocateable) {
+			((AbsoluteScreenLocateable) locGeo)
+					.setAbsoluteScreenLocActive(MyXMLHandler.parseBoolean(attrs.get("absolute")));
+		}
+		// relative start point (expression or label expected)
+		String exp = attrs.get("exp");
+		if (exp == null) {
+			exp = attrs.get("label");
+		}
+
+		// for corners a number of the startPoint is given
+		int number = 0;
+		try {
+			number = Integer.parseInt(attrs.get("number"));
+		} catch (RuntimeException expected) {
+			// do nothing
+		}
+
+		if (exp != null) {
+			// store (geo, expression, number) values
+			// they will be processed in processStartPoints() later
+			startPointList.add(new LocateableExpPair(locGeo, exp, number));
+			locGeo.setWaitForStartPoint();
+		} else {
+			// absolute start point (coords expected)
+			try {
+				GeoPointND p = xmlHandler.handleAbsoluteStartPoint(attrs);
+
+				if (number == 0) {
+					// set first start point right away
+					locGeo.setStartPoint(p);
+				} else {
+					// set other start points later
+					// store (geo, point, number) values
+					// they will be processed in processStartPoints() later
+					startPointList.add(new LocateableExpPair(locGeo, p, number));
+					locGeo.setWaitForStartPoint();
+				}
+			} catch (CircularDefinitionException | RuntimeException ignored) {
+				// do nothing
+			}
+		}
+	}
+
+	private boolean handleLength(Map<String, String> attrs) {
+
+		// name of linked geo
+		String val = attrs.get("val");
+
+		if (geo instanceof GeoInputBox) {
+			((GeoInputBox) geo).setLength(Integer.parseInt(val));
+		} else {
+			Log.error("Length not supported for " + geo.getGeoClassType());
+		}
+
+		return true;
+	}
+
+	private boolean handleTempUserInput(Map<String, String> attrs) {
+
+		// name of linked geo
+		String eval = attrs.get("eval");
+		String display = attrs.get("display");
+
+		if (geo instanceof GeoInputBox inputBox) {
+
+			if (inputBox.getLinkedGeo().isGeoText() && !inputBox.getLinkedGeo().isLabelSet()) {
+				((GeoText) inputBox.getLinkedGeo()).setTextString(eval);
+			} else {
+				inputBox.setTempUserInput(eval, display);
+			}
+		} else {
+			Log.error("temp user input not supported for " + geo.getGeoClassType());
+		}
+
+		return true;
+	}
+
+	private void handleTextAlign(Map<String, String> attrs) {
+		HorizontalAlignment align = HorizontalAlignment.fromString(attrs.get("val"));
+
+		if (align != null && geo instanceof HasAlignment) {
+			((HasAlignment) geo).setAlignment(align);
+		} else {
+			Log.error("Text alignment not supported for " + geo.getGeoClassType());
+		}
+	}
+
+	private void handleVerticalAlign(Map<String, String> attrs) {
+		VerticalAlignment align = VerticalAlignment.fromString(attrs.get("val"));
+
+		if (align != null && geo instanceof HasVerticalAlignment) {
+			((HasVerticalAlignment) geo).setVerticalAlignment(align);
+		} else {
+			Log.error("Vertical alignment not supported for " + geo.getGeoClassType());
+		}
+	}
+
+	private boolean handleListType(Map<String, String> attrs) {
+
+		// name of geo type, eg "point"
+		String val = attrs.get("val");
+
+		if (geo instanceof GeoList) {
+			((GeoList) geo).setTypeStringForXML(val);
+		} else {
+			Log.error("handleListType: expected LIST, got " + geo.getGeoClassType());
+		}
+
+		return true;
+	}
+
+	/**
+	 * Linked Geos have to be handled at the end of the construction, because
+	 * they could depend on objects that are defined after this GeoElement.
+	 *
+	 * So we store all (geo, expression) pairs and process them at the end of
+	 * the construction.
+	 *
+	 * @see #processLinkedGeoList()
+	 */
+	private boolean handleLinkedGeo(Map<String, String> attrs) {
+
+		// name of linked geo
+		String exp = attrs.get("exp");
+
+		if (exp != null) {
+			// store (geo, expression, number) values
+			// they will be processed in processLinkedGeos() later
+			linkedGeoList.add(geo, exp);
+		} else {
+			return false;
+		}
+
+		return true;
+	}
+
+	private boolean handleLineStyle(Map<String, String> attrs) {
+		try {
+			lineStyleTagProcessed = true;
+			geo.setLineType(Integer.parseInt(attrs.get("type")));
+			geo.setLineThickness(Integer.parseInt(attrs.get("thickness")));
+
+			// for 3D
+			String typeHidden = attrs.get("typeHidden");
+			if (typeHidden != null) {
+				geo.setLineTypeHidden(Integer.parseInt(typeHidden));
+			}
+			String opacity = attrs.get("opacity");
+			if (opacity != null) {
+				lineOpacityTagProcessed = true;
+				geo.setLineOpacity(Integer.parseInt(opacity));
+			}
+			String drawArrows = attrs.get("drawArrow");
+			if (drawArrows != null && geo instanceof GeoLocus) {
+				((GeoLocus) geo).drawAsArrows(MyXMLHandler.parseBoolean(drawArrows));
+			}
+
+			return true;
+		} catch (RuntimeException e) {
+			Log.debug(e);
+			return false;
+		}
+	}
+
+	private boolean handleDecoration(Map<String, String> attrs) {
+		try {
+			geo.setDecorationType(Integer.parseInt(attrs.get("type")));
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handleEqnStyle(Map<String, String> attrs) {
+		String style = attrs.get("style");
+		String parameter = attrs.get("parameter");
+		if (geo instanceof LinearEquationRepresentable) {
+			// e.g., GeoLine
+			if (!((LinearEquationRepresentable) geo).setEquationFormFromXML(style, parameter)) {
+				Log.error("unknown style for linear object in <eqnStyle>: " + style);
+			}
+		} else if (geo instanceof QuadraticEquationRepresentable) {
+			// e.g., GeoConic
+			if (!((QuadraticEquationRepresentable) geo).setEquationFormFromXML(style, parameter)) {
+				Log.error("unknown style for conic in <eqnStyle>: " + style);
+			}
+		} else {
+			Log.error("wrong element type for <eqnStyle>: " + geo.getClass());
+			return false;
+		}
+		return true;
+	}
+
+	private void handleEmbed(Map<String, String> attrs) {
+		if (geo instanceof GeoEmbed) {
+			try {
+				((GeoEmbed) geo).setEmbedId(Integer.parseInt(attrs.get("id")));
+				((GeoEmbed) geo).setAppName(attrs.get("app"));
+				((GeoEmbed) geo).setUrl(attrs.get("url"));
+			} catch (RuntimeException e) {
+				Log.error("Problem parsing embed " + e.getMessage());
+			}
+		} else {
+			Log.error("wrong element type for <embed>: " + geo.getClass());
+		}
+	}
+
+	private void handleEmbedSettings(Map<String, String> attrs) {
+		if (geo instanceof GeoEmbed) {
+			for (Map.Entry<String, String> entry : attrs.entrySet()) {
+				((GeoEmbed) geo).attr(entry.getKey(), entry.getValue());
+			}
+		}
+	}
+
+	private boolean handleSlider(Map<String, String> attrs) {
+		if (!geo.isGeoNumeric()) {
+			Log.error("wrong element type for <slider>: " + geo.getClass());
+			return false;
+		}
+
+		try {
+			sliderTagProcessed = true;
+			// don't create sliders in macro construction
+			if (geo.getKernel().isMacroKernel()) {
+				return true;
+			}
+
+			GeoNumeric num = (GeoNumeric) geo;
+
+			// make sure
+			String strMin = attrs.get("min");
+			String strMax = attrs.get("max");
+			if (strMin != null || strMax != null) {
+				minMaxList.add(new GeoNumericMinMax(geo, strMin, strMax));
+			}
+
+			String str = attrs.get("absoluteScreenLocation");
+			if (str != null) {
+				num.setAbsoluteScreenLocActive(MyXMLHandler.parseBoolean(str));
+			} else {
+				num.setAbsoluteScreenLocActive(false);
+			}
+
+			// null in preferences
+			if (attrs.get("x") != null) {
+				double x = StringUtil.parseDouble(attrs.get("x"));
+				double y = StringUtil.parseDouble(attrs.get("y"));
+				num.setSliderLocation(x, y, true);
+			}
+
+			num.setSliderWidth(StringUtil.parseDouble(attrs.get("width")), true);
+			num.setSliderFixed(MyXMLHandler.parseBoolean(attrs.get("fixed")));
+			num.setAVSliderOrCheckboxVisible(MyXMLHandler.parseBoolean(attrs.get("showAlgebra")));
+
+			if (MyXMLHandler.parseBoolean(attrs.get("arbitraryConstant"))) {
+				app.getKernel().getConstruction().getUnclaimedArbitraryConstants().add(num);
+			}
+
+			num.setSliderHorizontal(MyXMLHandler.parseBoolean(attrs.get("horizontal")));
+
+			return true;
+		} catch (RuntimeException e) {
+			Log.debug(e);
+			return false;
+		}
+	}
+
+	private boolean handleTrace(Map<String, String> attrs) {
+		if (!(geo instanceof Traceable t)) {
+			Log.error("wrong element type for <trace>: " + geo.getClass());
+			return false;
+		}
+
+		try {
+			t.setTrace(MyXMLHandler.parseBoolean(attrs.get("val")));
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handleSpreadsheetTrace(Map<String, String> attrs) {
+
+		// XML handling for new tracing code
+		if (!geo.isSpreadsheetTraceable()) {
+			Log.error("wrong element type for <trace>: " + geo.getClass());
+			return false;
+		}
+
+		try {
+
+			// set geo for tracing
+			geo.setSpreadsheetTrace(MyXMLHandler.parseBoolean(attrs.get("val")));
+
+			SpreadsheetTraceSettings t = geo.getTraceSettings();
+			t.traceColumn1 = Integer.parseInt(attrs.get("traceColumn1"));
+			t.traceColumn2 = Integer.parseInt(attrs.get("traceColumn2"));
+			t.traceRow1 = Integer.parseInt(attrs.get("traceRow1"));
+			t.traceRow2 = Integer.parseInt(attrs.get("traceRow2"));
+			t.tracingRow = Integer.parseInt(attrs.get("tracingRow"));
+			t.numRows = Integer.parseInt(attrs.get("numRows"));
+			t.headerOffset = Integer.parseInt(attrs.get("headerOffset"));
+
+			t.doColumnReset = MyXMLHandler.parseBoolean(attrs.get("doColumnReset"));
+			t.doRowLimit = MyXMLHandler.parseBoolean(attrs.get("doRowLimit"));
+			t.showLabel = MyXMLHandler.parseBoolean(attrs.get("showLabel"));
+			t.showTraceList = MyXMLHandler.parseBoolean(attrs.get("showTraceList"));
+			t.doTraceGeoCopy = MyXMLHandler.parseBoolean(attrs.get("doTraceGeoCopy"));
+
+			String stringPause = attrs.get("pause");
+			if (stringPause == null) {
+				t.pause = false;
+			} else {
+				t.pause = MyXMLHandler.parseBoolean(stringPause);
+			}
+
+			app.setNeedsSpreadsheetTableModel();
+
+			// app.getTraceManager().loadTraceGeoCollection(); is called when
+			// construction loaded to add geo to trace list
+
+			return true;
+
+		} catch (RuntimeException e) {
+			Log.debug(e);
+			return false;
+		}
+	}
+
+	private boolean handleShowTrimmed(Map<String, String> attrs) {
+		try {
+			geo.setShowTrimmedIntersectionLines(MyXMLHandler.parseBoolean(attrs.get("val")));
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handleSelectionAllowed(Map<String, String> attrs) {
+		try {
+			geo.setSelectionAllowed(MyXMLHandler.parseBoolean(attrs.get("val")));
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handleSelectedIndex(Map<String, String> attrs) {
+		try {
+			if (geo.isGeoList()) {
+				((GeoList) geo).setSelectedIndex(Integer.parseInt(attrs.get("val")));
+			}
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handleFading(Map<String, String> attrs) {
+		try {
+			float fading = Float.parseFloat(attrs.get("val"));
+			((GeoPlaneND) geo).setFading(fading);
+			return true;
+		} catch (Exception e) {
+			return false;
+		}
+	}
+
+	private boolean handleLevelOfDetailQuality(Map<String, String> attrs) {
+		try {
+			boolean lod = MyXMLHandler.parseBoolean(attrs.get("val"));
+			if (lod) {
+				((SurfaceEvaluable) geo).setLevelOfDetail(LevelOfDetail.QUALITY);
+			}
+			return true;
+		} catch (Exception e) {
+			return false;
+		}
+	}
+
+	private boolean handleBgColor(Map<String, String> attrs) {
+		GColor col = handleColorAlphaAttrs(attrs);
+		if (col == null) {
+			return false;
+		}
+		geo.setBackgroundColor(col);
+
+		return true;
+	}
+
+	private void handleBorderColor(Map<String, String> attrs) {
+		if (!(geo instanceof GeoInline)) {
+			return;
+		}
+		int red = Integer.parseInt(attrs.get("r"));
+		int green = Integer.parseInt(attrs.get("g"));
+		int blue = Integer.parseInt(attrs.get("b"));
+		GColor col = GColor.newColor(red, green, blue);
+		((GeoInline) geo).setBorderColor(col);
+	}
+
+	private void handleBoundingBox(Map<String, String> attrs) {
+		if (geo instanceof GeoText && geo.isIndependent()) {
+			try {
+				GeoInlineText ret = new GeoInlineText((GeoText) geo);
+				geo.getConstruction().replace(geo, ret);
+				geo = ret;
+				double width = Double.parseDouble(attrs.get("width"));
+				double height = Double.parseDouble(attrs.get("height"));
+				ret.setContentWidth(width);
+				ret.setContentHeight(height);
+				ret.setSize(width, height);
+			} catch (Exception e) {
+				Log.debug(e);
+			}
+		} else {
+			Log.error("Unexpected type for <boundingBox>: " + geo.getClass());
+		}
+	}
+
+	private boolean handleMatrix(Map<String, String> attrs) {
+		if (!geo.isGeoConic() && !geo.isGeoQuadric()) {
+			Log.error("wrong element type for <matrix>: " + geo.getClass());
+			return false;
+		}
+		try {
+			handleMatrixConicOrQuadric(attrs);
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	/**
+	 * handler matrix for a conic or a quadric
+	 *
+	 * @param attrs
+	 *            attributes
+	 */
+	private void handleMatrixConicOrQuadric(Map<String, String> attrs) {
+		if (geo.isGeoQuadric()) {
+			if (geo.isDefaultGeo()) { // avoid setting for default geo
+				return;
+			}
+			GeoQuadric3DInterface quadric = (GeoQuadric3DInterface) geo;
+			// set matrix and classify conic now
+			// <eigenvectors> should have been set earlier
+
+			if (needsValuesFromXML(geo)) {
+				double[] matrix = {
+					StringUtil.parseDouble(attrs.get("A0")),
+					StringUtil.parseDouble(attrs.get("A1")),
+					StringUtil.parseDouble(attrs.get("A2")),
+					StringUtil.parseDouble(attrs.get("A3")),
+					StringUtil.parseDouble(attrs.get("A4")),
+					StringUtil.parseDouble(attrs.get("A5")),
+					StringUtil.parseDouble(attrs.get("A6")),
+					StringUtil.parseDouble(attrs.get("A7")),
+					StringUtil.parseDouble(attrs.get("A8")),
+					StringUtil.parseDouble(attrs.get("A9"))
+				};
+				quadric.setMatrixFromXML(matrix);
+			} else {
+				quadric.ensureClassified();
+			}
+			if (!setEigenvectorsCalled) {
+				quadric.hideIfNotSphere();
+			}
+		} else if (geo.isGeoConic()) {
+			GeoConicND conic = (GeoConicND) geo;
+			// set matrix and classify conic now
+			// <eigenvectors> should have been set earlier
+			if (needsValuesFromXML(geo)) {
+				double[] matrix = {
+					StringUtil.parseDouble(attrs.get("A0")),
+					StringUtil.parseDouble(attrs.get("A1")),
+					StringUtil.parseDouble(attrs.get("A2")),
+					StringUtil.parseDouble(attrs.get("A3")),
+					StringUtil.parseDouble(attrs.get("A4")),
+					StringUtil.parseDouble(attrs.get("A5"))
+				};
+				conic.setMatrix(matrix);
+			} else {
+				conic.ensureClassified();
+			}
+		}
+	}
+
+	private boolean handleLabelOffset(Map<String, String> attrs) {
+		try {
+			geo.labelOffsetX = Integer.parseInt(attrs.get("x"));
+			geo.labelOffsetY = Integer.parseInt(attrs.get("y"));
+
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handleLabelMode(Map<String, String> attrs) {
+		try {
+			geo.setLabelMode(Integer.parseInt(attrs.get("val")));
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handleTooltipMode(Map<String, String> attrs) {
+		try {
+			geo.setTooltipMode(Integer.parseInt(attrs.get("val")));
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean handleCoefficients(Map<String, String> attrs) {
+		if (!geo.isGeoImplicitCurve()) {
+			Log.warn("wrong element type for <coefficients>: " + geo.getClass());
+			return false;
+		}
+		try {
+			String rep = attrs.get("rep");
+			if (rep == null) {
+				return false;
+			}
+			if (attrs.get("rep").equals("array")) {
+				String data = attrs.get("data");
+				if (data == null) {
+					return false;
+				}
+				ArrayList<ArrayList<Double>> collect = new ArrayList<>();
+				ArrayList<Double> newRow = new ArrayList<>();
+				int start = 0;
+				for (int c = 1; c < data.length(); c++) {
+					switch (data.charAt(c)) {
+						default:
+							// do nothing
+							break;
+						case '[':
+							if (!newRow.isEmpty()) {
+								return false;
+							}
+							start = c + 1;
+							break;
+						case ']':
+							newRow.add(StringUtil.parseDouble(data.substring(start, c)));
+							start = c + 1;
+							collect.add(newRow);
+							newRow = new ArrayList<>();
+							c++; // jump over ','
+							break;
+						case ',':
+							newRow.add(StringUtil.parseDouble(data.substring(start, c)));
+							start = c + 1;
+					}
+				}
+				double[][] coeff = new double[collect.size()][];
+				for (int i = 0; i < collect.size(); i++) {
+					ArrayList<Double> row = collect.get(i);
+					coeff[i] = new double[row.size()];
+					for (int j = 0; j < row.size(); j++) {
+						coeff[i][j] = row.get(j);
+					}
+				}
+				ExpressionNode def = geo.getDefinition();
+				/*
+				 * Only overwrite coeff from XML when we don't have definition
+				 * (setting coeffs explicitly kills factorization)
+				 */
+				if (def == null) {
+					((GeoImplicit) geo).setCoeff(coeff);
+				}
+				// geo.setDefinition(def);
+				return true;
+			}
+		} catch (RuntimeException e) {
+			return false;
+		}
+		return false;
+	}
+
+	private boolean handleUserInput(Map<String, String> attrs) {
+		if (!(geo instanceof GeoImplicit)) {
+			Log.warn("wrong element type for <userinput>: " + geo.getClass());
+			return false;
+		}
+		try {
+			boolean valid = !"false".equals(attrs.get("valid"));
+			if (geo.isIndependent() && valid) {
+				String value = attrs.get("value");
+				if (value != null) {
+					ValidExpression ve = xmlHandler.parser.parseGeoGebraExpression(value);
+					geo.setDefinition(ve.wrap());
+					if (ve.unwrap() instanceof Equation) {
+						((GeoImplicit) geo).fromEquation((Equation) ve.unwrap(), null);
+					}
+				}
+			}
+			if (attrs.get("show") != null && attrs.get("show").equals("true") && valid) {
+				((GeoImplicit) geo).setToUser();
+			} else {
+				((GeoImplicit) geo).setToImplicit();
+			}
+
+			return true;
+		} catch (Exception e) {
+			Log.debug(e.getMessage());
+			return false;
+		}
+	}
+
+	private void handleOrdering(Map<String, String> attrs) {
+		try {
+			geo.setOrdering(Double.parseDouble(attrs.get("val")));
+		} catch (RuntimeException expected) {
+			// missing or incorrect ordering
+		}
+	}
+
+	private boolean handleObjColor(Map<String, String> attrs) {
+		GColor col = MyXMLHandler.handleColorAttrs(attrs);
+		if (col == null) {
+			return false;
+		}
+		geo.setObjColor(col);
+
+		// Dynamic colors
+		// Michael Borcherds 2008-04-02
+		String red = attrs.get("dynamicr");
+		String green = attrs.get("dynamicg");
+		String blue = attrs.get("dynamicb");
+		String alpha = attrs.get("dynamica");
+		String colorSpace = attrs.get("colorSpace");
+
+		if (red != null && green != null && blue != null) {
+			try {
+				if (!red.isEmpty() || !green.isEmpty() || !blue.isEmpty()) {
+					if (red.isEmpty()) {
+						red = "0";
+					}
+					if (green.isEmpty()) {
+						green = "0";
+					}
+					if (blue.isEmpty()) {
+						blue = "0";
+					}
+
+					StringBuilder sb = new StringBuilder();
+					sb.append('{');
+					sb.append(red);
+					sb.append(',');
+					sb.append(green);
+					sb.append(',');
+					sb.append(blue);
+					if (alpha != null && !alpha.isEmpty()) {
+						sb.append(',');
+						sb.append(alpha);
+					}
+					sb.append('}');
+
+					// need to to this at end of construction (dependencies!)
+					dynamicColorList.add(geo, sb.toString());
+					geo.setColorSpace(
+							colorSpace == null ? GeoElement.COLORSPACE_RGB : Integer.parseInt(colorSpace));
+				}
+			} catch (RuntimeException e) {
+				Log.debug(e);
+				Log.error("Error loading Dynamic Colors");
+			}
+		}
+
+		String angle = attrs.get("hatchAngle");
+		if (angle != null) {
+			geo.setHatchingAngle(Integer.parseInt(angle));
+		}
+
+		String inverse = attrs.get("inverseFill");
+		if (inverse != null) {
+			geo.setInverseFill(MyXMLHandler.parseBoolean(inverse));
+		}
+
+		String distance = attrs.get("hatchDistance");
+		if (angle != null) {
+			geo.setHatchingDistance(Integer.parseInt(distance));
+			// Old files don't store fillType, just fillDistance. New files
+			// override this below.
+			geo.setFillType(FillType.HATCH);
+		}
+
+		String fillType = attrs.get("fillType");
+		if (fillType != null) {
+			geo.setFillType(FillType.values()[Integer.parseInt(fillType)]);
+		}
+		String fillSymbol = attrs.get("fillSymbol");
+		if (fillSymbol != null) {
+			geo.setFillSymbol(fillSymbol);
+		}
+		String filename = attrs.get("image");
+		if (filename != null) {
+			geo.setFillImage(filename);
+			geo.setFillType(FillType.IMAGE);
+		}
+
+		alpha = attrs.get("alpha");
+		// ignore alpha value for lists prior to GeoGebra 3.2
+		if (alpha != null && (!geo.isGeoList() || xmlHandler.ggbFileFormat > 3.19)) {
+			geo.setAlphaValue(Float.parseFloat(alpha));
+		}
+		return true;
+	}
+
+	/**
+	 * @param attrs
+	 *            attributes
+	 * @return success
+	 */
+	private boolean handleEigenvectorsConic(Map<String, String> attrs) {
+		if (!geo.isGeoConic()) {
+			Log.error("wrong element type for <eigenvectors>: " + geo.getClass());
+			return false;
+		}
+		try {
+			GeoConicND conic = (GeoConicND) geo;
+			// set eigenvectors, but don't classify conic now
+			// classifyConic() will be called in handleMatrix() by
+			// conic.setMatrix()
+			if (needsValuesFromXML(geo)) {
+				conic.setEigenvectors(
+						StringUtil.parseDouble(attrs.get("x0")),
+						StringUtil.parseDouble(attrs.get("y0")),
+						StringUtil.parseDouble(attrs.get("z0")),
+						StringUtil.parseDouble(attrs.get("x1")),
+						StringUtil.parseDouble(attrs.get("y1")),
+						StringUtil.parseDouble(attrs.get("z1")));
+			}
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	private boolean needsValuesFromXML(GeoElement geo) {
+		return (geo.isIndependent() && geo.getDefinition() == null)
+				|| (geo.getParentAlgorithm() instanceof SetRandomValue);
+	}
+
+	private void handleEigenvectors(Map<String, String> attrs) {
+		if (!geo.isGeoQuadric()) {
+			handleEigenvectorsConic(attrs);
+			return;
+		}
+		try {
+			GeoQuadric3DInterface quadric = (GeoQuadric3DInterface) geo;
+			// set eigenvectors, but don't classify conic now
+			// classifyConic() will be called in handleMatrix() by
+			// conic.setMatrix()
+			setEigenvectorsCalled = true;
+			if (needsValuesFromXML(geo)) {
+				quadric.setEigenvectors(
+						StringUtil.parseDouble(attrs.get("x0")),
+						StringUtil.parseDouble(attrs.get("y0")),
+						StringUtil.parseDouble(attrs.get("z0")),
+						StringUtil.parseDouble(attrs.get("x1")),
+						StringUtil.parseDouble(attrs.get("y1")),
+						StringUtil.parseDouble(attrs.get("z1")),
+						StringUtil.parseDouble(attrs.get("x2")),
+						StringUtil.parseDouble(attrs.get("y2")),
+						StringUtil.parseDouble(attrs.get("z2")));
+			}
+		} catch (Exception e) {
+			Log.error("Problem parsing eigenvectors: " + e);
+		}
+	}
+
+	protected void finish() {
+		if (!sliderTagProcessed && geo.isGeoNumeric()) {
+			((GeoNumeric) geo).setAVSliderOrCheckboxVisible(false);
+		} else if (!fontTagProcessed && geo.isGeoText()) {
+			((TextProperties) geo).setFontSizeMultiplier(1);
+			((TextProperties) geo).setSerifFont(false);
+			((TextProperties) geo).setFontStyle(GFont.PLAIN);
+		} else if (!lineStyleTagProcessed
+				&& ((geo.isGeoFunctionNVar() && ((GeoFunctionNVar) geo).isFun2Var())
+						|| geo.isGeoSurfaceCartesian())) {
+			geo.setLineThickness(0);
+		}
+
+		if (!lineOpacityTagProcessed && sliderTagProcessed && geo.isGeoNumeric()) {
+			GColor bgColor = geo.getBackgroundColor();
+			if (bgColor != null) {
+				geo.setLineOpacity(bgColor.getAlpha());
+				geo.setBackgroundColor(bgColor.deriveWithAlpha(255));
+			} else {
+				geo.setLineOpacity(GeoNumeric.DEFAULT_SLIDER_LINE_OPACITY);
+			}
+		}
+		if (!symbolicTagProcessed && (geo.isGeoText() || geo.isGeoInputBox() || geo.isGeoList())) {
+			((HasSymbolicMode) geo).setSymbolicMode(false, false);
+		}
+		if (geo instanceof GeoImage image && image.isCentered()) {
+			image.setCentered(true);
+		}
+		if (geo instanceof GeoImplicitCurve curve && curve.getExpression() == null) {
+			geo.setUndefined();
+		}
+		if (xmlHandler.casMap != null && geo instanceof AlgebraicExpression expr) {
+			expr.updateCASEvalMap(xmlHandler.casMap);
+		}
+		if (pendingLabel != null) {
+			geo.setLoadedLabel(pendingLabel);
+			pendingLabel = null;
+		} else if (startPointList.stream().noneMatch(pair -> pair.locateable == geo)) {
+			xmlHandler.kernel.notifyUpdateVisualStyle(geo, GProperty.COMBINED);
+		}
+	}
+
+	private boolean handleShow(Map<String, String> attrs) {
+		try {
+			if (isUndefinedGeoNumber()) {
+				geo.setEuclidianVisible(false);
+			} else {
+				geo.setEuclidianVisible(MyXMLHandler.parseBoolean(attrs.get("object")));
+				geo.setLabelVisible(MyXMLHandler.parseBoolean(attrs.get("label")));
+			}
+
+			// bit 0 -> display object in EV1, 0 = true (default)
+			// bit 1 -> display object in EV2, 0 = false (default)
+			int EVs = 0; // default, display in just EV1
+			String str = attrs.get("ev");
+			if (str != null) {
+				EVs = Integer.parseInt(str);
+			}
+
+			if ((EVs & 1) == 0) {
+				geo.addView(App.VIEW_EUCLIDIAN);
+			} else {
+				geo.removeView(App.VIEW_EUCLIDIAN);
+			}
+
+			if ((EVs & 2) == 2) { // bit 1
+				geo.addView(App.VIEW_EUCLIDIAN2);
+			} else {
+				geo.removeView(App.VIEW_EUCLIDIAN2);
+			}
+
+			if ((EVs & 4) == 4) { // bit 2
+				geo.addViews3D();
+			}
+
+			if ((EVs & 8) == 8) { // bit 3
+				geo.removeViews3D();
+			}
+
+			if ((EVs & 16) == 16) { // bit 4
+				geo.setVisibleInViewForPlane(true);
+				if (!(xmlHandler.cons instanceof MacroConstruction)) {
+					app.addToViewsForPlane(geo);
+				}
+			}
+
+			if ((EVs & 32) == 32) { // bit 5
+				geo.setVisibleInViewForPlane(false);
+				app.removeFromViewsForPlane(geo);
+			}
+
+			return true;
+
+		} catch (RuntimeException e) {
+			Log.debug(e);
+			return false;
+		}
+	}
+
+	private boolean isUndefinedGeoNumber() {
+		// we should show undefined integrals
+		if (!geo.isGeoNumeric() || !geo.isIndependent()) {
+			return false;
+		}
+
+		GeoNumeric numeric = (GeoNumeric) this.geo;
+		return Double.isNaN(numeric.value);
+	}
+
+	private boolean handleShowOnAxis(Map<String, String> attrs) {
+		try {
+			if (!(geo instanceof GeoFunction)) {
+				return false;
+			}
+			((GeoFunction) geo).setShowOnAxis(MyXMLHandler.parseBoolean(attrs.get("val")));
+			return true;
+
+		} catch (RuntimeException e) {
+			Log.debug(e);
+			return false;
+		}
+	}
+
+	private void handleSimplifyCoefficients(Map<String, String> attrs) {
+		try {
+			if (!(geo instanceof GeoFunction function)) {
+				return;
+			}
+			function.setSimplifyCoefficients(MyXMLHandler.parseBoolean(attrs.get("val")));
+		} catch (RuntimeException e) {
+			Log.debug(e);
+		}
+	}
+
+	/**
+	 * Handle start tag inside &lt;element&gt;
+	 *
+	 * @param eName
+	 *            element name
+	 * @param attrs
+	 *            attributes
+	 */
+	protected void startGeoElement(
+			String eName, Map<String, String> attrs, ArrayList<String> errors) {
+		if (geo == null) {
+			Log.error("no element set for <" + eName + ">");
+			return;
+		}
+
+		ScriptType scriptType = ScriptType.getTypeWithXMLName(eName);
+		if (scriptType != null) {
+			handleScript(attrs, scriptType);
+		} else {
+			switch (eName) {
+				case "auxiliary":
+					handleAuxiliary(attrs);
+					break;
+				case "autocolor":
+					handleAutocolor(attrs);
+					break;
+				case "animation":
+					handleAnimation(attrs);
+					break;
+				case "arcSize":
+					handleArcSize(attrs);
+					break;
+				case "allowReflexAngle":
+					handleAllowReflexAngle(attrs);
+					break;
+				case "absoluteScreenLocation":
+					handleAbsoluteScreenLocation(attrs, true);
+					break;
+				case "angleStyle":
+					handleAngleStyle(attrs);
+					break;
+				case "audio":
+					handleAudio(attrs);
+					break;
+				case "algebra":
+					handleAlgebra(attrs);
+					break;
+				case "breakpoint":
+					handleBreakpoint(attrs);
+					break;
+				case "bgColor":
+					handleBgColor(attrs);
+					break;
+				case "borderColor":
+					handleBorderColor(attrs);
+					break;
+				case "boundingBox":
+					handleBoundingBox(attrs);
+					break;
+				case "coords":
+					handleCoords(attrs);
+					break;
+				case "coordStyle":
+					handleCoordStyle(attrs);
+					break;
+				case "caption":
+					handleCaption(attrs);
+					break;
+				case "condition":
+					handleCondition(attrs);
+					break;
+				case "contentSize":
+					handleContentSize(attrs);
+					break;
+				case "checkbox":
+					handleCheckbox(attrs);
+					break;
+				case "coefficients":
+					handleCoefficients(attrs);
+					break;
+				case "comboBox":
+					handleComboBox(attrs);
+					break;
+				case "contentSerif":
+					handleSerifContent(attrs);
+					break;
+				case "cropBox":
+					handleCropBox(attrs);
+					break;
+				case "curveParam":
+					handleCurveParam(attrs);
+					break;
+				case "casMap":
+					xmlHandler.casMapForElement();
+					break;
+				case "content":
+					handleContentParam(attrs);
+					break;
+				case "decoration":
+					handleDecoration(attrs);
+					break;
+				case "decimals":
+					handleTextDecimals(attrs);
+					break;
+				case "dimensions":
+					handleDimensions(attrs);
+					break;
+				case "eqnStyle":
+					handleEqnStyle(attrs);
+					break;
+				case "eigenvectors":
+					handleEigenvectors(attrs);
+					break;
+				case "emphasizeRightAngle":
+					handleEmphasizeRightAngle(attrs);
+					break;
+				case "embed":
+					handleEmbed(attrs);
+					break;
+				case "embedSettings":
+					handleEmbedSettings(attrs);
+					break;
+				case "endStyle":
+					handleSegmentEndStyle(attrs);
+					break;
+				case "fixed":
+					handleFixed(attrs);
+					break;
+				case "file":
+					handleFile(attrs);
+					break;
+				case "font":
+					handleTextFont(attrs);
+					break;
+				case "forceReflexAngle":
+					handleForceReflexAngle(attrs);
+					break;
+				case "dynamicCaption":
+					handleDynamicCaption(attrs);
+					break;
+				case "fading":
+					handleFading(attrs);
+					break;
+				case "headStyle":
+					handleHeadStyle(attrs);
+					return;
+				case "isLaTeX":
+					handleIsLaTeX(attrs);
+					break;
+				case "incrementY":
+					handleVerticalIncrement(attrs);
+					break;
+				case "inBackground":
+					handleInBackground(attrs);
+					break;
+				case "interpolate":
+					handleInterpolate(attrs);
+					break;
+				case "isMask":
+					handleIsMask(attrs);
+					break;
+				case "isShape":
+					// don't print error, skip silently
+					break;
+				case "centered":
+					handleCentered(attrs);
+					break;
+				case "keepTypeOnTransform":
+					handleKeepTypeOnTransform(attrs);
+					break;
+				case "lineStyle":
+					handleLineStyle(attrs);
+					break;
+				case "labelOffset":
+					handleLabelOffset(attrs);
+					break;
+				case "labelMode":
+					handleLabelMode(attrs);
+					break;
+				case "layer":
+					handleLayer(attrs);
+					break;
+				case "linkedGeo":
+					handleLinkedGeo(attrs);
+					break;
+				case "length":
+					handleLength(attrs);
+					break;
+				case "tempUserInput":
+					handleTempUserInput(attrs);
+					break;
+				case "listType":
+					handleListType(attrs);
+					break;
+				case "listener":
+					handleListeners(attrs);
+					break;
+				case "levelOfDetailQuality":
+					handleLevelOfDetailQuality(attrs);
+					break;
+				case "matrix":
+					handleMatrix(attrs);
+					break;
+				case "objColor":
+					handleObjColor(attrs);
+					break;
+				case "ordering":
+					handleOrdering(attrs);
+					break;
+				case "outlyingIntersections":
+					handleOutlyingIntersections(attrs);
+					break;
+				case "parent":
+					handleParent(attrs);
+					break;
+				case "parentLabel":
+					handleParentLabel(attrs);
+					break;
+				case "pointSize":
+					handlePointSize(attrs);
+					break;
+				case "pointStyle":
+					handlePointStyle(attrs);
+					break;
+				case "show":
+					handleShow(attrs);
+					break;
+				case "showOnAxis":
+					handleShowOnAxis(attrs);
+					break;
+				case "simplifyCoefficients":
+					handleSimplifyCoefficients(attrs);
+					break;
+				case "startPoint":
+					handleStartPoint(attrs);
+					break;
+				case "slider":
+					handleSlider(attrs);
+					break;
+				case "symbolic":
+					handleSymbolic(attrs);
+					break;
+				case "slopeTriangleSize":
+					handleSlopeTriangleSize(attrs);
+					break;
+				case "significantfigures":
+					handleTextFigures(attrs);
+					break;
+				case "spreadsheetTrace":
+					handleSpreadsheetTrace(attrs);
+					break;
+				case "startStyle":
+					handleSegmentStartStyle(attrs);
+					break;
+				case "strokeBezierCoords":
+					handleStrokeBezierCoords(attrs);
+					break;
+				case "strokeCoords":
+					handleStrokeCoords(attrs);
+					break;
+				case "showTrimmed":
+					handleShowTrimmed(attrs);
+					break;
+				case "selectionAllowed":
+					handleSelectionAllowed(attrs);
+					break;
+				case "selectedIndex":
+					handleSelectedIndex(attrs);
+					break;
+				case "tableview":
+					handleTableView(attrs);
+					break;
+				case "trace":
+					handleTrace(attrs);
+					break;
+				case "tooltipMode":
+					handleTooltipMode(attrs);
+					break;
+				case "tag":
+					handleExtraTag(attrs);
+					break;
+				case "tags":
+					// ignore
+					break;
+				case "userinput":
+					handleUserInput(attrs);
+					break;
+				case "value":
+					handleValue(attrs, errors);
+					break;
+				case "variables":
+					handleVariables(attrs);
+					break;
+				case "video":
+					handleVideo(attrs);
+					break;
+				case "textAlign":
+					handleTextAlign(attrs);
+					break;
+				case "verticalAlign":
+					handleVerticalAlign(attrs);
+					break;
+				default:
+					Log.error("unknown tag in <element>: " + eName);
+			}
+		}
+	}
+
+	private void handleStrokeBezierCoords(Map<String, String> attrs) {
+		String coords = attrs.get("val");
+		if (!StringUtil.empty(coords) && geo instanceof GeoLocusStroke stroke) {
+			stroke.setBezierCoords(StringUtil.parseDoubleArray(coords));
+		}
+	}
+
+	private void handleStrokeCoords(Map<String, String> attrs) {
+		String coords = attrs.get("val");
+		if (!StringUtil.empty(coords) && geo instanceof GeoLocusStroke stroke) {
+			if (!stroke.getPoints().isEmpty()) {
+				return; // Already handled by handleStrokeBezierCoords
+			}
+			stroke.setDefined(true);
+
+			double[] numCoords = StringUtil.parseDoubleArray(coords);
+			List<MyPoint> pathPoints = new ArrayList<>(numCoords.length / 2);
+			for (int i = 0; i < numCoords.length; i++) {
+				if (i < numCoords.length - 1) {
+					pathPoints.add(new MyPoint(numCoords[i], numCoords[i + 1]));
+					i++;
+				}
+			}
+			stroke.appendVertexPointArray(pathPoints);
+		}
+	}
+
+	private void handleDynamicCaption(Map<String, String> attrs) {
+		try {
+			String dynamicCaption = attrs.get("val");
+			if (dynamicCaption != null) {
+				dynamicCaptionList.add(geo, dynamicCaption);
+			}
+		} catch (RuntimeException e) {
+			Log.error("malformed <dynamicCaption>");
+		}
+	}
+
+	private void handleContentSize(Map<String, String> attrs) {
+		if (!(geo instanceof GeoEmbed || geo instanceof GeoInline)) {
+			Log.error("wrong element type for <contentSize>: " + geo.getClass());
+			return;
+		}
+		double width = -1;
+		double height = -1;
+		try {
+			width = Double.parseDouble(attrs.get("width"));
+			height = Double.parseDouble(attrs.get("height"));
+		} catch (NumberFormatException e) {
+			Log.error("malformed <contentSize>");
+		}
+
+		if (geo instanceof GeoEmbed geoEmbed) {
+			geoEmbed.setContentWidth(width);
+			geoEmbed.setContentHeight(height);
+		} else {
+			GeoInline geoInline = (GeoInline) geo;
+			geoInline.setContentWidth(width);
+			geoInline.setContentHeight(height);
+			geoInline.setZoomingEnabled(false);
+		}
+	}
+
+	private void handleParent(Map<String, String> attrs) {
+		if (!(geo instanceof GeoMindMapNode)) {
+			Log.error("wrong element type for <parent>: " + geo.getClass());
+			return;
+		}
+
+		String val = attrs.get("val");
+		GeoElement parent = "_".equals(val) ? null : xmlHandler.kernel.lookupLabel(val);
+		NodeAlignment alignment = NodeAlignment.valueOf(attrs.get("align"));
+
+		if (parent != null && !(parent instanceof GeoMindMapNode)) {
+			Log.error("<parent> has incorrect type: " + parent.getClass());
+			return;
+		}
+		((GeoMindMapNode) geo).setParent((GeoMindMapNode) parent, alignment);
+	}
+
+	private void handleParentLabel(Map<String, String> attrs) {
+		if (geo instanceof GeoLocusStroke) {
+			((GeoLocusStroke) geo).setSplitParentLabel(attrs.get("val"));
+		}
+	}
+
+	protected void initDefault(Map<String, String> attrs) {
+		geo = getGeoElement(attrs);
+		geo.setLineOpacity(255);
+	}
+
+	private void processStartPointList() {
+		try {
+			AlgebraProcessor algProc = xmlHandler.getAlgProcessor();
+			List<Locateable> changedLocateables = getLocateablesFromStartPointList();
+			for (LocateableExpPair pair : startPointList) {
+				GeoPointND P = pair.point != null
+						? pair.point
+						: algProc.evaluateToPoint(pair.exp, ErrorHelper.silent(), true);
+				pair.locateable.setStartPoint(P, pair.number);
+			}
+			for (Locateable updated : changedLocateables) {
+				updated.updateVisualStyle(GProperty.COMBINED);
+			}
+		} catch (Exception e) {
+			startPointList.clear();
+			Log.debug(e);
+			addError("Invalid start point: " + e);
+		}
+		startPointList.clear();
+	}
+
+	private ArrayList<Locateable> getLocateablesFromStartPointList() {
+		ArrayList<Locateable> changedLocateables = new ArrayList<>(startPointList.size());
+		// use list instead of set to maintain order
+		for (LocateableExpPair pair : startPointList) {
+			if (changedLocateables.isEmpty()
+					|| changedLocateables.get(changedLocateables.size() - 1) != pair.locateable) {
+				changedLocateables.add(pair.locateable);
+			}
+		}
+		return changedLocateables;
+	}
+
+	private void processLinkedGeoList() {
+		linkedGeoList.process(
+				(geo, str) -> ((GeoInputBox) geo).setLinkedGeo(xmlHandler.kernel.lookupLabel(str)));
+	}
+
+	private void processDynamicCaptionList() {
+		dynamicCaptionList.process((geo, str) -> {
+			GeoElement caption = xmlHandler.kernel.lookupLabel(str);
+			if (caption != null && caption.isGeoText()) {
+				geo.setDynamicCaption((GeoText) caption);
+			} else {
+				Log.warn("dynamicCaption is not a GeoText:" + str);
+			}
+		});
+	}
+
+	private void processShowObjectConditionList() {
+		AlgebraProcessor algProc = xmlHandler.getAlgProcessor();
+		showObjectConditionList.process((geo, str) -> {
+			GeoBoolean condition = algProc.evaluateToBoolean(str, ErrorHelper.silent());
+			if (condition != null) {
+				geo.setShowObjectCondition(condition);
+			} else {
+				addError("Invalid condition to show object: " + str);
+			}
+		});
+	}
+
+	private void processAnimationSpeedList() {
+		AlgebraProcessor algProc = xmlHandler.getAlgProcessor();
+		animationSpeedList.process((geo, str) -> {
+			GeoNumberValue num = algProc.evaluateToNumeric(str, xmlHandler.handler);
+			geo.setAnimationSpeedObject(num);
+		});
+	}
+
+	private void processAnimationStepList() {
+		AlgebraProcessor algProc = xmlHandler.getAlgProcessor();
+		animationStepList.process((geo, string) -> {
+			NumberValue num = algProc.evaluateToNumeric(string, xmlHandler.handler);
+			if (geo.isGeoNumeric() && num != null) {
+				((GeoNumeric) geo).setAutoStep(Double.isNaN(num.getDouble()));
+			}
+			geo.setAnimationStep(num);
+		});
+	}
+
+	private void processVerticalIncrementList() {
+		AlgebraProcessor algProc = xmlHandler.getAlgProcessor();
+		verticalIncrementList.process((geo, string) -> {
+			NumberValue step = algProc.evaluateToNumeric(string, xmlHandler.handler);
+			((GeoPointND) geo).setVerticalIncrement(step);
+		});
+	}
+
+	private void processAnimatingList() {
+		try {
+			for (GeoElement animGeo : animatingList) {
+				animGeo.setAnimating(true);
+			}
+		} catch (RuntimeException e) {
+			addError("Invalid animating: " + e);
+		}
+		animatingList.clear();
+	}
+
+	private void processMinMaxList() {
+		try {
+			Iterator<GeoNumericMinMax> it = minMaxList.iterator();
+			AlgebraProcessor algProc = xmlHandler.getAlgProcessor();
+
+			while (it.hasNext()) {
+				GeoNumericMinMax pair = it.next();
+				// the setIntervalMin and setIntervalMax methods might turn ?
+				// into defined
+				// this is intentional, but when loading a file we must override
+				// it for 3.2 compatibility
+				GeoElement geoElement = pair.getGeo();
+				boolean wasDefined = geoElement.isDefined();
+				boolean isDrawable = geoElement.isDrawable();
+				if (pair.min != null) {
+					NumberValue num = algProc.evaluateToNumeric(pair.min, xmlHandler.handler);
+					((GeoNumeric) geoElement).setIntervalMin(num);
+				}
+
+				if (pair.max != null) {
+					NumberValue num2 = algProc.evaluateToNumeric(pair.max, xmlHandler.handler);
+					((GeoNumeric) geoElement).setIntervalMax(num2);
+				}
+
+				if (!wasDefined) {
+					geoElement.setUndefined();
+				}
+				if (!isDrawable && geoElement instanceof GeoNumeric) {
+					((GeoNumeric) geoElement).setDrawable(false);
+				}
+			}
+		} catch (RuntimeException e) {
+			minMaxList.clear();
+			Log.debug(e);
+			addError("Invalid min/max: " + e);
+		}
+		minMaxList.clear();
+	}
+
+	// Michael Borcherds 2008-05-18
+	private void processDynamicColorList() {
+		AlgebraProcessor algProc = xmlHandler.getAlgProcessor();
+		dynamicColorList.process((geo, str) -> {
+			GeoList col = algProc.evaluateToList(str);
+			if (col == null) {
+				addError("Invalid dynamic color: " + str);
+			}
+			geo.setColorFunction(col);
+		});
+	}
+
+	private void addError(String string) {
+		xmlHandler.errors.add(string);
+	}
+
+	protected void processLists() {
+		processStartPointList();
+		processLinkedGeoList();
+		processShowObjectConditionList();
+		processDynamicColorList();
+		processDynamicCaptionList();
+		processAnimationSpeedList();
+		processAnimationStepList();
+		processMinMaxList();
+		processVerticalIncrementList();
+
+		processAnimatingList(); // must be after min/maxList otherwise
+		// GeoElement.setAnimating doesn't work
+	}
+
+	protected void processDefaultLists() {
+		processMinMaxList();
+		processAnimationStepList();
+		processAnimationSpeedList();
+	}
+
+	protected void reset() {
+		startPointList.clear();
+		showObjectConditionList.clear();
+		dynamicColorList.clear();
+
+		linkedGeoList.clear();
+		animatingList.clear();
+		minMaxList.clear();
+		animationStepList.clear();
+		animationSpeedList.clear();
+		verticalIncrementList.clear();
+		sliderTagProcessed = false;
+		fontTagProcessed = false;
+		lineStyleTagProcessed = false;
+		lineOpacityTagProcessed = false;
+		symbolicTagProcessed = false;
+		setEigenvectorsCalled = false;
+	}
+
+	/*
+	 * expects r, g, b, alpha attributes to build a color
+	 */
+	private static GColor handleColorAlphaAttrs(Map<String, String> attrs) {
+		try {
+			int red = Integer.parseInt(attrs.get("r"));
+			int green = Integer.parseInt(attrs.get("g"));
+			int blue = Integer.parseInt(attrs.get("b"));
+			int alpha = Integer.parseInt(attrs.get("alpha"));
+			return GColor.newColor(red, green, blue, alpha);
+		} catch (RuntimeException e) {
+			return null;
+		}
+	}
+
+	// called when <element> is encountered
+	// e.g. for <element type="point" label="P">
+	private GeoElement getGeoElement(Map<String, String> attrs) {
+		GeoElement geo1 = null;
+		String label = attrs.get("label");
+		String type = attrs.get("type");
+		String defaultset = attrs.get("default");
+		if (label == null || type == null) {
+			Log.error("attributes missing in <element>");
+			return geo1;
+		}
+
+		if (defaultset == null || !xmlHandler.kernel.getElementDefaultAllowed()) {
+			// does a geo element with this label exist?
+			geo1 = xmlHandler.kernel.lookupLabel(label);
+			// needed for TRAC-2719
+			// if geo wasn't found in construction list
+			// look in cas
+			if (geo1 == null) {
+				geo1 = xmlHandler.kernel.lookupCasCellLabel(label);
+			}
+
+			if (geo1 == null || xmlHandler.kernel.getConstruction().isConstantElement(geo1)) {
+				if (geo1 != null) {
+					// In case one of the constant elements need to be overwritten,
+					// make sure to get the localized label
+					// (issue with file loading after language change)
+					xmlHandler
+							.kernel
+							.getConstruction()
+							.getGeoTable()
+							.remove(app.getLocalization().getMenu(geo1.getLabelSimple()));
+				}
+				// try to find an algo on which this label depends
+				// geo = cons.resolveLabelDependency(label,
+				// kernel.getClassType(type));
+				// if none, create new geo
+				geo1 = xmlHandler.kernel.createGeoElement(xmlHandler.cons, type);
+				pendingLabel = label;
+
+				// independent GeoElements should be hidden by default
+				// (as older versions of this file format did not
+				// store show/hide information for all kinds of objects,
+				// e.g. GeoNumeric)
+				geo1.setEuclidianVisible(false);
+			}
+		} else {
+			int defset = Integer.parseInt(defaultset);
+			geo1 = xmlHandler.kernel.getConstruction().getConstructionDefaults().getDefaultGeo(defset);
+			if (geo1 == null) {
+				// wrong default setting, act as if there were no default set
+				geo1 = xmlHandler.kernel.lookupLabel(label);
+				if (geo1 == null) {
+					geo1 = xmlHandler.kernel.createGeoElement(xmlHandler.cons, type);
+					geo1.setLoadedLabel(label);
+					geo1.setEuclidianVisible(false);
+				}
+			}
+		}
+
+		// use default point style on points
+		if (geo1.getGeoClassType().equals(GeoClass.POINT) && xmlHandler.ggbFileFormat < 3.3) {
+			((PointProperties) geo1).setPointStyle(docPointStyle);
+		}
+
+		// for downward compatibility
+		if (geo1.isLimitedPath()) {
+			LimitedPath lp = (LimitedPath) geo1;
+			// old default value for intersections of segments, ...
+			// V2.5: default of "allow outlying intersections" is now false
+			lp.setAllowOutlyingIntersections(true);
+
+			// old default value for geometric transforms of segments, ...
+			// V2.6: default of "keep type on geometric transform" is now true
+			lp.setKeepTypeOnGeometricTransform(false);
+		}
+
+		return geo1;
+	}
+
+	protected void updatePointStyle(Map<String, String> attrs) {
+		// if there is a point style given save it
+		if (xmlHandler.ggbFileFormat < 3.3) {
+			String strPointStyle = attrs.get("pointStyle");
+			if (strPointStyle != null) {
+				docPointStyle = Integer.parseInt(strPointStyle);
+			} else {
+				docPointStyle = EuclidianStyleConstants.POINT_STYLE_DOT;
+			}
+
+			// TODO save as default construction (F.S.)
+		} else {
+			docPointStyle = -1;
+		}
+	}
+
+	/**
+	 * parse list of geos in a group
+	 * @param attrs - labels of geos in the group
+	 */
+	public void handleGroup(Map<String, String> attrs) {
+		ArrayList<GeoElement> geosInGroup = new ArrayList<>();
+		for (String label : attrs.values()) {
+			GeoElement geo = xmlHandler.kernel.lookupLabel(label);
+			if (geo != null) {
+				geosInGroup.add(geo);
+			}
+		}
+		if (!geosInGroup.isEmpty()) {
+			app.getKernel().getConstruction().createGroup(geosInGroup);
+		}
+	}
+}

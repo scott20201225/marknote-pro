@@ -1,0 +1,138 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.web.shared.ggtapi.models;
+
+import org.geogebra.common.move.ggtapi.models.AuthenticationModel;
+import org.geogebra.common.move.ggtapi.operations.BackendAPI;
+import org.geogebra.common.plugin.Event;
+import org.geogebra.common.plugin.EventType;
+import org.geogebra.common.util.HttpRequest;
+import org.geogebra.common.util.MD5Checksum;
+import org.geogebra.gwtutil.Cookies;
+import org.geogebra.web.html5.MebisGlobal;
+import org.geogebra.web.html5.gui.util.BrowserStorage;
+import org.geogebra.web.html5.main.AppW;
+
+import elemental2.dom.DomGlobal;
+import jsinterop.base.Js;
+
+/**
+ * @author gabor
+ *
+ */
+public final class AuthenticationModelW extends AuthenticationModel {
+
+	private static final String GGB_LAST_USER = "last_user";
+	/** token storage */
+	private String authToken = null;
+
+	private final AppW app;
+	private boolean inited = false;
+
+	/**
+	 * creates a new login model for Web
+	 *
+	 * @param app
+	 *            application
+	 */
+	public AuthenticationModelW(AppW app) {
+		this.app = app;
+	}
+
+	@Override
+	public void storeLoginToken(String token) {
+		if (this.app != null) {
+			ensureInited();
+			this.app.dispatchEvent(new Event(EventType.LOGIN, null, token));
+		}
+		this.authToken = token;
+		BrowserStorage.LOCAL.setItem(GGB_TOKEN_KEY_NAME, token);
+	}
+
+	@Override
+	public String getLoginToken() {
+		if (authToken != null) {
+			return authToken;
+		}
+		if (BrowserStorage.SESSION.getItem(GGB_TOKEN_KEY_NAME) != null) {
+			return BrowserStorage.SESSION.getItem(GGB_TOKEN_KEY_NAME);
+		}
+		return BrowserStorage.LOCAL.getItem(GGB_TOKEN_KEY_NAME);
+	}
+
+	@Override
+	public void clearLoginToken() {
+		app.getLoginOperation().getGeoGebraTubeAPI().logout(this.authToken);
+
+		this.authToken = null;
+		// this should log the user out of other systems too
+		ensureInited();
+		this.app.dispatchEvent(new Event(EventType.LOGIN, null, ""));
+		BrowserStorage.LOCAL.removeItem(GGB_TOKEN_KEY_NAME);
+		BrowserStorage.SESSION.removeItem(GGB_TOKEN_KEY_NAME);
+		BrowserStorage.LOCAL.removeItem(GGB_LAST_USER);
+	}
+
+	private void ensureInited() {
+		if (inited || app.getLAF() == null || app.getLAF().getLoginListener() == null) {
+			return;
+		}
+		inited = true;
+		app.getGgbApi().registerClientListener("loginListener");
+	}
+
+	/**
+	 * @param api responsible for mapping JSON to user object
+	 * @return whether user data was loaded
+	 */
+	public boolean loadUserFromSession(BackendAPI api) {
+		String sessionUser = BrowserStorage.SESSION.getItem(GGB_LAST_USER);
+		if (sessionUser != null) {
+			loadUserFromString(sessionUser, api);
+			return true;
+		}
+		return false;
+	}
+
+	@Override
+	public String getEncoded() {
+		String secret = "ef1V8PNj";
+		String encrypted = MD5Checksum.compute(getLoginToken() + "T" + "1581341456" + secret);
+		return DomGlobal.btoa(getLoginToken()) + "|T|" + "1581341456" + "|" + encrypted;
+	}
+
+	@Override
+	public String getCookie(String cookieName) {
+		return Cookies.getCookie(cookieName);
+	}
+
+	@Override
+	public void refreshToken(HttpRequest request, Runnable afterRefresh) {
+		if (app.isByCS()) {
+			MebisGlobal.refreshToken(token -> {
+				if (Js.isTruthy(token)) {
+					request.setAuth(token);
+					// just update the token, no need to fire event
+					authToken = token;
+				}
+				afterRefresh.run();
+			});
+		} else {
+			afterRefresh.run();
+		}
+	}
+}

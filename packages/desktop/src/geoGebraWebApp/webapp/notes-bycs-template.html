@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="<!--LANG-->">
+<head>
+	<meta charset="utf-8" />
+	<title>ByCS-Board</title>
+	<link rel="shortcut icon" href="/public/assets/board.ico" type="image/x-icon">
+	<link rel="icon" href="/public/assets/board.ico" type="image/x-icon">
+	<meta property="og:title" content="ByCS-Board" />
+	
+	<!--INMOBITAG-->
+<script type="text/javascript">
+
+var latestVersion="5.0.580.0";
+var module = "web3d";
+var defaultParams = {"vendor":"ByCS", "preloadModules":""};
+var prerelease = false;
+var startDelay = 0;
+var translation = {};
+var codebase = "/";
+</script>
+<script>prerelease=false;appID="notes";</script><!--LANGUAGE LINKS-->
+<script>
+	function $e(id){
+		return document.getElementById(id);
+	}
+	function c(className){
+		return document.getElementsByClassName(className)[0];
+	}
+	var finalLang = null;
+	
+	function setParamFromURL(paramName){
+		if (getURLParam(paramName)) {
+			$e("ggw").setAttribute("data-param-"+paramName,getURLParam(paramName));
+		}
+	}
+
+	function changeMetaTitle(titleBase){
+		var title = titleBase.includes(defaultParams.vendor) ? titleBase
+					: defaultParams.vendor == "ByCS" ? "ByCS-Board"
+					: `${titleBase} - ${defaultParams.vendor}`;
+		var tag = document.querySelector("meta[property='og:title']");
+		if (tag && tag.setAttribute) {
+			tag.setAttribute("content", title);
+		}
+		document.title = title;
+	}
+
+	function isAppSupportingPerspective(idString){
+		if (!window.appID || window.appID == "classic") {
+			return true;
+		}
+		// only search supported in unbundled apps & notes
+		return idString.substring(0,6) == "search";
+	}
+
+	function perspective(id, name){
+		var unbundled = ["graphing", "geometry", "whiteboard", "notes", "3d", "cas",
+				"scientific", "calculator", "suite"].indexOf(name) >= 0;
+		if($e("ggw")){
+			$e("ggw").className="geogebraweb";
+
+			$e("ggw").setAttribute("data-param-appname", window.appID || "classic");
+			if (getURLParam("examMode")) {
+				$e("ggw").setAttribute("data-param-featureSet", getURLParam("examMode"));
+				$e("ggw").setAttribute("data-param-examMode", "true");
+			} else if(id){
+				if (isAppSupportingPerspective(id + "")) {
+					$e("ggw").setAttribute("data-param-perspective", id);
+					if (c("mowToolbar")) {
+						c("mowToolbar").style.display = "none";
+					}
+				}
+			}
+			setParamFromURL("filename");
+			setParamFromURL("rounding");
+			setParamFromURL("ggbbase64");
+			setParamFromURL("allowUndoCheckpoints");
+			setParamFromURL("fontAwesome");
+			setParamFromURL("featureSet");
+			setParamFromURL("webfonts");
+			if (isEmbed() || unbundled) {
+				$e("ggw").setAttribute("data-param-showAppsPicker","false");
+				$e("appsPicker") && $e("appsPicker").style.setProperty("display", "none");
+			}
+		} else if (id && ggbApplet.setPerspective) {
+			ggbApplet.setPerspective(id+"");
+		} else if (id && window.renderGGBElement) {
+			if (isAppSupportingPerspective(id + "")) {
+				c("geogebraweb").setAttribute("data-param-perspective", id);
+			}
+			renderGGBElement(c("geogebraweb"));
+		}
+		var label = $e(name);
+		if(label){
+			parentTable(label).className += " perspectiveHighlighted";
+		}
+		if (name && window.history && window.history.pushState && name != "picker" && location.host && location.host.indexOf("geogebra") >= 0 &&
+				location.href.indexOf("?") < 0 && !location.pathname.match(/\/.*\/.+/)){
+			if (name != "classic" && !window.appID) {
+				history.pushState({}, "GeoGebra", "/classic#" + name);
+			}
+
+		}
+		return false;
+	}
+
+	function div(styleName){
+		var ret = document.createElement("div");
+		ret.className = styleName;
+		return ret;
+	}
+
+	function getLocalStorage(key){
+		try{
+			if(location.host && window.localStorage){
+				return localStorage.getItem(key);
+			}
+		} catch(e){
+			//local storage not supported
+		}
+		return false;
+	}
+
+	function setLocalStorage(key, value){
+		try{
+			if(location.host && window.localStorage){
+				return localStorage.setItem(key, value);
+			}
+		} catch(e){
+			//local storage not supported
+		}
+	}
+
+	function getCookieUnsafe(cookieName){
+		var crumbs = document.cookie.split(';');
+		for (var i = 0; i < crumbs.length; ++i) {
+			var nameAndValue = crumbs[i].trim().split("=");
+			if (nameAndValue[0] == cookieName) {
+				//may throw an exception
+				return decodeURIComponent(nameAndValue[1]);
+			}
+		}
+		return false;
+	}
+
+	function getCookie(cookieName){
+		try {
+			return getCookieUnsafe(cookieName);
+		} catch (e) {
+			// ignore error, keep undecoded value
+		}
+		return false;
+	}
+
+	function parentTable(ret){
+		var parent = ret;
+		while(parent = parent.parentElement){
+			if(parent.tagName == "TABLE"){
+				return parent;
+			}
+		}
+		return ret;
+	}
+
+	function button(id, perspectiveId, caption){
+		var shortId = id.replace("perspective","");
+		if(getPerspective() == shortId){
+			changeMetaTitle(caption);
+		}
+		var ret = $e(id);
+		if (!ret) {
+			return;
+		}
+		var parent = parentTable(ret);
+
+		parent.addEventListener("click",function(){
+			if($e("ggw")){
+				$e("ggw").setAttribute("data-param-showAppsPicker","false");
+			}
+			changeMetaTitle(ret.innerText);
+			perspective(perspectiveId,id.replace("perspective",""));
+		});
+
+		ret.innerHTML = caption;
+	}
+
+	function setPickerLabels(dict){
+		button("graphing", 1, dict["Graphing"] || "Graphing");
+		button("geometry", 2, dict["Perspective.Geometry"] || "Geometry");
+		button("cas", 4, dict["Perspective.CAS"] || "CAS Calculator");
+		button("spreadsheet",  3, dict["Perspective.Spreadsheet"] || "Spreadsheet Calc");
+		button("perspective3d", 5, dict["GeoGebra3DGrapher.short"] || "3D Calculator");
+		button("probability", 6, dict["Perspective.Probability"] || "Probability Calc");
+
+		button("exam","exam", dict["exam_menu_entry"] || "Exam Calculator");
+		if($e("download")){
+			$e("download").innerHTML = dict["Download"] || "Download";
+		}
+		if($e("tutorialLink")){
+			$e("tutorialLink").href = "https://www.geogebra.org/m/"+dict["TutorialClassic"];
+		}
+	}
+
+	function showInLang(lang){
+		var props = __GGB__keysVar[lang];
+		if (window.appID === "suite") {
+			changeMetaTitle(props.menu["CalculatorSuite"] || "Calculator Suite")
+		}
+		if(window.appID === "graphing"){
+			changeMetaTitle(props.menu["GraphingCalculator"] || "Graphing Calculator");
+		}
+		if(window.appID === "geometry"){
+			changeMetaTitle(props.menu["Geometry"]  || "Geometry");
+		}
+		if(window.appID === "CAS"){
+			changeMetaTitle(props.menu["CASCalculator"]  || "CAS Calculator");
+		}
+		if(window.appID === "3D"){
+			changeMetaTitle(props.menu["Graphing3D"]  || "3D Graphing Calculator");
+		}
+		if(!window.appID && !getPerspective()){
+			changeMetaTitle(props.menu["math_apps"]  || "GeoGebra Classic");
+		}
+		document.body.parentNode.style.overflow = "auto";
+		if($e("ggbPage")){
+			$e("ggbPage").style.display = "";
+		}
+
+		if(finalLang && finalLang != lang){
+			console.log("wrong lang");
+			return;
+		}
+		if($e("ggbPage")){
+			setPickerLabels(props.menu);
+		}
+	}
+
+	function showInEnglish(){
+			if(!window.__GGB__keysVar && $e("ggbPage")){
+				setPickerLabels({});
+
+				$e("ggbPage").style.display="";
+			}
+
+		}
+	var langs = ["af",  "ar",  "ar-MA",  "ar-TN",  "bg",  "bs",  "ca",  "ca-XV",  "cs",  "cy",  "da",
+	"de-AT",  "de",  "el",  "en-AU",  "en-GB",  "en",  "eo",  "es-ES",  "es",  "es-UY",  "et",  "eu",
+	"fa",  "fi",  "fr",  "gl",  "hi",  "hr",  "hu",  "hy",  "in",  "is",  "it",  "he",
+	"ja",  "yi",  "ka",  "kk",  "km",  "kn",  "ko",  "lt",  "lv",  "mk",  "ml",  "mn",  "mr",  "ms",
+	"ne",  "nl-NL",  "nl",  "no",  "nb",  "nn",  "pl",  "pt",  "pt-PT",  "ro",  "ru",  "si",
+	"sk",  "sl",  "sq",  "sr",  "sv",  "ta",  "tg",  "th",  "fil",  "tr",  "ty",  "ug",  "uk",
+	"ur",  "vi",  "xh",  "zh-CN", "zh-TW"];
+
+	function validLang(lang){
+		lang=lang.replace("_","-").replace("tl","fil").replace("ji","yi").replace("no-NO-NY","nn");
+		if(lang.substring(0,2) == "no"){
+			lang = "nb";
+		}
+		if(lang.substring(0,2) == "zh"){
+			lang = lang.indexOf("TW") > 0 || lang.indexOf("Hant") > 0 ? "zh-TW" : "zh-CN";
+		}
+		if(langs.indexOf(lang) >= 0){
+			return lang;
+		}
+		lang = lang.substring(0,2);
+		if(langs.indexOf(lang) >= 0){
+			return lang;
+		}
+		return "en";
+	}
+	function getURLParam(param){
+		return new URLSearchParams(location.search).get(param);
+	}
+	function switchLang(lang){
+		var storedTranslation = {};
+		if(getLocalStorage("translation")){
+			try {
+				storedTranslation = JSON.parse(localStorage.translation);
+			}
+			catch(e){
+				console.log(e.message);
+			}
+		}
+		if(storedTranslation[lang] && storedTranslation["version"] == latestVersion){
+			window.__GGB__keysVar = {};
+			window.__GGB__keysVar[lang] = storedTranslation[lang];
+			window.__GGB__keysVar["version"] = storedTranslation["version"];
+			showInLang(lang);
+		}
+		else{
+			var l10n = document.createElement("script");
+			document.head.appendChild(l10n);
+			l10n.onload = function(){
+
+
+				showInLang(lang);
+				if(window.__GGB__keysVar[lang]){
+					var obj = {};
+					obj["version"] = latestVersion;
+					obj[lang] = window.__GGB__keysVar[lang];
+					setLocalStorage("translation", JSON.stringify(obj));
+				}
+
+			}
+			var propertiesCodebase = codebase.replace("/latest", "/"+latestVersion);
+			l10n.setAttribute("src", propertiesCodebase + module+"/js/properties_keys_" + lang + ".js");
+		}
+	}
+
+	function insertScript(){
+		if (window.loadFontScript) {
+			window.loadFontScript(codebase + module);
+		}
+		if (window.loadFontAwesome) {
+			window.loadFontAwesome();
+		}
+		const app = document.createElement("script");
+		app.setAttribute("src",codebase+module+"/"+module+".nocache.js");
+		window.setTimeout(function(){
+			document.head.appendChild(app);
+		}, startDelay);
+	}
+
+	function isDevelopmentHost() {
+		return location.host && location.host.match(/^([0-9.]*|localhost|apps-builds.s3.*.amazonaws.com)(:.+)?$/);
+	}
+
+	function showStartScreen(){
+		var lang = getURLParam("lang") || getCookie("GeoGebraLangUI") || getLocalStorage("GeoGebraLangUI") || navigator.language || "en";
+		window.setTimeout(showInEnglish, 1000);
+		switchLang(validLang(lang));
+	}
+
+	function setPrerelease() {
+		document.body.className += "prerelease";
+		$e("ggw").setAttribute("data-param-prerelease", true);
+		$e("ggw").setAttribute("data-param-showlogging", true);
+	}
+
+	function setDebug(){
+		$e("ggw").setAttribute("data-param-showlogging", true);
+	}
+
+	function getPerspective(){
+		if (getURLParam("perspective")) {
+			return getURLParam("perspective");
+		}
+		const parts = location.pathname.split("/");
+		const path = parts.length == 1 || parts[parts.length-1].length? parts[parts.length-1] : parts[parts.length-2] ;
+		if (location.hash.length || (path != '/apps' && path != '/apps/' && !path.match(/\.html$/))) {
+			return location.hash.length ? location.hash.replace('#','') : path;
+		}
+		return window.appID;
+	}
+
+	function resizeStart(){
+		if($e("perspectivesBox")){
+			if(window.innerHeight < 650 || window.innerWidth < 650){
+				$e("perspectivesBox").style.display = "none";
+			} else {
+				$e("perspectivesBox").style.top= (Math.max(0,Math.round(window.innerHeight/2 -250))-53)+"px";
+			}
+		}
+	}
+
+	function updateAppletParams(){
+		for (var key in defaultParams) {
+			$e("ggw").setAttribute("data-param-" + key, defaultParams[key]);
+		}
+		$e("ggw").setAttribute("data-param-examLaunchURL", `seb://${location.host}${location.pathname}?examMode=$mode`);
+		if (isEmbed()) {
+			$e("ggw").setAttribute("data-param-enableFileFeatures", false);
+		}
+		const prereleaseParam = getURLParam("prerelease");
+		if ((prereleaseParam || prerelease) && ("false" != prereleaseParam)) {
+			setPrerelease();
+		}
+		if (isDevelopmentHost()) {
+			setDebug();
+		}
+	}
+
+	function loadMaterial(tubeid){
+		$e("ggw").setAttribute("data-param-tubeid", tubeid);
+		if(window.addAppletPreview){
+			window.addAppletPreview(tubeid);
+		}
+		perspective(false);
+		insertScript();
+	}
+
+	/** @return array [whole URL, appName, sandbox, material ID]*/
+	function getParametersFromPath(){
+		return location.pathname.match(/^\/(o|classic|graphing|suite|geometry|3d|([a-z]+\/)?frame|notes|cas|calculator)\/([a-zA-Z0-9]+)/);
+	}
+
+	function loadApp(){
+		if (isDevelopmentHost()) {
+			defaultParams.backendURL = "https://api-beta.geogebra.org/v1.0";
+		}
+
+		var names = {'geometry':2, 'spreadsheet':3, 'cas':4, '3d':5, 'probability':6, 'graphing':1, 'whiteboard':7,'calculator':8};
+		var tubeid = getURLParam("id");
+		var checkId = getParametersFromPath();
+		if(checkId && !names[checkId[3]]){
+			tubeid = checkId[3];
+			if (checkId[1] == "o") {
+				appID = "auto";
+			}
+		}
+
+		var skipAppsPicker = getURLParam("command") || getURLParam("state") || getURLParam("filename");
+		resizeStart();
+		window.addEventListener && window.addEventListener("resize", resizeStart);
+		if ($e("ggw")) {
+			updateAppletParams();
+		}
+
+		if (window.loadUnsavedWork && window.loadUnsavedWork($e("ggw"))) {
+			return;
+		}
+
+		if (tubeid) {
+			if ($e("ggw")) {
+				loadMaterial(tubeid);
+				return;
+			}
+		} else if (getPerspective()) {
+			var pName = getPerspective();
+			if (pName.substring(0,6) == "search" || pName.substring(0,4) == "exam") {
+				if ($e("perspectivesBox")) {
+					$e("perspectivesBox").style.display = "none";
+				}
+				perspective(pName);
+			} else {
+				perspective(names[pName], pName);
+			}
+			document.body.className += " " + pName;
+			document.body.className += " " + module;
+			insertScript();
+			showStartScreen();
+			return;
+		} else if(skipAppsPicker) {
+			perspective(false);
+			insertScript();
+			return;
+		}
+
+		showStartScreen();
+		insertScript();
+		perspective(false, "picker"); //TODO
+	}
+
+</script>
+<script type="text/javascript">
+// test to see if the app is running as a chrome webapp
+document.isChromeWebapp = function isChromeWebapp() {
+	if (typeof chrome === 'object' &&
+			typeof chrome.app === 'object' &&
+			typeof chrome.app.isInstalled === 'boolean' &&
+			chrome.app.isInstalled) {
+			return true;
+		}
+		return false;
+	};
+</script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"/>
+<script>
+    defaultParams.id = "notesApplet";
+    defaultParams.fontAwesome = "light";
+    var loadedFromStorage = false;
+
+    function loadUnsavedWork(ggw) {
+        var storage = window.sessionStorage;
+        var unsavedWork = storage.getItem('boardUnsaved');
+
+        if (unsavedWork) {
+            loadBase64(ggw, unsavedWork);
+            storage.removeItem('boardUnsaved')
+            loadedFromStorage = true;
+        }
+        return unsavedWork;
+    }
+
+    function loadBase64(ggw, base64){
+        ggw.setAttribute("data-param-ggbBase64", base64);
+        if(window.addAppletPreview){
+            window.addAppletPreview(base64);
+        }
+        perspective(false);
+        insertScript();
+    }
+
+    function toggleFullscreen() {
+        try {
+            // the CSS class is defined in https://git.geogebra.org/mow/mow-front/blob/master/app.php
+            window.parent.document.body.classList.toggle("fullscreen-app");
+        } catch (ex) {
+            // possibly the Mebis iframe is embedded in some non-standard page
+            window.console.log(ex);
+        }
+    }
+
+    function nativeLogin() {
+        try {
+            if (window.parent && window.parent.login) {
+                window.parent.login();
+            }
+        } catch (ex) {
+            console.log("Cannot login from this frame");
+        }
+    }
+
+    function ggbMultiplayerChange(users) {
+       window.parent && window.parent.multiplayerChange && window.parent.multiplayerChange(users);
+    }
+
+    function isEmbed() {
+        return false;
+    }
+
+    function getParentParam(name) {
+        return window.parent.document.body && window.parent.document.body.dataset[name];
+    }
+
+    const accessToken = window.accessToken || getParentParam("accesstoken");
+    if (accessToken) {
+       sessionStorage.setItem("token", accessToken);
+    }
+
+    let refreshToken = getParentParam("refreshtoken");
+
+    let lastRefresh = new Date();
+    window.refreshToken = function(callback) {
+        if (new Date() - lastRefresh < 240_000) {
+            callback(null);
+            return;
+        }
+        const baseUrl = getParentParam("baseurl");
+        fetch(`${baseUrl}/refresh`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: `refresh_token=${refreshToken}`
+        })
+        .then((response) => response.json())
+        .then(data => {
+            callback(data.access_token);
+            sessionStorage.setItem("token", data.access_token);
+            refreshToken = data.refresh_token;
+            lastRefresh = new Date();
+        })
+        .catch(_ => callback(null));
+    }
+</script>
+<style>
+body {
+  --ggb-primary-color: #975FA8;
+  --ggb-primary-variant-color: #C19FCB;
+  --ggb-dark-color: #723B86;
+  --ggb-light-color: #EADFEE;
+  --ggb-selection-color: rgba(151, 95, 168, 0.2);
+  --ggb-button-border-radius: 8px;
+}
+.GeoGebraFrame .fa-solid {
+  font-weight: 900;
+}
+</style>
+
+
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1" />
+    <style>
+    body {
+        touch-action: none;
+        -webkit-tap-highlight-color: rgba(255, 255, 255, 0); /* avoid flash on Android http://stackoverflow.com/questions/5210481/*/
+        color: #666666;
+        font-size: 14px;
+        font-family: sans-serif;
+        margin: 0;
+        padding: 0;
+        position: fixed;
+        top:0;
+        width:100%;
+        height:100%;
+    }
+    </style>
+	<style>:root{--ggb-primary-color: #6557D2;--ggb-primary-variant-color: #F3F0FF;--ggb-dark-color: #5145A8;--ggb-light-color: #F3F0FF;--ggb-selection-color: rgba(101, 87, 210, 0.2);--ggb-button-border-radius: 20px}.GeoGebraHeader{display:flex;border-bottom:1px solid #dcdcdc;background-color:#fff;padding:4px;-webkit-user-select:none;user-select:none;height:24px;display:block;height:64px;padding:0px;border:0px;box-shadow:0 2px 2px 0 rgba(0,0,0,.14),0 1px 5px 0 rgba(0,0,0,.12),0 3px 1px -2px rgba(0,0,0,.2);z-index:500;position:relative;width:100%}.GeoGebraHeader.noShadow{box-shadow:none}.GeoGebraHeader.scientificHeader{height:112px;box-shadow:0 4px 5px 0 rgba(0,0,0,.14),0 1px 10px 0 rgba(0,0,0,.12),0 2px 4px -1px rgba(0,0,0,.2)}.compact.GeoGebraHeader.scientificHeader,.smallScreen.GeoGebraHeader.scientificHeader{height:80px}.GeoGebraHeader.notesHeader{box-shadow:none;border-bottom:1px solid #e6e6eb;box-sizing:border-box}.GeoGebraHeader .materialTextButton.signIn{display:block;text-align:center}.GeoGebraHeader .appName{font-size:24px;font-weight:normal;margin:17px 24px 15px 0px;width:fit-content;height:32px;line-height:32px;font-family:sans-serif;letter-spacing:.43px;color:rgba(0,0,0,.6);white-space:nowrap;display:flex}.compact.GeoGebraHeader .appName,.smallScreen.GeoGebraHeader .appName{display:none}@media screen and (max-width: 660px){.GeoGebraHeader .appName{display:none}.GeoGebraHeader .examTypePanel{display:none}.GeoGebraHeader .suiteAppPickerButton{visibility:hidden}}.GeoGebraFrame .buttons{position:absolute;top:0;right:12px;display:flex;height:100%;align-items:center}.GeoGebraFrame button{border:initial;background:initial;font-family:geogebra-sans-serif,"Helvetica Neue",Helvetica,Arial,sans-serif;font-size:16px}.GeoGebraFrame .menuBtn{margin:14px 0px 14px 18px}.GeoGebraFrame .shareBtn{margin:6px}.GeoGebraFrame .materialFilledButton.assignBtn{margin:0 12px;display:block}.GeoGebraFrame .materialFilledButton.assignBtn:focus{background-color:#5145a8}.GeoGebraHeader .profilePanel{text-transform:uppercase;line-height:24px;border-radius:2px;cursor:pointer}.GeoGebraHeader #profileId:focus .imageHolder{background:#f3f2f7}.GeoGebraHeader .profilePanel{margin:8px}img.profileImage{border-radius:50%;display:block}.GeoGebraHeader .examPanel{position:absolute;top:0px;right:0px;display:flex;min-height:48px}.GeoGebraHeader .examTypePanel{display:flex;align-items:center;color:#008475}.GeoGebraHeader .examTypePanel.locked{color:#007aff}.GeoGebraHeader .examType{font-size:20px;margin:8px 32px 8px 8px}.GeoGebraHeader .examTypeIcon{height:24px}.GeoGebraHeader .timerImg{margin-right:8px;opacity:.54}.GeoGebraHeader .examTypePanel.cheat{color:#d32f2f}.GeoGebraHeader .examInfoBtn{margin:14px 18px}.GeoGebraHeader .examTimer{font-size:20px;margin:20px 0px}.GeoGebraFrame .headerStyle{display:inline-flex}.GeoGebraFrame .headerLogo{height:48px;float:left}.GeoGebraFrame.GeoGebraHeader.suiteHeader .upperHeader{display:flex}.GeoGebraFrame.GeoGebraHeader.suiteHeader.compact .upperHeader,.GeoGebraFrame.GeoGebraHeader.suiteHeader.smallScreen .upperHeader{height:48px}.GeoGebraFrame.GeoGebraHeader.scientificHeader.compact .upperHeader,.GeoGebraFrame.GeoGebraHeader.scientificHeader.smallScreen .upperHeader{height:44px}.GeoGebraHeader .suiteAppPickerButton{display:inline-flex;min-width:138px;max-width:250px;height:36px;margin:14px 0px;border-radius:18px;box-sizing:border-box;border:1px solid #b4b3ba;cursor:pointer;transition:background-color 100ms ease-in-out}.GeoGebraHeader.compact .suiteAppPickerButton{margin:6px 0px}.GeoGebraHeader .suiteAppPickerButton:hover,.GeoGebraHeader .suiteAppPickerButton:focus,.GeoGebraHeader .suiteAppPickerButton[aria-expanded=true]{background-color:#f3f2f7}.GeoGebraHeader .suiteAppPickerButton[aria-expanded=true] .dropDownImg{transform:rotate(-180deg)}.GeoGebraHeader .suiteAppPickerButton .gwt-Label{height:20px;line-height:20px;margin:7px 0px;font-size:100%;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.GeoGebraHeader .suiteAppPickerButton .gwt-Image{margin:5px 12px 5px 16px}.GeoGebraHeader .suiteAppPickerButton .dropDownImg{margin:5px 16px 5px 12px;opacity:54%;transition:transform 200ms ease-in-out}.GeoGebraHeader.suiteHeader .undoRedoSettingsPanelScientific{display:none}.GeoGebraHeader.mobile{display:none}.application .GeoGebraHeader.mobile{display:flex}.startscreen .appName{margin-top:0;margin-bottom:10px}.prerelease .appName:after{border-radius:4px;content:"BETA";background:#f3f2f7;color:#6e6d73;font-size:14px;padding:8px;line-height:16px;margin-left:8px;font-weight:700}.GeoGebraHeader a{text-decoration:none;margin-left:8px;margin-right:0px}.logoLink[href="#"]{cursor:default}.GeoGebraHeader ul{list-style-type:none;margin:0}.GeoGebraHeader li{display:inline}.GeoGebraHeader .links{padding:3px 4px;font-size:15px;margin:0px}.application .startscreen{display:none}.startscreen{position:absolute;top:64px;width:100%;height:calc(100% - 64px)}.startscreen.notes-mebis{top:0;height:100%}.startscreen .logo{display:none}.startscreen .logo.mobile{display:block;width:35%;margin:auto}.startscreen .logo svg{width:100%;height:100%}svg.icon.left{margin-right:15px}.GeoGebraHeader ul a{transition:background-color .3s;font-size:1rem;color:rgba(0,0,0,.87);display:block;padding:0 15px;cursor:pointer;margin:0}.GeoGebraFrame .iconButton.settingsBtnScientific{margin:6px;float:right}.GeoGebraFrame .undoBtnScientific{margin-right:12px}.GeoGebraFrame .undoRedoCntScientific{margin:6px;float:left}.GeoGebraFrame .hidden{display:none}.compact.GeoGebraHeader{height:48px}.compact.GeoGebraFrame .appName{display:none}.compact.GeoGebraFrame .examTypePanel{display:none}.compact.GeoGebraFrame .examTimer{margin:12px 0}.compact.GeoGebraFrame .examInfoBtn{margin:6px 18px}.compact.GeoGebraFrame .shareBtn,.compact.GeoGebraFrame .signIn{display:none}.compact.GeoGebraFrame .undoRedoSettingsPanelScientific .settingsBtnScientific,.compact.GeoGebraFrame .undoRedoSettingsPanelScientific .undoRedoCntScientific{margin:0px}.GeoGebraHeader .signInIcon{display:none}.GeoGebraHeader.compact .signInIcon{display:initial;margin:6px}.compact.GeoGebraFrame .menuBtn{margin:6px 0px 6px 18px}.compact.GeoGebraFrame.scientificHeader .menuBtn,.smallScreen.GeoGebraFrame.scientificHeader .menuBtn{margin-top:4px;margin-bottom:4px}.GeoGebraFrame .logoLink{margin:8px;border-radius:4px}.compact.GeoGebraFrame .logoLink{margin:4px}.GeoGebraFrame #logoID:hover{cursor:pointer}.GeoGebraFrame .logoLink:focus{outline-color:var(--ggb-dark-color);outline-width:2px;outline-style:solid;outline-offset:2px;background-color:var(--ggb-light-color)}.compact.GeoGebraFrame .headerLogo,.compact.GeoGebraFrame.scientificHeader .headerLogo,.smallScreen.GeoGebraFrame.scientificHeader .headerLogo{height:36px}.compact.GeoGebraFrame .profilePanel{width:40px;height:40px;margin:4px 8px}.compact.GeoGebraFrame .profilePanel .imageHolder{width:40px;height:40px}.compact .profilePanel .imageHolder .profileImage{width:32px;height:32px}
+</style>
+	
+</head>
+<body dir="ltr" tabindex="-1" onload="loadApp()">
+	<span data-appId="" data-measurementId="" id="fbase"></span>
+	<div class="startscreen notes-bycs"><div class="mk-spinner-wrap">
+<div class="mk-spinner-ring bycs"></div>
+</div><main class="GeoGebraFrame jsloaded applet-unfocused" role="main" style="width: 100%; height: 100%; border-width: 0px; border-style: solid;" lang="cs">
+<div class="gwt-SplitLayoutPanel" style="position: relative; width: 100%; height: 100%;">
+<div aria-hidden="true" style="position: absolute; z-index: -32767; top: -20ex; width: 10em; height: 10ex; visibility: hidden;">&nbsp;
+</div>
+<div style="position: absolute; overflow: hidden; left: 0px; top: 0px; right: 0px; bottom: 0px;">
+<div class="ggbdockpanelhack" style="right: 0px; bottom: 0px; position: absolute; left: 0px; top: 0px;">
+<div aria-hidden="true" style="position: absolute; z-index: -32767; top: -20ex; width: 10em; height: 10ex; visibility: hidden;">&nbsp;
+</div>
+<div style="position: absolute; overflow: hidden; left: 0px; top: 0px; right: 0px; height: 0px;">
+<div class="TitleBarPanel cursor_drag" style="right: 0px; bottom: 0px; position: absolute; left: 0px; top: 0px;">
+<div class="MatTitleBarPanelContent">
+<div class="StyleBarPanel_" aria-hidden="true" style="display: none;">
+</div>
+<div class="dragPanel" aria-hidden="true" style="display: none;">
+<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAABnElEQVR42u2WvUvDQBiHXQVxkIKKk7gUcRAHEXRwEhdxcXVxcXVXV1f/F0EHLTioIWnSEDW0Kn7Uih+46OLHVp+r7xCOljbRCx168CPQy71Pru/v3nu7ujqj3Yfruov5fH48beis53n36NK27f5UoMAm0Buqii5Q1jQ0i/wItCb+ASsIgiEjUPI5AORJh4q+UMmyrD4TeV0l+CHPHM8z9CofUlRQdI420zDYdqFQWDOWUwA7ccHMLYVh2JMUmkFXyrVxwawJ0F1st/u+P0rQAxZ+o+O4YH4/EdPZLcPFvcosH7L46A/gmuObVjheGkFl7aiUgazrkuC79eakqkVjnKK5hmCCLfBCRVt0izZ0KTDaqzeHHrQYFZW+Zrue0apSLoGr3UgMZbLBVs/omBSGRGDvd1TF3dm4BWKSRY9JXC3r1E4zic6y4zjDAJYTgB1jl4bRkqntYkscfoOu0btcFCU5Wg4fs/LvYK68bnHrZ4OrsUg30mtk1ypvAPZTbQS0LuQ5An4x3vpo9TxUuWa306l2mhhqCs13Gv22Hz96im2JbZeT8gAAAABJRU5ErkJggg==" width="30" height="30" class="gwt-Image">
+</div>
+<div tabindex="4004" class="button flatButton graphicsContextMenuBtn button-up" role="button">
+<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0Ij48ZGVmcz48c3R5bGU+LmNscy0xe2ZpbGw6bm9uZTtzdHJva2U6I2ZmZjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMH0uY2xzLTJ7ZmlsbDojZmZmfTwvc3R5bGU+PC9kZWZzPjxnIGlkPSJzZXR0aW5nc19ib3JkZXIiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjMiIGNsYXNzPSJjbHMtMSIvPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjgiIGNsYXNzPSJjbHMtMSIvPjwvZz48cGF0aCBpZD0iZWNrIiBkPSJNMjAuMTcgMTMuMDhhOC41NyA4LjU3IDAgMCAwIC4wOC0xLjA4IDguNTcgOC41NyAwIDAgMC0uMDgtMS4wOGwyLjMyLTEuODFhLjU1LjU1IDAgMCAwIC4xMy0uN0wyMC40MyA0LjZhLjU1LjU1IDAgMCAwLS42Ny0uMjRMMTcgNS40NmE4IDggMCAwIDAtMS44Ni0xLjA4bC0uNDItMi45MkEuNTQuNTQgMCAwIDAgMTQuMiAxSDkuOGEuNTQuNTQgMCAwIDAtLjU0LjQ2bC0uNDIgMi45MkE4LjQ1IDguNDUgMCAwIDAgNyA1LjQ1bC0yLjc1LTEuMWEuNTQuNTQgMCAwIDAtLjY3LjI0TDEuMzcgOC40YS41NC41NCAwIDAgMCAuMTMuN2wyLjMyIDEuODFBOC43MiA4LjcyIDAgMCAwIDMuNzUgMTJhOC43MiA4LjcyIDAgMCAwIC4wOCAxLjA4bC0yLjMyIDEuODFhLjU1LjU1IDAgMCAwLS4xMy43bDIuMiAzLjgxYS41NS41NSAwIDAgMCAuNjcuMjRMNyAxOC41NGE4IDggMCAwIDAgMS44NiAxLjA4bC40MiAyLjkxYS41NC41NCAwIDAgMCAuNTIuNDdoNC40YS41NC41NCAwIDAgMCAuNTQtLjQ2bC40Mi0yLjkxQTguNDUgOC40NSAwIDAgMCAxNyAxOC41NGwyLjc0IDEuMWEuNTQuNTQgMCAwIDAgLjY3LS4yNGwyLjItMy44MWEuNTUuNTUgMCAwIDAtLjEzLS43ek0xMiAxNS44NUEzLjg1IDMuODUgMCAxIDEgMTUuODUgMTIgMy44NSAzLjg1IDAgMCAxIDEyIDE1Ljg1eiIgY2xhc3M9ImNscy0yIi8+PHBhdGggaWQ9ImdlYXIiIGQ9Ik0xOS40MyAxM2E3Ljc5IDcuNzkgMCAwIDAgLjA3LTEgNy43OSA3Ljc5IDAgMCAwLS4wNy0xbDIuMTEtMS42NWEuNS41IDAgMCAwIC4xMi0uNjRsLTItMy40NmEuNS41IDAgMCAwLS42MS0uMjJsLTIuNDkgMWE3LjMxIDcuMzEgMCAwIDAtMS42OS0xbC0uMzgtMi42NUEuNDkuNDkgMCAwIDAgMTQgMmgtNGEuNDkuNDkgMCAwIDAtLjQ5LjQybC0uMzggMi42NWE3LjY4IDcuNjggMCAwIDAtMS42OSAxbC0yLjQ5LTFhLjQ5LjQ5IDAgMCAwLS42MS4yMmwtMiAzLjQ2YS40OS40OSAwIDAgMCAuMTIuNjRMNC41NyAxMWE3LjkzIDcuOTMgMCAwIDAtLjA3IDEgNy45MyA3LjkzIDAgMCAwIC4wNyAxbC0yLjExIDEuNjNhLjUuNSAwIDAgMC0uMTIuNjRsMiAzLjQ2YS41LjUgMCAwIDAgLjYxLjIybDIuNDktMWE3LjMxIDcuMzEgMCAwIDAgMS42OSAxbC4zOCAyLjY1YS40OS40OSAwIDAgMCAuNDkuNGg0YS40OS40OSAwIDAgMCAuNDktLjQybC4zOC0yLjY1YTcuNjggNy42OCAwIDAgMCAxLjY5LTFsMi40OSAxYS40OS40OSAwIDAgMCAuNjEtLjIybDItMy40NmEuNS41IDAgMCAwLS4xMi0uNjR6TTEyIDE1LjVhMy41IDMuNSAwIDEgMSAzLjUtMy41IDMuNSAzLjUgMCAwIDEtMy41IDMuNXoiLz48L3N2Zz4=" class="gwt-Image" draggable="false" role="button" style="width: 24px;">
+</div>
+</div>
+</div>
+</div>
+<div style="position: absolute; overflow: hidden; left: 0px; right: 0px; bottom: 0px; height: 0px;">
+</div>
+<div style="position: absolute; overflow: hidden; left: 0px; right: 0px; bottom: 0px; height: 0px;">
+<div style="right: 0px; bottom: 0px; position: absolute; left: 0px; top: 0px;">
+</div>
+</div>
+<div style="position: absolute; overflow: hidden; left: 0px; top: 0px; right: 0px; bottom: 0px;">
+<div role="application" style="right: 0px; bottom: 0px; position: absolute; left: 0px; top: 0px;">
+<div class="EuclidianPanel" style="position: relative; overflow: visible; width: 1140px; height: 900px;">
+<canvas height="900" width="1140" dir="ltr" tabindex="10000" class="cursor_pen" style="position: relative; z-index: 0; width: 1140px; height: 900px;">
+</canvas>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="showMowSubmenu mowToolbar BigScreen" style="left: calc(50% - 300px);background-color: #00a8d5;">
+<div class="mowSubmenuScrollPanel slideLeft">
+<div class="mowSubMenu penSubMenu">
+<div class="mowSubMenuContent" style="overflow: auto; position: relative; zoom: 1;">
+<div style="position: relative; zoom: 1;">
+<div>
+<div class="panelRow">
+<div class="penPanel">
+<div class="panelRow">
+<div tabindex="0" class="button mowToolButton button-up" role="button" data-title="Move" aria-label="Move" mode="0" id="mode0" aria-pressed="false" selected="false">
+<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiB2aWV3Qm94PSIwIDAgNTEyIDUxMiI+PHBhdGggZmlsbD0iI2ZmZiIgc3Ryb2tlPSIjMDAwIiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiIHN0cm9rZS13aWR0aD0iMTMiIGQ9Ik0yOTguNzcgNDI2LjE3bDQxLjEyLTIwLjU2LTY4LjU0LTE0MC41MiA4NS42OC04LjU3LTE4OC41LTE2NC41MS0zLjQyIDI1OC43NiA2My40LTY1LjEyeiIvPjwvc3ZnPg==" class="gwt-Image opacityFixForOldIcons" draggable="false">
+</div><div tabindex="0" class="button mowToolButton plusMarginLeft button-up" role="button" mode="62" id="mode62" aria-pressed="false" selected="true">
+<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PGRlZnM+PHN0eWxlPi5jbHMtMXtmaWxsOiNmZmY7fS5jbHMtMntmaWxsOm5vbmU7fS5jbHMtM3tmaWxsOiM2NjY7fTwvc3R5bGU+PC9kZWZzPjx0aXRsZT5tb2RlX3Blbl93aGl0ZSBjb3B5PC90aXRsZT48ZyBpZD0ibW9kZV9wZW5fd2hpdGUiPjxwYXRoIGNsYXNzPSJjbHMtMSIgZD0iTTAsMFYyNEgyNFYwWk02Ljc1LDIxSDNWMTcuMjVMMTQuMDYsNi4xOWwzLjc1LDMuNzVaIi8+PHBhdGggY2xhc3M9ImNscy0yIiBkPSJNMjIuNjgsMGgyNFYyNGgtMjRaIi8+PHBhdGggY2xhc3M9ImNscy0yIiBkPSJNMjIuNjgsMGgyNFYyNGgtMjRaIi8+PHBhdGggY2xhc3M9ImNscy0zIiBkPSJNMjAuNzEsN2ExLDEsMCwwLDAsMC0xLjQxTDE4LjM3LDMuMjlhMSwxLDAsMCwwLTEuNDEsMEwxNS4xMyw1LjEybDMuNzUsMy43NVoiLz48cGF0aCBjbGFzcz0iY2xzLTMiIGQ9Ik0xNC4wNiw2LjE5LDMsMTcuMjVWMjFINi43NUwxNy44MSw5Ljk0Wk02LjM1LDIwSDRWMTcuNjVsMTAtMTBMMTYuNCw5Ljk0WiIvPjwvZz48L3N2Zz4=" class="gwt-Image opacityFixForOldIcons" draggable="false" style="background-color: rgba(0,0,0,1)">
+</div><div tabindex="0" class="button mowToolButton button-up" role="button" mode="77" id="mode77" aria-pressed="false" selected="false">
+<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0Ij48cGF0aCBkPSJNMyA1aDJWM2EyIDIgMCAwIDAtMiAyem0wIDhoMnYtMkgzem00IDhoMnYtMkg3ek0zIDloMlY3SDN6bTEwLTZoLTJ2Mmgyem02IDB2MmgyYTIgMiAwIDAgMC0yLTJ6TTUgMjF2LTJIM2EyIDIgMCAwIDAgMiAyem0tMi00aDJ2LTJIM3pNOSAzSDd2Mmgyem0yIDE4aDJ2LTJoLTJ6bTgtOGgydi0yaC0yem0wIDhhMiAyIDAgMCAwIDItMmgtMnptMC0xMmgyVjdoLTJ6bTAgOGgydi0yaC0yem0tNCA0aDJ2LTJoLTJ6bTAtMTZoMlYzaC0yeiIvPjwvc3ZnPg==" class="gwt-Image opacityFixForOldIcons" draggable="false">
+</div><div tabindex="0" class="button mowToolButton plusMarginLeft button-up" role="button" mode="110" id="mode110" aria-pressed="false" selected="false">
+<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHRpdGxlPm1vZGVfZXJhc2VyX2JsYWNrPC90aXRsZT48ZyBpZD0ibW9kZV9lcmFzZXIiPjxwYXRoIGQ9Ik0xMC43MywxOC41bDguNC04LjRhMiwyLDAsMCwwLDAtMi44M0wxNi4zLDQuNDRhMiwyLDAsMCwwLTIuODMsMEwyLjg3LDE1LjA1YTIsMiwwLDAsMCwwLDIuODNMNSwyMEgyMFYxOC41Wk0xNC44OSw1LjE1bDMuNTQsMy41NC03LjA3LDcuMDdMNy44MiwxMi4yMlpNNS42OSwxOC41bC0yLjExLTIsMy4xOC0zLjE4LDMuNTQsMy41NEw4LjUzLDE4LjVaIi8+PC9nPjwvc3ZnPg==" class="gwt-Image" draggable="false">
+</div>
+</div>
+</div>
+<div class="colorPanel"><div class="panelRow">
+<div class="gwt-Label mowColorButton mowColorButton-selected" style="background-color: rgb(0, 0, 0);"></div><div class="gwt-Label mowColorButton" style="background-color: rgb(46, 125, 50);"></div><div class="gwt-Label mowColorButton" style="background-color: rgb(0, 168, 168);"></div><div class="gwt-Label mowColorButton" style="background-color: rgb(21, 101, 192);"></div><div class="gwt-Label mowColorButton" style="background-color: rgb(101, 87, 210);"></div><div class="gwt-Label mowColorButton" style="background-color: rgb(204, 0, 153);"></div><div class="gwt-Label mowColorButton" style="background-color: rgb(211, 47, 47);"></div><div class="gwt-Label mowColorButton" style="background-color: rgb(219, 97, 20);"></div><div class="gwt-Label mowColorButton" style="background-color: rgb(255, 204, 0);"></div><div tabindex="0" class="button mowColorButton mowColorPlusButton button-up" role="button" aria-pressed="false">
+<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBkPSJNMTkgMTNoLTZ2NmgtMnYtNkg1di0yaDZWNWgydjZoNnYyeiIvPjxwYXRoIGZpbGw9Im5vbmUiIGQ9Ik0wIDBoMjR2MjRIMHoiLz48L3N2Zz4=" class="gwt-Image" draggable="false" role="button" style="width: 24px;">
+</div>
+</div>
+</div>
+<div class="sizePanel">
+<div class="optionsSlider mowOptionsSlider" disabled="false"><div class="gwt-Label">1</div>
+<div class="ui-slider ui-slider-horizontal ui-widget ui-widget-content ui-corner-all" tabindex="0" style="width: 200px;">
+<span class="ui-slider-handle ui-state-default ui-corner-all" tabindex="0" style="left: 36.3636%;">
+<span>
+</span>
+</span>
+</div>
+<div class="gwt-Label">12
+</div>
+<canvas width="50" height="30" dir="ltr" class="preview" tabindex="0">
+</canvas>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+<div class="panelRow">
+<div class="middle indicatorLeft">
+<div class="indicator">
+</div>
+<div tabindex="0" class="gwt-ToggleButton gwt-ToggleButton-up selected" role="button" aria-pressed="false">
+<img src="data:image/svg+xml;base64,PHN2ZyBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9IjI0IiB2aWV3Qm94PSIwIDAgMjQgMjQiIHdpZHRoPSIyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICAgIDxwYXRoIGQ9Ik00LjU5IDYuODljLjctLjcxIDEuNC0xLjM1IDEuNzEtMS4yMi41LjIgMCAxLjAzLS4zIDEuNTItLjI1LjQyLTIuODYgMy44OS0yLjg2IDYuMzEgMCAxLjI4LjQ4IDIuMzQgMS4zNCAyLjk4Ljc1LjU2IDEuNzQuNzMgMi42NC40NiAxLjA3LS4zMSAxLjk1LTEuNCAzLjA2LTIuNzcgMS4yMS0xLjQ5IDIuODMtMy40NCA0LjA4LTMuNDQgMS42MyAwIDEuNjUgMS4wMSAxLjc2IDEuNzktMy43OC42NC01LjM4IDMuNjctNS4zOCA1LjM3IDAgMS43IDEuNDQgMy4wOSAzLjIxIDMuMDkgMS42MyAwIDQuMjktMS4zMyA0LjY5LTYuMUgyMXYtMi41aC0yLjQ3Yy0uMTUtMS42NS0xLjA5LTQuMi00LjAzLTQuMi0yLjI1IDAtNC4xOCAxLjkxLTQuOTQgMi44NC0uNTguNzMtMi4wNiAyLjQ4LTIuMjkgMi43Mi0uMjUuMy0uNjguODQtMS4xMS44NC0uNDUgMC0uNzItLjgzLS4zNi0xLjkyLjM1LTEuMDkgMS40LTIuODYgMS44NS0zLjUyLjc4LTEuMTQgMS4zLTEuOTIgMS4zLTMuMjhDOC45NSAzLjY5IDcuMzEgMyA2LjQ0IDMgNS4xMiAzIDMuOTcgNCAzLjcyIDQuMjVjLS4zNi4zNi0uNjYuNjYtLjg4LjkzbDEuNzUgMS43MXptOS4yOSAxMS42NmMtLjMxIDAtLjc0LS4yNi0uNzQtLjcyIDAtLjYuNzMtMi4yIDIuODctMi43Ni0uMyAyLjY5LTEuNDMgMy40OC0yLjEzIDMuNDh6Ii8+CiAgICA8cGF0aCBkPSJNMCAwaDI0djI0SDB6IiBmaWxsPSJub25lIi8+Cjwvc3ZnPg==" width="24" height="24" class="gwt-Image">
+</div>
+<div tabindex="0" class="gwt-ToggleButton gwt-ToggleButton-up" role="button" aria-pressed="false">
+<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGlkPSJ0b29sc19wYW5lbF9nZ2IiIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0Ij48ZGVmcz48c3R5bGU+LmNscy0xe2ZpbGw6I2ZmZn08L3N0eWxlPjwvZGVmcz48cGF0aCBkPSJNMjIgMTZMMTQgMmwtMy41MiA2LjE2QTcgNyAwIDEgMCAxNS45MiAxNnptLTgtOS43OEwxOC40NCAxNGgtMi41MmE3IDcgMCAwIDAtMy40Ni01LjA4em0tMi41NCA0LjQ1QTUgNSAwIDAgMSAxMy45IDE0SDkuNTZ6TTkgMjBhNSA1IDAgMCAxIDAtMTBoLjQxTDYgMTZoNy45QTUgNSAwIDAgMSA5IDIweiIgY2xhc3M9ImNscy0xIi8+PC9zdmc+" width="24" height="24" class="gwt-Image">
+</div>
+<div tabindex="0" class="gwt-ToggleButton gwt-ToggleButton-up" role="button" aria-pressed="false">
+<img src="data:image/svg+xml;base64,PHN2ZyBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9IjI0IiB2aWV3Qm94PSIwIDAgMjQgMjQiIHdpZHRoPSIyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICAgIDxwYXRoIGQ9Ik0xNi41IDZ2MTEuNWMwIDIuMjEtMS43OSA0LTQgNHMtNC0xLjc5LTQtNFY1YzAtMS4zOCAxLjEyLTIuNSAyLjUtMi41czIuNSAxLjEyIDIuNSAyLjV2MTAuNWMwIC41NS0uNDUgMS0xIDFzLTEtLjQ1LTEtMVY2SDEwdjkuNWMwIDEuMzggMS4xMiAyLjUgMi41IDIuNXMyLjUtMS4xMiAyLjUtMi41VjVjMC0yLjIxLTEuNzktNC00LTRTNyAyLjc5IDcgNXYxMi41YzAgMy4wNCAyLjQ2IDUuNSA1LjUgNS41czUuNS0yLjQ2IDUuNS01LjVWNmgtMS41eiIvPgogICAgPHBhdGggZD0iTTAgMGgyNHYyNEgweiIgZmlsbD0ibm9uZSIvPgo8L3N2Zz4=" width="24" height="24" class="gwt-Image">
+</div>
+</div>
+<div class="right">
+<div tabindex="0" class="gwt-ToggleButton gwt-ToggleButton-up" role="button" aria-pressed="false">
+<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgZmlsbD0iI0ZGRiIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBkPSJNNy40MSA3Ljg0TDEyIDEyLjQybDQuNTktNC41OEwxOCA5LjI1bC02IDYtNi02eiIvPjxwYXRoIGZpbGw9Im5vbmUiIGQ9Ik0wLS43NWgyNHYyNEgweiIvPjwvc3ZnPg==" width="24" height="24" class="gwt-Image" draggable="false">
+</div>
+</div>
+</div>
+</div>
+<div class="undoRedoPanel undoRedoPositionMow">
+<div tabindex="0" class="gwt-ToggleButton flatButton gwt-ToggleButton-up buttonInactive" role="button" aria-pressed="false">
+<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0Ij48ZGVmcz48c3R5bGU+LmNscy0xe2ZpbGw6bm9uZTtzdHJva2U6I2ZmZjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMH0uY2xzLTJ7ZmlsbDojZmZmfTwvc3R5bGU+PC9kZWZzPjxwYXRoIGlkPSJ1bmRvX2hlbHAiIGQ9Ik0xLjUgNnYxMC41SDEyTDEuNSA2eiIgY2xhc3M9ImNscy0xIi8+PHBhdGggaWQ9IkViZW5lXzMxIiBkPSJNMTIuNSA3LjNhMTAuMjMgMTAuMjMgMCAwIDAtNi45IDIuM0wyIDZ2OWwxMCAxLTMuNS0zLjVhNi4yNSA2LjI1IDAgMCAxIDQtMS4zYzMuNTQgMCA2IDIuNjEgNy4xIDUuOGw0LTEuNGExMS4zMSAxMS4zMSAwIDAgMC0xMS4xLTguM3oiIGNsYXNzPSJjbHMtMiIvPjxwYXRoIGlkPSJ1bmRvIiBkPSJNMTIuNSA4YTEwLjQ2IDEwLjQ2IDAgMCAwLTYuOSAyLjZMMiA3djloOWwtMy42Mi0zLjYyQTggOCAwIDAgMSAyMC4xIDE2bDIuMzctLjc4QTEwLjUxIDEwLjUxIDAgMCAwIDEyLjUgOHoiLz48L3N2Zz4=" width="24" height="24" class="gwt-Image">
+</div>
+<div tabindex="0" class="gwt-ToggleButton flatButton buttonActive gwt-ToggleButton-up hideButton" role="button" aria-pressed="false">
+<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGlkPSJyZWRvIiB2aWV3Qm94PSIwIDAgMjQgMjQiIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCI+PGRlZnM+PHN0eWxlPi5jbHMtMXtmaWxsOm5vbmU7c3Ryb2tlOiNmZmY7c3Ryb2tlLWxpbmVjYXA6cm91bmQ7c3Ryb2tlLW1pdGVybGltaXQ6MTB9LmNscy0ye2ZpbGw6I2ZmZn08L3N0eWxlPjwvZGVmcz48cGF0aCBkPSJNMjIuNSA2djEwLjVIMTJMMjIuNSA2eiIgY2xhc3M9ImNscy0xIi8+PHBhdGggZD0iTS40IDE1LjZsNCAxLjRjMS4wNS0zLjE5IDMuNTYtNS44IDcuMS01LjhhNi4yNSA2LjI1IDAgMCAxIDQgMS4zTDEyIDE2bDEwLTFWNmwtMy42IDMuNmExMC4yMyAxMC4yMyAwIDAgMC02LjktMi4zQTExLjMxIDExLjMxIDAgMCAwIC40IDE1LjZ6IiBjbGFzcz0iY2xzLTIiLz48cGF0aCBkPSJNMTguNCAxMC42YTEwLjQ3IDEwLjQ3IDAgMCAwLTE2Ljg2IDQuNjJMMy45IDE2YTggOCAwIDAgMSAxMi43Mi0zLjYyTDEzIDE2aDlWN3oiLz48L3N2Zz4=" width="24" height="24" class="gwt-Image">
+</div>
+</div>
+<div tabindex="0" class="button mowOpenMenuButton button-up" role="button" aria-pressed="false">
+<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGlkPSJtZW51IiB2aWV3Qm94PSIwIDAgMjQgMjQiIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCI+PGRlZnM+PHN0eWxlPi5jbHMtMXtmaWxsOiNmZmZ9PC9zdHlsZT48L2RlZnM+PHBhdGggZD0iTTIgNWgyMHY0SDJ6bTAgNWgyMHY0SDJ6bTAgNWgyMHY0SDJ6IiBjbGFzcz0iY2xzLTEiLz48cGF0aCBkPSJNMyAxOGgxOHYtMkgzem0wLTVoMTh2LTJIM3ptMC03djJoMThWNnoiLz48L3N2Zz4=" class="gwt-Image" draggable="false" role="button" style="width: 24px;">
+</div>
+<div aria-hidden="true" class="DockGlassPane" style="position: relative; overflow: hidden; display: none; z-index: 5000;">
+<div aria-hidden="true" style="border-width: 4px; border-style: solid; border-color: gray; display: none;">
+</div>
+</div>
+</main>
+</div>
+    <div id="ggw"
+    data-param-useBrowserForJS="false"
+    data-param-app="true" data-param-showAppsPicker="true" ></div>
+</body>
+<!--FIREBASE-->
+</html>
+

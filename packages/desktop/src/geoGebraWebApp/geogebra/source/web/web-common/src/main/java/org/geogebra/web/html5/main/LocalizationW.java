@@ -1,0 +1,380 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.web.html5.main;
+
+import java.util.ArrayList;
+import java.util.Objects;
+
+import org.geogebra.common.GeoGebraConstants;
+import org.geogebra.common.gui.SetLabels;
+import org.geogebra.common.main.AppConfig;
+import org.geogebra.common.main.Localization;
+import org.geogebra.common.main.syntax.suggestionfilter.SyntaxFilter;
+import org.geogebra.common.util.StringUtil;
+import org.geogebra.common.util.debug.Log;
+import org.geogebra.common.util.lang.Language;
+import org.geogebra.gwtutil.JavaScriptInjector;
+import org.geogebra.gwtutil.ScriptLoadCallback;
+import org.geogebra.web.html5.GeoGebraGlobal;
+import org.geogebra.web.html5.bridge.GeoGebraJSNativeBridge;
+import org.geogebra.web.html5.gui.util.BrowserStorage;
+import org.geogebra.web.resources.StyleInjector;
+
+import com.google.gwt.core.client.GWT;
+
+import elemental2.core.Global;
+import jsinterop.base.Js;
+import jsinterop.base.JsPropertyMap;
+
+/**
+ * JSON based localization for Web
+ *
+ */
+public final class LocalizationW extends Localization {
+
+	/**
+	 * Default locale string
+	 */
+	public static final String DEFAULT_LANGUAGE = "en";
+
+	// must be updated whenever localeStr changes
+	// (cached for speed)
+	private Language lang = Language.English_US;
+	private String languageTag = lang.toLanguageTag();
+	private String preferredTag = languageTag;
+
+	private ScriptLoadCallback scriptCallback;
+
+	private boolean commandChanged = true;
+
+	private ArrayList<SetLabels> setLabelsListeners;
+
+	/**
+	 * @param config app config
+	 * @param dimension 3 for 3D
+	 */
+	public LocalizationW(AppConfig config, int dimension) {
+		super(dimension, 13);
+		SyntaxFilter syntaxFilter = config.newCommandSyntaxFilter();
+		if (syntaxFilter != null) {
+			getCommandSyntax().addSyntaxFilter(syntaxFilter);
+		}
+	}
+
+	//
+	/*
+	 * eg __GGB__keysVar.en.command.Ellipse
+	 */
+	/**
+	 *
+	 * @param language
+	 *            language
+	 * @param key
+	 *            key
+	 * @param section
+	 *            properties section (menu /error/...)
+	 * @return translation or English if translation not found; fallback is
+	 *         empty string
+	 */
+	public String getPropertyNative(String language, String key, String section) {
+		// null check needed for tests
+		if (Js.isFalsy(GeoGebraGlobal.__GGB__keysVar) || GeoGebraGlobal.__GGB__keysVar == null) {
+			return "";
+		}
+
+		JsPropertyMap<JsPropertyMap<String>> dictionary = GeoGebraGlobal.__GGB__keysVar.get(language);
+		if (dictionary != null) {
+			return Objects.requireNonNull(dictionary.get(section)).get(key);
+		} else {
+			JsPropertyMap<JsPropertyMap<String>> enDictionary = GeoGebraGlobal.__GGB__keysVar.get("en");
+			if (enDictionary != null) {
+				return Objects.requireNonNull(enDictionary.get(section)).get(key);
+			} else {
+				return "";
+			}
+		}
+	}
+
+	@Override
+	public String getCommand(String key) {
+		if (key == null) {
+			return "";
+		}
+
+		return getPropertyWithFallback(getCommandLocaleString(), key, key, "command");
+	}
+
+	private String getPropertyWithFallback(
+			String lang, String key, String fallback, String category) {
+		String ret = getPropertyNative(lang, key, category);
+		if (StringUtil.empty(ret)) {
+			if (GWT.isScript()) { // no error message in test
+				Log.debug(category + " key not found: " + key);
+			}
+			return fallback;
+		}
+
+		return ret;
+	}
+
+	@Override
+	public String getEnglishCommand(String key) {
+		if (key == null) {
+			return "";
+		}
+		return getPropertyWithFallback("en", key, key, "command");
+	}
+
+	private String getCommandLocaleString() {
+		if (!lang.hasTranslatedKeyboard()) {
+			return "en";
+		}
+		return languageTag;
+	}
+
+	/**
+	 * @author Rana This method should work for both menu and menu tooltips
+	 *         items
+	 */
+	@Override
+	public String getMenuDefault(String key, String fallback) {
+		if (key == null) {
+			return "";
+		}
+
+		String ret = getPropertyNative(languageTag, key, "menu");
+
+		if (StringUtil.empty(ret)) {
+			return fallback;
+		}
+
+		return ret;
+	}
+
+	@Override
+	public String getSymbol(int key) {
+		return getPropertyWithFallback(languageTag, "S_" + key, null, "symbols");
+	}
+
+	@Override
+	public String getSymbolTooltip(int key) {
+		return getPropertyWithFallback(languageTag, "T_" + key, null, "symbols");
+	}
+
+	/**
+	 * Following Java's convention, the return string should only include the
+	 * language part of the locale. The assumption here that the "default"
+	 * locale is English.
+	 */
+	@Override
+	public Language getLanguage() {
+		return lang;
+	}
+
+	@Override
+	public Language getLanguageEnum() {
+		return lang;
+	}
+
+	@Override
+	protected boolean isCommandChanged() {
+		return commandChanged;
+	}
+
+	@Override
+	protected void setCommandChanged(boolean b) {
+		commandChanged = b;
+	}
+
+	@Override
+	protected boolean isCommandNull() {
+		return false;
+	}
+
+	@Override
+	public void initCommand() {
+		//
+	}
+
+	/**
+	 * @param lang0
+	 *            preferred language
+	 */
+	public void setLanguage(String lang0) {
+		// these must be updated whenever language changes
+		lang = StringUtil.empty(lang0)
+				? Language.English_US
+				: Language.fromLanguageTagOrLocaleString(lang0);
+		preferredTag = languageTag = lang.toLanguageTag();
+
+		setCommandChanged(true);
+
+		Log.debug("keys loaded for language: " + lang0);
+
+		updateLanguageFlags(lang.language);
+
+		// For styling on Firefox. (Mainly for rtl-languages.)
+		// TODO set RTL to the correct element when ready
+		// if (rightToLeftReadingOrder) {
+		// RootPanel.getBodyElement().setAttribute("dir", "rtl");
+		// } else {
+		// RootPanel.getBodyElement().setAttribute("dir", "ltr");
+		// }
+
+		saveLanguageToSettings(lang0);
+	}
+
+	@Override
+	public String getLanguageTag() {
+		return lang.toLanguageTag();
+	}
+
+	@Override
+	public String getPreferredLanguageTag() {
+		return preferredTag;
+	}
+
+	/**
+	 * @param lang0
+	 *            language (assuming it is supported)
+	 * @param version
+	 *            app version
+	 * @return true when available
+	 */
+	static boolean loadPropertiesFromStorage(String lang0, String version) {
+		String translationJson = BrowserStorage.LOCAL.getItem("translation");
+		if (Js.isTruthy(translationJson)) {
+			try {
+				JsPropertyMap<Object> storedTranslation =
+						Js.uncheckedCast(Global.JSON.parse(translationJson));
+				if (version.length() > 0
+						&& Js.isTruthy(storedTranslation)
+						&& !version.equals(storedTranslation.get("version"))) {
+					storedTranslation = null;
+				}
+				if (storedTranslation != null && Js.isTruthy(storedTranslation.get(lang0))) {
+					GeoGebraGlobal.__GGB__keysVar = JsPropertyMap.of();
+					GeoGebraGlobal.__GGB__keysVar.set(lang0, Js.uncheckedCast(storedTranslation.get(lang0)));
+					return true;
+				}
+			} catch (Throwable e) {
+				Log.debug(e);
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Saves properties loaded from external JSON to localStorage
+	 *  @param lang0
+	 *            language
+	 */
+	static void savePropertiesToStorage(String lang0) {
+		if (Js.isTruthy(GeoGebraGlobal.__GGB__keysVar)
+				&& Js.isTruthy(GeoGebraGlobal.__GGB__keysVar.get(lang0))) {
+			JsPropertyMap<Object> obj = JsPropertyMap.of();
+			obj.set("version", GeoGebraConstants.VERSION_STRING);
+			obj.set(lang0, GeoGebraGlobal.__GGB__keysVar.get(lang0));
+			BrowserStorage.LOCAL.setItem("translation", Global.JSON.stringify(obj));
+		}
+	}
+
+	/**
+	 * Cancel script load callback.
+	 */
+	public void cancelCallback() {
+		if (scriptCallback != null) {
+			scriptCallback.cancel();
+		}
+	}
+
+	/**
+	 * @param language
+	 *            language
+	 * @param app
+	 *            callback
+	 */
+	public void loadScript(final Language language, final HasLanguage app) {
+		preferredTag = language.toLanguageTag();
+		if (LocalizationW.loadPropertiesFromStorage(preferredTag, GeoGebraConstants.VERSION_STRING)) {
+			app.doSetLanguage(preferredTag, false);
+		} else {
+			// load keys (into a JavaScript <script> tag)
+			String url = StyleInjector.normalizeUrl(GWT.getModuleBaseURL());
+			scriptCallback = new ScriptLoadCallback() {
+				private boolean canceled = false;
+
+				@Override
+				public void onLoad() {
+					if (canceled) {
+						Log.debug("Async language file load canceled.");
+						return;
+					}
+					// force reload
+					app.doSetLanguage(preferredTag, true);
+
+					LocalizationW.savePropertiesToStorage(preferredTag);
+				}
+
+				@Override
+				public void onError() {
+					if (canceled) {
+						Log.debug("Async language file load canceled.");
+						return;
+					}
+					LocalizationW.loadPropertiesFromStorage(preferredTag, "");
+					app.doSetLanguage(preferredTag, false);
+				}
+
+				@Override
+				public void cancel() {
+					canceled = true;
+					preferredTag = languageTag;
+				}
+			};
+			JavaScriptInjector.loadJS(url + "js/properties_keys_" + preferredTag + ".js", scriptCallback);
+		}
+	}
+
+	private void saveLanguageToSettings(String lang0) {
+		if (GeoGebraJSNativeBridge.get() != null) {
+			GeoGebraJSNativeBridge.get().savePreference("language", lang0);
+		}
+	}
+
+	/**
+	 * @param localizedUI
+	 *            localized UI element
+	 */
+	public void registerLocalizedUI(SetLabels localizedUI) {
+		if (setLabelsListeners == null) {
+			setLabelsListeners = new ArrayList<>();
+		}
+		setLabelsListeners.add(localizedUI);
+	}
+
+	/**
+	 * Call setLabels() on all registered UI elements
+	 */
+	public void notifySetLabels() {
+		if (setLabelsListeners != null) {
+			for (SetLabels ui : setLabelsListeners) {
+				ui.setLabels();
+			}
+		}
+	}
+}
