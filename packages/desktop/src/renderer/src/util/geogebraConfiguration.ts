@@ -1,0 +1,44 @@
+import { usePreferencesStore } from '@/store/preferences'
+import type { GeoGebraConfiguration } from '@shared/types/ipc'
+
+const GEOGEBRA_THEME_VARIABLES = [
+  'themeColor',
+  'themeColor10',
+  'themeColor20',
+  'themeColor30',
+  'editorColor',
+  'editorColor30',
+  'editorColor50',
+  'editorBgColor',
+  'sideBarBgColor',
+  'sideBarItemHoverBgColor',
+  'itemBgColor',
+  'floatBgColor',
+  'floatHoverColor',
+  'floatBorderColor',
+  'inputBgColor',
+  'tableBorderColor'
+] as const
+
+const readThemeColors = (): Record<string, string> => {
+  const style = window.getComputedStyle(document.documentElement)
+  const colors: Record<string, string> = {}
+
+  for (const name of GEOGEBRA_THEME_VARIABLES) {
+    const value = style.getPropertyValue(`--${name}`).trim()
+    if (value) colors[name] = value
+  }
+
+  return colors
+}
+
+/** Builds the host configuration used by the embedded GeoGebra BrowserView. */
+export const getGeoGebraConfiguration = (): GeoGebraConfiguration => {
+  const preferencesStore = usePreferencesStore()
+  return {
+    language: preferencesStore.language,
+    dark: document.body.classList.contains('dark'),
+    theme: preferencesStore.theme,
+    colors: readThemeColors()
+  }
+}

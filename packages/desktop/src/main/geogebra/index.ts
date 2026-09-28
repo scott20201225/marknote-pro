@@ -27,10 +27,31 @@ interface GeoGebraWindowEntry {
   activePath: string | null
   visible: boolean
   language: string
+  configuration: GeoGebraConfiguration
 }
 
 const views = new Map<number, GeoGebraWindowEntry>()
 const viewOwners = new Map<number, { windowId: number; filePath: string }>()
+
+const DEFAULT_GEOGEBRA_CONFIGURATION: GeoGebraConfiguration = {
+  language: 'zh-CN',
+  dark: false,
+  theme: 'light',
+  colors: {}
+}
+
+const normalizeGeoGebraConfiguration = (
+  configuration?: Partial<GeoGebraConfiguration>
+): GeoGebraConfiguration => ({
+  language: normalizeGeoGebraLanguage(configuration?.language),
+  dark: configuration?.dark === true,
+  theme: typeof configuration?.theme === 'string' ? configuration.theme : 'light',
+  colors: Object.fromEntries(
+    Object.entries(configuration?.colors ?? {}).filter(
+      ([, value]) => typeof value === 'string' && value.length < 160
+    )
+  )
+})
 
 export const isGeoGebraFile = (pathname: string): boolean =>
   typeof pathname === 'string' && path.extname(pathname).toLowerCase() === GEOGEBRA_EXTENSION
@@ -162,7 +183,8 @@ const getOrCreateWindowEntry = (win: BrowserWindow): GeoGebraWindowEntry => {
     documents: new Map(),
     activePath: null,
     visible: false,
-    language: 'zh-CN'
+    language: DEFAULT_GEOGEBRA_CONFIGURATION.language,
+    configuration: DEFAULT_GEOGEBRA_CONFIGURATION
   }
   views.set(win.id, entry)
   win.on('closed', () => {
@@ -207,6 +229,19 @@ const ensureViewLoaded = async (entry: GeoGebraDocumentEntry, language: string):
   await entry.view.webContents.loadURL(getGeoGebraUrl(entry.mode, language))
   if (!entry.controlsStyleKey && !entry.view.webContents.isDestroyed()) {
     entry.controlsStyleKey = await entry.view.webContents.insertCSS(`
+      /* MarkNotePro exposes file, save, export and print in its native menu.
+         Removing GeoGebra's duplicate header also removes its 64px layout
+         reservation, so the applet container must explicitly fill the page. */
+      .GeoGebraHeader {
+        display: none !important;
+      }
+
+      #ggbApplet {
+        display: block !important;
+        height: 100vh !important;
+        min-height: 100vh !important;
+      }
+
       .GeoGebraFrame .appName::after,
       .GeoGebraFrame .shareBtn,
       .GeoGebraFrame .assignBtn,
@@ -392,11 +427,14 @@ export const invokeGeoGebraMenuAction = (win: BrowserWindow, action: GeoGebraMen
           const menuButton = [...document.querySelectorAll(
             '[aria-label="主菜单"], [aria-label="Main Menu"], [aria-label="菜单"], [aria-label="Menu"], ' +
             '[title="主菜单"], [title="Main Menu"], [title="菜单"], [title="Menu"], .menuBtn'
-          )].find(isVisible)
+          )].find((element) => element instanceof HTMLElement)
           if (!menuButton) {
             reject(new Error('找不到 GeoGebra 主菜单按钮'))
             return
           }
+          // The host intentionally hides GeoGebra's duplicate header.  A
+          // synthetic event still reaches its native menu handler, while the
+          // resulting menu items are rendered in the normal visible overlay.
           click(menuButton)
           let attempts = 0
           const waitForAction = () => {
@@ -663,9 +701,12 @@ const configureGeoGebra = async (
   configuration: GeoGebraConfiguration
 ): Promise<void> => {
   const windowEntry = getOrCreateWindowEntry(win)
-  const language = normalizeGeoGebraLanguage(configuration.language)
-  if (windowEntry.language === language) return
+  const normalizedConfiguration = normalizeGeoGebraConfiguration(configuration)
+  const { language } = normalizedConfiguration
+  const languageChanged = windowEntry.language !== language
   windowEntry.language = language
+  windowEntry.configuration = normalizedConfiguration
+  if (!languageChanged) return
   await Promise.all(
     [...windowEntry.documents.values()]
       .filter((entry) => entry.loaded && !entry.view.webContents.isDestroyed())
@@ -759,8 +800,15 @@ export const openGeoGebraFile = async (
     }
     const exportTitle = path.basename(filePath, path.extname(filePath))
     if (entry.exportTitle !== exportTitle) {
-      await setGeoGebraExportTitle(entry, exportTitle)
-      entry.exportTitle = exportTitle
+      // A GeoGebra construction does not always expose a <construction> node
+      // that can carry a title. Export naming is optional, so it must never
+      // prevent a valid .ggb archive from opening.
+      try {
+        await setGeoGebraExportTitle(entry, exportTitle)
+        entry.exportTitle = exportTitle
+      } catch (error) {
+        log.warn('设置 GeoGebra 导出文件名失败，继续打开文件:', error)
+      }
     }
     windowEntry.activePath = filePath
     win.webContents.send('mt::geogebra::opened', {
