@@ -10,7 +10,11 @@ import log from 'electron-log'
 import { writeFile } from '../filesystem'
 import type { GeoGebraMode } from '../../shared/types/files'
 import type { GeoGebraConfiguration } from '../../shared/types/ipc'
-import { buildGeoGebraThemeCss } from './theme'
+import {
+  buildGeoGebraThemeCss,
+  computeGeoGebraThemePalette,
+  syncGeoGebraGraphics
+} from './theme'
 
 const GEOGEBRA_EXTENSION = '.ggb'
 
@@ -69,6 +73,9 @@ const applyGeoGebraTheme = async (
 
   const css = buildGeoGebraThemeCss(configuration)
   if (css) entry.themeStyleKey = await entry.view.webContents.insertCSS(css)
+
+  const palette = computeGeoGebraThemePalette(configuration)
+  void syncGeoGebraGraphics(entry.view.webContents, palette)
 }
 
 export const isGeoGebraFile = (pathname: string): boolean =>
@@ -882,6 +889,7 @@ export const openGeoGebraFile = async (
       // is later replaced by the blank app bootstrap.
       await ensureViewLoaded(entry, windowEntry.configuration)
       await loadBase64(entry, fileBase64)
+      await applyGeoGebraTheme(entry, windowEntry.configuration)
 
       // New files are created as an empty placeholder before the BrowserView
       // starts. Persist GeoGebra's first generated archive immediately so the
