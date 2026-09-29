@@ -10,6 +10,7 @@ import log from 'electron-log'
 import { writeFile } from '../filesystem'
 import type { GeoGebraMode } from '../../shared/types/files'
 import type { GeoGebraConfiguration } from '../../shared/types/ipc'
+import { buildGeoGebraThemeCss } from './theme'
 
 const GEOGEBRA_EXTENSION = '.ggb'
 
@@ -54,81 +55,7 @@ const normalizeGeoGebraConfiguration = (
   )
 })
 
-const getGeoGebraThemeColor = (
-  configuration: GeoGebraConfiguration,
-  name: string,
-  fallback: string
-): string => {
-  const value = configuration.colors[name]?.trim()
-  return value && !/[;{}]/.test(value) ? value : fallback
-}
 
-/**
- * GeoGebra's graph canvas intentionally keeps its own colors.  This only
- * adapts the surrounding application chrome and Algebra panel to MarkNotePro
- * so modes with specialized content (Spreadsheet/Data/CAS) stay untouched.
- */
-const buildGeoGebraThemeCss = (configuration: GeoGebraConfiguration): string => {
-  if (!configuration.dark) return ''
-
-  const panel = getGeoGebraThemeColor(configuration, 'sideBarBgColor', '#232323')
-  const surface = getGeoGebraThemeColor(configuration, 'editorBgColor', '#282828')
-  const floating = getGeoGebraThemeColor(configuration, 'floatBgColor', '#3f3f3f')
-  const text = getGeoGebraThemeColor(configuration, 'editorColor', '#dcdfe6')
-  const muted = getGeoGebraThemeColor(configuration, 'editorColor50', '#a8abb2')
-  const accent = getGeoGebraThemeColor(configuration, 'themeColor', '#409eff')
-  const border = getGeoGebraThemeColor(configuration, 'tableBorderColor', 'rgba(255, 255, 255, 0.14)')
-
-  return `
-    .GeoGebraFrame,
-    .GeoGebraFrame .gwt-SplitLayoutPanel.neutral-0,
-    .GeoGebraFrame .toolbar,
-    .GeoGebraFrame .main {
-      background-color: ${surface} !important;
-      color: ${text} !important;
-    }
-
-    .GeoGebraFrame .header,
-    .GeoGebraFrame .toolPanelHeading {
-      background-color: ${panel} !important;
-      color: ${text} !important;
-      border-color: ${border} !important;
-    }
-
-    .GeoGebraFrame .header .gwt-Label,
-    .GeoGebraFrame .toolPanelHeading .gwt-Label,
-    .GeoGebraFrame .header .button,
-    .GeoGebraFrame .toolPanelHeading .button,
-    .GeoGebraFrame .header .tabButton {
-      color: ${text} !important;
-    }
-
-    .GeoGebraFrame .header .tabButton.selected .gwt-Label {
-      color: ${accent} !important;
-    }
-
-    .GeoGebraFrame .algebraView,
-    .GeoGebraFrame .algebraView .gwt-TreeItem,
-    .GeoGebraFrame .algebraView .newRadioButtonTreeItemParent,
-    .GeoGebraFrame .algebraView .avInputItem,
-    .GeoGebraFrame .algebraView .panelRow,
-    .GeoGebraFrame .algebraView .scrollableTextBox,
-    .GeoGebraFrame .algebraView .marblePanel {
-      background-color: ${surface} !important;
-      color: ${text} !important;
-      border-color: ${border} !important;
-    }
-
-    .GeoGebraFrame .algebraView .avDummyLabel {
-      color: ${muted} !important;
-    }
-
-    .GeoGebraFrame .algebraView .menuItemView {
-      background-color: ${floating} !important;
-      color: ${text} !important;
-    }
-  `
-}
 
 const applyGeoGebraTheme = async (
   entry: GeoGebraDocumentEntry,

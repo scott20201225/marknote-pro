@@ -17,7 +17,10 @@ const GEOGEBRA_THEME_VARIABLES = [
   'floatHoverColor',
   'floatBorderColor',
   'inputBgColor',
-  'tableBorderColor'
+  'tableBorderColor',
+  'selectionColor',
+  'highlightColor',
+  'iconColor'
 ] as const
 
 const readThemeColors = (): Record<string, string> => {
