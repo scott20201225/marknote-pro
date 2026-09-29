@@ -40,10 +40,17 @@ const getBounds = (): DrawioBounds | null => {
   }
 }
 
+let lastSentBoundsKey = ''
+
+const getBoundsKey = (bounds: DrawioBounds): string =>
+  `${Math.round(bounds.x)},${Math.round(bounds.y)},${Math.round(bounds.width)},${Math.round(bounds.height)}`
+
 const showGeoGebra = async (): Promise<void> => {
   await nextTick()
   const bounds = getBounds()
-  if (bounds) await window.electron.ipcRenderer.invoke('mt::geogebra::show', bounds)
+  if (!bounds) return
+  lastSentBoundsKey = getBoundsKey(bounds)
+  await window.electron.ipcRenderer.invoke('mt::geogebra::show', bounds)
 }
 
 const resumeAfterHostOverlay = (): void => {
@@ -52,7 +59,11 @@ const resumeAfterHostOverlay = (): void => {
 
 const syncBounds = (): void => {
   const bounds = getBounds()
-  if (bounds) window.electron.ipcRenderer.send('mt::geogebra::set-bounds', bounds)
+  if (!bounds) return
+  const nextKey = getBoundsKey(bounds)
+  if (nextKey === lastSentBoundsKey) return
+  lastSentBoundsKey = nextKey
+  window.electron.ipcRenderer.send('mt::geogebra::set-bounds', bounds)
 }
 
 const syncBoundsAfterLayout = (): void => {
