@@ -437,7 +437,93 @@ const GEOGEBRA_EXPORT_LABELS: Record<Exclude<GeoGebraMenuAction, 'print'>, strin
   png: ['PNG 图片 (.png)', 'PNG Image (.png)'],
   svg: ['SVG 图片 (.svg)', 'SVG Image (.svg)'],
   pdf: ['PDF 文档 (.pdf)', 'PDF Document (.pdf)'],
-  stl: ['3D 打印 (.stl)', '3D Printing (.stl)']
+  stl: ['3D 打印 (.stl)', '3D Printing (.stl)', '3D Print (.stl)', '3D打印(stl)']
+}
+
+interface GeoGebraPrintData {
+  type: 'svg' | 'png'
+  content: string
+}
+
+const getGeoGebraPrintContent = async (
+  entry: GeoGebraDocumentEntry
+): Promise<GeoGebraPrintData | null> => {
+  if (entry.view.webContents.isDestroyed()) return null
+  return (await entry.view.webContents.executeJavaScript(`
+    new Promise((resolve) => {
+      const api = window.ggbApplet
+      if (!api) return resolve(null)
+
+      const tryPng = () => {
+        try {
+          if (typeof api.getPNGBase64 === 'function') {
+            const png = api.getPNGBase64(2, false, 300)
+            if (typeof png === 'string' && png.length > 50) {
+              return resolve({ type: 'png', content: png })
+            }
+          }
+        } catch {}
+        resolve(null)
+      }
+
+      try {
+        if (typeof api.exportSVG === 'function') {
+          let resolved = false
+          const timer = setTimeout(() => {
+            if (!resolved) {
+              resolved = true
+              tryPng()
+            }
+          }, 1200)
+
+          api.exportSVG((svg) => {
+            if (resolved) return
+            resolved = true
+            clearTimeout(timer)
+            if (typeof svg === 'string' && svg.includes('<svg')) {
+              return resolve({ type: 'svg', content: svg })
+            }
+            tryPng()
+          })
+          return
+        }
+      } catch {}
+
+      tryPng()
+    })
+  `)) as GeoGebraPrintData | null
+}
+
+const createGeoGebraPrintWindow = async (data: GeoGebraPrintData): Promise<BrowserWindow> => {
+  const printWindow = new BrowserWindow({
+    show: false,
+    webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true }
+  })
+  const bodyContent =
+    data.type === 'svg'
+      ? data.content
+      : `<img src="data:image/png;base64,${data.content}" alt="GeoGebra Construction" />`
+  const document = `<!doctype html><html><head><meta charset="UTF-8"><style>@page{margin:10mm;size:auto}html,body{margin:0;padding:0;background:#fff;display:flex;justify-content:center;align-items:center;min-height:100vh}svg{display:block;max-width:100%;max-height:100vh;height:auto;width:auto}img{display:block;max-width:100%;max-height:100vh;width:auto;height:auto;object-fit:contain}</style></head><body>${bodyContent}</body></html>`
+  await printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(document)}`)
+  return printWindow
+}
+
+export const printGeoGebraDocument = async (win: BrowserWindow): Promise<void> => {
+  const entry = getActiveDocument(win)
+  if (!entry || entry.view.webContents.isDestroyed()) return
+  try {
+    const data = await getGeoGebraPrintContent(entry)
+    if (!data) {
+      log.warn('未能获取 GeoGebra 打印图像数据')
+      return
+    }
+    const printWindow = await createGeoGebraPrintWindow(data)
+    printWindow.webContents.print({ printBackground: true }, () => {
+      if (!printWindow.isDestroyed()) printWindow.destroy()
+    })
+  } catch (error) {
+    log.error('打印 GeoGebra 文档失败:', error)
+  }
 }
 
 /**
@@ -448,15 +534,19 @@ export const invokeGeoGebraMenuAction = (win: BrowserWindow, action: GeoGebraMen
   const entry = getActiveDocument(win)
   if (!entry || entry.view.webContents.isDestroyed()) return
 
-  const isPrint = action === 'print'
-  const targetLabels = isPrint ? ['打印', 'Print'] : GEOGEBRA_EXPORT_LABELS[action]
-  const actionName = isPrint ? '打印' : targetLabels[0]
+  if (action === 'print') {
+    void printGeoGebraDocument(win)
+    return
+  }
+
+  const targetLabels = GEOGEBRA_EXPORT_LABELS[action]
+  const actionName = targetLabels[0]
   void entry.view.webContents
     .executeJavaScript(
       `
         new Promise((resolve, reject) => {
           const targetLabels = ${JSON.stringify(targetLabels)}
-          const downloadLabels = ['下载', 'Download']
+          const downloadLabels = ['下载', 'Download', '下载为', 'Download as', '下载为...', 'Download as...']
           const normalize = (value) => (value || '').replace(/\\s+/g, ' ').trim()
           const isVisible = (element) => {
             if (!(element instanceof HTMLElement)) return false
@@ -509,14 +599,7 @@ export const invokeGeoGebraMenuAction = (win: BrowserWindow, action: GeoGebraMen
             }
             return false
           }
-          if (${JSON.stringify(isPrint)}) {
-            const printItem = findMenuItem(targetLabels)
-            if (printItem) {
-              click(printItem)
-              resolve(undefined)
-              return
-            }
-          } else if (openDownload()) {
+          if (openDownload()) {
             return
           }
           const menuButton = [...document.querySelectorAll(
@@ -533,14 +616,7 @@ export const invokeGeoGebraMenuAction = (win: BrowserWindow, action: GeoGebraMen
           click(menuButton)
           let attempts = 0
           const waitForAction = () => {
-            if (${JSON.stringify(isPrint)}) {
-              const printItem = findMenuItem(targetLabels)
-              if (printItem) {
-                click(printItem)
-                resolve(undefined)
-                return
-              }
-            } else if (openDownload()) {
+            if (openDownload()) {
               return
             }
             if (++attempts >= 40) {
@@ -916,7 +992,7 @@ export const openGeoGebraFile = async (
     // Do not retain a half-hydrated BrowserView. Reusing it would show a blank
     // construction on the next open and could make a later save overwrite the
     // still-valid file on disk.
-    if (createdEntry) closeDocument(win, createdEntry.filePath)
+    if (createdEntry && win) closeDocument(win, createdEntry.filePath)
     log.error('打开 GeoGebra 文件失败:', error)
     await dialog.showErrorBox(
       '无法打开 GeoGebra 文件',
