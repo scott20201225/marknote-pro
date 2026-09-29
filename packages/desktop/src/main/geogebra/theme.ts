@@ -593,13 +593,24 @@ export const buildGeoGebraThemeCss = (configuration: GeoGebraConfiguration): str
     .GeoGebraFrame .dockPanel,
     .GeoGebraFrame .euclidianViewPanel,
     .GeoGebraFrame .EuclidianPanel,
-    .GeoGebraFrame .euclidianView {
+    .GeoGebraFrame .EuclidianPanel3D,
+    .GeoGebraFrame .euclidianView,
+    .GeoGebraFrame .euclidianView3D,
+    .GeoGebraFrame .EuclidianView3D {
       background-color: var(--ggb-theme-surface) !important;
       color: var(--ggb-theme-text) !important;
     }
 
-    .GeoGebraFrame canvas {
+    .GeoGebraFrame canvas,
+    .GeoGebraFrame .EuclidianPanel3D canvas,
+    .GeoGebraFrame .euclidianView3D canvas {
       background-color: var(--ggb-theme-canvas-bg) !important;
+    }
+
+    .GeoGebraFrame .EuclidianStyleBar3D,
+    .GeoGebraFrame .styleBar3D {
+      background-color: var(--ggb-theme-panel) !important;
+      border-bottom: 1px solid var(--ggb-theme-border-subtle) !important;
     }
 
     .GeoGebraFrame .gwt-SplitLayoutPanel-HDragger,
@@ -1478,7 +1489,7 @@ export const buildGeoGebraThemeCss = (configuration: GeoGebraConfiguration): str
 
     .GeoGebraFrame .tvTable td,
     .GeoGebraFrame .tvTable th {
-      border-color: var(--ggb-theme-border-subtle) !important;
+      border: 1px solid var(--ggb-theme-border) !important;
       color: var(--ggb-theme-text) !important;
     }
 
@@ -1495,7 +1506,7 @@ export const buildGeoGebraThemeCss = (configuration: GeoGebraConfiguration): str
     .GeoGebraFrame .tvTable .values thead th,
     .GeoGebraFrame .tvTable .values thead th.emptyColumn {
       background-color: var(--ggb-theme-panel) !important;
-      border-bottom: 1px solid var(--ggb-theme-border-subtle) !important;
+      border: 1px solid var(--ggb-theme-border) !important;
       color: var(--ggb-theme-text) !important;
     }
 
@@ -1528,11 +1539,15 @@ export const buildGeoGebraThemeCss = (configuration: GeoGebraConfiguration): str
       background-color: var(--ggb-theme-input) !important;
     }
 
-    .GeoGebraFrame .tableEditor,
-    .GeoGebraFrame .tableEditor input {
+    .GeoGebraFrame .tableEditor {
       background-color: var(--ggb-theme-input) !important;
       color: var(--ggb-theme-text) !important;
-      outline: none !important;
+    }
+
+    .GeoGebraFrame .tableEditor input,
+    .GeoGebraFrame .tableEditor textarea,
+    .GeoGebraFrame .tableEditor * {
+      color: var(--ggb-theme-text) !important;
       caret-color: var(--ggb-theme-accent) !important;
     }
 
@@ -1623,6 +1638,115 @@ export const buildGeoGebraThemeCss = (configuration: GeoGebraConfiguration): str
     .GeoGebraFrame .validation.error .label,
     .GeoGebraFrame .inputTextField.error .errorLabel {
       color: var(--ggb-theme-error) !important;
+    }
+
+    /* =========================================================================
+       6.3 概率计算器视图 (Probability Calculator: PlotPanel & Distribution Controls)
+       ========================================================================= */
+    .GeoGebraFrame .probabilityTab,
+    .GeoGebraFrame .probabilityTab .tabPanel,
+    .GeoGebraFrame .probabilityTab .panelContainer,
+    .GeoGebraFrame .probabilityTab .PlotPanelPlus,
+    .GeoGebraFrame .distributionPanel,
+    .GeoGebraFrame .distributionPanel .parameterHolder,
+    .GeoGebraFrame .distributionPanel .probabilityResultRow,
+    .GeoGebraFrame .probCalcPanel {
+      background-color: var(--ggb-theme-surface) !important;
+      color: var(--ggb-theme-text) !important;
+    }
+
+    .GeoGebraFrame .distributionPanel .gwt-Label {
+      color: var(--ggb-theme-text) !important;
+    }
+
+    .GeoGebraFrame .distributionPanel .holder.focusState .gwt-Label {
+      color: var(--ggb-theme-accent) !important;
+    }
+
+    .GeoGebraFrame .distributionPanel .mathTextField,
+    .GeoGebraFrame .distributionPanel .inputTextField,
+    .GeoGebraFrame .distributionPanel .probabilityResultRow .mathTextField {
+      background-color: var(--ggb-theme-input) !important;
+      border-bottom: 1px solid var(--ggb-theme-border) !important;
+      color: var(--ggb-theme-text) !important;
+    }
+
+    .GeoGebraFrame .distributionPanel .holder.focusState .mathTextField,
+    .GeoGebraFrame .distributionPanel .mathTextField:focus-within {
+      border-bottom: 2px solid var(--ggb-theme-accent) !important;
+    }
+
+    .GeoGebraFrame .distributionPanel .iconPanel .iconButton {
+      background: transparent !important;
+      border-radius: 6px !important;
+      border: 1px solid transparent !important;
+    }
+
+    .GeoGebraFrame .distributionPanel .iconPanel .iconButton:hover {
+      background-color: var(--ggb-theme-hover) !important;
+    }
+
+    .GeoGebraFrame .distributionPanel .iconPanel .iconButton.active,
+    .GeoGebraFrame .distributionPanel .iconPanel .iconButton[aria-pressed="true"] {
+      background-color: var(--ggb-theme-active) !important;
+      border-color: var(--ggb-theme-accent) !important;
+    }
+
+    /* =========================================================================
+       6.4 科学计算器视图 (Scientific Calculator Layout)
+       ========================================================================= */
+    .GeoGebraFrame .tab.scientific,
+    .GeoGebraFrame .panelScientificDefaults,
+    .GeoGebraFrame .panelScientificDefaults > div,
+    .GeoGebraFrame .algebraPanelScientific,
+    .GeoGebraFrame .algebraPanelScientificSmallScreen,
+    .GeoGebraFrame .undoRedoSettingsPanelScientific {
+      background-color: var(--ggb-theme-surface) !important;
+      color: var(--ggb-theme-text) !important;
+    }
+
+    .GeoGebraFrame .panelScientificDefaults > div {
+      background: var(--ggb-theme-surface) !important;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+    }
+
+    .GeoGebraFrame .undoRedoSettingsPanelScientific .gwt-Button,
+    .GeoGebraFrame .undoRedoSettingsPanelScientific .button {
+      background: transparent !important;
+      color: var(--ggb-theme-text) !important;
+    }
+
+    .GeoGebraFrame .avItemHeaderScientific {
+      color: var(--ggb-theme-text-muted) !important;
+    }
+
+    /* =========================================================================
+       6.5 计算机代数系统 (CAS View: Table, Input & Output)
+       ========================================================================= */
+    .GeoGebraFrame .casView,
+    .GeoGebraFrame .casView table,
+    .GeoGebraFrame .CAS-table,
+    .GeoGebraFrame .CAS-table > tbody > tr > td,
+    .GeoGebraFrame .CAS_inputPanel,
+    .GeoGebraFrame .CAS_outputPanel {
+      background-color: var(--ggb-theme-surface) !important;
+      color: var(--ggb-theme-text) !important;
+      border-color: var(--ggb-theme-border) !important;
+    }
+
+    .GeoGebraFrame .cas_header {
+      background-color: var(--ggb-theme-panel) !important;
+      color: var(--ggb-theme-text-muted) !important;
+      border-color: var(--ggb-theme-border) !important;
+    }
+
+    .GeoGebraFrame .cas_header.selected {
+      background-color: var(--ggb-theme-active) !important;
+      color: var(--ggb-theme-accent) !important;
+    }
+
+    .GeoGebraFrame .CAS_table_first_row_selected {
+      background-color: var(--ggb-theme-active) !important;
     }
 
     /* =========================================================================
@@ -1750,7 +1874,18 @@ export const buildGeoGebraThemeCss = (configuration: GeoGebraConfiguration): str
     .GeoGebraFrame .gwt-MenuItem img,
     .GeoGebraFrame .listMenuItem img:not(.profileImage),
     .GeoGebraFrame .contextSubMenu img,
-    .GeoGebraFrame .iconButtonPanel img {
+    .GeoGebraFrame .iconButtonPanel img,
+    /* 概率计算器、科学计算器与 CAS 视图图标 */
+    .GeoGebraFrame .distributionPanel .iconPanel img,
+    .GeoGebraFrame .distributionPanel .iconPanel .gwt-Image,
+    .GeoGebraFrame .probCalcStylbarBtn img,
+    .GeoGebraFrame .probCalcStylbarBtn .gwt-Image,
+    .GeoGebraFrame .undoRedoSettingsPanelScientific img,
+    .GeoGebraFrame .undoRedoSettingsPanelScientific .gwt-Image,
+    .GeoGebraFrame .CAS-table img,
+    .GeoGebraFrame .casRowHeader img,
+    .GeoGebraFrame .EuclidianStyleBar3D img,
+    .GeoGebraFrame .EuclidianStyleBar3D .gwt-Image {
       filter: ${palette.iconFilter} !important;
     }
 
@@ -1758,6 +1893,23 @@ export const buildGeoGebraThemeCss = (configuration: GeoGebraConfiguration): str
     .GeoGebraFrame .spreadsheetPanel canvas.spreadsheetWidget,
     .GeoGebraFrame canvas.spreadsheetWidget {
       filter: invert(0.88) hue-rotate(180deg) brightness(0.95) contrast(0.95) !important;
+    }
+
+    /* 概率计算器绘图区域 Canvas 自动反色 (Probability Plot Canvas Inversion) */
+    .GeoGebraFrame .PlotPanelPlus canvas,
+    .GeoGebraFrame .probabilityTab .PlotPanelPlus canvas,
+    .GeoGebraFrame .probCalcPlotPanel canvas {
+      filter: invert(0.88) hue-rotate(180deg) brightness(0.95) contrast(0.95) !important;
+    }
+
+    /* 单元格就地编辑器、数学输入框与 CAS 公式输出 Canvas 浅色自适应反色 */
+    .GeoGebraFrame .tableEditor canvas,
+    .GeoGebraFrame .tableEditorWrap canvas,
+    .GeoGebraFrame .tvTable .tableEditorWrap canvas,
+    .GeoGebraFrame .mathTextField canvas,
+    .GeoGebraFrame .evInputEditor canvas,
+    .GeoGebraFrame .CAS_outputPanel canvas {
+      filter: invert(1) hue-rotate(180deg) !important;
     }
 
     /* 已拥有品牌高亮色或彩色选中的元素免除反色滤镜，保证色彩纯正 */
@@ -1799,17 +1951,59 @@ export const syncGeoGebraGraphics = async (
             axesColor: ${JSON.stringify(palette.axesColor)},
             gridColor: ${JSON.stringify(palette.gridColor)}
           }
+          // 视图映射：1 (绘图区1), 2 (绘图区2), 3/-1 (3D 绘图区)
           try { api.setGraphicsOptions(1, opts) } catch (e) {}
-          try { api.setGraphicsOptions(16, opts) } catch (e) {}
-          try { api.setGraphicsOptions(512, opts) } catch (e) {}
+          try { api.setGraphicsOptions(2, opts) } catch (e) {}
+          try { api.setGraphicsOptions(3, opts) } catch (e) {}
+          try { api.setGraphicsOptions(-1, opts) } catch (e) {}
           return true
         }
 
-        if (applyToApp()) return
+        const hookEvents = () => {
+          const api = window.ggbApplet
+          if (!api) return false
+
+          if (typeof api.registerClientListener === 'function' && !window.__ggbThemeClientHooked) {
+            window.__ggbThemeClientHooked = true
+            api.registerClientListener((event) => {
+              const type = (event && (event.type || event[0])) || ''
+              if (
+                type === 'undo' ||
+                type === 'redo' ||
+                type === 'clear' ||
+                type === 'perspectiveChange' ||
+                type === 'setMode'
+              ) {
+                setTimeout(applyToApp, 0)
+                setTimeout(applyToApp, 60)
+                setTimeout(applyToApp, 200)
+              }
+            })
+          }
+
+          if (typeof api.registerClearListener === 'function' && !window.__ggbThemeClearHooked) {
+            window.__ggbThemeClearHooked = true
+            api.registerClearListener(() => {
+              setTimeout(applyToApp, 0)
+              setTimeout(applyToApp, 60)
+              setTimeout(applyToApp, 200)
+            })
+          }
+
+          return true
+        }
+
+        if (applyToApp()) {
+          hookEvents()
+          return
+        }
 
         let attempts = 0
         const interval = setInterval(() => {
-          if (applyToApp() || ++attempts >= 30) {
+          if (applyToApp()) {
+            hookEvents()
+            clearInterval(interval)
+          } else if (++attempts >= 40) {
             clearInterval(interval)
           }
         }, 150)
