@@ -26,6 +26,7 @@ interface GeoGebraDocumentEntry {
   controlsStyleKey?: string
   themeStyleKey?: string
   exportTitle?: string
+  lastBounds?: Rectangle
 }
 
 interface GeoGebraWindowEntry {
@@ -277,43 +278,33 @@ const GEOGEBRA_HOST_LAYOUT_SCRIPT = `
     if (window.__marknoteGeoGebraLayoutMonitor) return
     window.__marknoteGeoGebraLayoutMonitor = true
 
-    let resizing = false
+    const getViewportKey = () => {
+      const w = Math.max(1, document.documentElement.clientWidth || window.innerWidth)
+      const h = Math.max(1, document.documentElement.clientHeight || window.innerHeight)
+      return w + 'x' + h
+    }
+
+    let dispatchingResize = false
     const fixLayout = () => {
-      if (resizing) return
-      resizing = true
+      if (dispatchingResize) return
+      stripHeaderReservation()
+      const nextKey = getViewportKey()
+      if (window.__marknoteLastViewportKey === nextKey) return
+      window.__marknoteLastViewportKey = nextKey
+      dispatchingResize = true
       try {
-        stripHeaderReservation()
-        const w = Math.max(1, document.documentElement.clientWidth || window.innerWidth)
-        const h = Math.max(1, document.documentElement.clientHeight || window.innerHeight)
-        if (window.ggbApplet && typeof window.ggbApplet.setSize === 'function') {
-          window.ggbApplet.setSize(w, h)
-        }
         window.dispatchEvent(new Event('resize'))
       } finally {
-        resizing = false
+        dispatchingResize = false
       }
     }
 
     window.__marknoteFixGeoGebraLayout = fixLayout
 
-    if (window.ResizeObserver) {
-      new ResizeObserver(() => fixLayout()).observe(document.documentElement)
-    }
     window.addEventListener('resize', () => {
       stripHeaderReservation()
+      window.__marknoteLastViewportKey = getViewportKey()
     })
-
-    let attempts = 0
-    const pollReady = () => {
-      stripHeaderReservation()
-      if (window.ggbApplet && typeof window.ggbApplet.setSize === 'function') {
-        fixLayout()
-      }
-      if (++attempts < 60) {
-        window.setTimeout(pollReady, 100)
-      }
-    }
-    pollReady()
   })()
 `
 
@@ -452,7 +443,8 @@ const showGeoGebraView = (win: BrowserWindow, bounds: Rectangle): void => {
   const entry = getActiveDocument(win)
   if (!entry) return
   windowEntry.visible = true
-  if (!win.getBrowserViews().includes(entry.view)) win.addBrowserView(entry.view)
+  const wasAttached = win.getBrowserViews().includes(entry.view)
+  if (!wasAttached) win.addBrowserView(entry.view)
   const normalizedBounds = normalizeBounds(bounds)
   // BrowserView bounds are relative to Electron's native content area. Clamp
   // the renderer-measured editing surface rectangle against the actual native
@@ -468,28 +460,31 @@ const showGeoGebraView = (win: BrowserWindow, bounds: Rectangle): void => {
     width: Math.max(1, Math.min(normalizedBounds.width, maxWidth)),
     height: Math.max(1, Math.min(normalizedBounds.height, maxHeight))
   }
-  entry.view.setBounds(boundedBounds)
+  const prev = entry.lastBounds
+  const boundsChanged =
+    !prev ||
+    prev.x !== boundedBounds.x ||
+    prev.y !== boundedBounds.y ||
+    prev.width !== boundedBounds.width ||
+    prev.height !== boundedBounds.height
 
-  const refreshLayout = (): void => {
-    if (entry.view.webContents.isDestroyed()) return
-    void entry.view.webContents
-      .executeJavaScript(
+  if (!wasAttached || boundsChanged) {
+    entry.lastBounds = boundedBounds
+    entry.view.setBounds(boundedBounds)
+    if (!entry.view.webContents.isDestroyed()) {
+      void entry.view.webContents
+        .executeJavaScript(
+          `
+          (() => {
+            if (typeof window.__marknoteFixGeoGebraLayout === 'function') {
+              window.__marknoteFixGeoGebraLayout()
+            }
+          })()
         `
-        (() => {
-          if (typeof window.__marknoteFixGeoGebraLayout === 'function') {
-            window.__marknoteFixGeoGebraLayout()
-          } else {
-            window.dispatchEvent(new Event('resize'))
-          }
-        })()
-      `
-      )
-      .catch(() => undefined)
+        )
+        .catch(() => undefined)
+    }
   }
-  refreshLayout()
-  setTimeout(refreshLayout, 160)
-  setTimeout(refreshLayout, 420)
-  setTimeout(refreshLayout, 800)
   win.setTopBrowserView(entry.view)
 }
 
