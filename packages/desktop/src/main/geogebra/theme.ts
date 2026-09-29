@@ -601,15 +601,22 @@ export const buildGeoGebraThemeCss = (configuration: GeoGebraConfiguration): str
       color: var(--ggb-theme-text) !important;
     }
 
-    .GeoGebraFrame .euclidianViewPanel canvas,
-    .GeoGebraFrame .EuclidianPanel canvas,
-    .GeoGebraFrame .EuclidianPanel3D canvas,
-    .GeoGebraFrame .euclidianView canvas,
-    .GeoGebraFrame .euclidianView3D canvas,
-    .GeoGebraFrame .EuclidianView3D canvas,
-    .GeoGebraFrame .euclidianView2 canvas,
-    .GeoGebraFrame .EuclidianPanel2 canvas {
+    .GeoGebraFrame .euclidianViewPanel canvas:not(.overlayGraphics),
+    .GeoGebraFrame .EuclidianPanel canvas:not(.overlayGraphics),
+    .GeoGebraFrame .EuclidianPanel3D canvas:not(.overlayGraphics),
+    .GeoGebraFrame .euclidianView canvas:not(.overlayGraphics),
+    .GeoGebraFrame .euclidianView3D canvas:not(.overlayGraphics),
+    .GeoGebraFrame .EuclidianView3D canvas:not(.overlayGraphics),
+    .GeoGebraFrame .euclidianView2 canvas:not(.overlayGraphics),
+    .GeoGebraFrame .EuclidianPanel2 canvas:not(.overlayGraphics) {
       background-color: var(--ggb-theme-canvas-bg) !important;
+    }
+
+    /* 画笔、手绘函数及高亮覆盖层 Canvas 必须保持绝对透明，防止遮挡主绘图区内容与坐标网格 */
+    .GeoGebraFrame .overlayGraphics,
+    .GeoGebraFrame canvas.overlayGraphics {
+      background: transparent !important;
+      background-color: transparent !important;
     }
 
     /* 所有公式、代数、输入框及表格编辑 Canvas 默认透明底色，防止反色产生底色色块 */
@@ -2049,6 +2056,107 @@ export const syncGeoGebraGraphics = async (
           };
         }
 
+        const adaptObject = (name) => {
+          const api = window.ggbApplet
+          if (!name || !api || typeof api.getObjectType !== 'function') return
+          try {
+            const type = (api.getObjectType(name) || '').toLowerCase()
+            const targetTypes = [
+              'line',
+              'ray',
+              'segment',
+              'vector',
+              'polyline',
+              'penstroke',
+              'conic',
+              'conicpart',
+              'implicitpoly',
+              'curvecartesian',
+              'line3d',
+              'segment3d',
+              'ray3d',
+              'vector3d'
+            ]
+            if (targetTypes.includes(type)) {
+              const hex = (api.getColor(name) || '').toUpperCase()
+              if (window.__ggbDarkTheme) {
+                if (hex.length === 7 && hex.startsWith('#')) {
+                  const r = parseInt(hex.slice(1, 3), 16)
+                  const g = parseInt(hex.slice(3, 5), 16)
+                  const b = parseInt(hex.slice(5, 7), 16)
+                  // 默认深色/黑色几何元素在深色背景下自适应为高对比度亮灰色
+                  if (r < 70 && g < 70 && b < 70 && Math.abs(r - g) < 15 && Math.abs(g - b) < 15) {
+                    window.__ggbAdaptedObjects = window.__ggbAdaptedObjects || new Set()
+                    window.__ggbAdaptedObjects.add(name)
+                    api.setColor(name, 224, 224, 224)
+                  }
+                }
+              } else {
+                if (window.__ggbAdaptedObjects && window.__ggbAdaptedObjects.has(name)) {
+                  window.__ggbAdaptedObjects.delete(name)
+                  api.setColor(name, 32, 33, 36)
+                }
+              }
+            }
+          } catch (e) {}
+        }
+
+        const onObjectAdded = (name) => {
+          const api = window.ggbApplet
+          if (!name || !api) return
+          try {
+            const type = typeof api.getObjectType === 'function' ? (api.getObjectType(name) || '').toLowerCase() : ''
+            // 按钮对象默认被设为辅助对象而无法在代数区显示和删除，此处解除辅助对象标记以便管理和删除
+            if (type === 'button') {
+              try {
+                if (typeof api.setAuxiliary === 'function') api.setAuxiliary(name, false)
+              } catch (e) {}
+            }
+            adaptObject(name)
+            setTimeout(() => {
+              if (type === 'button') {
+                try { if (typeof api.setAuxiliary === 'function') api.setAuxiliary(name, false) } catch (e) {}
+              }
+              adaptObject(name)
+            }, 30)
+          } catch (e) {}
+        }
+
+        const adaptAllObjects = () => {
+          const api = window.ggbApplet
+          if (!api || typeof api.getAllObjectNames !== 'function') return
+          try {
+            const names = api.getAllObjectNames() || []
+            for (let i = 0; i < names.length; i++) {
+              const name = names[i]
+              const type = (api.getObjectType(name) || '').toLowerCase()
+              if (type === 'button') {
+                try { if (typeof api.setAuxiliary === 'function') api.setAuxiliary(name, false) } catch (e) {}
+              }
+              adaptObject(name)
+            }
+          } catch (e) {}
+        }
+
+        const syncPenColor = () => {
+          const api = window.ggbApplet
+          if (!api) return
+          try {
+            if (typeof api.getPenColor === 'function' && typeof api.setPenColor === 'function') {
+              const penColor = (api.getPenColor() || '').toUpperCase()
+              if (window.__ggbDarkTheme) {
+                if (penColor === '#202124' || penColor === '#000000' || penColor === '#1C1C1F') {
+                  api.setPenColor(224, 224, 224)
+                }
+              } else {
+                if (penColor === '#E0E0E0' || penColor === '#FFFFFF') {
+                  api.setPenColor(32, 33, 36)
+                }
+              }
+            }
+          } catch (e) {}
+        }
+
         const applyToApp = () => {
           const api = window.ggbApplet
           if (!api || typeof api.setGraphicsOptions !== 'function') return false
@@ -2063,12 +2171,19 @@ export const syncGeoGebraGraphics = async (
           try { api.setGraphicsOptions(3, opts) } catch (e) {}
           try { api.setGraphicsOptions(-1, opts) } catch (e) {}
           try { if (typeof api.refreshViews === 'function') api.refreshViews() } catch (e) {}
+          syncPenColor()
+          adaptAllObjects()
           return true
         }
 
         const hookEvents = () => {
           const api = window.ggbApplet
           if (!api) return false
+
+          if (typeof api.registerAddListener === 'function' && !window.__ggbThemeAddHooked) {
+            window.__ggbThemeAddHooked = true
+            api.registerAddListener(onObjectAdded)
+          }
 
           if (typeof api.registerClientListener === 'function' && !window.__ggbThemeClientHooked) {
             window.__ggbThemeClientHooked = true
@@ -2078,8 +2193,7 @@ export const syncGeoGebraGraphics = async (
                 type === 'undo' ||
                 type === 'redo' ||
                 type === 'clear' ||
-                type === 'perspectiveChange' ||
-                type === 'setMode'
+                type === 'perspectiveChange'
               ) {
                 setTimeout(applyToApp, 0)
                 setTimeout(applyToApp, 60)
