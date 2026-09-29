@@ -222,6 +222,101 @@ const getOrCreateWindowEntry = (win: BrowserWindow): GeoGebraWindowEntry => {
   return entry
 }
 
+const GEOGEBRA_HOST_LAYOUT_SCRIPT = `
+  (() => {
+    if (!window.__marknoteGeoGebraMarginTopPatched) {
+      window.__marknoteGeoGebraMarginTopPatched = true
+      const rawGetAttribute = Element.prototype.getAttribute
+      Element.prototype.getAttribute = function (name) {
+        if (typeof name === 'string' && name.toLowerCase() === 'data-param-margintop') {
+          return '0'
+        }
+        return rawGetAttribute.call(this, name)
+      }
+      const rawSetAttribute = Element.prototype.setAttribute
+      Element.prototype.setAttribute = function (name, value) {
+        if (typeof name === 'string' && name.toLowerCase() === 'data-param-margintop') {
+          return rawSetAttribute.call(this, name, '0')
+        }
+        return rawSetAttribute.call(this, name, value)
+      }
+    }
+
+    const stripHeaderReservation = () => {
+      if (window.defaultParams && typeof window.defaultParams === 'object') {
+        window.defaultParams.marginTop = 0
+      }
+      for (const header of document.querySelectorAll(
+        '.GeoGebraHeader, nav.GeoGebraFrame, #logoID'
+      )) {
+        const nav =
+          header.closest('nav') ||
+          (header instanceof HTMLElement && header.classList.contains('GeoGebraHeader')
+            ? header
+            : null)
+        if (nav instanceof HTMLElement) {
+          nav.classList.remove('GeoGebraHeader')
+          nav.style.setProperty('display', 'none', 'important')
+          nav.style.setProperty('height', '0px', 'important')
+          nav.style.setProperty('min-height', '0px', 'important')
+        }
+      }
+      for (const node of document.querySelectorAll('#ggw, #ggbApplet, .geogebraweb')) {
+        if (node instanceof HTMLElement) {
+          node.setAttribute('data-param-marginTop', '0')
+          node.style.setProperty('top', '0px', 'important')
+          node.style.setProperty('height', '100%', 'important')
+          node.style.setProperty('min-height', '0px', 'important')
+        }
+      }
+    }
+
+    window.__marknoteStripGeoGebraHeader = stripHeaderReservation
+    stripHeaderReservation()
+
+    if (window.__marknoteGeoGebraLayoutMonitor) return
+    window.__marknoteGeoGebraLayoutMonitor = true
+
+    let resizing = false
+    const fixLayout = () => {
+      if (resizing) return
+      resizing = true
+      try {
+        stripHeaderReservation()
+        const w = Math.max(1, document.documentElement.clientWidth || window.innerWidth)
+        const h = Math.max(1, document.documentElement.clientHeight || window.innerHeight)
+        if (window.ggbApplet && typeof window.ggbApplet.setSize === 'function') {
+          window.ggbApplet.setSize(w, h)
+        }
+        window.dispatchEvent(new Event('resize'))
+      } finally {
+        resizing = false
+      }
+    }
+
+    window.__marknoteFixGeoGebraLayout = fixLayout
+
+    if (window.ResizeObserver) {
+      new ResizeObserver(() => fixLayout()).observe(document.documentElement)
+    }
+    window.addEventListener('resize', () => {
+      stripHeaderReservation()
+    })
+
+    let attempts = 0
+    const pollReady = () => {
+      stripHeaderReservation()
+      if (window.ggbApplet && typeof window.ggbApplet.setSize === 'function') {
+        fixLayout()
+      }
+      if (++attempts < 60) {
+        window.setTimeout(pollReady, 100)
+      }
+    }
+    pollReady()
+  })()
+`
+
 const createDocumentEntry = (
   win: BrowserWindow,
   filePath: string,
@@ -239,6 +334,11 @@ const createDocumentEntry = (
   const entry = { view, filePath, mode, loaded: false }
   getOrCreateWindowEntry(win).documents.set(filePath, entry)
   viewOwners.set(view.webContents.id, { windowId: win.id, filePath })
+  view.webContents.on('dom-ready', () => {
+    if (!view.webContents.isDestroyed()) {
+      void view.webContents.executeJavaScript(GEOGEBRA_HOST_LAYOUT_SCRIPT).catch(() => undefined)
+    }
+  })
   view.webContents.on('did-fail-load', (_event, code, description, url) => {
     log.error(`GeoGebra 加载失败: ${code} ${description} @ ${url}`)
   })
@@ -257,31 +357,86 @@ const ensureViewLoaded = async (
   await entry.view.webContents.loadURL(getGeoGebraUrl(entry.mode, configuration.language))
   if (!entry.controlsStyleKey && !entry.view.webContents.isDestroyed()) {
     entry.controlsStyleKey = await entry.view.webContents.insertCSS(`
-      /* MarkNotePro exposes file, save, export and print in its native menu.
-         Removing GeoGebra's duplicate header also removes its 64px layout
-         reservation, so the applet container must explicitly fill the page. */
-      .GeoGebraHeader {
-        display: none !important;
+      html,
+      body,
+      body.application {
+        width: 100% !important;
+        height: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
       }
 
-      #ggbApplet {
-        display: block !important;
-        height: 100vh !important;
-        min-height: 100vh !important;
+      /* MarkNotePro exposes file, save, export and print in its native menu.
+         Removing GeoGebra's duplicate header also removes its 64px/112px layout
+         reservation, so the applet container must explicitly fill the page. */
+      .GeoGebraHeader,
+      nav.GeoGebraFrame.graphingHeader,
+      nav.GeoGebraFrame.scientificHeader,
+      nav.GeoGebraFrame.suiteHeader,
+      nav.GeoGebraFrame.notesHeader {
+        display: none !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        max-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
+        overflow: hidden !important;
+      }
+
+      #ggw,
+      #ggbApplet,
+      .geogebraweb,
+      .startscreen {
+        position: absolute !important;
+        inset: 0 !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+      }
+
+      #ggbApplet > .GeoGebraFrame,
+      .startscreen > .GeoGebraFrame {
+        position: absolute !important;
+        inset: 0 !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        min-height: 0 !important;
+        margin: 0 !important;
       }
 
       .GeoGebraFrame .appName::after,
       .GeoGebraFrame .shareBtn,
       .GeoGebraFrame .assignBtn,
       .GeoGebraFrame .signIn,
-      .GeoGebraFrame .signInIcon {
+      .GeoGebraFrame .signInIcon,
+      .GeoGebraFrame > .menu,
+      .GeoGebraFrame .flatButton.menu,
+      .GeoGebraFrame .iconButton.menu,
+      .GeoGebraFrame .landscapeMenuBtn,
+      .GeoGebraFrame .portraitMenuBtn {
         display: none !important;
+      }
+
+      .GeoGebraFrame .toolbar .header-open-landscape .center.withMenu,
+      .GeoGebraFrame .toolbar .header-close-landscape .center.withMenu {
+        top: 24px !important;
       }
 
       .GeoGebraFrame .appName::after {
         content: none !important;
       }
     `)
+
+    void entry.view.webContents
+      .executeJavaScript(GEOGEBRA_HOST_LAYOUT_SCRIPT)
+      .catch(() => undefined)
   }
   await applyGeoGebraTheme(entry, configuration)
 }
@@ -299,41 +454,33 @@ const showGeoGebraView = (win: BrowserWindow, bounds: Rectangle): void => {
   windowEntry.visible = true
   if (!win.getBrowserViews().includes(entry.view)) win.addBrowserView(entry.view)
   const normalizedBounds = normalizeBounds(bounds)
-  // BrowserView bounds are relative to Electron's native content area. The
-  // renderer can temporarily report a taller CSS layout while macOS is
-  // restoring/maximizing the window, so clamp the final rectangle against the
-  // actual content size to keep it above the Dock and below the title row.
+  // BrowserView bounds are relative to Electron's native content area. Clamp
+  // the renderer-measured editing surface rectangle against the actual native
+  // content dimensions so it never overflows the window during resize/restore.
   const [contentWidth, contentHeight] = win.getContentSize()
   const x = Math.min(normalizedBounds.x, Math.max(0, contentWidth - 1))
   const y = Math.min(normalizedBounds.y, Math.max(0, contentHeight - 1))
-  // GeoGebra occupies the whole remaining tab area. The renderer-provided
-  // width/height can be stale during a maximize/restore transition, so derive
-  // both dimensions from the native content area instead of preserving a
-  // measured rectangle that may leave a gap or extend under the Dock.
+  const maxWidth = Math.max(1, contentWidth - x)
+  const maxHeight = Math.max(1, contentHeight - y)
   const boundedBounds: Rectangle = {
     x,
     y,
-    width: Math.max(1, contentWidth - x),
-    height: Math.max(1, contentHeight - y)
+    width: Math.max(1, Math.min(normalizedBounds.width, maxWidth)),
+    height: Math.max(1, Math.min(normalizedBounds.height, maxHeight))
   }
   entry.view.setBounds(boundedBounds)
 
-  // BrowserView.setBounds changes the native viewport, but embedded GeoGebra
-  // does not always receive a browser resize event when a tab is restored or
-  // shown again. Its generated layout can then keep the initial narrow canvas
-  // and leave the remaining viewport as an empty gray area. Notify the page
-  // through the normal browser resize path after the native bounds have been
-  // applied. Do not call GeoGebra's setSize API here: it creates a second,
-  // manually injected viewport size and can place its bottom controls below
-  // the actual BrowserView after macOS maximize/restore.
   const refreshLayout = (): void => {
     if (entry.view.webContents.isDestroyed()) return
     void entry.view.webContents
       .executeJavaScript(
         `
         (() => {
-          window.dispatchEvent(new Event('resize'))
-          window.requestAnimationFrame(() => window.dispatchEvent(new Event('resize')))
+          if (typeof window.__marknoteFixGeoGebraLayout === 'function') {
+            window.__marknoteFixGeoGebraLayout()
+          } else {
+            window.dispatchEvent(new Event('resize'))
+          }
         })()
       `
       )
@@ -536,18 +683,23 @@ export const invokeGeoGebraMenuAction = (win: BrowserWindow, action: GeoGebraMen
           if (openDownload()) {
             return
           }
-          const menuButton = [...document.querySelectorAll(
+          const menuSelector =
+            '#ggbApplet .menu, #ggbApplet .landscapeMenuBtn, #ggbApplet .portraitMenuBtn, ' +
+            '#ggbApplet [aria-label="主菜单"], #ggbApplet [aria-label="Main Menu"], ' +
+            '#ggbApplet [aria-label="菜单"], #ggbApplet [aria-label="Menu"], ' +
             '[aria-label="主菜单"], [aria-label="Main Menu"], [aria-label="菜单"], [aria-label="Menu"], ' +
             '[title="主菜单"], [title="Main Menu"], [title="菜单"], [title="Menu"], .menuBtn'
-          )].find((element) => element instanceof HTMLElement)
-          if (!menuButton) {
+          const menuButtons = [...document.querySelectorAll(menuSelector)].filter(
+            (element) => element instanceof HTMLElement && !element.closest('.startscreen')
+          )
+          if (!menuButtons.length) {
             reject(new Error('找不到 GeoGebra 主菜单按钮'))
             return
           }
-          // The host intentionally hides GeoGebra's duplicate header.  A
-          // synthetic event still reaches its native menu handler, while the
+          // The host intentionally hides GeoGebra's duplicate header/menu button.
+          // A synthetic event still reaches its native menu handler, while the
           // resulting menu items are rendered in the normal visible overlay.
-          click(menuButton)
+          click(menuButtons[0])
           let attempts = 0
           const waitForAction = () => {
             if (openDownload()) {
