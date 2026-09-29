@@ -601,10 +601,37 @@ export const buildGeoGebraThemeCss = (configuration: GeoGebraConfiguration): str
       color: var(--ggb-theme-text) !important;
     }
 
-    .GeoGebraFrame canvas,
+    .GeoGebraFrame .euclidianViewPanel canvas,
+    .GeoGebraFrame .EuclidianPanel canvas,
     .GeoGebraFrame .EuclidianPanel3D canvas,
-    .GeoGebraFrame .euclidianView3D canvas {
+    .GeoGebraFrame .euclidianView canvas,
+    .GeoGebraFrame .euclidianView3D canvas,
+    .GeoGebraFrame .EuclidianView3D canvas,
+    .GeoGebraFrame .euclidianView2 canvas,
+    .GeoGebraFrame .EuclidianPanel2 canvas {
       background-color: var(--ggb-theme-canvas-bg) !important;
+    }
+
+    /* 所有公式、代数、输入框及表格编辑 Canvas 默认透明底色，防止反色产生底色色块 */
+    .GeoGebraFrame .algebraView canvas,
+    .GeoGebraFrame .algebraPanel canvas,
+    .GeoGebraFrame .avItem canvas,
+    .GeoGebraFrame .avInputItem canvas,
+    .GeoGebraFrame .elem canvas,
+    .GeoGebraFrame .elemText canvas,
+    .GeoGebraFrame .scrollableTextBox canvas,
+    .GeoGebraFrame .latexItem canvas,
+    .GeoGebraFrame .canvasVal,
+    .GeoGebraFrame .canvasDef,
+    .GeoGebraFrame .newRadioButtonTreeItemParent canvas,
+    .GeoGebraFrame .tableEditor canvas,
+    .GeoGebraFrame .tableEditorWrap canvas,
+    .GeoGebraFrame .tvTable canvas,
+    .GeoGebraFrame .mathTextField canvas,
+    .GeoGebraFrame .evInputEditor canvas,
+    .GeoGebraFrame .CAS_outputPanel canvas {
+      background: transparent !important;
+      background-color: transparent !important;
     }
 
     .GeoGebraFrame .EuclidianStyleBar3D,
@@ -1193,14 +1220,17 @@ export const buildGeoGebraThemeCss = (configuration: GeoGebraConfiguration): str
     }
 
     .GeoGebraFrame .avItem,
-    .GeoGebraFrame .avInputItem {
+    .GeoGebraFrame .avInputItem,
+    .GeoGebraFrame .newRadioButtonTreeItemParent {
       border-top: 1px solid var(--ggb-theme-border-subtle) !important;
+      border-bottom: 1px solid var(--ggb-theme-border-subtle) !important;
       background-color: var(--ggb-theme-surface) !important;
       transition: background-color 150ms ease !important;
     }
 
     .GeoGebraFrame .avItem:hover,
-    .GeoGebraFrame .avInputItem:hover {
+    .GeoGebraFrame .avInputItem:hover,
+    .GeoGebraFrame .newRadioButtonTreeItemParent:hover {
       background-color: var(--ggb-theme-hover) !important;
     }
 
@@ -1209,16 +1239,48 @@ export const buildGeoGebraThemeCss = (configuration: GeoGebraConfiguration): str
     }
 
     .GeoGebraFrame .avItem.avSelectedRow,
-    .GeoGebraFrame .avItem.avSelectedRow.keyboardFocus {
+    .GeoGebraFrame .avItem.avSelectedRow.keyboardFocus,
+    .GeoGebraFrame .newRadioButtonTreeItemParent.focused,
+    .GeoGebraFrame .newRadioButtonTreeItemParent.gwt-TreeItem-selected,
+    .GeoGebraFrame .newRadioButtonTreeItemParent.keyboardFocus,
+    .GeoGebraFrame .algebraPanelScientific .newRadioButtonTreeItemParent.focused {
       background-color: var(--ggb-theme-active) !important;
       border-top: 1px solid var(--ggb-theme-accent) !important;
       border-bottom: 1px solid var(--ggb-theme-accent) !important;
       outline: none !important;
     }
 
-    .GeoGebraFrame .avItem.avSelectedRow .marblePanel {
+    .GeoGebraFrame .avItem.avSelectedRow .marblePanel,
+    .GeoGebraFrame .newRadioButtonTreeItemParent.focused .marblePanel {
       background-color: var(--ggb-theme-active) !important;
       border-right: 1px solid var(--ggb-theme-border-subtle) !important;
+    }
+
+    /* 严禁代数项内部元素（公式容器、文本包裹、GWT 选中态）产生硬编码白色底色 */
+    .GeoGebraFrame .gwt-TreeItem-selected,
+    .GeoGebraFrame .gwt-TreeItem.gwt-TreeItem-selected,
+    .GeoGebraFrame .gwt-Tree .gwt-TreeItem-selected,
+    .GeoGebraFrame .elem,
+    .GeoGebraFrame .elemText,
+    .GeoGebraFrame .scrollableTextBox,
+    .GeoGebraFrame .latexItem,
+    .GeoGebraFrame .avValue,
+    .GeoGebraFrame .avOutput,
+    .GeoGebraFrame .avDefinition,
+    .GeoGebraFrame .avDefinitionPlain,
+    .GeoGebraFrame .avPlainText,
+    .GeoGebraFrame .newRadioButtonTreeItemParent .elem,
+    .GeoGebraFrame .newRadioButtonTreeItemParent .elemText,
+    .GeoGebraFrame .newRadioButtonTreeItemParent .scrollableTextBox,
+    .GeoGebraFrame .newRadioButtonTreeItemParent .latexItem,
+    .GeoGebraFrame .avItem .elem,
+    .GeoGebraFrame .avItem .elemText,
+    .GeoGebraFrame .avItem .scrollableTextBox,
+    .GeoGebraFrame .avItem .latexItem,
+    .GeoGebraFrame .avItem .avValue,
+    .GeoGebraFrame .avItem .avOutput {
+      background: transparent !important;
+      background-color: transparent !important;
     }
 
     .GeoGebraFrame .marble {
@@ -1401,20 +1463,11 @@ export const buildGeoGebraThemeCss = (configuration: GeoGebraConfiguration): str
     }
 
     /* 正在编辑的代数行 (Active/Focused Expression Item) */
-    .GeoGebraFrame .newRadioButtonTreeItemParent {
-      background-color: var(--ggb-theme-surface) !important;
-      border-top: 1px solid var(--ggb-theme-border-subtle) !important;
-      border-bottom: 1px solid var(--ggb-theme-border-subtle) !important;
-    }
-    .GeoGebraFrame .newRadioButtonTreeItemParent.focused,
-    .GeoGebraFrame .algebraPanelScientific .newRadioButtonTreeItemParent.focused {
-      border-top: 1px solid var(--ggb-theme-accent) !important;
-      border-bottom: 1px solid var(--ggb-theme-accent) !important;
-      background-color: var(--ggb-theme-active) !important;
-    }
     .GeoGebraFrame .newRadioButtonTreeItemParent.focused .scrollableTextBox,
     .GeoGebraFrame .algebraPanelScientific .newRadioButtonTreeItemParent.focused .scrollableTextBox {
       border-bottom: 1px solid var(--ggb-theme-accent) !important;
+      background: transparent !important;
+      background-color: transparent !important;
     }
 
     /* 数学公式输入框在编辑状态 (MathTextField in Edit Mode) */
@@ -1536,12 +1589,19 @@ export const buildGeoGebraThemeCss = (configuration: GeoGebraConfiguration): str
     /* 表格就地编辑框 (Table In-Place Editor) */
     .GeoGebraFrame .tableEditorWrap {
       border: 2px solid var(--ggb-theme-accent) !important;
-      background-color: var(--ggb-theme-input) !important;
+      background: transparent !important;
+      background-color: transparent !important;
     }
 
     .GeoGebraFrame .tableEditor {
-      background-color: var(--ggb-theme-input) !important;
+      background: transparent !important;
+      background-color: transparent !important;
       color: var(--ggb-theme-text) !important;
+    }
+
+    .GeoGebraFrame .tableEditor canvas {
+      background: transparent !important;
+      background-color: transparent !important;
     }
 
     .GeoGebraFrame .tableEditor input,
@@ -1902,14 +1962,28 @@ export const buildGeoGebraThemeCss = (configuration: GeoGebraConfiguration): str
       filter: invert(0.88) hue-rotate(180deg) brightness(0.95) contrast(0.95) !important;
     }
 
-    /* 单元格就地编辑器、数学输入框与 CAS 公式输出 Canvas 浅色自适应反色 */
+    /* 代数区数学公式、单元格就地编辑器、数学输入框与 CAS 公式输出 Canvas 浅色自适应反色 */
+    .GeoGebraFrame .algebraView canvas,
+    .GeoGebraFrame .algebraPanel canvas,
+    .GeoGebraFrame .avItem canvas,
+    .GeoGebraFrame .avInputItem canvas,
+    .GeoGebraFrame .elem canvas,
+    .GeoGebraFrame .elemText canvas,
+    .GeoGebraFrame .scrollableTextBox canvas,
+    .GeoGebraFrame .latexItem canvas,
+    .GeoGebraFrame .canvasVal,
+    .GeoGebraFrame .canvasDef,
+    .GeoGebraFrame .newRadioButtonTreeItemParent canvas,
     .GeoGebraFrame .tableEditor canvas,
     .GeoGebraFrame .tableEditorWrap canvas,
     .GeoGebraFrame .tvTable .tableEditorWrap canvas,
+    .GeoGebraFrame .tvTable .tableEditor canvas,
     .GeoGebraFrame .mathTextField canvas,
     .GeoGebraFrame .evInputEditor canvas,
     .GeoGebraFrame .CAS_outputPanel canvas {
       filter: invert(1) hue-rotate(180deg) !important;
+      background: transparent !important;
+      background-color: transparent !important;
     }
 
     /* 已拥有品牌高亮色或彩色选中的元素免除反色滤镜，保证色彩纯正 */
@@ -1943,6 +2017,38 @@ export const syncGeoGebraGraphics = async (
   try {
     await webContents.executeJavaScript(`
       (() => {
+        window.__ggbDarkTheme = ${palette.isDark};
+
+        if (!window.__ggbFillRectHooked) {
+          window.__ggbFillRectHooked = true;
+          const origFillRect = CanvasRenderingContext2D.prototype.fillRect;
+          CanvasRenderingContext2D.prototype.fillRect = function(x, y, w, h) {
+            if (window.__ggbDarkTheme && this.canvas) {
+              try {
+                const el = this.canvas;
+                const inEditor = el.closest && el.closest(
+                  '.algebraView, .algebraPanel, .scrollableTextBox, .latexItem, .newRadioButtonTreeItemParent, .avItem, .avInputItem, .tableEditor, .tableEditorWrap, .tvTable, .mathTextField, .evInputEditor'
+                );
+                if (inEditor) {
+                  const fs = String(this.fillStyle || '').toLowerCase().replace(/\\s+/g, '');
+                  if (
+                    fs === '#ffffff' ||
+                    fs === '#fff' ||
+                    fs === 'white' ||
+                    fs === 'rgb(255,255,255)' ||
+                    fs === 'rgba(255,255,255,1)' ||
+                    fs === 'rgba(255,255,255,1.0)' ||
+                    (fs.startsWith('rgba(255,255,255') && !fs.includes(',0)'))
+                  ) {
+                    return this.clearRect(x, y, w, h);
+                  }
+                }
+              } catch (e) {}
+            }
+            return origFillRect.call(this, x, y, w, h);
+          };
+        }
+
         const applyToApp = () => {
           const api = window.ggbApplet
           if (!api || typeof api.setGraphicsOptions !== 'function') return false
@@ -1956,6 +2062,7 @@ export const syncGeoGebraGraphics = async (
           try { api.setGraphicsOptions(2, opts) } catch (e) {}
           try { api.setGraphicsOptions(3, opts) } catch (e) {}
           try { api.setGraphicsOptions(-1, opts) } catch (e) {}
+          try { if (typeof api.refreshViews === 'function') api.refreshViews() } catch (e) {}
           return true
         }
 
