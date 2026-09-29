@@ -28,10 +28,6 @@ const getBounds = (): DrawioBounds | null => {
   const left = noteListRect && noteListRect.right > rect.left
     ? Math.min(noteListRect.right, rect.right)
     : rect.left
-  // `.editor-middle` keeps a 100vh minimum height while the title bar and tab
-  // row are stacked above the editor surface. Only the top-left corner is
-  // authoritative here; the main process fills the native View to the
-  // content area's right and bottom edges.
   const top = Math.max(0, rect.top)
   // BrowserView bounds are native content coordinates, while the DOM reports
   // CSS pixels. Keep GeoGebra aligned with Draw.io when the app is zoomed.
@@ -39,8 +35,8 @@ const getBounds = (): DrawioBounds | null => {
   return {
     x: left * zoomFactor,
     y: top * zoomFactor,
-    width: Math.max(1, window.innerWidth - left) * zoomFactor,
-    height: Math.max(1, window.innerHeight - top) * zoomFactor
+    width: Math.max(1, rect.right - left) * zoomFactor,
+    height: Math.max(1, rect.height) * zoomFactor
   }
 }
 
