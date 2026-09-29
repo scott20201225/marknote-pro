@@ -7,12 +7,15 @@ import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { usePreferencesStore } from '@/store/preferences'
 import { useLayoutStore } from '@/store/layout'
+import { useEditorStore } from '@/store/editor'
 import type { DrawioBounds } from '@shared/types/ipc'
 
 const surfaceRef = ref<HTMLDivElement | null>(null)
 const preferencesStore = usePreferencesStore()
 const layoutStore = useLayoutStore()
+const editorStore = useEditorStore()
 const { zoom } = storeToRefs(preferencesStore)
+const { currentFile } = storeToRefs(editorStore)
 const { rightColumn, sideBarWidth, noteNavigationMode, noteListWidth } = storeToRefs(layoutStore)
 let boundsSyncAnimationFrame = 0
 let removeOpenedListener: (() => void) | null = null
@@ -45,6 +48,10 @@ const showGeoGebra = async (): Promise<void> => {
   await nextTick()
   const bounds = getBounds()
   if (bounds) await window.electron.ipcRenderer.invoke('mt::geogebra::show', bounds)
+}
+
+const resumeAfterHostOverlay = (): void => {
+  if (currentFile.value?.isGeoGebra) void showGeoGebra()
 }
 
 const syncBounds = (): void => {
@@ -92,6 +99,7 @@ onMounted(() => {
     void showGeoGebra()
   })
   window.addEventListener('resize', handleWindowResize)
+  window.addEventListener('marknotepro:resume-native-editor', resumeAfterHostOverlay)
   if (surfaceRef.value) {
     resizeObserver = new ResizeObserver(syncBoundsAfterLayout)
     resizeObserver.observe(surfaceRef.value)
@@ -106,6 +114,7 @@ watch([rightColumn, sideBarWidth, noteNavigationMode, noteListWidth], () => {
 onBeforeUnmount(() => {
   if (boundsSyncAnimationFrame) window.cancelAnimationFrame(boundsSyncAnimationFrame)
   window.removeEventListener('resize', handleWindowResize)
+  window.removeEventListener('marknotepro:resume-native-editor', resumeAfterHostOverlay)
   resizeObserver?.disconnect()
   resizeObserver = null
   removeOpenedListener?.()

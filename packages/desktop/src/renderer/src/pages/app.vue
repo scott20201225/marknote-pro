@@ -136,7 +136,7 @@ const lastGestureScale = ref(1)
 
 const { windowActive, platform, init } = storeToRefs(mainStore)
 const { sourceCode, theme, customCss, textDirection, language } = storeToRefs(preferencesStore)
-const { projectTree } = storeToRefs(projectStore)
+const { projectTree, moveDialogVisible } = storeToRefs(projectStore)
 const { currentFile } = storeToRefs(editorStore)
 
 const pathname = computed(() => currentFile.value?.pathname)
@@ -331,6 +331,20 @@ watch([currentFile, () => preferencesStore.preferenceLoaded], ([file, preference
   window.electron.ipcRenderer.send('mt::drawio::hide')
   geogebraFile.value = null
   window.electron.ipcRenderer.send('mt::geogebra::hide')
+})
+
+// Native BrowserViews always sit above the renderer's DOM. Temporarily remove
+// them while the workspace move dialog is open, then let the active editor
+// restore itself with its own measured bounds after the dialog closes.
+watch(moveDialogVisible, (visible, wasVisible) => {
+  if (visible) {
+    window.electron.ipcRenderer.send('mt::drawio::hide')
+    window.electron.ipcRenderer.send('mt::geogebra::hide')
+    return
+  }
+  if (wasVisible) {
+    nextTick(() => window.dispatchEvent(new Event('marknotepro:resume-native-editor')))
+  }
 })
 
 watch(
