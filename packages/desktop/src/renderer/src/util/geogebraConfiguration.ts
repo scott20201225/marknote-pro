@@ -7,8 +7,12 @@ const GEOGEBRA_THEME_VARIABLES = [
   'themeColor20',
   'themeColor30',
   'editorColor',
+  'editorColor10',
   'editorColor30',
+  'editorColor40',
   'editorColor50',
+  'editorColor60',
+  'editorColor80',
   'editorBgColor',
   'sideBarBgColor',
   'sideBarItemHoverBgColor',
@@ -20,7 +24,12 @@ const GEOGEBRA_THEME_VARIABLES = [
   'tableBorderColor',
   'selectionColor',
   'highlightColor',
-  'iconColor'
+  'iconColor',
+  'buttonBgColorHover',
+  'buttonBgColorActive',
+  'buttonPrimaryBgColorHover',
+  'buttonPrimaryBgColorActive',
+  'deleteColor'
 ] as const
 
 const readThemeColors = (): Record<string, string> => {
