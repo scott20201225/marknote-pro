@@ -1004,8 +1004,83 @@ export const buildGeoGebraThemeCss = (configuration: GeoGebraConfiguration): str
        5. 选中态与激活态全面覆盖 (Selected / Active Components)
        ========================================================================= */
 
-    /* 工具栏选中的工具 (Selected Tools) */
+    /* 左侧/底部导航条容器 (Navigation Rail: Toolbar Header) */
     .GeoGebraFrame .toolbar,
+    .GeoGebraFrame .toolbar .header,
+    .GeoGebraFrame .header,
+    .GeoGebraFrame .header-open-landscape,
+    .GeoGebraFrame .header-close-landscape,
+    .GeoGebraFrame .header-open-portrait,
+    .GeoGebraFrame .header-close-portrait,
+    .GeoGebraFrame .header .contents,
+    .GeoGebraFrame .header .center {
+      background-color: var(--ggb-theme-panel) !important;
+      color: var(--ggb-theme-text) !important;
+    }
+
+    .GeoGebraFrame .header-open-landscape,
+    .GeoGebraFrame .header-close-landscape {
+      border-right: 1px solid var(--ggb-theme-border-subtle) !important;
+      box-shadow: none !important;
+    }
+
+    .GeoGebraFrame .header-open-portrait,
+    .GeoGebraFrame .header-close-portrait {
+      border-top: 1px solid var(--ggb-theme-border-subtle) !important;
+      box-shadow: none !important;
+    }
+
+    /* 导航标签项 (Navigation Tab Buttons: 代数区/工具/表格/数据) */
+    .GeoGebraFrame .tabButton,
+    .GeoGebraFrame .header .tabButton {
+      background-color: transparent !important;
+      opacity: 0.7 !important;
+      transition: background-color 150ms ease, opacity 150ms ease !important;
+    }
+
+    .GeoGebraFrame .tabButton .gwt-Label,
+    .GeoGebraFrame .header .tabButton .gwt-Label {
+      color: var(--ggb-theme-text-secondary) !important;
+    }
+
+    .GeoGebraFrame .tabButton:hover,
+    .GeoGebraFrame .header .tabButton:hover {
+      background-color: var(--ggb-theme-hover) !important;
+      opacity: 1 !important;
+    }
+
+    .GeoGebraFrame .tabButton:hover .gwt-Label,
+    .GeoGebraFrame .header .tabButton:hover .gwt-Label {
+      color: var(--ggb-theme-text) !important;
+    }
+
+    /* 选中的导航标签 (Selected Navigation Tab) */
+    .GeoGebraFrame .tabButton.selected,
+    .GeoGebraFrame .header .tabButton.selected {
+      background-color: var(--ggb-theme-active) !important;
+      opacity: 1 !important;
+    }
+
+    .GeoGebraFrame .header-open-landscape .tabButton.selected,
+    .GeoGebraFrame .header-close-landscape .tabButton.selected {
+      border-left: 3px solid var(--ggb-theme-accent) !important;
+      border-bottom: none !important;
+    }
+
+    .GeoGebraFrame .header-open-portrait .tabButton.selected,
+    .GeoGebraFrame .header-close-portrait .tabButton.selected {
+      border-bottom: 3px solid var(--ggb-theme-accent) !important;
+    }
+
+    .GeoGebraFrame .tabButton.selected .gwt-Label,
+    .GeoGebraFrame .header .tabButton.selected .gwt-Label {
+      color: var(--ggb-theme-accent) !important;
+      font-weight: 600 !important;
+    }
+
+    /* 工具面板整体与分类标题 (Tools Panel) */
+    .GeoGebraFrame .toolsPanel,
+    .GeoGebraFrame .toolsPanel .categoryPanel,
     .GeoGebraFrame .toolPanel,
     .GeoGebraFrame .toolBPanel,
     .GeoGebraFrame .toolbarPanel {
@@ -1013,55 +1088,71 @@ export const buildGeoGebraThemeCss = (configuration: GeoGebraConfiguration): str
       color: var(--ggb-theme-text) !important;
       border-color: var(--ggb-theme-border-subtle) !important;
     }
+
+    .GeoGebraFrame .toolsPanel .catLabel {
+      color: var(--ggb-theme-text) !important;
+      font-weight: 600 !important;
+    }
+
+    /* 工具按钮 (ToolButton: 包含图标与文本) */
+    .GeoGebraFrame .toolsPanel .toolButton,
     .GeoGebraFrame .toolButton {
       background-color: transparent !important;
       color: var(--ggb-theme-text) !important;
+      border-radius: 6px !important;
+      transition: background-color 150ms ease !important;
     }
-    .GeoGebraFrame .toolsPanel .button {
-      background-color: var(--ggb-theme-elevated) !important;
-      border: 1px solid var(--ggb-theme-border) !important;
+
+    .GeoGebraFrame .toolsPanel .toolButton .gwt-Label,
+    .GeoGebraFrame .toolButton .gwt-Label {
+      color: var(--ggb-theme-text-secondary) !important;
+      transition: color 150ms ease !important;
     }
-    .GeoGebraFrame .toolsPanel .button[selected=false]:hover,
-    .GeoGebraFrame .toolsPanel .button[selected=false]:focus,
-    .GeoGebraFrame .toolButton[selected=false]:hover {
-      border-color: var(--ggb-theme-accent) !important;
+
+    .GeoGebraFrame .toolsPanel .toolButton:hover,
+    .GeoGebraFrame .toolButton:hover {
       background-color: var(--ggb-theme-hover) !important;
     }
-    .GeoGebraFrame .toolButton[selected=false]:hover .gwt-Label {
+
+    .GeoGebraFrame .toolsPanel .toolButton:hover .gwt-Label,
+    .GeoGebraFrame .toolButton:hover .gwt-Label {
       color: var(--ggb-theme-text) !important;
     }
-    /* 工具被选中 */
-    .GeoGebraFrame .toolsPanel .button[selected=true] {
-      border: 2px solid var(--ggb-theme-accent) !important;
-      background-color: var(--ggb-theme-active) !important;
-    }
+
+    /* 选中工具状态 (Selected Tool) */
+    .GeoGebraFrame .toolsPanel .toolButton[selected=true],
     .GeoGebraFrame .toolButton[selected=true],
     .GeoGebraFrame .toolButton.selected,
     .GeoGebraFrame .toolbarPanel .toolBPanel .touched {
       border-color: var(--ggb-theme-accent) !important;
       background-color: var(--ggb-theme-active) !important;
     }
+
+    .GeoGebraFrame .toolsPanel .toolButton[selected=true] .gwt-Label,
     .GeoGebraFrame .toolButton[selected=true] .gwt-Label {
       color: var(--ggb-theme-accent) !important;
       font-weight: 600 !important;
     }
 
-    /* 顶栏与套件标签页选中态 (Tabs) */
-    .GeoGebraFrame .header .tabButton {
-      color: var(--ggb-theme-text-muted) !important;
-    }
-    .GeoGebraFrame .header .tabButton:hover {
-      background-color: var(--ggb-theme-hover) !important;
-      color: var(--ggb-theme-text) !important;
-    }
-    .GeoGebraFrame .header .tabButton.selected {
-      color: var(--ggb-theme-accent) !important;
-      border-bottom: 2px solid var(--ggb-theme-accent) !important;
-    }
-    .GeoGebraFrame .header .tabButton.selected .gwt-Label {
-      color: var(--ggb-theme-accent) !important;
+    /* 紧凑型工具小按钮 (Tools Panel Category Small Buttons) */
+    .GeoGebraFrame .toolsPanel .button {
+      background-color: var(--ggb-theme-elevated) !important;
+      border: 1px solid var(--ggb-theme-border) !important;
+      border-radius: 6px !important;
     }
 
+    .GeoGebraFrame .toolsPanel .button[selected=false]:hover,
+    .GeoGebraFrame .toolsPanel .button[selected=false]:focus {
+      border-color: var(--ggb-theme-accent) !important;
+      background-color: var(--ggb-theme-hover) !important;
+    }
+
+    .GeoGebraFrame .toolsPanel .button[selected=true] {
+      border: 2px solid var(--ggb-theme-accent) !important;
+      background-color: var(--ggb-theme-active) !important;
+    }
+
+    /* 顶栏与套件标签页选中态 (Tabs) */
     .GeoGebraFrame .componentTab .tabList .tabBtn .gwt-Label {
       color: var(--ggb-theme-text-muted) !important;
     }
@@ -1084,20 +1175,65 @@ export const buildGeoGebraThemeCss = (configuration: GeoGebraConfiguration): str
       color: var(--ggb-theme-accent) !important;
     }
 
-    /* 代数区选中的表达式行 (Algebra View Expression Selection) */
+    /* 代数区表达式列表项与边框 (Algebra View Rows & Borders) */
+    .GeoGebraFrame .algebraView,
+    .GeoGebraFrame .algebraPanel {
+      background-color: var(--ggb-theme-surface) !important;
+    }
+
+    .GeoGebraFrame .avItem,
+    .GeoGebraFrame .avInputItem {
+      border-top: 1px solid var(--ggb-theme-border-subtle) !important;
+      background-color: var(--ggb-theme-surface) !important;
+      transition: background-color 150ms ease !important;
+    }
+
+    .GeoGebraFrame .avItem:hover,
+    .GeoGebraFrame .avInputItem:hover {
+      background-color: var(--ggb-theme-hover) !important;
+    }
+
+    .GeoGebraFrame .marblePanel {
+      border-right: 1px solid var(--ggb-theme-border-subtle) !important;
+    }
+
     .GeoGebraFrame .avItem.avSelectedRow,
     .GeoGebraFrame .avItem.avSelectedRow.keyboardFocus {
       background-color: var(--ggb-theme-active) !important;
-      outline: 2px solid var(--ggb-theme-accent) !important;
-      outline-offset: -2px !important;
+      border-top: 1px solid var(--ggb-theme-accent) !important;
+      border-bottom: 1px solid var(--ggb-theme-accent) !important;
+      outline: none !important;
     }
+
     .GeoGebraFrame .avItem.avSelectedRow .marblePanel {
       background-color: var(--ggb-theme-active) !important;
-      border-color: var(--ggb-theme-border) !important;
+      border-right: 1px solid var(--ggb-theme-border-subtle) !important;
     }
+
     .GeoGebraFrame .marble {
       background-color: var(--ggb-theme-accent) !important;
       border: 1px solid var(--ggb-theme-accent) !important;
+    }
+
+    .GeoGebraFrame .algebraView .more,
+    .GeoGebraFrame .more {
+      background: transparent !important;
+      border-radius: 4px !important;
+      opacity: 0.65 !important;
+      transition: background-color 150ms ease, opacity 150ms ease !important;
+    }
+
+    .GeoGebraFrame .algebraView .more:hover,
+    .GeoGebraFrame .more:hover {
+      background-color: var(--ggb-theme-hover) !important;
+      opacity: 1 !important;
+    }
+
+    /* 代数区菜单弹出项白色背景修复 (More Context Menu Hardcoded White Fix) */
+    .GeoGebraFrame .listMenuItem.settingsItem,
+    .GeoGebraFrame .listMenuItem.iconButtonPanel,
+    .GeoGebraFrame .listMenuItem.ariaItemWithButton.selectedItem {
+      background-color: var(--ggb-theme-elevated) !important;
     }
 
     /* 复选框 (Checkbox) */
@@ -1326,45 +1462,152 @@ export const buildGeoGebraThemeCss = (configuration: GeoGebraConfiguration): str
       background: var(--ggb-theme-accent) !important;
     }
 
-    /* 表格编辑器处于单元格编辑状态 (Table Spreadsheet Cell Edit Mode) */
+    /* =========================================================================
+       6.1 数值表格视图 (Table of Values View: tvTable)
+       ========================================================================= */
+    .GeoGebraFrame .tableViewParent,
     .GeoGebraFrame .tableViewMain,
     .GeoGebraFrame .tvTable,
-    .GeoGebraFrame .geogebraweb-table-spreadsheet {
+    .GeoGebraFrame .tvTable .mainScrollPanel,
+    .GeoGebraFrame .tvTable .outerScrollPanel,
+    .GeoGebraFrame .tvTable .valueScroller,
+    .GeoGebraFrame .tvTable .values {
       background-color: var(--ggb-theme-surface) !important;
       color: var(--ggb-theme-text) !important;
     }
+
     .GeoGebraFrame .tvTable td,
-    .GeoGebraFrame .tvTable th,
-    .GeoGebraFrame .geogebraweb-table-spreadsheet td {
+    .GeoGebraFrame .tvTable th {
       border-color: var(--ggb-theme-border-subtle) !important;
       color: var(--ggb-theme-text) !important;
     }
-    .GeoGebraFrame .tvTable .values thead th,
-    .GeoGebraFrame .geogebraweb-table-spreadsheet td.SVheader {
-      background-color: var(--ggb-theme-panel) !important;
+
+    .GeoGebraFrame .tvTable td .content,
+    .GeoGebraFrame .tvTable th .content {
       color: var(--ggb-theme-text) !important;
     }
-    .GeoGebraFrame .tvTable .highlighted,
-    .GeoGebraFrame .geogebraweb-table-spreadsheet td.SVheader.selected {
+
+    .GeoGebraFrame .tvTable td.notEditable .content {
+      color: var(--ggb-theme-text-muted) !important;
+    }
+
+    /* 数值表表头 (Sticky Header: 如 x 及函数列标题与菜单按钮) */
+    .GeoGebraFrame .tvTable .values thead th,
+    .GeoGebraFrame .tvTable .values thead th.emptyColumn {
+      background-color: var(--ggb-theme-panel) !important;
+      border-bottom: 1px solid var(--ggb-theme-border-subtle) !important;
+      color: var(--ggb-theme-text) !important;
+    }
+
+    .GeoGebraFrame .tvTable .values thead th .gwt-Label {
+      color: var(--ggb-theme-text) !important;
+    }
+
+    .GeoGebraFrame .tvTable .values thead th .button {
+      background: transparent !important;
+    }
+
+    .GeoGebraFrame .tvTable .values thead th .button:hover {
+      background-color: var(--ggb-theme-hover) !important;
+      border-radius: 4px !important;
+    }
+
+    .GeoGebraFrame .tvTable .highlighted {
       background-color: var(--ggb-theme-active) !important;
     }
+
     .GeoGebraFrame .tvTable td.keyboardFocusedCell,
     .GeoGebraFrame .tvTable th.keyboardFocusedCell {
       outline: 2px solid var(--ggb-theme-accent) !important;
       outline-offset: -2px !important;
     }
+
+    /* 表格就地编辑框 (Table In-Place Editor) */
+    .GeoGebraFrame .tableEditorWrap {
+      border: 2px solid var(--ggb-theme-accent) !important;
+      background-color: var(--ggb-theme-input) !important;
+    }
+
     .GeoGebraFrame .tableEditor,
     .GeoGebraFrame .tableEditor input {
       background-color: var(--ggb-theme-input) !important;
       color: var(--ggb-theme-text) !important;
-      outline: 2px solid var(--ggb-theme-accent) !important;
+      outline: none !important;
       caret-color: var(--ggb-theme-accent) !important;
     }
 
-    /* 表格遮罩渐变 (Spreadsheet Shaded Gradient Fix) */
+    /* 表格遮罩渐变：使用主题背景色淡出，彻底清除硬编码白色渐变 */
     .GeoGebraFrame .tvTable .shaded:after {
       background: linear-gradient(to left, var(--ggb-theme-surface) 70px, transparent 120px),
                   linear-gradient(to top, var(--ggb-theme-surface) 20px, transparent 52px) !important;
+    }
+
+    /* =========================================================================
+       6.2 电子表格视图 (Spreadsheet View: Canvas & HTML Grid & StyleBar)
+       ========================================================================= */
+    /* 电子表格工具条 (Spreadsheet Style Bar) */
+    .GeoGebraFrame .spreadsheetStyleBarParent,
+    .GeoGebraFrame .spreadsheetStyleBar,
+    .GeoGebraFrame .toolPanelHeading .spreadsheetStyleBar {
+      background-color: var(--ggb-theme-panel) !important;
+      border-bottom: 1px solid var(--ggb-theme-border-subtle) !important;
+    }
+
+    .GeoGebraFrame .spreadsheetStyleBar .iconButton {
+      background: transparent !important;
+      border-radius: 6px !important;
+      color: var(--ggb-theme-text) !important;
+      transition: background-color 150ms ease !important;
+    }
+
+    .GeoGebraFrame .spreadsheetStyleBar .iconButton:hover {
+      background-color: var(--ggb-theme-hover) !important;
+    }
+
+    .GeoGebraFrame .spreadsheetStyleBar .iconButton.active {
+      background-color: var(--ggb-theme-active) !important;
+      color: var(--ggb-theme-accent) !important;
+    }
+
+    /* 电子表格面板容器 */
+    .GeoGebraFrame .spreadsheetPanel,
+    .GeoGebraFrame .SpreadsheetWrapView {
+      background-color: var(--ggb-theme-surface) !important;
+      color: var(--ggb-theme-text) !important;
+    }
+
+    /* 电子表格单元格编辑器 */
+    .GeoGebraFrame .spreadsheetEditor {
+      background-color: var(--ggb-theme-input) !important;
+      border: 2px solid var(--ggb-theme-accent) !important;
+      color: var(--ggb-theme-text) !important;
+    }
+
+    /* HTML 表格模式电子表格 (Classic Grid) */
+    .GeoGebraFrame .geogebraweb-table-spreadsheet {
+      background-color: var(--ggb-theme-surface) !important;
+      color: var(--ggb-theme-text) !important;
+    }
+
+    .GeoGebraFrame .geogebraweb-table-spreadsheet td {
+      background-color: var(--ggb-theme-surface) !important;
+      border-right: 1px solid var(--ggb-theme-border-subtle) !important;
+      border-bottom: 1px solid var(--ggb-theme-border-subtle) !important;
+      color: var(--ggb-theme-text) !important;
+    }
+
+    .GeoGebraFrame .geogebraweb-table-spreadsheet td.SVheader,
+    .GeoGebraFrame .geogebraweb-table-spreadsheet.upperCorner td,
+    .GeoGebraFrame .geogebraweb-table-spreadsheet-lowerLeftCorner {
+      background-color: var(--ggb-theme-panel) !important;
+      border-color: var(--ggb-theme-border-subtle) !important;
+      color: var(--ggb-theme-text) !important;
+    }
+
+    .GeoGebraFrame .geogebraweb-table-spreadsheet td.SVheader.selected {
+      background-color: var(--ggb-theme-active) !important;
+      color: var(--ggb-theme-accent) !important;
+      font-weight: 600 !important;
     }
 
     /* 表单校验错误状态 (Validation Error State) */
@@ -1444,7 +1687,8 @@ export const buildGeoGebraThemeCss = (configuration: GeoGebraConfiguration): str
     }
 
     /* =========================================================================
-       8. 图标色调自适应与悬浮反馈系统 (Icon Adaptive Filtering & Hover Feedback)
+       8. 图标色调自适应、电子表格Canvas反色与悬浮反馈系统
+          (Icon Adaptive Filtering, Canvas Inversion & Hover Feedback)
        ========================================================================= */
     .GeoGebraFrame img {
       transition: opacity 150ms ease !important;
@@ -1461,23 +1705,70 @@ export const buildGeoGebraThemeCss = (configuration: GeoGebraConfiguration): str
     ${
       palette.isDark
         ? `
-    .GeoGebraFrame .header .gwt-Image:not(.profileImage),
+    /* 左侧/底部导航栏未选中标签图标 */
+    .GeoGebraFrame .tabButton:not(.selected) img,
+    .GeoGebraFrame .tabButton:not(.selected) .gwt-Image,
+    .GeoGebraFrame .header .tabButton:not(.selected) img,
+    .GeoGebraFrame .header .tabButton:not(.selected) .gwt-Image,
+    /* 工具栏未选中的工具图标 (分类按钮与常规工具按钮) */
+    .GeoGebraFrame .toolsPanel .toolButton:not([selected=true]) img,
+    .GeoGebraFrame .toolsPanel .toolButton:not([selected=true]) .gwt-Image,
+    .GeoGebraFrame .toolsPanel .button:not([selected=true]) img,
+    .GeoGebraFrame .toolsPanel .button:not([selected=true]) .gwt-Image,
+    .GeoGebraFrame .toolsPanel img:not([selected=true]),
+    .GeoGebraFrame .toolButton:not([selected=true]) img,
+    .GeoGebraFrame .toolButton:not([selected=true]) .gwt-Image,
     .GeoGebraFrame .toolPanel .gwt-Image,
     .GeoGebraFrame .toolPanelHeading .gwt-Image,
-    .GeoGebraFrame .zoomPanelBtn .gwt-Image,
-    .GeoGebraFrame .graphicsControlsPanel .gwt-Image,
-    .GeoGebraFrame .quickStylebar .gwt-Image,
+    /* 数值表格操作按钮图标 */
+    .GeoGebraFrame .tvTable th .button img,
+    .GeoGebraFrame .tvTable .content .button img,
+    /* 电子表格工具条图标 */
+    .GeoGebraFrame .spreadsheetStyleBar img,
+    .GeoGebraFrame .spreadsheetStyleBar .iconButton img,
+    .GeoGebraFrame .spreadsheetStyleBar .iconButton .gwt-Image,
+    /* 代数区操作按钮图标与公式箭头 */
+    .GeoGebraFrame .algebraView .more img,
+    .GeoGebraFrame .more img,
     .GeoGebraFrame .marblePanel img,
     .GeoGebraFrame .speedPanel img,
     .GeoGebraFrame .playOnly img,
+    .GeoGebraFrame .arrowOutputImg,
+    .GeoGebraFrame .show-fraction img,
+    /* 绘图区浮动控件图标 */
+    .GeoGebraFrame .zoomPanelBtn .gwt-Image,
+    .GeoGebraFrame .graphicsControlsPanel .gwt-Image,
+    .GeoGebraFrame .quickStylebar .gwt-Image,
+    .GeoGebraFrame .quickStylebar img,
+    /* 虚拟键盘按键图标 */
     .GeoGebraFrame .KeyBoardButton img,
+    .GeoGebraFrame .KeyboardSwitcher img,
+    .GeoGebraFrame .closeTabbedKeyboardButton img,
+    .GeoGebraFrame .matOpenKeyboardBtn img,
+    /* 菜单与下拉项图标 */
     .GeoGebraFrame .menuItemView img,
     .GeoGebraFrame .gwt-MenuItem img,
-    .GeoGebraFrame .listMenuItem img:not(.profileImage) {
+    .GeoGebraFrame .listMenuItem img:not(.profileImage),
+    .GeoGebraFrame .contextSubMenu img,
+    .GeoGebraFrame .iconButtonPanel img {
       filter: ${palette.iconFilter} !important;
     }
 
+    /* 电子表格 Canvas 绘图区域自动反色与色彩校准 (Canvas Spreadsheet Inversion) */
+    .GeoGebraFrame .spreadsheetPanel canvas.spreadsheetWidget,
+    .GeoGebraFrame canvas.spreadsheetWidget {
+      filter: invert(0.88) hue-rotate(180deg) brightness(0.95) contrast(0.95) !important;
+    }
+
+    /* 已拥有品牌高亮色或彩色选中的元素免除反色滤镜，保证色彩纯正 */
+    .GeoGebraFrame .tabButton.selected img,
+    .GeoGebraFrame .tabButton.selected .gwt-Image,
+    .GeoGebraFrame .header .tabButton.selected img,
     .GeoGebraFrame .header .tabButton.selected .gwt-Image,
+    .GeoGebraFrame .toolsPanel .toolButton[selected=true] img,
+    .GeoGebraFrame .toolsPanel .toolButton[selected=true] .gwt-Image,
+    .GeoGebraFrame .toolsPanel .button[selected=true] img,
+    .GeoGebraFrame .toolButton[selected=true] img,
     .GeoGebraFrame .headerLogo,
     .GeoGebraFrame .profileImage {
       filter: none !important;
