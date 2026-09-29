@@ -1624,6 +1624,11 @@ export const buildGeoGebraThemeCss = (configuration: GeoGebraConfiguration): str
                   linear-gradient(to top, var(--ggb-theme-surface) 20px, transparent 52px) !important;
     }
 
+    /* 科学计算器下的表格没有右侧占位空列，原生样式仅保留底部纵向淡出，不能叠加右侧横向遮罩否则会遮挡最右侧 g(x) 列内容与边框 */
+    .GeoGebraFrame .scientific.tvTable .shaded:after {
+      background: linear-gradient(to top, var(--ggb-theme-surface) 20px, transparent 52px) !important;
+    }
+
     /* =========================================================================
        6.2 电子表格视图 (Spreadsheet View: Canvas & HTML Grid & StyleBar)
        ========================================================================= */
