@@ -834,6 +834,11 @@ export const buildGeoGebraThemeCss = (configuration: GeoGebraConfiguration): str
       transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease !important;
     }
 
+    .GeoGebraFrame .materialTextButton .gwt-Label,
+    .GeoGebraFrame .flatDialogBtn .gwt-Label {
+      color: var(--ggb-theme-accent) !important;
+    }
+
     /* 文本按钮鼠标移动上的颜色 (Button Hover) */
     .GeoGebraFrame .materialTextButton:hover,
     .GeoGebraFrame .gwt-Button:hover,
@@ -842,6 +847,11 @@ export const buildGeoGebraThemeCss = (configuration: GeoGebraConfiguration): str
       background-color: var(--ggb-theme-hover) !important;
       color: var(--ggb-theme-accent-hover) !important;
       border-color: transparent !important;
+    }
+
+    .GeoGebraFrame .materialTextButton:hover .gwt-Label,
+    .GeoGebraFrame .flatDialogBtn:hover .gwt-Label {
+      color: var(--ggb-theme-accent-hover) !important;
     }
 
     /* 填充主按钮 (Filled Primary Button) */
