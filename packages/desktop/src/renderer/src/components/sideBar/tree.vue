@@ -483,9 +483,17 @@ watch(
   opacity: 0;
   transform: translateX(-50px);
 }
+:global(body) {
+  --tree-text-color: color-mix(in srgb, var(--editorBgColor) 8%, #000000 92%);
+  --tree-icon-color: color-mix(in srgb, var(--editorBgColor) 25%, #000000 75%);
+}
+:global(body.dark) {
+  --tree-text-color: color-mix(in srgb, var(--editorBgColor) 5%, #ffffff 95%);
+  --tree-icon-color: color-mix(in srgb, var(--editorBgColor) 20%, #ffffff 80%);
+}
 .tree-view {
   font-size: 14px;
-  color: var(--sideBarColor);
+  color: var(--tree-text-color);
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -503,6 +511,7 @@ watch(
   height: 30px;
   line-height: 30px;
   font-size: 14px;
+  color: var(--tree-text-color);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -511,6 +520,7 @@ watch(
 .tree-panel > .title > span {
   flex: 1;
   min-width: 0;
+  color: var(--tree-text-color);
 }
 
 .note-navigation-toggle {
@@ -524,13 +534,13 @@ watch(
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: var(--sideBarIconColor);
+  color: var(--tree-icon-color);
   cursor: pointer;
 }
 
 .note-navigation-toggle:hover {
   background: var(--sideBarItemHoverBgColor);
-  color: var(--sideBarTitleColor);
+  color: var(--tree-text-color);
 }
 
 .root-rename-input {
@@ -539,7 +549,7 @@ watch(
   height: 22px;
   outline: none;
   padding: 0 8px;
-  color: var(--sideBarColor);
+  color: var(--tree-text-color);
   border: 1px solid var(--floatBorderColor);
   background: var(--floatBorderColor);
   border-radius: 3px;
@@ -581,20 +591,20 @@ watch(
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: var(--sideBarIconColor);
+  color: var(--tree-icon-color);
   cursor: pointer;
 }
 
 .tree-action-button:hover {
   background: var(--sideBarItemHoverBgColor);
-  color: var(--sideBarTitleColor);
+  color: var(--tree-text-color);
 }
 
 .tree-panel > .title > a {
   pointer-events: auto;
   cursor: pointer;
   margin-left: 8px;
-  color: var(--sideBarIconColor);
+  color: var(--tree-icon-color);
   opacity: 0;
 }
 
@@ -684,7 +694,7 @@ watch(
   height: 22px;
   margin: 5px 0;
   padding: 0 6px;
-  color: var(--sideBarColor);
+  color: var(--tree-text-color);
   border: 1px solid var(--floatBorderColor);
   background: var(--inputBgColor);
   width: calc(100% - 45px);
@@ -699,7 +709,7 @@ watch(
   flex-direction: column;
   padding-top: 40px;
   align-items: center;
-  color: var(--sideBarTextColor);
+  color: var(--tree-text-color);
   & button {
     margin-top: 10px;
   }

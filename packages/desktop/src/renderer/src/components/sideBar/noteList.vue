@@ -326,6 +326,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
   border-left: 1px solid var(--itemBgColor);
   background: var(--sideBarBgColor);
+  color: var(--tree-text-color, var(--sideBarTitleColor));
 }
 
 .note-list-header {
@@ -346,7 +347,7 @@ onBeforeUnmount(() => {
   flex: 1;
   min-width: 0;
   font-size: 12px;
-  color: var(--sideBarTitleColor);
+  color: var(--tree-text-color, var(--sideBarTitleColor));
 }
 
 .note-list-body {
@@ -363,7 +364,7 @@ onBeforeUnmount(() => {
   height: 22px;
   outline: none;
   padding: 0 8px;
-  color: var(--sideBarColor);
+  color: var(--tree-text-color, var(--sideBarTitleColor));
   border: 1px solid var(--floatBorderColor);
   background: var(--inputBgColor);
   border-radius: 3px;
@@ -375,7 +376,7 @@ onBeforeUnmount(() => {
   gap: 6px;
   margin: 0 12px 8px;
   font-size: 12px;
-  color: var(--sideBarColor);
+  color: var(--tree-text-color, var(--sideBarTitleColor));
 }
 
 .geogebra-create-options select {
@@ -392,6 +393,7 @@ onBeforeUnmount(() => {
   min-height: 32px;
   padding: 0 12px;
   cursor: default;
+  color: var(--tree-text-color, var(--sideBarTitleColor));
 }
 
 .note-list-item:hover {
@@ -400,6 +402,10 @@ onBeforeUnmount(() => {
 
 .note-list-item.current {
   background: var(--sideBarItemHoverBgColor);
+  color: var(--themeColor);
+}
+
+.note-list-item.current .note-list-name {
   color: var(--themeColor);
 }
 
@@ -420,21 +426,22 @@ onBeforeUnmount(() => {
   outline: none;
   border: 1px solid var(--floatBorderColor);
   border-radius: 3px;
-  color: var(--sideBarTitleColor) !important;
+  color: var(--tree-text-color, var(--sideBarTitleColor)) !important;
   background-color: var(--inputBgColor) !important;
-  -webkit-text-fill-color: var(--sideBarTitleColor);
+  -webkit-text-fill-color: var(--tree-text-color, var(--sideBarTitleColor));
   caret-color: var(--themeColor);
   font: inherit;
 }
 
 .note-list-main > input.rename::selection {
-  color: var(--sideBarTitleColor);
+  color: var(--tree-text-color, var(--sideBarTitleColor));
   background-color: var(--themeColor);
 }
 
 .note-list-name {
   flex: 1;
   min-width: 0;
+  color: var(--tree-text-color, var(--sideBarTitleColor));
 }
 
 .note-action-button {
@@ -448,13 +455,13 @@ onBeforeUnmount(() => {
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: var(--sideBarIconColor);
+  color: var(--tree-icon-color, var(--sideBarIconColor));
   cursor: pointer;
 }
 
 .note-action-button:hover {
   background: var(--sideBarItemHoverBgColor);
-  color: var(--sideBarTitleColor);
+  color: var(--tree-text-color, var(--sideBarTitleColor));
 }
 
 .note-list-empty {

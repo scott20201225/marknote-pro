@@ -320,16 +320,17 @@ onMounted(() => {
     height: 30px;
     padding-right: 15px;
     gap: 6px;
+    color: var(--tree-text-color, var(--sideBarTitleColor));
     & > .icon-arrow {
       flex-shrink: 0;
-      color: var(--sideBarIconColor);
+      color: var(--tree-icon-color, var(--sideBarIconColor));
       margin-right: 5px;
       transition: transform 0.25s ease-out;
       transform: rotate(90deg);
     }
     & > .icon-node-type {
       flex-shrink: 0;
-      color: var(--sideBarIconColor);
+      color: var(--tree-icon-color, var(--sideBarIconColor));
       opacity: 0.9;
     }
     & > .icon-arrow.fold {
@@ -349,6 +350,7 @@ onMounted(() => {
 .folder-name > input.rename {
   flex: 1;
   min-width: 0;
+  color: var(--tree-text-color, var(--sideBarTitleColor));
 }
 
 .folder-action-button {
@@ -362,13 +364,13 @@ onMounted(() => {
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: var(--sideBarIconColor);
+  color: var(--tree-icon-color, var(--sideBarIconColor));
   cursor: pointer;
 }
 
 .folder-action-button:hover {
   background: var(--sideBarItemHoverBgColor);
-  color: var(--sideBarTitleColor);
+  color: var(--tree-text-color, var(--sideBarTitleColor));
 }
 .new-input,
 input.rename {
@@ -376,7 +378,7 @@ input.rename {
   height: 22px;
   margin: 5px 0;
   padding: 0 6px;
-  color: var(--sideBarColor);
+  color: var(--tree-text-color, var(--sideBarTitleColor));
   border: 1px solid var(--floatBorderColor);
   background: var(--floatBorderColor);
   width: 70%;
@@ -390,7 +392,7 @@ input.rename {
   margin-top: 4px;
   margin-bottom: 4px;
   font-size: 12px;
-  color: var(--sideBarColor);
+  color: var(--tree-text-color, var(--sideBarTitleColor));
 }
 
 .geogebra-create-options select {
