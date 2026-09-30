@@ -67,9 +67,6 @@ importers:
       '@floating-ui/core':
         specifier: ^1.8.0
         version: 1.8.0
-      '@floating-ui/react-dom':
-        specifier: ^2.1.9
-        version: 2.1.9(react-dom@16.14.0(react@16.14.0))(react@16.14.0)
       '@github/alive-client':
         specifier: ^1.2.0
         version: 1.2.0
@@ -193,9 +190,6 @@ importers:
       flowchart.js:
         specifier: ^1.18.0
         version: 1.18.0
-      focus-trap-react:
-        specifier: 8.11.3
-        version: 8.11.3(prop-types@15.8.1)(react-dom@16.14.0(react@16.14.0))(react@16.14.0)
       font-list:
         specifier: ^2.1.0
         version: 2.1.0
@@ -286,33 +280,12 @@ importers:
       prismjs:
         specifier: ^1.30.0
         version: 1.30.0
-      prop-types:
-        specifier: 15.8.1
-        version: 15.8.1
       quick-lru:
         specifier: ^3.0.0
         version: 3.0.0
       re2js:
         specifier: ^2.8.6
         version: 2.8.6
-      react:
-        specifier: 16.14.0
-        version: 16.14.0
-      react-confetti:
-        specifier: ^6.4.0
-        version: 6.4.0(react@16.14.0)
-      react-css-transition-replace:
-        specifier: 3.0.3
-        version: 3.0.3(react-dom@16.14.0(react@16.14.0))(react@16.14.0)
-      react-dom:
-        specifier: 16.14.0
-        version: 16.14.0(react@16.14.0)
-      react-transition-group:
-        specifier: 4.4.5
-        version: 4.4.5(react-dom@16.14.0(react@16.14.0))(react@16.14.0)
-      react-virtualized:
-        specifier: 9.22.6
-        version: 9.22.6(react-dom@16.14.0(react@16.14.0))(react@16.14.0)
       registry-js:
         specifier: ^1.16.1
         version: 1.16.1
@@ -380,6 +353,9 @@ importers:
       '@electron/rebuild':
         specifier: ^4.0.4
         version: 4.2.0(supports-color@10.2.2)
+      '@floating-ui/react-dom':
+        specifier: ^2.1.9
+        version: 2.1.9(react-dom@16.14.0(react@16.14.0))(react@16.14.0)
       '@playwright/test':
         specifier: ^1.61.0
         version: 1.61.1
@@ -455,6 +431,9 @@ importers:
       file-loader:
         specifier: ^6.2.0
         version: 6.2.0(webpack@5.108.4)
+      focus-trap-react:
+        specifier: 8.11.3
+        version: 8.11.3(prop-types@15.8.1)(react-dom@16.14.0(react@16.14.0))(react@16.14.0)
       html-webpack-plugin:
         specifier: ^5.6.7
         version: 5.6.7(webpack@5.108.4)
@@ -470,6 +449,27 @@ importers:
       postcss-preset-env:
         specifier: ^11.3.1
         version: 11.3.2(postcss@8.5.15)
+      prop-types:
+        specifier: 15.8.1
+        version: 15.8.1
+      react:
+        specifier: 16.14.0
+        version: 16.14.0
+      react-confetti:
+        specifier: ^6.4.0
+        version: 6.4.0(react@16.14.0)
+      react-css-transition-replace:
+        specifier: 3.0.3
+        version: 3.0.3(react-dom@16.14.0(react@16.14.0))(react@16.14.0)
+      react-dom:
+        specifier: 16.14.0
+        version: 16.14.0(react@16.14.0)
+      react-transition-group:
+        specifier: 4.4.5
+        version: 4.4.5(react-dom@16.14.0(react@16.14.0))(react@16.14.0)
+      react-virtualized:
+        specifier: 9.22.6
+        version: 9.22.6(react-dom@16.14.0(react@16.14.0))(react@16.14.0)
       sass:
         specifier: ^1.101.0
         version: 1.101.0

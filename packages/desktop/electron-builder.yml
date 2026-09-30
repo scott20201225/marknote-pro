@@ -33,6 +33,8 @@ files:
   - '!node_modules/**/{*.vcxproj,*.vcxproj.filters}'
   - '!node_modules/**/build/Release/{*.lib,*.exp,*.ilk,*.pdb,*.iobj,*.ipdb}'
   - '!node_modules/**/build/Release/obj'
+  # Duplicate embedded Git (packaged via extraResources)
+  - '!node_modules/dugite/git/**'
   # Do not bundle development related files
   - '!eslint.config.js'
   - '!jsconfig.json'
@@ -68,10 +70,29 @@ extraResources:
     to: drawio
     filter:
       - '**/*'
+      - '!js/diagramly/**'
+      - '!js/grapheditor/**'
+      - '!**/*.map'
   - from: src/geoGebraWebApp/webapp
     to: geogebra
     filter:
       - '**/*'
+      - '!tablet3d/**'
+      - '!web/**'
+      - '!webSimple/**'
+      - '!dev/**'
+      - '!partners/**'
+      - '!**/*Test*.html'
+      - '!**/*test*.html'
+      - '!assess.html'
+      - '!bugBisector.html'
+      - '!buttons.html'
+      - '!coords.json'
+      - '!evaluator.html'
+      - '!notes-bycs*.html'
+      - '!notes-murokdev.html'
+      - '!showcase.html'
+      - '!web3d/js/properties_keys_!(en*|zh*|de*|es*|fr*|ja*|ko*|nl*|pt*|tr*).js'
 npmRebuild: false
 electronLanguages: # Keep Chromium/AppKit locales for the UI languages MarkText supports
   # Values must cover both spellings: "xx-YY" .pak files on Windows/Linux and
@@ -98,7 +119,6 @@ electronLanguages: # Keep Chromium/AppKit locales for the UI languages MarkText 
 
 asarUnpack:
   - resources/**
-  - node_modules/dugite/git/**
 protocols:
   - name: GitHub Desktop
     schemes:
