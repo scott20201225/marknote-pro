@@ -25,9 +25,58 @@
 		return (typeof value === 'string' && value.length < 160 && !/[<>{};]/.test(value)) ? value : fallback;
 	}
 
-	function applyMarkNoteProTheme() {
+	function clampChannel(v) {
+		return Math.max(0, Math.min(255, Math.round(v)));
+	}
+
+	function toHexColor(c) {
+		var h = function (v) {
+			var s = clampChannel(v).toString(16);
+			return s.length < 2 ? '0' + s : s;
+		};
+		return '#' + h(c.r) + h(c.g) + h(c.b);
+	}
+
+	function parseRgbColor(str, fallback) {
+		if (typeof str !== 'string') return fallback;
+		var s = str.trim();
+		var hexMatch = /^#([0-9a-fA-F]{3,8})$/.exec(s);
+		if (hexMatch) {
+			var hex = hexMatch[1];
+			if (hex.length === 3 || hex.length === 4) {
+				hex = hex.charAt(0) + hex.charAt(0) + hex.charAt(1) + hex.charAt(1) + hex.charAt(2) + hex.charAt(2);
+			}
+			return {
+				r: parseInt(hex.substring(0, 2), 16),
+				g: parseInt(hex.substring(2, 4), 16),
+				b: parseInt(hex.substring(4, 6), 16)
+			};
+		}
+		var rgbMatch = /^rgba?\(\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*([0-9.]+)/i.exec(s);
+		if (rgbMatch) {
+			return {
+				r: clampChannel(parseFloat(rgbMatch[1])),
+				g: clampChannel(parseFloat(rgbMatch[2])),
+				b: clampChannel(parseFloat(rgbMatch[3]))
+			};
+		}
+		return fallback;
+	}
+
+	function mixRgbColor(c1, c2, weight) {
+		return {
+			r: c1.r * (1 - weight) + c2.r * weight,
+			g: c1.g * (1 - weight) + c2.g * weight,
+			b: c1.b * (1 - weight) + c2.b * weight
+		};
+	}
+
+	function applyMarkNoteProTheme(graph) {
 		var colors = getMarkNoteProThemeColors();
 		if (colors == null) return;
+
+		var isDark = (typeof urlParams !== 'undefined' && urlParams.dark === '1') ||
+			(typeof Editor !== 'undefined' && typeof Editor.isDarkMode === 'function' && Editor.isDarkMode());
 
 		var panel = getMarkNoteProThemeColor(colors, 'sideBarBgColor', '#f1f3f4');
 		var toolbar = getMarkNoteProThemeColor(colors, 'itemBgColor', panel);
@@ -40,6 +89,23 @@
 		var selected = getMarkNoteProThemeColor(colors, 'themeColor20', hover);
 		var selectedHover = getMarkNoteProThemeColor(colors, 'themeColor30', selected);
 		var accent = getMarkNoteProThemeColor(colors, 'themeColor', '#0071e3');
+
+		var workspaceRgb = parseRgbColor(workspace, isDark ? { r: 30, g: 30, b: 34 } : { r: 255, g: 255, b: 255 });
+		var panelRgb = parseRgbColor(panel, isDark ? { r: 24, g: 24, b: 28 } : { r: 241, g: 243, b: 244 });
+		var textRgb = parseRgbColor(text, isDark ? { r: 220, g: 223, b: 230 } : { r: 63, g: 63, b: 63 });
+		var borderRgb = parseRgbColor(border, mixRgbColor(workspaceRgb, textRgb, isDark ? 0.22 : 0.16));
+
+		var pageBgHex = toHexColor(workspaceRgb);
+		var surroundBgHex = toHexColor(panelRgb);
+		var pageBorderHex = toHexColor(borderRgb);
+		var gridHex = toHexColor(
+			mixRgbColor(
+				workspaceRgb,
+				isDark ? { r: 255, g: 255, b: 255 } : { r: 0, g: 0, b: 0 },
+				isDark ? 0.16 : 0.10
+			)
+		);
+
 		var style = document.getElementById('marknotepro-theme-variables');
 
 		if (style == null) {
@@ -54,7 +120,8 @@
 		style.textContent = ':root{' +
 			'--ge-panel-color:' + panel + ';--ge-dark-panel-color:' + panel + ';' +
 			'--toolbar-color:' + toolbar + ';--dark-toolbar-color:' + toolbar + ';' +
-			'--workspace-color:' + workspace + ';--dark-workspace-color:' + workspace + ';' +
+			'--workspace-color:' + surroundBgHex + ';--dark-workspace-color:' + surroundBgHex + ';' +
+			'--dark-color:' + pageBgHex + ';--ge-dark-color:' + pageBgHex + ';' +
 			'--dialog-color:' + dialog + ';--dark-dialog-color:' + dialog + ';' +
 			'--field-color:' + field + ';--dark-field-color:' + field + ';' +
 			'--card-color:' + toolbar + ';--dark-card-color:' + toolbar + ';' +
@@ -73,12 +140,58 @@
 			'--accent-hover-color:' + selectedHover + ';--dark-active-accent-color:' + selectedHover + ';' +
 			'--accent-text-color:' + accent + ';--dark-accent-text-color:' + accent + ';' +
 			'--focus-color:' + accent + ';--dark-focus-color:' + accent + ';' +
-		'}';
+		'}' +
+		'.geDiagramContainer{background-color:' + surroundBgHex + ' !important;}' +
+		'.geBackgroundPage{border-color:' + pageBorderHex + ' !important;box-shadow:0 2px 10px rgba(0,0,0,0.18) !important;}' +
+		'.geRuler{background:' + pageBgHex + ' !important;}';
+
+		var lightDarkPageBg = 'light-dark(' + pageBgHex + ', ' + pageBgHex + ')';
+		var lightDarkPageBorder = 'light-dark(' + pageBorderHex + ', ' + pageBorderHex + ')';
+		var lightDarkGrid = 'light-dark(' + gridHex + ', ' + gridHex + ')';
 
 		if (typeof Editor !== 'undefined') {
-			Editor.pageBackgroundColor = workspace;
-			Editor.darkColor = workspace;
-			Editor.darkPageBackgroundColor = workspace;
+			Editor.pageBackgroundColor = pageBgHex;
+			Editor.darkColor = pageBgHex;
+			Editor.darkPageBackgroundColor = pageBgHex;
+		}
+
+		if (typeof Graph !== 'undefined' && Graph.prototype != null) {
+			Graph.prototype.defaultPageBackgroundColor =
+				(typeof urlParams !== 'undefined' && urlParams.embedInline === '1')
+					? 'transparent'
+					: lightDarkPageBg;
+			Graph.prototype.defaultPageBorderColor = lightDarkPageBorder;
+			Graph.prototype.shapeBackgroundColor = lightDarkPageBg;
+			Graph.prototype.diagramBackgroundColor = surroundBgHex;
+		}
+
+		if (typeof mxGraphView !== 'undefined' && mxGraphView.prototype != null) {
+			mxGraphView.prototype.defaultGridColor = gridHex;
+			mxGraphView.prototype.defaultDarkGridColor = gridHex;
+			mxGraphView.prototype.gridColor = lightDarkGrid;
+		}
+
+		if (typeof mxSettings !== 'undefined' && mxSettings.settings != null) {
+			mxSettings.settings.gridColor = gridHex;
+			mxSettings.settings.darkGridColor = gridHex;
+		}
+
+		if (graph != null) {
+			graph.defaultPageBackgroundColor =
+				(typeof urlParams !== 'undefined' && urlParams.embedInline === '1')
+					? 'transparent'
+					: lightDarkPageBg;
+			graph.defaultPageBorderColor = lightDarkPageBorder;
+			graph.shapeBackgroundColor = lightDarkPageBg;
+			graph.diagramBackgroundColor = surroundBgHex;
+			if (graph.view != null) {
+				graph.view.defaultGridColor = gridHex;
+				graph.view.defaultDarkGridColor = gridHex;
+				graph.view.gridColor = lightDarkGrid;
+				if (typeof graph.view.validateBackground === 'function') {
+					graph.view.validateBackground();
+				}
+			}
 		}
 	}
 
@@ -99,7 +212,19 @@
 		var createToolbar = EditorUi.prototype.createToolbar;
 		if (createToolbar == null || createToolbar.marknoteproPatched) return;
 		var createUi = EditorUi.prototype.createUi;
+		var installSettings = EditorUi.prototype.installSettings;
 		applyMarkNoteProTheme();
+
+		if (installSettings != null && !installSettings.marknoteproThemePatched) {
+			function installSettingsWithMarkNoteProTheme() {
+				var result = installSettings.apply(this, arguments);
+				applyMarkNoteProTheme(this.editor != null ? this.editor.graph : null);
+				return result;
+			}
+
+			installSettingsWithMarkNoteProTheme.marknoteproThemePatched = true;
+			EditorUi.prototype.installSettings = installSettingsWithMarkNoteProTheme;
+		}
 
 		if (createUi != null && !createUi.marknoteproMenubarPatched) {
 			function createUiWithoutMenubar() {
@@ -123,6 +248,7 @@
 			var graph = this.editor != null ? this.editor.graph : null;
 
 			if (graph == null) return toolbar;
+			applyMarkNoteProTheme(graph);
 
 			if (this.actions != null && this.actions.get('marknoteproExportPng') == null) {
 				var ui = this;

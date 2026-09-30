@@ -1668,11 +1668,31 @@ export const buildGeoGebraThemeCss = (configuration: GeoGebraConfiguration): str
       color: var(--ggb-theme-accent) !important;
     }
 
-    /* 电子表格面板容器 */
+    /* 电子表格面板容器与滚动覆盖层 */
     .GeoGebraFrame .spreadsheetPanel,
     .GeoGebraFrame .SpreadsheetWrapView {
       background-color: var(--ggb-theme-surface) !important;
       color: var(--ggb-theme-text) !important;
+    }
+
+    .GeoGebraFrame .spreadsheetScrollOverlay {
+      scrollbar-color: var(--ggb-theme-border) var(--ggb-theme-surface) !important;
+    }
+
+    .GeoGebraFrame .spreadsheetScrollOverlay::-webkit-scrollbar {
+      width: 8px !important;
+      height: 8px !important;
+      background-color: var(--ggb-theme-surface) !important;
+    }
+
+    .GeoGebraFrame .spreadsheetScrollOverlay::-webkit-scrollbar-track,
+    .GeoGebraFrame .spreadsheetScrollOverlay::-webkit-scrollbar-corner {
+      background-color: var(--ggb-theme-surface) !important;
+    }
+
+    .GeoGebraFrame .spreadsheetScrollOverlay::-webkit-scrollbar-thumb {
+      background-color: var(--ggb-theme-border) !important;
+      border-radius: 4px !important;
     }
 
     /* 电子表格单元格编辑器 */
@@ -2087,12 +2107,6 @@ export const buildGeoGebraThemeCss = (configuration: GeoGebraConfiguration): str
       filter: ${palette.iconFilter} !important;
     }
 
-    /* 电子表格 Canvas 绘图区域自动反色与色彩校准 (Canvas Spreadsheet Inversion) */
-    .GeoGebraFrame .spreadsheetPanel canvas.spreadsheetWidget,
-    .GeoGebraFrame canvas.spreadsheetWidget {
-      filter: invert(0.88) hue-rotate(180deg) brightness(0.95) contrast(0.95) !important;
-    }
-
     /* 概率计算器绘图区域 Canvas 自动反色 (Probability Plot Canvas Inversion) */
     .GeoGebraFrame .PlotPanelPlus canvas,
     .GeoGebraFrame .probabilityTab .PlotPanelPlus canvas,
@@ -2116,6 +2130,7 @@ export const buildGeoGebraThemeCss = (configuration: GeoGebraConfiguration): str
     .GeoGebraFrame .tableEditorWrap canvas,
     .GeoGebraFrame .tvTable .tableEditorWrap canvas,
     .GeoGebraFrame .tvTable .tableEditor canvas,
+    .GeoGebraFrame .spreadsheetEditor canvas,
     .GeoGebraFrame .mathTextField canvas,
     .GeoGebraFrame .evInputEditor canvas,
     .GeoGebraFrame .CAS_outputPanel canvas,
@@ -2154,34 +2169,238 @@ export const syncGeoGebraGraphics = async (
     await webContents.executeJavaScript(`
       (() => {
         window.__ggbDarkTheme = ${palette.isDark};
+        window.__ggbThemePalette = ${JSON.stringify({
+          surface: palette.surface,
+          panel: palette.panel,
+          gridColor: palette.gridColor,
+          border: palette.border,
+          borderSubtle: palette.borderSubtle,
+          borderHover: palette.borderHover,
+          hover: palette.hover,
+          hoverStrong: palette.hoverStrong,
+          active: palette.active,
+          selected: palette.selected,
+          textPrimary: palette.textPrimary,
+          accent: palette.accent,
+          accentText: palette.accentText,
+          error: palette.error
+        })};
 
         if (!window.__ggbFillRectHooked) {
           window.__ggbFillRectHooked = true;
           const origFillRect = CanvasRenderingContext2D.prototype.fillRect;
+          const origStroke = CanvasRenderingContext2D.prototype.stroke;
+          const origFillText = CanvasRenderingContext2D.prototype.fillText;
+          const origFill = CanvasRenderingContext2D.prototype.fill;
+
+          const isSpreadsheetCanvas = (el) =>
+            !!(el && el.classList && el.classList.contains('spreadsheetWidget'));
+
+          const normalizeStyle = (val) =>
+            typeof val === 'string' ? val.toLowerCase().replace(/\\s+/g, '') : '';
+
+          const mapSpreadsheetFillRectColor = (fs, p) => {
+            if (!p || !fs) return null;
+            if (
+              fs === '#ffffff' ||
+              fs === '#fff' ||
+              fs === 'white' ||
+              fs === 'rgb(255,255,255)' ||
+              fs === 'rgba(255,255,255,1)' ||
+              fs === 'rgba(255,255,255,1.0)'
+            ) {
+              return p.surface;
+            }
+            if (fs === '#f3f2f7' || fs === 'rgb(243,242,247)' || fs === 'rgba(243,242,247,1)') {
+              return p.panel;
+            }
+            if (fs === '#e6e6eb' || fs === 'rgb(230,230,235)' || fs === 'rgba(230,230,235,1)') {
+              return p.hoverStrong;
+            }
+            if (fs === '#6e6d73' || fs === 'rgb(110,109,115)' || fs === 'rgba(110,109,115,1)') {
+              return p.accent;
+            }
+            if (fs === '#f3f0ff' || fs === 'rgb(243,240,255)' || fs === 'rgba(243,240,255,1)') {
+              return p.selected;
+            }
+            if (fs === '#6557d2' || fs === 'rgb(101,87,210)' || fs === 'rgba(101,87,210,1)') {
+              return p.accent;
+            }
+            return null;
+          };
+
+          const mapSpreadsheetStrokeColor = (ss, p) => {
+            if (!p || !ss) return null;
+            if (ss === '#e6e6eb' || ss === 'rgb(230,230,235)' || ss === 'rgba(230,230,235,1)') {
+              return p.gridColor;
+            }
+            if (ss === '#6557d2' || ss === 'rgb(101,87,210)' || ss === 'rgba(101,87,210,1)') {
+              return p.accent;
+            }
+            if (ss === '#6e6d73' || ss === 'rgb(110,109,115)' || ss === 'rgba(110,109,115,1)') {
+              return p.borderHover;
+            }
+            if (ss === '#b4b3ba' || ss === 'rgb(180,179,186)' || ss === 'rgba(180,179,186,1)') {
+              return p.border;
+            }
+            if (
+              ss === '#ffffff' ||
+              ss === '#fff' ||
+              ss === 'white' ||
+              ss === 'rgb(255,255,255)' ||
+              ss === 'rgba(255,255,255,1)'
+            ) {
+              return p.surface;
+            }
+            if (
+              ss === '#000000' ||
+              ss === '#000' ||
+              ss === 'black' ||
+              ss === 'rgb(0,0,0)' ||
+              ss === 'rgba(0,0,0,1)' ||
+              ss === '#1c1c1f' ||
+              ss === 'rgb(28,28,31)' ||
+              ss === 'rgba(28,28,31,1)'
+            ) {
+              return p.textPrimary;
+            }
+            if (ss === '#b00020' || ss === 'rgb(176,0,32)' || ss === 'rgba(176,0,32,1)') {
+              return p.error;
+            }
+            return null;
+          };
+
+          const mapSpreadsheetTextFillColor = (fs, p) => {
+            if (!p || !fs) return null;
+            if (
+              fs === '#1c1c1f' ||
+              fs === 'rgb(28,28,31)' ||
+              fs === 'rgba(28,28,31,1)' ||
+              fs === '#000000' ||
+              fs === '#000' ||
+              fs === 'black' ||
+              fs === 'rgb(0,0,0)' ||
+              fs === 'rgba(0,0,0,1)'
+            ) {
+              return p.textPrimary;
+            }
+            if (
+              fs === '#ffffff' ||
+              fs === '#fff' ||
+              fs === 'white' ||
+              fs === 'rgb(255,255,255)' ||
+              fs === 'rgba(255,255,255,1)'
+            ) {
+              return p.accentText;
+            }
+            if (fs === '#b00020' || fs === 'rgb(176,0,32)' || fs === 'rgba(176,0,32,1)') {
+              return p.error;
+            }
+            return null;
+          };
+
           CanvasRenderingContext2D.prototype.fillRect = function(x, y, w, h) {
-            if (window.__ggbDarkTheme && this.canvas) {
+            const el = this.canvas;
+            if (el) {
               try {
-                const el = this.canvas;
-                const inEditor = el.closest && el.closest(
-                  '.algebraView, .algebraPanel, .scrollableTextBox, .latexItem, .newRadioButtonTreeItemParent, .avItem, .avInputItem, .tableEditor, .tableEditorWrap, .tvTable, .mathTextField, .evInputEditor, .previewPanel, .insertPopup, .textDialog'
-                );
-                if (inEditor) {
-                  const fs = String(this.fillStyle || '').toLowerCase().replace(/\\s+/g, '');
-                  if (
-                    fs === '#ffffff' ||
-                    fs === '#fff' ||
-                    fs === 'white' ||
-                    fs === 'rgb(255,255,255)' ||
-                    fs === 'rgba(255,255,255,1)' ||
-                    fs === 'rgba(255,255,255,1.0)' ||
-                    (fs.startsWith('rgba(255,255,255') && !fs.includes(',0)'))
-                  ) {
-                    return this.clearRect(x, y, w, h);
+                if (isSpreadsheetCanvas(el) && window.__ggbThemePalette) {
+                  const fs = normalizeStyle(this.fillStyle);
+                  const mapped = mapSpreadsheetFillRectColor(fs, window.__ggbThemePalette);
+                  if (mapped) {
+                    const prev = this.fillStyle;
+                    this.fillStyle = mapped;
+                    try {
+                      return origFillRect.call(this, x, y, w, h);
+                    } finally {
+                      this.fillStyle = prev;
+                    }
+                  }
+                } else if (window.__ggbDarkTheme) {
+                  const inEditor = el.closest && el.closest(
+                    '.algebraView, .algebraPanel, .scrollableTextBox, .latexItem, .newRadioButtonTreeItemParent, .avItem, .avInputItem, .tableEditor, .tableEditorWrap, .tvTable, .spreadsheetEditor, .mathTextField, .evInputEditor, .previewPanel, .insertPopup, .textDialog'
+                  );
+                  if (inEditor) {
+                    const fs = normalizeStyle(this.fillStyle);
+                    if (
+                      fs === '#ffffff' ||
+                      fs === '#fff' ||
+                      fs === 'white' ||
+                      fs === 'rgb(255,255,255)' ||
+                      fs === 'rgba(255,255,255,1)' ||
+                      fs === 'rgba(255,255,255,1.0)' ||
+                      (fs.startsWith('rgba(255,255,255') && !fs.includes(',0)'))
+                    ) {
+                      return this.clearRect(x, y, w, h);
+                    }
                   }
                 }
               } catch (e) {}
             }
             return origFillRect.call(this, x, y, w, h);
+          };
+
+          CanvasRenderingContext2D.prototype.stroke = function(...args) {
+            const el = this.canvas;
+            if (isSpreadsheetCanvas(el) && window.__ggbThemePalette) {
+              try {
+                const ss = normalizeStyle(this.strokeStyle);
+                const mapped = mapSpreadsheetStrokeColor(ss, window.__ggbThemePalette);
+                if (mapped) {
+                  const prev = this.strokeStyle;
+                  this.strokeStyle = mapped;
+                  try {
+                    return origStroke.apply(this, args);
+                  } finally {
+                    this.strokeStyle = prev;
+                  }
+                }
+              } catch (e) {}
+            }
+            return origStroke.apply(this, args);
+          };
+
+          CanvasRenderingContext2D.prototype.fillText = function(text, x, y, maxWidth) {
+            const el = this.canvas;
+            if (isSpreadsheetCanvas(el) && window.__ggbThemePalette) {
+              try {
+                const fs = normalizeStyle(this.fillStyle);
+                const mapped = mapSpreadsheetTextFillColor(fs, window.__ggbThemePalette);
+                if (mapped) {
+                  const prev = this.fillStyle;
+                  this.fillStyle = mapped;
+                  try {
+                    return maxWidth !== undefined
+                      ? origFillText.call(this, text, x, y, maxWidth)
+                      : origFillText.call(this, text, x, y);
+                  } finally {
+                    this.fillStyle = prev;
+                  }
+                }
+              } catch (e) {}
+            }
+            return maxWidth !== undefined
+              ? origFillText.call(this, text, x, y, maxWidth)
+              : origFillText.call(this, text, x, y);
+          };
+
+          CanvasRenderingContext2D.prototype.fill = function(...args) {
+            const el = this.canvas;
+            if (isSpreadsheetCanvas(el) && window.__ggbThemePalette) {
+              try {
+                const fs = normalizeStyle(this.fillStyle);
+                const mapped = mapSpreadsheetTextFillColor(fs, window.__ggbThemePalette);
+                if (mapped) {
+                  const prev = this.fillStyle;
+                  this.fillStyle = mapped;
+                  try {
+                    return origFill.apply(this, args);
+                  } finally {
+                    this.fillStyle = prev;
+                  }
+                }
+              } catch (e) {}
+            }
+            return origFill.apply(this, args);
           };
         }
 
@@ -2287,6 +2506,20 @@ export const syncGeoGebraGraphics = async (
           } catch (e) {}
         }
 
+        const refreshSpreadsheetView = () => {
+          try {
+            if (document.fonts && typeof document.fonts.dispatchEvent === 'function') {
+              document.fonts.dispatchEvent(new Event('loadingdone'));
+            }
+          } catch (e) {}
+          try {
+            const overlays = document.querySelectorAll('.spreadsheetScrollOverlay');
+            for (let i = 0; i < overlays.length; i++) {
+              overlays[i].dispatchEvent(new Event('scroll'));
+            }
+          } catch (e) {}
+        }
+
         const applyToApp = () => {
           const api = window.ggbApplet
           if (!api || typeof api.setGraphicsOptions !== 'function') return false
@@ -2301,6 +2534,7 @@ export const syncGeoGebraGraphics = async (
           try { api.setGraphicsOptions(3, opts) } catch (e) {}
           try { api.setGraphicsOptions(-1, opts) } catch (e) {}
           try { if (typeof api.refreshViews === 'function') api.refreshViews() } catch (e) {}
+          refreshSpreadsheetView()
           syncPenColor()
           adaptAllObjects()
           return true
