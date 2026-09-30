@@ -1,0 +1,90 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.spreadsheet.core;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.geogebra.common.spreadsheet.TestTabularData;
+import org.hamcrest.Description;
+import org.hamcrest.TypeSafeMatcher;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+class SelectionTest {
+
+	Selection cells;
+	Selection columns;
+	Selection rows;
+
+	@BeforeEach
+	void setup() {
+		cells = new Selection(new TabularRange(3, 5, 4, 6));
+		rows = new Selection(new TabularRange(3, -1, 4, -1));
+		columns = new Selection(new TabularRange(-1, 5, -1, 6));
+	}
+
+	@Test
+	void testGetSelectionForMoveLeft() {
+		assertThat(cells.getNextCellForMoveLeft(), equalToCell(3, 4));
+		assertThat(rows.getNextCellForMoveLeft(), equalToCell(3, 0));
+		assertThat(columns.getNextCellForMoveLeft(), equalToCell(0, 4));
+	}
+
+	@Test
+	void testGetSelectionForMoveRight() {
+		assertThat(cells.getNextCellForMoveRight(100), equalToCell(3, 6));
+		assertThat(rows.getNextCellForMoveRight(100), equalToCell(3, 1));
+		assertThat(columns.getNextCellForMoveRight(100), equalToCell(0, 6));
+	}
+
+	@Test
+	void testGetSelectionForMoveUp() {
+		assertThat(cells.getNextCellForMoveUp(), equalToCell(2, 5));
+		assertThat(rows.getNextCellForMoveUp(), equalToCell(2, 0));
+		assertThat(columns.getNextCellForMoveUp(), equalToCell(0, 5));
+	}
+
+	@Test
+	void testGetSelectionForMoveDown() {
+		assertThat(cells.getNextCellForMoveDown(100), equalToCell(4, 5));
+		assertThat(rows.getNextCellForMoveDown(100), equalToCell(4, 0));
+		assertThat(columns.getNextCellForMoveDown(100), equalToCell(1, 5));
+	}
+
+	@Test
+	void testName() {
+		TabularData<String> data = new TestTabularData();
+		assertEquals("F4:G5", cells.getName(data));
+		Selection singleCell = new Selection(new TabularRange(2, 1));
+		assertEquals("B3", singleCell.getName(data));
+	}
+
+	private TypeSafeMatcher<Selection> equalToCell(int row, int col) {
+		return new TypeSafeMatcher<>() {
+			@Override
+			protected boolean matchesSafely(Selection selection) {
+				return selection.getRange().equals(new TabularRange(row, col, row, col));
+			}
+
+			@Override
+			public void describeTo(Description description) {
+				description.appendText(" single cell at " + row + "," + col);
+			}
+		};
+	}
+}

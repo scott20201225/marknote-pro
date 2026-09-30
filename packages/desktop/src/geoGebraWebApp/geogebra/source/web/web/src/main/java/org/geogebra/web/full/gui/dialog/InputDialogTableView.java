@@ -1,0 +1,179 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.web.full.gui.dialog;
+
+import static org.geogebra.common.main.settings.TableSettings.DEFAULT_MAX;
+import static org.geogebra.common.main.settings.TableSettings.DEFAULT_MIN;
+import static org.geogebra.common.main.settings.TableSettings.DEFAULT_STEP;
+
+import org.geogebra.common.gui.dialog.validator.TableValuesDialogValidator;
+import org.geogebra.common.gui.view.table.InvalidValuesException;
+import org.geogebra.common.gui.view.table.TableValuesView;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.plugin.Event;
+import org.geogebra.common.plugin.EventType;
+import org.geogebra.web.full.gui.GuiManagerW;
+import org.geogebra.web.full.gui.components.ComponentInputField;
+import org.geogebra.web.html5.gui.HasKeyboardPopup;
+import org.geogebra.web.html5.main.AppW;
+import org.geogebra.web.html5.util.TestHarness;
+import org.geogebra.web.shared.components.dialog.ComponentDialog;
+import org.geogebra.web.shared.components.dialog.DialogData;
+import org.gwtproject.user.client.ui.Label;
+
+/**
+ * dialog opened from av context menu of functions and lines by clicking
+ * on Table of values
+ *
+ */
+public final class InputDialogTableView extends ComponentDialog implements HasKeyboardPopup {
+	private ComponentInputField startValue;
+	private ComponentInputField endValue;
+	private ComponentInputField step;
+	private GeoElement geo;
+	private Label errorLabel;
+	private final TableValuesDialogValidator validator;
+
+	/**
+	 * Create new dialog. NOT modal to make sure onscreen keyboard still works.
+	 *
+	 * @param app
+	 *            see {@link AppW}
+	 * @param data
+	 *            dialog translation keys
+	 */
+	public InputDialogTableView(final AppW app, DialogData data) {
+		super(app, data, false, true);
+		addStyleName("tableOfValuesDialog");
+		buildContent();
+		validator = new TableValuesDialogValidator(app);
+		this.addCloseHandler(event -> {
+			app.unregisterPopup(this);
+			app.hideKeyboard();
+		});
+	}
+
+	private void buildContent() {
+		startValue = createTextField("StartValueX");
+		endValue = createTextField("EndValueX");
+		step = createTextField("Step");
+		// last input text field shouldn't have any bottom margin
+		step.addStyleName("noBottomMarg");
+		TestHarness.setAttr(startValue, "startValue");
+		TestHarness.setAttr(endValue, "endValue");
+		TestHarness.setAttr(step, "stepValue");
+
+		errorLabel = new Label();
+		errorLabel.setStyleName("globalErrorLabel");
+		errorLabel.getElement().setTabIndex(-1);
+
+		addDialogContent(startValue, endValue, step, errorLabel);
+	}
+
+	private ComponentInputField createTextField(String labelText) {
+		return new ComponentInputField((AppW) app, null, labelText, null, "", null);
+	}
+
+	@Override
+	public void show() {
+		endValue.resetInputField();
+		step.resetInputField();
+		super.show();
+		startValue.focusDeferred();
+	}
+
+	/**
+	 * @param functionGeo
+	 *            function
+	 */
+	public void show(GeoElement functionGeo) {
+		this.geo = functionGeo;
+		TableValuesView tv = (TableValuesView) app.getGuiManager().getTableValuesView();
+		if (tv.getValuesMin() == 0 && tv.getValuesMax() == 0 && tv.getValuesStep() == 0) {
+			setFieldValues(DEFAULT_MIN + "", DEFAULT_MAX + "", DEFAULT_STEP + "");
+		} else {
+			setFieldValues(tv.getValuesMinStr(), tv.getValuesMaxStr(), tv.getValuesStepStr());
+		}
+		errorLabel.setText("");
+		((AppW) app).registerPopup(this);
+		show();
+	}
+
+	private void setFieldValues(String minStr, String maxStr, String stepStr) {
+		startValue.setInputText(minStr);
+		endValue.setInputText(maxStr);
+		step.setInputText(stepStr);
+	}
+
+	private void openTableView() {
+		double[] inputFieldValues = validator.getDoubles(startValue, endValue, step);
+		if (startValue.hasError()) {
+			startValue.focusDeferred();
+		} else if (endValue.hasError()) {
+			endValue.focusDeferred();
+		} else if (step.hasError()) {
+			step.focusDeferred();
+		}
+		if (inputFieldValues != null) {
+			try {
+				initTableValuesView(inputFieldValues[0], inputFieldValues[1], inputFieldValues[2]);
+				app.storeUndoInfo();
+				hide();
+			} catch (InvalidValuesException ex) {
+				errorLabel.setText(ex.getLocalizedMessage(app.getLocalization()));
+				errorLabel.getElement().scrollIntoView();
+			}
+		} else {
+			errorLabel.setText("");
+		}
+	}
+
+	@Override
+	public void onPositiveAction() {
+		openTableView();
+	}
+
+	/**
+	 * Initializes Table View
+	 *
+	 * @param min
+	 *            min x-value.
+	 * @param max
+	 *            max x-value.
+	 * @param stepVal
+	 *            x step value.
+	 * @throws InvalidValuesException
+	 *             if (max-min)/step is too big
+	 */
+	private void initTableValuesView(double min, double max, double stepVal)
+			throws InvalidValuesException {
+		GuiManagerW gui = (GuiManagerW) app.getGuiManager();
+		gui.getTableValuesView().setValues(min, max, stepVal);
+		dispatchSetTVValues(min, max, stepVal);
+		if (geo != null) {
+			gui.addGeoToTableValuesView(geo);
+			app.getKernel().attach(gui.getTableValuesView());
+		} else {
+			gui.getUnbundledToolbar().resize();
+		}
+	}
+
+	private void dispatchSetTVValues(double valuesMin, double valuesMax, double valuesStep) {
+		String values = valuesMin + "," + valuesMax + "," + valuesStep;
+		app.dispatchEvent(new Event(EventType.SET_VALUES_TV, null, values));
+	}
+}

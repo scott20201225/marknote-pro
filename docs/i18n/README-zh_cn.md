@@ -193,6 +193,11 @@ MarkNotePro 正在开发中，请在提交 pull request 之前确保阅读[贡�
 
 <a href="https://github.com/scott20201225/marknote-pro/graphs/contributors"><img src="https://github.com/sponsors/scott20201225/contributors.svg?width=890" /></a>
 
-## 许可证
+## 许可证与商业授权
 
-[**MIT**](../../LICENSE).
+本项目采用 [**MarkNotePro 非商业使用与商业授权许可协议**](../../LICENSE)：
+
+- **非商业用途免费**：个人学习、教学演示、学术研究及个人非商业笔记管理可免费使用。
+- **商业用途须获授权**：未经版权所有人事先书面授权，严禁将本软件用于任何商业用途；商业使用请联系作者获取授权。
+- **内置组件协议**：内置 **draw.io** 遵循 Apache License 2.0，内置 **GeoGebra** 遵循 [GeoGebra License](https://www.geogebra.org/license)（GPLv3 / CC BY-NC-SA 3.0 非商业许可），内置 **GitHub Desktop** 与上游 **MarkText** 组件遵循 MIT License。
+

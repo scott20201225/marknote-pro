@@ -1,0 +1,223 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.geogebra3D.kernel3D.algos;
+
+import org.geogebra.common.kernel.Construction;
+import org.geogebra.common.kernel.StringTemplate;
+import org.geogebra.common.kernel.arithmetic.ExpressionNode;
+import org.geogebra.common.kernel.arithmetic.FunctionNVar;
+import org.geogebra.common.kernel.arithmetic.FunctionVariable;
+import org.geogebra.common.kernel.arithmetic.NumberValue;
+import org.geogebra.common.kernel.commands.Commands;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.kernel.geos.GeoFunctionNVar;
+import org.geogebra.common.kernel.geos.GeoNumberValue;
+import org.geogebra.common.kernel.geos.GeoNumeric;
+
+/**
+ * @author ggb3D
+ *
+ */
+public class AlgoFunctionNVarND extends AlgoElement3D {
+
+	/** input function */
+	protected GeoFunctionNVar inputFunction;
+
+	/** output function */
+	protected GeoFunctionNVar function;
+
+	// private NumberValue[] coords; // input : expression for each coord x, y,
+	// z, ...
+	/** input : "from" values for each var */
+	protected NumberValue[] from;
+	/** input : "to" values for each var */
+	protected NumberValue[] to;
+
+	// private GeoNumeric[] localVar; // input : variables u, v, ...
+
+	private AlgoFunctionNVarND(Construction cons, NumberValue[] from, NumberValue[] to) {
+		super(cons);
+
+		// this.coords = coords;
+		this.from = from;
+		this.to = to;
+		// this.localVar = localVar;
+	}
+
+	/**
+	 * Construct a function
+	 *
+	 * @param cons
+	 *            construction
+	 * @param label
+	 *            label
+	 * @param coords
+	 *            description of the function
+	 * @param localVar
+	 *            var of the function
+	 * @param from
+	 *            "from" values for each var
+	 * @param to
+	 *            "to" values for each var
+	 *
+	 */
+	public AlgoFunctionNVarND(
+			Construction cons,
+			String label,
+			GeoNumberValue[] coords,
+			GeoNumeric[] localVar,
+			GeoNumberValue[] from,
+			GeoNumberValue[] to) {
+
+		this(cons, from, to);
+
+		// we need to create Function objects for the coord NumberValues,
+		// so let's get the expressions of xcoord and ycoord and replace
+		// the localVar by a functionVar
+		FunctionVariable[] funVar = new FunctionVariable[localVar.length];
+		for (int i = 0; i < localVar.length; i++) {
+			String varStr = localVar[i].getLabel(StringTemplate.defaultTemplate);
+			funVar[i] = new FunctionVariable(kernel, varStr);
+		}
+
+		ExpressionNode[] exp = new ExpressionNode[coords.length];
+		FunctionNVar[] fun = new FunctionNVar[coords.length];
+
+		for (int i = 0; i < coords.length; i++) {
+			exp[i] = kernel.convertNumberValueToExpressionNode(coords[i].toGeoElement());
+			for (int j = 0; j < localVar.length; j++) {
+				exp[i] = exp[i].replace(localVar[j], funVar[j]).wrap();
+			}
+			fun[i] = new FunctionNVar(exp[i], funVar);
+		}
+
+		// create the function
+		function = new GeoFunctionNVar(cons, fun[0]);
+
+		// end of construction
+		setInputOutput(coords, localVar);
+
+		compute();
+		function.setLabel(label);
+	}
+
+	/**
+	 * Construct a function
+	 *
+	 * @param cons
+	 *            construction
+	 * @param label
+	 *            label
+	 * @param f
+	 *            (x,y) function
+	 * @param from
+	 *            "from" values for each var
+	 * @param to
+	 *            "to" values for each var
+	 *
+	 */
+	public AlgoFunctionNVarND(
+			Construction cons,
+			String label,
+			GeoFunctionNVar f,
+			GeoNumberValue[] from,
+			GeoNumberValue[] to) {
+
+		this(cons, from, to);
+
+		inputFunction = f;
+		// function = new GeoFunctionNVar(cons,
+		// inputFunction.getFunction());//(GeoFunctionNVar)
+		// inputFunction.copy();
+		function = inputFunction.copy();
+
+		// end of construction
+		setInputOutput((GeoNumberValue[]) null, null);
+
+		compute();
+		function.setLabel(label);
+	}
+
+	private void setInputOutput(GeoNumberValue[] coords, GeoNumeric[] localVar) {
+
+		int inputLength = from.length + to.length;
+		if (coords != null) {
+			inputLength += coords.length;
+		} else {
+			inputLength += 1; // for the function
+		}
+		if (localVar != null) {
+			inputLength += localVar.length;
+		}
+		GeoElement[] inputElements = new GeoElement[inputLength];
+
+		int index = 0;
+
+		if (coords != null) {
+			for (int i = 0; i < coords.length; i++) {
+				inputElements[index] = (GeoElement) coords[i];
+				index++;
+			}
+		} else {
+			inputElements[index] = inputFunction;
+			index++;
+		}
+
+		for (int i = 0; i < from.length; i++) {
+			if (localVar != null) {
+				inputElements[index] = localVar[i];
+				index++;
+			}
+			inputElements[index] = (GeoElement) from[i];
+			index++;
+			inputElements[index] = (GeoElement) to[i];
+			index++;
+		}
+
+		super.setInputOutput(inputElements, new GeoElement[] {function});
+	}
+
+	/**
+	 * @return the function
+	 */
+	public GeoFunctionNVar getFunction() {
+		return function;
+	}
+
+	@Override
+	public void compute() {
+
+		if (inputFunction != null) {
+			function.set(inputFunction);
+		}
+
+		function.setInterval(getDouble(from), getDouble(to));
+	}
+
+	private static double[] getDouble(NumberValue[] values) {
+		double[] ret = new double[values.length];
+		for (int i = 0; i < values.length; i++) {
+			ret[i] = values[i].getDouble();
+		}
+		return ret;
+	}
+
+	@Override
+	public Commands getClassName() {
+		return Commands.Function;
+	}
+}

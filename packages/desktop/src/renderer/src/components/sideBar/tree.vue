@@ -71,6 +71,18 @@
             @keydown.enter.prevent="handleInputEnterFromKeyboard"
             @blur="handleInputBlur"
           />
+          <div
+            v-if="showTreeCreateInput && createCacheType === 'geogebra'"
+            class="geogebra-create-options"
+            :style="{ 'margin-left': `${depth * 5 + 15}px` }"
+          >
+            <label>{{ t('sideBar.tree.geoGebraMode') }}</label>
+            <select v-model="geoGebraMode">
+              <option v-for="mode of geoGebraModes" :key="mode.value" :value="mode.value">
+                {{ t(mode.labelKey) }}
+              </option>
+            </select>
+          </div>
           <file v-for="file of visibleRootFiles" :key="file.id" :file="file" :depth="depth" />
           <div
             v-if="
@@ -130,6 +142,8 @@ import {
   getVisibleNoteFolders
 } from '../../util/noteWorkspace'
 import type { TreeFileNode, TreeFolderNode, TreeNode, TabDescriptor } from './types'
+import type { GeoGebraMode } from '@shared/types/files'
+import { GEO_GEBRA_MODES } from '../../util/geogebra'
 
 const { t } = useI18n()
 
@@ -174,11 +188,22 @@ const createCacheType = computed<string | undefined>(() => {
   const cache = createCache.value as { type?: string }
   return cache.type
 })
+const geoGebraModes = GEO_GEBRA_MODES
+const geoGebraMode = computed<GeoGebraMode>({
+  get: () => (createCache.value as { geoGebraMode?: GeoGebraMode }).geoGebraMode ?? 'graphing',
+  set: (value) => {
+    const cache = createCache.value as { dirname?: string; type?: string }
+    if (!cache.dirname || !cache.type) return
+    projectStore.createCache = { dirname: cache.dirname, type: cache.type, geoGebraMode: value }
+  }
+})
 
 const isCreatingNoteInListMode = computed<boolean>(() => {
   return (
     noteNavigationMode.value === 'tree-list' &&
-    (createCacheType.value === 'document' || createCacheType.value === 'file')
+    (createCacheType.value === 'document' ||
+      createCacheType.value === 'file' ||
+      createCacheType.value === 'geogebra')
   )
 })
 
@@ -263,6 +288,13 @@ const toggleRootFromDoubleClick = (event: MouseEvent): void => {
   const target = event.target as HTMLElement | null
   if (target?.closest('input')) return
   toggleDirectories()
+}
+
+const toggleDirectories = (): void => {
+  const folders = visibleRootFolders.value
+  if (!folders.length) return
+  const shouldCollapse = folders.some((folder) => !folder.isCollapsed)
+  for (const folder of folders) folder.isCollapsed = shouldCollapse
 }
 
 const handleSplitDragStart = (event: MouseEvent): void => {
@@ -425,6 +457,23 @@ watch(
   margin-right: 10px;
 }
 
+.geogebra-create-options {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: var(--itemFontColor);
+}
+
+.geogebra-create-options select {
+  min-width: 130px;
+  color: inherit;
+  background: var(--editorBgColor);
+  border: 1px solid var(--borderColor);
+}
+
 .list-enter-active,
 .list-leave-active {
   transition: all 0.2s;
@@ -434,9 +483,17 @@ watch(
   opacity: 0;
   transform: translateX(-50px);
 }
+:global(body) {
+  --tree-text-color: color-mix(in srgb, var(--editorBgColor) 8%, #000000 92%);
+  --tree-icon-color: color-mix(in srgb, var(--editorBgColor) 25%, #000000 75%);
+}
+:global(body.dark) {
+  --tree-text-color: color-mix(in srgb, var(--editorBgColor) 5%, #ffffff 95%);
+  --tree-icon-color: color-mix(in srgb, var(--editorBgColor) 20%, #ffffff 80%);
+}
 .tree-view {
   font-size: 14px;
-  color: var(--sideBarColor);
+  color: var(--tree-text-color);
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -454,6 +511,7 @@ watch(
   height: 30px;
   line-height: 30px;
   font-size: 14px;
+  color: var(--tree-text-color);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -462,6 +520,7 @@ watch(
 .tree-panel > .title > span {
   flex: 1;
   min-width: 0;
+  color: var(--tree-text-color);
 }
 
 .note-navigation-toggle {
@@ -475,13 +534,13 @@ watch(
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: var(--sideBarIconColor);
+  color: var(--tree-icon-color);
   cursor: pointer;
 }
 
 .note-navigation-toggle:hover {
   background: var(--sideBarItemHoverBgColor);
-  color: var(--sideBarTitleColor);
+  color: var(--tree-text-color);
 }
 
 .root-rename-input {
@@ -490,7 +549,7 @@ watch(
   height: 22px;
   outline: none;
   padding: 0 8px;
-  color: var(--sideBarColor);
+  color: var(--tree-text-color);
   border: 1px solid var(--floatBorderColor);
   background: var(--floatBorderColor);
   border-radius: 3px;
@@ -532,20 +591,20 @@ watch(
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: var(--sideBarIconColor);
+  color: var(--tree-icon-color);
   cursor: pointer;
 }
 
 .tree-action-button:hover {
   background: var(--sideBarItemHoverBgColor);
-  color: var(--sideBarTitleColor);
+  color: var(--tree-text-color);
 }
 
 .tree-panel > .title > a {
   pointer-events: auto;
   cursor: pointer;
   margin-left: 8px;
-  color: var(--sideBarIconColor);
+  color: var(--tree-icon-color);
   opacity: 0;
 }
 
@@ -635,7 +694,7 @@ watch(
   height: 22px;
   margin: 5px 0;
   padding: 0 6px;
-  color: var(--sideBarColor);
+  color: var(--tree-text-color);
   border: 1px solid var(--floatBorderColor);
   background: var(--inputBgColor);
   width: calc(100% - 45px);
@@ -650,7 +709,7 @@ watch(
   flex-direction: column;
   padding-top: 40px;
   align-items: center;
-  color: var(--sideBarTextColor);
+  color: var(--tree-text-color);
   & button {
     margin-top: 10px;
   }

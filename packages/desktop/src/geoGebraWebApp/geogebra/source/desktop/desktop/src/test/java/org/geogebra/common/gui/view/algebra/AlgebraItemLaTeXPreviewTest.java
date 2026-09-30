@@ -1,0 +1,65 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.gui.view.algebra;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.geogebra.common.kernel.geos.BaseSymbolicTest;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.scientific.LabelController;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+class AlgebraItemLaTeXPreviewTest extends BaseSymbolicTest {
+
+	@BeforeEach
+	void clean() {
+		app.getKernel().clearConstruction(true);
+		app.setCasConfig();
+		app.getKernel().setAngleUnit(app.getConfig().getDefaultAngleUnit());
+	}
+
+	@Test
+	void testCommandLatexPreview() {
+		GeoElement integral = add("a(x) = Integral(x*x,1,2)");
+		assertEquals(
+				"a\\left(x \\right)\\, = \\,\\int\\limits_{1}^{2}x \\; x\\,\\mathrm{d}x",
+				AlgebraItem.getPreviewLatexForGeoElement(integral));
+
+		GeoElement solve = add("b(x) = Solve(x*x = 4)");
+		assertEquals(
+				"b\\left(x \\right)\\, = \\,Solve \\left(x \\; x\\, = \\,4 \\right)",
+				AlgebraItem.getPreviewLatexForGeoElement(solve));
+	}
+
+	@Test
+	void testSimpleLatexPreview() {
+		GeoElement geo = add("a = c + c");
+		assertEquals("a\\, = \\,c + c", AlgebraItem.getPreviewLatexForGeoElement(geo));
+
+		GeoElement function = add("f(x) = x+1");
+		assertEquals(
+				"f\\left(x \\right)\\, = \\,x + 1", AlgebraItem.getPreviewLatexForGeoElement(function));
+	}
+
+	@Test
+	void testTextLatexPreview() {
+		GeoElement geo = add("t = \"text\"");
+		new LabelController().hideLabel(geo);
+		assertEquals("text", AlgebraItem.getPreviewLatexForGeoElement(geo));
+	}
+}

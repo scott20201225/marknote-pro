@@ -1,0 +1,86 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.properties;
+
+import java.util.List;
+
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+
+/**
+ * A property whose value is one of an array of predefined values,
+ * similarly to an enumeration, where the value is one a finite set of possible values.
+ * {@link ValuedProperty#setValue(Object)} will now throw a RuntimeException
+ * if the value is not member of the {@link EnumeratedProperty#getValues()} ()}
+ * array.
+ */
+public interface EnumeratedProperty<V> extends ValuedProperty<V> {
+
+	/**
+	 * Gets the list of available values for this property.
+	 * When calling {@link EnumeratedProperty#setValue(Object)} the value must be
+	 * one of these values, otherwise a {@link RuntimeException} will be thrown.
+	 * @return the list of available values
+	 */
+	@NonNull List<V> getValues();
+
+	/**
+	 * Adds a {@link ValueFilter} to this property which can modify the list of available values
+	 * returned by {@link EnumeratedProperty#getValues()}.
+	 *
+	 * @param valueFilter the {@link ValueFilter} to be added.
+	 */
+	void addValueFilter(@NonNull ValueFilter valueFilter);
+
+	/**
+	 * Removes a previously added {@link ValueFilter} from this property.
+	 * Once removed, the filter will no longer affect the list of available values
+	 * returned by {@link EnumeratedProperty#getValues()}.
+	 *
+	 * @param valueFilter the {@link ValueFilter} to be removed.
+	 */
+	void removeValueFilter(@NonNull ValueFilter valueFilter);
+
+	/**
+	 * Get the index of the value of this property in the array
+	 * {@link EnumeratedProperty#getValues()}. Returns -1 if the value is null.
+	 * @return index of value in the array or -1.
+	 */
+	int getIndex();
+
+	/**
+	 * Set the value of this property to the index-th element in the array
+	 * {@link EnumeratedProperty#getValues()}. Might throw {@link ArrayIndexOutOfBoundsException}
+	 * if the index is invalid with respect to the values array.
+	 * @param index index of the value
+	 */
+	void setIndex(int index);
+
+	/**
+	 * Gets the array of indices where a divider must be inserted.
+	 * Please note that indices refer to the unmodified values array.
+	 * The array is sorted in ascending order.
+	 * <p>
+	 * For example, with values {"a", "b", "c", "d", "e"}, if this method returns
+	 * {1, 3}, it must be understood as the following {"a", |, "b", "c", |, "d", "e"}
+	 * @return a sorted array of indices where a divider must be inserted
+	 * or {@code null} if no dividers are present.
+	 */
+	default @Nullable int[] getGroupDividerIndices() {
+		return null;
+	}
+}

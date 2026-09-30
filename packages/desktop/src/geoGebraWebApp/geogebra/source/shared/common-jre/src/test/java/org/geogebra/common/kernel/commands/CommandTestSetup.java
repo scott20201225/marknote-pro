@@ -1,0 +1,210 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.kernel.commands;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.Collections;
+import java.util.List;
+
+import org.geogebra.common.AppCommonFactory;
+import org.geogebra.common.factories.UtilFactory;
+import org.geogebra.common.factories.UtilFactoryCommon;
+import org.geogebra.common.io.XmlTestUtil;
+import org.geogebra.common.kernel.StringTemplate;
+import org.geogebra.common.kernel.algos.AlgoIntersectPolyLines;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.kernel.implicit.GeoImplicitCurve;
+import org.geogebra.common.main.App;
+import org.geogebra.common.main.AppCommon3D;
+import org.geogebra.common.util.debug.Log;
+import org.geogebra.test.commands.AlgebraTestHelper;
+import org.geogebra.test.commands.CommandSignatures;
+import org.hamcrest.Matcher;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+
+public class CommandTestSetup {
+
+	private static final int UNINITIALIZED = -1000;
+	AppCommon3D app;
+	AlgebraProcessor ap;
+	static List<Integer> signature;
+	protected static int uncheckedSyntaxesCount = UNINITIALIZED;
+
+	/**
+	 * Create the app
+	 */
+	@BeforeEach
+	void setupApp() {
+		UtilFactory.setPrototypeIfNull(new UtilFactoryCommon());
+		app = AppCommonFactory.create3D();
+		ap = app.getKernel().getAlgebraProcessor();
+		app.setRandomSeed(42);
+
+		resetSyntaxCounter();
+		app.setActiveView(App.VIEW_EUCLIDIAN);
+		GeoImplicitCurve.setFastDrawThreshold(10000);
+	}
+
+	@AfterEach
+	void checkSyntaxes() {
+		checkSyntaxesStatic();
+		if (app.getKernel().getConstruction().getGeoSetLabelOrder().size() < 20) {
+			XmlTestUtil.checkCurrentXML(app);
+		}
+	}
+
+	/**
+	 * Assert that there are no unchecked syntaxes left
+	 */
+	public static void checkSyntaxesStatic() {
+		assertTrue(
+				uncheckedSyntaxesCount <= 0, "unchecked syntaxes: " + uncheckedSyntaxesCount + signature);
+	}
+
+	/**
+	 * Checks that given input expression produces expected results.
+	 * Also counts calls to this method within a single test to make sure
+	 * we test each command at least as many times as it has syntaxes.
+	 * @param input input expression
+	 * @param expected matchers for expected results (can be empty list if 0 results expected)
+	 * @param app1 application
+	 * @param processor algebra processor
+	 * @param tpl serialization template
+	 */
+	protected static void testSyntax(
+			String input,
+			List<Matcher<String>> expected,
+			App app1,
+			AlgebraProcessor processor,
+			StringTemplate tpl) {
+		app1.getEuclidianView1().getEuclidianController().clearZoomerAnimationListeners();
+		if (uncheckedSyntaxesCount == UNINITIALIZED) {
+			Throwable t = new Throwable();
+			String cmdName = t.getStackTrace()[2].getMethodName().substring(3);
+			try {
+				Commands.valueOf(cmdName);
+			} catch (Exception e) {
+				cmdName = t.getStackTrace()[3].getMethodName().substring(3);
+			}
+
+			signature = CommandSignatures.getSignature(cmdName, app1);
+			if (signature != null) {
+				uncheckedSyntaxesCount = signature.size();
+			}
+			Log.debug(cmdName);
+		}
+		uncheckedSyntaxesCount--;
+		AlgebraTestHelper.checkSyntaxSingle(input, expected, processor, tpl);
+	}
+
+	/**
+	 * Reset the counter for syntax coverage checking.
+	 */
+	public static void resetSyntaxCounter() {
+		uncheckedSyntaxesCount = UNINITIALIZED;
+	}
+
+	/**
+	 * Check that processing of input rounded to 5 decimal places produces expected output.
+	 * @param input input expression
+	 * @param expected expected results (can be empty if command has no results)
+	 */
+	protected void tRound(String input, String... expected) {
+		t(input, StringTemplate.editTemplate, expected);
+	}
+
+	/**
+	 * Check that processing of input produces expected output.
+	 * @param input input expression
+	 * @param expected expected results (can be empty if command has no results)
+	 */
+	protected void t(String input, String... expected) {
+		testSyntax(input, AlgebraTestHelper.getMatchers(expected), app, ap, StringTemplate.xmlTemplate);
+	}
+
+	/**
+	 * Check that processing of input produces expected output
+	 * when serialized using a specific template.
+	 * @param input input expression
+	 * @param tpl serialization template
+	 * @param expected expected results (can be empty if command has no results)
+	 */
+	protected void t(String input, StringTemplate tpl, String... expected) {
+		testSyntax(input, AlgebraTestHelper.getMatchers(expected), app, ap, tpl);
+	}
+
+	/**
+	 * Check that processing of input produces (exactly one) output which matches
+	 * a given matcher.
+	 * @param input input expression
+	 * @param matcher expected results (can be empty if command has no results)
+	 */
+	protected void t(String input, Matcher<String> matcher) {
+		testSyntax(input, Collections.singletonList(matcher), app, ap, StringTemplate.xmlTemplate);
+	}
+
+	/**
+	 * @see #intersect(String, String, boolean, boolean, String...)
+	 */
+	protected void intersect(String arg1, String arg2, boolean checkNumbered, String... results) {
+		intersect(arg1, arg2, checkNumbered, checkNumbered, results);
+	}
+
+	/**
+	 * Checks that multiple syntaxes of the Intersect command give the same expected results.
+	 * In general these should be equivalent
+	 * - Intersect[arg1,arg2]
+	 * - Intersect[arg2,arg1]
+	 * - Intersect[arg1,arg2,1]
+	 * - Intersect[arg2,arg1,1]
+	 * - Intersect[arg1,arg2,Intersect[arg1,arg2]]
+	 * @param arg1 first object
+	 * @param arg2 second object
+	 * @param checkNumbered whether to test the [argX,argY,1] syntaxes
+	 * @param checkClosest whether to test the [argX,argY,Intersect[...]] syntax
+	 * @param results expected result
+	 */
+	protected void intersect(
+			String arg1, String arg2, boolean checkNumbered, boolean checkClosest, String... results) {
+		app.getKernel().clearConstruction(true);
+		app.getKernel().getConstruction().setSuppressLabelCreation(false);
+		tRound("its:=Intersect(" + arg1 + "," + arg2 + ")", results);
+		GeoElement geo = lookup("its") == null ? lookup("its_1") : lookup("its");
+		boolean symmetric = geo != null
+				&& !(geo.getParentAlgorithm() instanceof AlgoIntersectPolyLines
+						&& geo.getParentAlgorithm().getOutput(0).getGeoClassType()
+								== geo.getParentAlgorithm().getOutput(1).getGeoClassType());
+		if (symmetric) {
+			tRound("Intersect(" + arg2 + "," + arg1 + ")", results);
+		}
+		if (checkNumbered) {
+			tRound("Intersect(" + arg1 + "," + arg2 + ",1)", results[0]);
+			if (symmetric) {
+				tRound("Intersect(" + arg2 + "," + arg1 + ",1)", results[0]);
+			}
+		}
+		if (checkClosest) {
+			tRound("Intersect(" + arg1 + "," + arg2 + "," + results[0] + ")", results[0]);
+		}
+	}
+
+	protected GeoElement lookup(String label) {
+		return app.getKernel().lookupLabel(label);
+	}
+}

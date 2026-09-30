@@ -1,6 +1,13 @@
 <template>
   <git-desktop v-if="workbench === 'git'" />
-  <div v-else class="editor-container" :class="{ 'drawio-open': currentFile?.isDrawing === true }">
+  <div
+    v-else
+    class="editor-container"
+    :class="{
+      'drawio-open': currentFile?.isDrawing === true,
+      'geogebra-open': currentFile?.isGeoGebra === true
+    }"
+  >
     <side-bar v-if="init" />
 
     <div class="editor-middle">
@@ -9,7 +16,7 @@
         :pathname="pathname"
         :filename="filename"
         :active="windowActive"
-        :word-count="drawioFile ? null : wordCount"
+        :word-count="drawioFile || geogebraFile ? null : wordCount"
         :platform="platform"
         :is-saved="isSaved"
       />
@@ -44,9 +51,11 @@
           </el-icon>
         </button>
       </div>
-      <recent v-if="!hasCurrentFile && init && !currentFile?.isDrawing" />
+      <recent
+        v-if="!hasCurrentFile && init && !currentFile?.isDrawing && !currentFile?.isGeoGebra"
+      />
       <editor-with-tabs
-        v-if="hasCurrentFile && init && !currentFile?.isDrawing"
+        v-if="hasCurrentFile && init && !currentFile?.isDrawing && !currentFile?.isGeoGebra"
         :markdown="markdown"
         :cursor="cursor"
         :muya-index-cursor="muyaIndexCursor"
@@ -57,6 +66,7 @@
       <!-- Keep Drawio mounted so its BrowserViews survive tab switches, but
            never let its absolute surface cover the Markdown editor. -->
       <drawio v-if="init" v-show="currentFile?.isDrawing === true" />
+      <geogebra v-if="init" v-show="currentFile?.isGeoGebra === true" />
       <command-palette />
       <about-dialog />
       <export-setting-dialog />
@@ -73,6 +83,7 @@ import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
 import { useMainStore } from '@/store'
 import { storeToRefs } from 'pinia'
 import { addStyles, addThemeStyle, addCustomStyle, type AddStylesOptions } from '@/util/theme'
+import { getGeoGebraConfiguration } from '@/util/geogebraConfiguration'
 import Recent from '@/components/recent/index.vue'
 import EditorWithTabs from '@/components/editorWithTabs/index.vue'
 import Tabs from '@/components/editorWithTabs/tabs.vue'
@@ -86,6 +97,7 @@ import Rename from '@/components/rename/index.vue'
 import ImportModal from '@/components/import/index.vue'
 import GitDesktop from '@/components/gitDesktop/index.vue'
 import Drawio from '@/components/drawio/index.vue'
+import Geogebra from '@/components/geogebra/index.vue'
 import bus from '@/bus'
 import { DEFAULT_STYLE } from '@/config'
 import { useLayoutStore } from '@/store/layout'
@@ -97,6 +109,7 @@ import { useProjectStore } from '@/store/project'
 import { useAutoUpdatesStore } from '@/store/autoUpdates'
 import { useNotificationStore } from '@/store/notification'
 import { getDrawioConfiguration } from '@/util/drawioConfiguration'
+import type { GeoGebraMode } from '@shared/types/files'
 
 const mainStore = useMainStore()
 const editorStore = useEditorStore()
@@ -118,11 +131,12 @@ const tabScrollState = ref({
 })
 const workbench = ref<'note' | 'git'>('note')
 const drawioFile = ref<{ filePath: string; title: string } | null>(null)
+const geogebraFile = ref<{ filePath: string; title: string; mode: GeoGebraMode } | null>(null)
 const lastGestureScale = ref(1)
 
 const { windowActive, platform, init } = storeToRefs(mainStore)
-const { sourceCode, theme, customCss, textDirection } = storeToRefs(preferencesStore)
-const { projectTree } = storeToRefs(projectStore)
+const { sourceCode, theme, customCss, textDirection, language } = storeToRefs(preferencesStore)
+const { projectTree, moveDialogVisible } = storeToRefs(projectStore)
 const { currentFile } = storeToRefs(editorStore)
 
 const pathname = computed(() => currentFile.value?.pathname)
@@ -142,7 +156,11 @@ const muyaIndexCursor = computed<Record<string, unknown> | undefined>(
 )
 
 const hasCurrentFile = computed<boolean>(() => {
-  return currentFile.value?.markdown !== undefined && !currentFile.value?.isDrawing
+  return (
+    currentFile.value?.markdown !== undefined &&
+    !currentFile.value?.isDrawing &&
+    !currentFile.value?.isGeoGebra
+  )
 })
 
 const workspaceSelectionRequired = computed<boolean>(() => {
@@ -197,7 +215,12 @@ const handleWorkbenchSwitch = (event: Event): void => {
   const target = (event as CustomEvent).detail
   if (target === 'note' || target === 'git') {
     workbench.value = target
-    if (target !== 'note') drawioFile.value = null
+    if (target !== 'note') {
+      drawioFile.value = null
+      geogebraFile.value = null
+      window.electron.ipcRenderer.send('mt::drawio::hide')
+      window.electron.ipcRenderer.send('mt::geogebra::hide')
+    }
   }
 }
 
@@ -206,10 +229,26 @@ const openDrawio = (_event: unknown, payload: { filePath: string; title: string 
   drawioFile.value = payload
 }
 
+const openGeoGebra = (
+  _event: unknown,
+  payload: { filePath: string; title: string; mode: GeoGebraMode }
+): void => {
+  editorStore.OPEN_GEOGEBRA_TAB(payload)
+  geogebraFile.value = payload
+}
+
 const closeDrawio = (_event: unknown, payload?: { filePath?: string }): void => {
   if (payload?.filePath && payload.filePath !== currentFile.value?.pathname) return
   drawioFile.value = null
   if (currentFile.value?.isDrawing) {
+    editorStore.FORCE_CLOSE_TAB(currentFile.value)
+  }
+}
+
+const closeGeoGebra = (_event: unknown, payload?: { filePath?: string }): void => {
+  if (payload?.filePath && payload.filePath !== currentFile.value?.pathname) return
+  geogebraFile.value = null
+  if (currentFile.value?.isGeoGebra) {
     editorStore.FORCE_CLOSE_TAB(currentFile.value)
   }
 }
@@ -229,9 +268,24 @@ watch(customCss, (value, oldValue) => {
   }
 })
 
+watch(
+  [language, theme, () => preferencesStore.preferenceLoaded],
+  ([value, _theme, preferenceLoaded]) => {
+    if (!preferenceLoaded || !value) return
+    nextTick(() => {
+      void window.electron.ipcRenderer.invoke('mt::geogebra::configure', getGeoGebraConfiguration())
+    })
+  }
+)
+
 watch([currentFile, () => preferencesStore.preferenceLoaded], ([file, preferenceLoaded]) => {
   window.electron.ipcRenderer.send('mt::drawio-menu-mode', !!file?.isDrawing)
+  window.electron.ipcRenderer.send('mt::geogebra-menu-mode', !!file?.isGeoGebra)
   if (file?.isDrawing) {
+    // Both editors use independent native BrowserViews. Remove GeoGebra
+    // before attaching Draw.io so it can never cover the sidebar or canvas.
+    geogebraFile.value = null
+    window.electron.ipcRenderer.send('mt::geogebra::hide')
     // A restored drawing tab can become current before persisted preferences
     // finish loading. Wait for them so the first frame URL is never built from
     // the default language/theme.
@@ -246,9 +300,50 @@ watch([currentFile, () => preferencesStore.preferenceLoaded], ([file, preference
     return
   }
 
-  if (drawioFile.value) {
+  if (file?.isGeoGebra) {
+    // Mirror the Draw.io branch: native BrowserViews are not controlled by
+    // Vue's v-show and must be explicitly removed before the other opens.
     drawioFile.value = null
     window.electron.ipcRenderer.send('mt::drawio::hide')
+    if (!preferenceLoaded) return
+    if (geogebraFile.value?.filePath !== file.pathname) {
+      const openRequest = file.geoGebraMode
+        ? window.electron.ipcRenderer.invoke(
+            'mt::geogebra::open',
+            file.pathname,
+            file.geoGebraMode,
+            getGeoGebraConfiguration()
+          )
+        : window.electron.ipcRenderer.invoke(
+            'mt::geogebra::open',
+            file.pathname,
+            undefined,
+            getGeoGebraConfiguration()
+          )
+      void openRequest
+    }
+    return
+  }
+
+  // Native Draw.io/GeoGebra BrowserViews are independent of v-show. Always
+  // hide both overlays when the active tab becomes Markdown or empty.
+  drawioFile.value = null
+  window.electron.ipcRenderer.send('mt::drawio::hide')
+  geogebraFile.value = null
+  window.electron.ipcRenderer.send('mt::geogebra::hide')
+})
+
+// Native BrowserViews always sit above the renderer's DOM. Temporarily remove
+// them while the workspace move dialog is open, then let the active editor
+// restore itself with its own measured bounds after the dialog closes.
+watch(moveDialogVisible, (visible, wasVisible) => {
+  if (visible) {
+    window.electron.ipcRenderer.send('mt::drawio::hide')
+    window.electron.ipcRenderer.send('mt::geogebra::hide')
+    return
+  }
+  if (wasVisible) {
+    nextTick(() => window.dispatchEvent(new Event('marknotepro:resume-native-editor')))
   }
 })
 
@@ -309,10 +404,13 @@ onMounted(() => {
   window.addEventListener('marknotepro:switch-workbench', handleWorkbenchSwitch)
   window.electron.ipcRenderer.on('mt::drawio::opened', openDrawio)
   window.electron.ipcRenderer.on('mt::drawio::closed', closeDrawio)
+  window.electron.ipcRenderer.on('mt::geogebra::opened', openGeoGebra)
+  window.electron.ipcRenderer.on('mt::geogebra::closed', closeGeoGebra)
   window.electron.ipcRenderer.on('mt::drawio::autosave-changed', (_event, enabled) => {
     window.electron.ipcRenderer.send('mt::drawio-autosave-changed', enabled)
   })
   window.electron.ipcRenderer.send('mt::drawio-menu-mode', !!currentFile.value?.isDrawing)
+  window.electron.ipcRenderer.send('mt::geogebra-menu-mode', !!currentFile.value?.isGeoGebra)
   window.addEventListener('wheel', handleWindowZoomWheel, { capture: true, passive: false })
   window.addEventListener('gesturestart', handleWindowZoomGestureStart)
   window.addEventListener('gesturechange', handleWindowZoomGestureChange)
@@ -338,6 +436,7 @@ onMounted(() => {
   editorStore.LISTEN_SCREEN_SHOT()
   editorStore.LISTEN_FOR_CLOSE()
   editorStore.LISTEN_FOR_DRAWIO_STATE()
+  editorStore.LISTEN_FOR_GEOGEBRA_STATE()
   editorStore.LISTEN_FOR_SAVE_AS()
   editorStore.LISTEN_FOR_MOVE_TO()
   editorStore.LISTEN_FOR_SAVE()
@@ -388,6 +487,8 @@ onBeforeUnmount(() => {
   window.removeEventListener('marknotepro:switch-workbench', handleWorkbenchSwitch)
   window.electron.ipcRenderer.removeAllListeners('mt::drawio::opened')
   window.electron.ipcRenderer.removeAllListeners('mt::drawio::closed')
+  window.electron.ipcRenderer.removeAllListeners('mt::geogebra::opened')
+  window.electron.ipcRenderer.removeAllListeners('mt::geogebra::closed')
   window.electron.ipcRenderer.removeAllListeners('mt::drawio::autosave-changed')
   window.electron.ipcRenderer.removeAllListeners('mt::drawio::state')
   window.removeEventListener('wheel', handleWindowZoomWheel, true)

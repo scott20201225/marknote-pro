@@ -1,0 +1,63 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.spreadsheet.kernel;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.spreadsheet.core.TabularData;
+
+/**
+ * Sortable list of copy/paste cell operations.
+ */
+final class CopyPasteCellOperationList {
+	private final List<CopyPasteCellOperation> list = new ArrayList<>();
+
+	void clear() {
+		list.clear();
+	}
+
+	/**
+	 * Adds a copy/paste cell operation.
+	 *
+	 * @param geoToCopy Geo to be copy-pasted
+	 * @param destRow to paste to.
+	 * @param destCol to paste to.
+	 */
+	void add(GeoElement geoToCopy, int destRow, int destCol) {
+		list.add(new CopyPasteCellOperation(geoToCopy, destRow, destCol));
+	}
+
+	/**
+	 * Apply all the operations in list between two data sources.
+	 * @param tabularData TabularData where content is pasted to
+	 */
+	void apply(TabularData<GeoElement> tabularData) {
+		for (CopyPasteCellOperation operation : list) {
+			operation.apply(tabularData);
+		}
+	}
+
+	/**
+	 * Sort the list by id (construction order)
+	 */
+	void sort() {
+		list.sort(Comparator.comparing(CopyPasteCellOperation::getId));
+	}
+}

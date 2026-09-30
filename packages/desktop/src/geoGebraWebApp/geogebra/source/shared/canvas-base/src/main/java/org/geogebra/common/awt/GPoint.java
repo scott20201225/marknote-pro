@@ -1,0 +1,119 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.awt;
+
+/** Class for integer tuples **/
+public class GPoint {
+	/** y-coordinate **/
+	public int y;
+	/** x-coordinate **/
+	public int x;
+
+	/**
+	 * Point (0, 0)
+	 */
+	public GPoint() {
+		x = 0;
+		y = 0;
+	}
+
+	/**
+	 * @param x
+	 *            x-coord
+	 * @param y
+	 *            y-coord
+	 */
+	public GPoint(int x, int y) {
+		this.x = x;
+		this.y = y;
+	}
+
+	/**
+	 * Set x and y at the same time
+	 *
+	 * @param x
+	 *            x-coord
+	 * @param y
+	 *            y-coord
+	 */
+	public void setLocation(int x, int y) {
+		this.x = x;
+		this.y = y;
+	}
+
+	/**
+	 * Take both coords from a point
+	 *
+	 * @param p
+	 *            point
+	 */
+	public void setLocation(GPoint p) {
+		this.x = p.x;
+		this.y = p.y;
+	}
+
+	public int getY() {
+		return y;
+	}
+
+	public int getX() {
+		return x;
+	}
+
+	/**
+	 * @return z-coordinate (0 for 2D points)
+	 */
+	public int getZ() {
+		return 0;
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		if (!(o instanceof GPoint point)) {
+			return false;
+		}
+		return point.x == x && point.y == y && point.getZ() == getZ();
+	}
+
+	@Override
+	public int hashCode() {
+		return (x << 16) ^ y;
+	}
+
+	/**
+	 * @param d other point
+	 * @return distance to other point
+	 */
+	public double distance(GPoint d) {
+		return Math.hypot(x - d.x, y - d.y);
+	}
+
+	/**
+	 * Distance from point (dx, dy)
+	 * @param dx other point's x-coordinate
+	 * @param dy other point's y-coordinate
+	 * @return Euclidean distance
+	 */
+	public double distance(double dx, double dy) {
+		return (int) Math.sqrt((x - dx) * (x - dx) + (y - dy) * (y - dy));
+	}
+
+	@Override
+	public String toString() {
+		return x + " : " + y;
+	}
+}

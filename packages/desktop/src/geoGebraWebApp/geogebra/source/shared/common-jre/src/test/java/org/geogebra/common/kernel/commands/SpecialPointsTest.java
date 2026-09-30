@@ -1,0 +1,139 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.kernel.commands;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.List;
+
+import org.geogebra.common.BaseUnitTest;
+import org.geogebra.common.euclidian.EuclidianConstants;
+import org.geogebra.common.kernel.Construction;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.kernel.geos.GeoPoint;
+import org.geogebra.common.kernel.geos.GeoSegment;
+import org.geogebra.common.main.settings.config.AppConfigGraphing;
+import org.geogebra.test.annotation.Issue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+class SpecialPointsTest extends BaseUnitTest {
+
+	@BeforeEach
+	void setupConfig() {
+		getApp().setConfig(new AppConfigGraphing());
+	}
+
+	@Test
+	void specialPointsForPolynomials() {
+		add("f(x)=x^3-x");
+		updateSpecialPoints("f");
+		assertEquals(7, numberOfSpecialPoints());
+	}
+
+	@Test
+	void specialPointsForSegment() {
+		Construction cons = getConstruction();
+		GeoPoint a = new GeoPoint(cons, -1, -1, 0);
+		GeoPoint b = new GeoPoint(cons, 1, 1, 0);
+		GeoSegment segment = new GeoSegment(cons, a, b);
+		segment.setLabel("s");
+		updateSpecialPoints("s");
+		assertEquals(0, numberOfSpecialPoints());
+	}
+
+	@Test
+	void specialPointsForTrig() {
+		add("ZoomIn(-4pi-1,-2,4pi+1,2)");
+		add("f(x)=sin(x)");
+		updateSpecialPoints("f");
+		assertEquals(19, numberOfSpecialPoints());
+	}
+
+	@Test
+	void specialPointForLines() {
+		add("f:x=2+y");
+		add("g:x=2-y");
+		add("c:xx+yy=10");
+		updateSpecialPoints("f");
+		assertEquals(5, numberOfSpecialPoints());
+		updateSpecialPoints("g");
+		assertEquals(5, numberOfSpecialPoints());
+	}
+
+	@Test
+	void specialPointForConics() {
+		add("f:y=x^2-6x+8");
+		updateSpecialPoints("f");
+		// 4 visible, 1 undefined
+		assertEquals(5, numberOfSpecialPoints());
+	}
+
+	@Test
+	void specialPointInShowHideMode() {
+		getApp().setMode(EuclidianConstants.MODE_SHOW_HIDE_OBJECT);
+		add("f:y=x^2-6x+8");
+		updateSpecialPoints("f");
+		// no special points, we're not selecting
+		assertEquals(0, numberOfSpecialPoints());
+	}
+
+	@Test
+	void specialPointsRedefine() {
+		add("f(x)=x^2");
+		updateSpecialPoints("f");
+		add("a=1");
+		add("f(x)=x^2+a");
+		updateSpecialPoints("f");
+		assertEquals(4, numberOfSpecialPoints());
+	}
+
+	@Test
+	void specialPointsParentAlgoRemovedFromUpdateSet() {
+		add("eq1: x^4+y^2=2");
+		GeoElement element = add("eq2: x*y=3");
+		updateSpecialPoints("eq2");
+		assertTrue(element.getAlgorithmList().isEmpty());
+		assertTrue(element.getAlgoUpdateSet().isEmpty());
+	}
+
+	@Test
+	@Issue("APPS-7931")
+	void restrictedSpecialPointsNeedGraphicsViewSelection() {
+		add("f(x)=x^2-2");
+		getApp().getSpecialPointsManager().setRestrictedToGraphicsViewSelection(true);
+		updateSpecialPoints("f");
+		assertEquals(0, numberOfSpecialPoints());
+
+		getApp().getSpecialPointsManager().setGraphicsViewSelectedGeo(lookup("f"));
+		updateSpecialPoints("f");
+		assertTrue(numberOfSpecialPoints() > 0);
+	}
+
+	private int numberOfSpecialPoints() {
+		List<GeoElement> specialPoints = getApp().getSpecialPointsManager().getSelectedPreviewPoints();
+		if (specialPoints == null) {
+			return 0;
+		}
+		return specialPoints.size();
+	}
+
+	private void updateSpecialPoints(String string) {
+		getApp().getSpecialPointsManager().updateSpecialPoints(lookup(string));
+	}
+}

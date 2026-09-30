@@ -1,0 +1,250 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.kernel.algos;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import org.apache.commons.math3.analysis.polynomials.PolynomialFunction;
+import org.geogebra.common.kernel.Construction;
+import org.geogebra.common.kernel.EquationSolverInterface;
+import org.geogebra.common.kernel.Kernel;
+import org.geogebra.common.kernel.commands.Commands;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.kernel.geos.GeoPoint;
+import org.geogebra.common.util.DoubleUtil;
+
+public abstract class AlgoSimpleRootsPolynomial extends AlgoIntersect {
+
+	protected boolean setLabels;
+	protected EquationSolverInterface eqnSolver;
+	protected GeoElement[] geos;
+	protected OutputHandler<GeoPoint> points;
+
+	/**
+	 * @param c
+	 *            construction
+	 */
+	public AlgoSimpleRootsPolynomial(Construction c) {
+		super(c);
+		eqnSolver = cons.getKernel().getEquationSolver();
+		points = new OutputHandler<>(() -> {
+			GeoPoint p = new GeoPoint(cons);
+			// p.setCoords(0, 0, 1);
+			p.setUndefined();
+			p.setParentAlgorithm(this);
+			return p;
+		});
+	}
+
+	/**
+	 * @param c
+	 *            construction
+	 * @param geos
+	 *            input
+	 */
+	public AlgoSimpleRootsPolynomial(Construction c, GeoElement... geos) {
+		this(c);
+		this.geos = new GeoElement[geos.length];
+		for (int i = 0; i < geos.length; i++) {
+			this.geos[i] = geos[i];
+		}
+		setInputOutput();
+	}
+
+	/**
+	 * @param pf
+	 *            assigns a PolynomialFunction to this Algorithm which roots
+	 *            lead to one or more output Points
+	 */
+	public void setRootsPolynomial(PolynomialFunction pf) {
+		doCalc(pf);
+	}
+
+	@Override
+	public GeoPoint[] getIntersectionPoints() {
+		return points.getOutput(new GeoPoint[0]);
+	}
+
+	@Override
+	protected GeoPoint[] getLastDefinedIntersectionPoints() {
+		return null;
+	}
+
+	@Override
+	protected void setInputOutput() {
+		input = geos;
+		setDependencies();
+	}
+
+	/**
+	 * @param roots
+	 *            array with the coefficients of the polynomial<br>
+	 *            the roots of the polynomial are assigned to the first n
+	 *            elements of <b>roots</b>
+	 * @param eqnSolver
+	 *            solver
+	 * @return number of distinct roots
+	 */
+	public static int getRoots(double[] roots, EquationSolverInterface eqnSolver) {
+		int nrRealRoots = eqnSolver.polynomialRoots(roots, false);
+		if (nrRealRoots > 1) {
+			int c = 0;
+			Arrays.sort(roots, 0, nrRealRoots);
+			double last = roots[0];
+			for (int i = 1; i < nrRealRoots; i++) {
+				if (roots[i] - last <= Kernel.MIN_PRECISION) {
+					c++;
+				} else {
+					last = roots[i];
+					if (c > 0) {
+						roots[i - c] = roots[i];
+					}
+				}
+			}
+			nrRealRoots -= c;
+		}
+		return nrRealRoots;
+	}
+
+	protected void doCalc(PolynomialFunction rootsPoly) {
+		double[] roots = rootsPoly.getCoefficients();
+		int nrRealRoots = 0;
+		if (roots.length > 1) {
+			nrRealRoots = getRoots(roots, eqnSolver);
+		}
+		makePoints(roots, nrRealRoots);
+	}
+
+	protected void doCalc(PolynomialFunction rootsPoly, double min, double max) {
+		double[] roots = rootsPoly.getCoefficients();
+		int nrRealRoots = 0;
+		if (roots.length > 1) {
+			nrRealRoots = getRoots(roots, eqnSolver);
+		}
+
+		for (int i = 0; i < nrRealRoots; ++i) {
+			if (DoubleUtil.isGreater(roots[i], max, Kernel.STANDARD_PRECISION)
+					|| DoubleUtil.isGreater(min, roots[i], Kernel.STANDARD_PRECISION)) {
+				roots[i] = Double.NaN;
+			}
+		}
+		makePoints(roots, nrRealRoots);
+	}
+
+	private static double distancePairSq(double[] p1, double[] p2) {
+		return (p1[0] - p2[0]) * (p1[0] - p2[0]) + (p1[1] - p2[1]) * (p1[1] - p2[1]);
+	}
+
+	private void makePoints(double[] roots, int nrRealRoots) {
+		List<double[]> valPairs = new ArrayList<>();
+		int len;
+		for (int i = 0; i < nrRealRoots; i++) {
+			len = getNrPoints(roots[i]);
+			for (int j = 0; j < len; j++) {
+				double[] pair = getXYPair(roots[i], j);
+				for (int k = 0; k < valPairs.size(); k++) {
+					if (distancePairSq(pair, valPairs.get(k)) < Kernel.STANDARD_PRECISION) {
+						pair = null;
+						break;
+					}
+				}
+				if (pair != null) {
+					valPairs.add(pair);
+				}
+			}
+		}
+		setPoints(valPairs);
+	}
+
+	/**
+	 * @param labels
+	 *            output labels
+	 */
+	public void setLabels(String[] labels) {
+		points.setLabels(labels);
+		update();
+	}
+
+	protected void setPoints(List<double[]> valPairs) {
+		points.adjustOutputSize(valPairs.size());
+		for (int i = 0; i < valPairs.size(); i++) {
+			points.getElement(i).setCoords(valPairs.get(i)[0], valPairs.get(i)[1], 1);
+		}
+
+		if (setLabels) {
+			points.updateLabels();
+		}
+	}
+
+	/**
+	 * @param t
+	 *            root of PolynomialFunction
+	 * @return number of corresponding outputPoints
+	 */
+	protected int getNrPoints(double t) {
+		return 1;
+	}
+
+	/**
+	 * @param t
+	 *            root of PolynomialFunction
+	 * @param idx
+	 *            index
+	 * @return Y-value corresponding to t and idx.
+	 */
+	protected double getYValue(double t, int idx) {
+		return getYValue(t);
+	}
+
+	/**
+	 * @param t
+	 *            root of PolynomialFunction
+	 * @return the corresponding Y-value
+	 */
+	protected abstract double getYValue(double t);
+
+	/**
+	 * @param t
+	 *            root of PolynomialFunction
+	 * @return the corresponding X-value
+	 */
+	protected double getXValue(double t) {
+		return t;
+	}
+
+	/**
+	 * @param t
+	 *            root of PolynomialFunction
+	 * @param idx
+	 *            index
+	 * @return X-value corresponding to t and idx.
+	 */
+	protected double getXValue(double t, int idx) {
+		return getXValue(t);
+	}
+
+	protected double[] getXYPair(double t, int idx) {
+		return new double[] {getXValue(t, idx), getYValue(t, idx)};
+	}
+
+	@Override
+	public Commands getClassName() {
+		return Commands.Roots;
+	}
+}

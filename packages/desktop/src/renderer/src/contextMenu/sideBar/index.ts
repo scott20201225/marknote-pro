@@ -2,6 +2,7 @@ import {
   SEPARATOR,
   getNewFile,
   getNewDrawing,
+  getNewGeoGebraMenu,
   getNewDirectory,
   getNewGroup,
   getNewArea,
@@ -59,6 +60,7 @@ export const showContextMenu = (
   if (kind === 'root') {
     contextItems = [
       getNewDrawing(),
+      getNewGeoGebraMenu(),
       getNewGroup(),
       getRENAME(),
       SEPARATOR,
@@ -91,6 +93,7 @@ export const showContextMenu = (
   } else if (kind === 'area') {
     contextItems = [
       getNewDrawing(),
+      getNewGeoGebraMenu(),
       getNewDocument(),
       SEPARATOR,
       getExpandAll(),
@@ -109,6 +112,7 @@ export const showContextMenu = (
     contextItems = [
       getNewDocument(),
       getNewDrawing(),
+      getNewGeoGebraMenu(),
       SEPARATOR,
       getCOPY(),
       getMOVE_TO(),
@@ -124,6 +128,7 @@ export const showContextMenu = (
     contextItems = [
       getNewFile(),
       getNewDrawing(),
+      getNewGeoGebraMenu(),
       getNewDirectory(),
       SEPARATOR,
       getCOPY(),
@@ -162,6 +167,7 @@ export const showNoteListContextMenu = (
   if (kind === 'root') {
     contextItems = [
       getNewDrawing(),
+      getNewGeoGebraMenu(),
       getNewGroup(),
       SEPARATOR,
       getRENAME(),
@@ -186,6 +192,7 @@ export const showNoteListContextMenu = (
   } else if (kind === 'area') {
     contextItems = [
       getNewDrawing(),
+      getNewGeoGebraMenu(),
       getNewDocument(),
       SEPARATOR,
       getMOVE_TO(),
@@ -201,6 +208,7 @@ export const showNoteListContextMenu = (
     contextItems = [
       getNewDocument(),
       getNewDrawing(),
+      getNewGeoGebraMenu(),
       SEPARATOR,
       getMOVE_TO(),
       SEPARATOR,

@@ -7,13 +7,16 @@ import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { usePreferencesStore } from '@/store/preferences'
 import { useLayoutStore } from '@/store/layout'
+import { useEditorStore } from '@/store/editor'
 import type { DrawioBounds } from '@shared/types/ipc'
 import { getDrawioConfiguration } from '@/util/drawioConfiguration'
 
 const surfaceRef = ref<HTMLDivElement | null>(null)
 const preferencesStore = usePreferencesStore()
 const layoutStore = useLayoutStore()
+const editorStore = useEditorStore()
 const { zoom } = storeToRefs(preferencesStore)
+const { currentFile } = storeToRefs(editorStore)
 const { preferenceLoaded } = storeToRefs(preferencesStore)
 const { rightColumn, sideBarWidth, noteNavigationMode, noteListWidth } = storeToRefs(layoutStore)
 let boundsSyncAnimationFrame = 0
@@ -56,6 +59,10 @@ const showDrawio = async (): Promise<void> => {
   if (bounds) await window.electron.ipcRenderer.invoke('mt::drawio::show', bounds)
 }
 
+const resumeAfterHostOverlay = (): void => {
+  if (currentFile.value?.isDrawing) void showDrawio()
+}
+
 const syncBounds = (): void => {
   const bounds = getBounds()
   if (bounds) window.electron.ipcRenderer.send('mt::drawio::set-bounds', bounds)
@@ -86,6 +93,7 @@ onMounted(() => {
     void showDrawio()
   })
   window.addEventListener('resize', syncBounds)
+  window.addEventListener('marknotepro:resume-native-editor', resumeAfterHostOverlay)
   themeObserver = new MutationObserver(() => syncConfiguration())
   themeObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] })
 })
@@ -121,6 +129,7 @@ onBeforeUnmount(() => {
   themeObserver?.disconnect()
   themeObserver = null
   window.removeEventListener('resize', syncBounds)
+  window.removeEventListener('marknotepro:resume-native-editor', resumeAfterHostOverlay)
   removeOpenedListener?.()
   removeOpenedListener = null
   window.electron.ipcRenderer.send('mt::drawio::hide')

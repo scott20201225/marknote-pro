@@ -1,0 +1,537 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.io.layout;
+
+import org.geogebra.common.io.XMLStringBuilder;
+import org.geogebra.common.javax.swing.SwingConstants;
+import org.geogebra.common.kernel.ConstructionDefaults;
+import org.geogebra.common.main.App;
+import org.geogebra.common.main.App.InputPosition;
+
+/**
+ * Structure for a perspective which consists of the docks and the toolbar
+ * definition. This structure is used to save and load perspectives, however, no
+ * objects are serialized - this class stores strings only to save and restore
+ * the layout of the user. This class is not intended to be updated in realtime
+ * too. Perspectives may be loaded at the beginning and in between, but the
+ * initially loaded perspective just needs to be updated if the user wants to
+ * save his perspective.
+ *
+ * @author Florian Sonner
+ */
+public class Perspective {
+
+	/**
+	 * The information about every dock split pane
+	 */
+	private DockSplitPaneData[] splitPaneData;
+
+	/**
+	 * The information about every dock panel.
+	 */
+	private DockPanelData[] dockPanelData;
+
+	/**
+	 * The definition string for the toolbar.
+	 */
+	private String toolbarDefinition;
+
+	/**
+	 * If the tool bar should be displayed.
+	 */
+	private boolean showToolBar;
+
+	/**
+	 * If the grid should be displayed.
+	 */
+	private boolean showGrid;
+
+	/**
+	 * If the axes should be displayed.
+	 */
+	private boolean showAxes;
+
+	/**
+	 * If the axes should be displayed.
+	 */
+	private boolean unitAxesRatio;
+
+	/**
+	 * If the input panel should be displayed.
+	 */
+	private boolean showInputPanel;
+
+	/**
+	 * If the command list should be displayed.
+	 */
+	private boolean showInputPanelCommands;
+
+	/**
+	 * If the input panel should be displayed on top or at the bottom of the
+	 * screen.
+	 */
+	private InputPosition showInputPanelOnTop = InputPosition.algebraView;
+
+	// needs to be initialized so that files from ggb32 show the toolbar #2993
+	private int toolBarPosition = SwingConstants.NORTH;
+
+	private boolean showToolBarHelp;
+
+	private boolean showDockBar;
+
+	private boolean isDockBarEast;
+
+	private int labelingStyle = ConstructionDefaults.LABEL_VISIBLE_NOT_SET;
+
+	private final int defaultID;
+	/** translation keys for perspective names */
+	private static final String[] perspectiveNames = new String[] {
+		"Custom",
+		"Graphing",
+		"Perspective.Geometry",
+		"Perspective.Spreadsheet",
+		"Perspective.CAS",
+		"Perspective.3DGraphics",
+		"Perspective.Probability",
+		"Notes",
+		"Scientific",
+		"Evaluator"
+	};
+	/** slugs for web app url / tutorials url */
+	private static final String[] perspectiveSlugs =
+			new String[] {"graphing", "geometry", "spreadsheet", "cas", "3d", "probability", "notes"};
+	/** graphing calculator */
+	public static final int GRAPHING = 1;
+	/** geometry calculator */
+	public static final int GEOMETRY = 2;
+	/** spreadsheet calc */
+	public static final int SPREADSHEET = 3;
+	/** CAS calculator */
+	public static final int CAS = 4;
+	/** 3D calculator */
+	public static final int GRAPHER_3D = 5;
+	/** probability calculator */
+	public static final int PROBABILITY = 6;
+	/** Whiteboard */
+	public static final int NOTES = 7;
+	/** Scientific calc */
+	public static final int SCIENTIFIC = 8;
+	/** Evaluator */
+	public static final int EVALUATOR = 9;
+
+	/**
+	 * Create a perspective with default layout.
+	 *
+	 * @param defaultID
+	 *            id
+	 * @param splitPaneInfo
+	 *            split settings
+	 * @param dockPanelInfo
+	 *            dock panel settings
+	 * @param toolbarDefinition
+	 *            toolbar string
+	 * @param showToolBar
+	 *            true to show toolbar
+	 * @param showGrid
+	 *            true to show grid
+	 * @param showAxes
+	 *            true to show axes
+	 * @param showInputPanel
+	 *            true to show input bar
+	 * @param showInputPanelCommands
+	 *            true to show input help
+	 * @param inputPosition
+	 *            position of the InputField/InputBox
+	 */
+	public Perspective(
+			int defaultID,
+			DockSplitPaneData[] splitPaneInfo,
+			DockPanelData[] dockPanelInfo,
+			String toolbarDefinition,
+			boolean showToolBar,
+			boolean showGrid,
+			boolean showAxes,
+			boolean showInputPanel,
+			boolean showInputPanelCommands,
+			InputPosition inputPosition) {
+		this.defaultID = defaultID;
+		this.splitPaneData = splitPaneInfo;
+		this.setDockPanelData(dockPanelInfo);
+		this.setToolbarDefinition(toolbarDefinition);
+		this.setShowToolBar(showToolBar);
+		this.showAxes = showAxes;
+		this.setShowGrid(showGrid);
+		this.showInputPanel = showInputPanel;
+		this.showInputPanelCommands = showInputPanelCommands;
+		this.showInputPanelOnTop = inputPosition;
+
+		// default layout options
+		this.setShowToolBar(true);
+		this.setShowToolBarHelp(false);
+		this.setToolBarPosition(SwingConstants.NORTH);
+		this.setDockBarEast(true);
+		this.setShowDockBar(true);
+	}
+
+	/**
+	 * Create an empty perspective.
+	 */
+	public Perspective() {
+		defaultID = 0;
+	}
+
+	/**
+	 * @return The ID of the perspective.
+	 */
+	public String getId() {
+		return perspectiveNames[defaultID];
+	}
+
+	/**
+	 * @return perspective URL slug
+	 */
+	public String getSlug() {
+		return perspectiveSlugs[defaultID - 1];
+	}
+
+	/**
+	 * @param splitPaneData
+	 *            The new description of the split panes.
+	 */
+	public void setSplitPaneData(DockSplitPaneData[] splitPaneData) {
+		this.splitPaneData = splitPaneData;
+	}
+
+	/**
+	 * @return The description of all split panes
+	 */
+	public DockSplitPaneData[] getSplitPaneData() {
+		return splitPaneData;
+	}
+
+	/**
+	 * @return The description of all DockPanels in the window.
+	 */
+	public DockPanelData[] getDockPanelData() {
+		return dockPanelData;
+	}
+
+	/**
+	 * @param dockPanelData
+	 *            the dockPanelInfo to set
+	 */
+	public void setDockPanelData(DockPanelData[] dockPanelData) {
+		this.dockPanelData = dockPanelData;
+	}
+
+	/**
+	 * @param showToolBar
+	 *            true to show toolbar
+	 */
+	public void setShowToolBar(boolean showToolBar) {
+		this.showToolBar = showToolBar;
+	}
+
+	/**
+	 * @return If the tool bar is visible.
+	 */
+	public boolean getShowToolBar() {
+		return showToolBar;
+	}
+
+	/**
+	 * @param toolbarDefinition
+	 *            The definition string of the toolbar.
+	 */
+	public void setToolbarDefinition(String toolbarDefinition) {
+		this.toolbarDefinition = toolbarDefinition;
+	}
+
+	/**
+	 * @return The definition string of the toolbar.
+	 */
+	public String getToolbarDefinition() {
+		return toolbarDefinition;
+	}
+
+	/**
+	 * @param showGrid
+	 *            If the grid should be displayed in this perspective.
+	 */
+	public void setShowGrid(boolean showGrid) {
+		this.showGrid = showGrid;
+	}
+
+	/**
+	 * @return If the grid should be displayed.
+	 */
+	public boolean getShowGrid() {
+		return showGrid;
+	}
+
+	/**
+	 * @param showAxes
+	 *            If the axes should be displayed.
+	 */
+	public void setShowAxes(boolean showAxes) {
+		this.showAxes = showAxes;
+	}
+
+	/**
+	 * @return If the axes should be displayed.
+	 */
+	public boolean getShowAxes() {
+		return showAxes;
+	}
+
+	/**
+	 * @param showInputPanel
+	 *            If the input panel should be displayed.
+	 */
+	public void setShowInputPanel(boolean showInputPanel) {
+		this.showInputPanel = showInputPanel;
+	}
+
+	/**
+	 * @return If the input panel should be displayed.
+	 */
+	public boolean getShowInputPanel() {
+		return showInputPanel;
+	}
+
+	/**
+	 * @param showInputPanelCommands
+	 *            true to show input help
+	 */
+	public void setShowInputPanelCommands(boolean showInputPanelCommands) {
+		this.showInputPanelCommands = showInputPanelCommands;
+	}
+
+	/**
+	 * @return If the command list should be displayed in the input panel.
+	 */
+	public boolean getShowInputPanelCommands() {
+		return showInputPanelCommands;
+	}
+
+	/**
+	 * @param inputPosition
+	 *            new position of inputPanel (respective inputBox)
+	 */
+	public void setInputPosition(InputPosition inputPosition) {
+		this.showInputPanelOnTop = inputPosition;
+	}
+
+	/**
+	 * @return If the input panel should be displayed at the top of the screen
+	 *         instead of the bottom.
+	 */
+	public InputPosition getInputPosition() {
+		return showInputPanelOnTop;
+	}
+
+	/**
+	 * @return toolbar position, see {@link #setToolBarPosition(int)}
+	 */
+	public int getToolBarPosition() {
+		return toolBarPosition;
+	}
+
+	/**
+	 * @param toolBarPosition
+	 *            1 = NORTH, 3=EAST, 5=SOUTH, 7=WEST
+	 */
+	public void setToolBarPosition(int toolBarPosition) {
+		this.toolBarPosition = toolBarPosition;
+	}
+
+	/**
+	 * @return whether tool help should be shown
+	 */
+	public boolean getShowToolBarHelp() {
+		return showToolBarHelp;
+	}
+
+	/**
+	 * @param showToolBarHelp
+	 *            whether toolbar help is shown
+	 */
+	public void setShowToolBarHelp(boolean showToolBarHelp) {
+		this.showToolBarHelp = showToolBarHelp;
+	}
+
+	/**
+	 * @return whether dockbar is shown
+	 */
+	public boolean getShowDockBar() {
+		return showDockBar;
+	}
+
+	/**
+	 * @param showDockBar
+	 *            whether dockbar is shown
+	 */
+	public void setShowDockBar(boolean showDockBar) {
+		this.showDockBar = showDockBar;
+	}
+
+	/**
+	 * @return true for dockbar on eastern side
+	 */
+	public boolean isDockBarEast() {
+		return isDockBarEast;
+	}
+
+	/**
+	 * @param isDockBarEast
+	 *            true to place the dockbar east, false for west
+	 */
+	public void setDockBarEast(boolean isDockBarEast) {
+		this.isDockBarEast = isDockBarEast;
+	}
+
+	// *********************************************************
+	// XML
+	// *********************************************************
+
+	/**
+	 * @return The settings of this perspective as XML.
+	 */
+	public String getXml() {
+		XMLStringBuilder sb = new XMLStringBuilder();
+		getXml(sb);
+		return sb.toString();
+	}
+
+	/**
+	 * @param sb The builder for appending settings of this perspective as XML.
+	 */
+	public void getXml(XMLStringBuilder sb) {
+
+		sb.startOpeningTag("perspective", 0).attr("id", "tmp").endTag();
+
+		getPanesXML(sb);
+
+		getViewsXML(sb);
+
+		getToolbarXML(sb);
+
+		// algebra input bar
+		sb.startTag("input");
+		sb.attr("show", getShowInputPanel());
+		sb.attr("cmd", getShowInputPanelCommands());
+		sb.attrRaw(
+				"top",
+				getInputPosition() == InputPosition.top
+						? "true"
+						: getInputPosition() == InputPosition.bottom ? "false" : "algebra");
+		sb.endTag();
+
+		getDockbarXML(sb);
+
+		sb.closeTag("perspective");
+	}
+
+	/**
+	 * @return whether this perspective was defined by the user (as opposed to a default one)
+	 */
+	public boolean isUserDefined() {
+		return defaultID == 0;
+	}
+
+	private void getPanesXML(XMLStringBuilder sb) {
+		sb.startOpeningTag("panes", 1).endTag();
+		for (int i = 0; i < splitPaneData.length; ++i) {
+			splitPaneData[i].getXml(sb);
+		}
+		sb.closeTag("panes");
+	}
+
+	private void getToolbarXML(XMLStringBuilder sb) {
+		// main toolbar
+		sb.startTag("toolbar").attr("show", getShowToolBar());
+		if (getToolbarDefinition() != null) {
+			sb.attrRaw("items", getToolbarDefinition());
+		}
+		sb.attr("position", getToolBarPosition());
+		sb.attr("help", getShowToolBarHelp());
+		sb.endTag();
+	}
+
+	private void getViewsXML(XMLStringBuilder sb) {
+		sb.startOpeningTag("views", 1).endTag();
+		for (int i = 0; i < getDockPanelData().length; ++i) {
+			DockPanelData data = getDockPanelData()[i];
+			if (data.storeXml()) {
+				data.getXml(sb);
+			}
+		}
+		sb.closeTag("views");
+	}
+
+	private void getDockbarXML(XMLStringBuilder sb) {
+		sb.startTag("dockBar")
+				.attr("show", getShowDockBar())
+				.attr("east", isDockBarEast())
+				.endTag();
+	}
+
+	/**
+	 * @param unitAxesRatio
+	 *            the unitAxesRatio to set
+	 */
+	public void setUnitAxesRatio(boolean unitAxesRatio) {
+		this.unitAxesRatio = unitAxesRatio;
+	}
+
+	/**
+	 * @return the unitAxesRatio
+	 */
+	public boolean isUnitAxesRatio() {
+		return unitAxesRatio;
+	}
+
+	/**
+	 * @return whether a view that works with keyboard is showing
+	 */
+	public boolean isKeyboardNeeded() {
+		if (!this.showInputPanel) {
+			return false;
+		}
+		for (DockPanelData dp : this.dockPanelData) {
+			if (dp.getViewId() == App.VIEW_ALGEBRA && dp.isVisible()) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * @return id of this perspective if it's default
+	 */
+	public int getDefaultID() {
+		return defaultID;
+	}
+
+	public int getLabelingStyle() {
+		return labelingStyle;
+	}
+
+	public void setLabelingStyle(int labelingStyle) {
+		this.labelingStyle = labelingStyle;
+	}
+}

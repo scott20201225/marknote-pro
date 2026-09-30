@@ -1,0 +1,334 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.geogebra3D.kernel3D.geos;
+
+import org.geogebra.common.geogebra3D.kernel3D.algos.AlgoLinePoint;
+import org.geogebra.common.io.XMLStringBuilder;
+import org.geogebra.common.kernel.Construction;
+import org.geogebra.common.kernel.PathMover;
+import org.geogebra.common.kernel.PathMoverGeneric;
+import org.geogebra.common.kernel.StringTemplate;
+import org.geogebra.common.kernel.algos.AlgoElement;
+import org.geogebra.common.kernel.arithmetic.ValueType;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.kernel.geos.XMLBuilder;
+import org.geogebra.common.kernel.kernelND.GeoElementND;
+import org.geogebra.common.kernel.kernelND.GeoLineND;
+import org.geogebra.common.kernel.kernelND.GeoPointND;
+import org.geogebra.common.kernel.kernelND.GeoVectorND;
+import org.geogebra.common.kernel.matrix.Coords;
+import org.geogebra.common.plugin.GeoClass;
+import org.geogebra.common.util.ExtendedBoolean;
+import org.geogebra.editor.share.util.Unicode;
+
+/**
+ * 3D line
+ */
+public class GeoLine3D extends GeoCoordSys1D {
+
+	private String parameter = Unicode.lambda_STRING;
+	private boolean showUndefinedInAlgebraView = false;
+
+	/**
+	 * creates a line joining O and I
+	 *
+	 * @param c
+	 *            construction
+	 * @param O
+	 *            start point
+	 * @param I
+	 *            end point
+	 */
+	public GeoLine3D(Construction c, GeoPointND O, GeoPointND I) {
+		super(c, O, I);
+	}
+
+	/**
+	 * @param c
+	 *            construction
+	 */
+	public GeoLine3D(Construction c) {
+		this(c, false);
+	}
+
+	/**
+	 * @param c
+	 *            construction
+	 * @param isIntersection
+	 *            flag for intersection lines
+	 */
+	public GeoLine3D(Construction c, boolean isIntersection) {
+		super(c, isIntersection);
+	}
+
+	/**
+	 * @param c
+	 *            construction
+	 * @param o
+	 *            start point
+	 * @param v
+	 *            direction
+	 */
+	public GeoLine3D(Construction c, Coords o, Coords v) {
+		super(c, o, v);
+	}
+
+	@Override
+	public void setToParametricForm(String parameter) {
+		this.parameter = parameter;
+	}
+
+	@Override
+	public final void setStartPoint(GeoPointND P) {
+		startPoint = P;
+	}
+
+	@Override
+	protected GeoCoordSys1D create(Construction cons1) {
+		return new GeoLine3D(cons1);
+	}
+
+	@Override
+	public GeoClass getGeoClassType() {
+		return GeoClass.LINE3D;
+	}
+
+	@Override
+	public ExtendedBoolean isEqualExtended(GeoElementND geo) {
+		if (geo instanceof GeoLineND) {
+			Coords diff =
+					((GeoLineND) geo).getDirectionInD3().crossProduct(getDirectionInD3().normalize());
+			return ExtendedBoolean.newExtendedBoolean(diff.isZero()
+					&& getCoordSys()
+							.getOrigin()
+							.sub(((GeoLineND) geo).getOrigin())
+							.crossProduct(getDirectionInD3())
+							.isZero());
+		}
+		return ExtendedBoolean.FALSE;
+	}
+
+	/**
+	 * Set whether this line should be visible in AV when undefined
+	 *
+	 * @param flag
+	 *            true to show undefined
+	 */
+	public void showUndefinedInAlgebraView(boolean flag) {
+		showUndefinedInAlgebraView = flag;
+	}
+
+	@Override
+	public boolean showInAlgebraView() {
+		return isDefined() || showUndefinedInAlgebraView;
+	}
+
+	@Override
+	protected boolean showInEuclidianView() {
+		return coordsys.isDefined();
+	}
+
+	@Override
+	public String toValueString(StringTemplate tpl) {
+		return buildValueString(tpl).toString();
+	}
+
+	@Override
+	public final String toString(StringTemplate tpl) {
+
+		StringBuilder sbToString = getSbToString();
+		sbToString.setLength(0);
+		sbToString.append(label);
+		sbToString.append(": "); // TODO use kernel property
+		sbToString.append(buildValueString(tpl));
+		return sbToString.toString();
+	}
+
+	private StringBuilder buildValueString(StringTemplate tpl) {
+
+		StringBuilder sbToString = getSbBuildValueString();
+
+		if (!isDefined()) {
+			sbToString.append("X = (?, ?, ?)");
+			return sbToString;
+		}
+
+		AlgoElement algo = getParentAlgorithm();
+		Coords O = coordsys.getOrigin(); // TODO inhom coords
+		Coords V = coordsys.getVx();
+		if (algo instanceof AlgoLinePoint) {
+			AlgoLinePoint algoLP = (AlgoLinePoint) algo;
+
+			GeoElement[] geos = algoLP.getInput();
+
+			if (geos[0].isGeoPoint() && geos[1].isGeoVector()) {
+
+				// use original coordinates for displaying, not normalized form
+				// for Line[ A, u ]
+
+				GeoPointND pt = (GeoPointND) geos[0];
+				O = pt.getInhomCoordsInD3();
+				GeoVectorND vec = (GeoVectorND) geos[1];
+
+				V = vec.getCoordsInD3();
+			}
+		}
+
+		sbToString.append("X");
+		tpl.appendOptionalSpace(sbToString);
+		sbToString.append("=");
+		tpl.appendOptionalSpace(sbToString);
+		sbToString.append("(");
+		sbToString.append(kernel.format(O.get(1), tpl));
+		coordDelimiter(sbToString, tpl);
+		sbToString.append(kernel.format(O.get(2), tpl));
+		coordDelimiter(sbToString, tpl);
+		sbToString.append(kernel.format(O.get(3), tpl));
+		sbToString.append(")");
+		tpl.appendOptionalSpace(sbToString);
+		sbToString.append("+");
+		tpl.appendOptionalSpace(sbToString);
+		sbToString.append(parameter);
+		if (tpl.hasCASType()) {
+			sbToString.append("*");
+		}
+		sbToString.append(" (");
+		sbToString.append(kernel.format(V.get(1), tpl));
+		coordDelimiter(sbToString, tpl);
+		sbToString.append(kernel.format(V.get(2), tpl));
+		coordDelimiter(sbToString, tpl);
+		sbToString.append(kernel.format(V.get(3), tpl));
+		sbToString.append(")");
+
+		return sbToString;
+	}
+
+	private void coordDelimiter(StringBuilder sbToString, StringTemplate tpl) {
+		sbToString.append(",");
+		tpl.appendOptionalSpace(sbToString);
+	}
+
+	@Override
+	protected void getXMLTags(XMLStringBuilder sb) {
+		super.getXMLTags(sb);
+		getCoordsXML(sb);
+	}
+
+	@Override
+	protected void getStyleXML(XMLStringBuilder sb) {
+		super.getStyleXML(sb);
+		XMLBuilder.appendEquationTypeLine(sb, Form.PARAMETRIC, parameter);
+	}
+
+	/**
+	 * set coords for XML
+	 *
+	 * @param sb
+	 *            string for XML
+	 */
+	protected void getCoordsXML(XMLStringBuilder sb) {
+
+		Coords o = coordsys.getOrigin(); // TODO inhom coords
+		Coords v = coordsys.getVx();
+
+		sb.startTag("coords");
+		sb.attr("ox", o.getX());
+		sb.attr("oy", o.getY());
+		sb.attr("oz", o.getZ());
+		sb.attr("ow", o.getW());
+		sb.attr("vx", v.getX());
+		sb.attr("vy", v.getY());
+		sb.attr("vz", v.getZ());
+		sb.attr("vw", v.getW());
+		sb.endTag();
+	}
+
+	@Override
+	public final boolean isGeoLine() {
+		return true;
+	}
+
+	// Path3D interface
+
+	@Override
+	public PathMover createPathMover() {
+		return new PathMoverGeneric(this);
+	}
+
+	@Override
+	public double getMaxParameter() {
+		return Double.POSITIVE_INFINITY;
+	}
+
+	@Override
+	public double getMinParameter() {
+		return Double.NEGATIVE_INFINITY;
+	}
+
+	@Override
+	public boolean isClosedPath() {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public boolean isValidCoord(double x) {
+		return true;
+	}
+
+	@Override
+	public final void removePointOnLine(GeoPointND p) {
+		// TODO
+	}
+
+	@Override
+	public boolean respectLimitedPath(double param) {
+		return true;
+	}
+
+	@Override
+	public GeoPointND setStandardStartPoint() {
+		// TODO Auto-generated method stub
+
+		return startPoint;
+	}
+
+	@Override
+	public boolean isParametric() {
+		return true;
+	}
+
+	@Override
+	public ValueType getValueType() {
+		return ValueType.PARAMETRIC3D;
+	}
+
+	@Override
+	public ExtendedBoolean isCongruent(GeoElement geo) {
+		return ExtendedBoolean.newExtendedBoolean(geo.isGeoLine());
+	}
+
+	@Override
+	public Coords getOrigin() {
+		return getCoordSys().getOrigin();
+	}
+
+	@Override
+	public char getLabelDelimiter() {
+		return ':';
+	}
+}

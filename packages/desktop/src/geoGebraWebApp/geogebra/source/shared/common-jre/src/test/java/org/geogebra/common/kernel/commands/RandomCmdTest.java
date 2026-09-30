@@ -1,0 +1,160 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.kernel.commands;
+
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import org.geogebra.common.AppCommonFactory;
+import org.geogebra.common.BaseUnitTest;
+import org.geogebra.common.io.XMLParseException;
+import org.geogebra.common.jre.headless.AppCommon;
+import org.geogebra.common.kernel.StringTemplate;
+import org.geogebra.common.kernel.geos.GeoBoolean;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.kernel.geos.GeoList;
+import org.geogebra.common.kernel.geos.GeoText;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+class RandomCmdTest extends BaseUnitTest {
+
+	@BeforeEach
+	void setSeed() {
+		getApp().setRandomSeed(42);
+	}
+
+	@Override
+	public AppCommon createAppCommon() {
+		return AppCommonFactory.create3D();
+	}
+
+	@Test
+	void randomBetweenShouldBeStable() {
+		shouldBeStable("RandomBetween(1,100)");
+		shouldBeStable("RandomBetween(-1,-100)");
+	}
+
+	@Test
+	void randomPointInShouldBeStable() {
+		shouldBeStable("RandomPointIn(1,2,3,4)");
+		shouldBeStable("RandomPointIn({(1,0),(0,1),(1,1)})");
+		shouldBeStable("RandomPointIn(Polygon((1,0),(0,1),(1,1)))");
+		shouldBeStable("RandomPointIn(xx+yy=4)");
+	}
+
+	@Test
+	void randomBinomialShouldBeStable() {
+		shouldBeStable("RandomBinomial(100, 0.6)");
+	}
+
+	@Test
+	void randomElementShouldBeStable() {
+		shouldBeStable("RandomElement(1..10)");
+		shouldBeStable("RandomElement(Identity(10))");
+		shouldBeStable("RandomElement((1..10, 2..11))");
+		shouldBeStable("RandomElement(2y=(1..10)x)");
+		shouldBeStable("RandomElement(2y=(1..10)x^2)");
+		shouldBeStable("RandomElement(l)");
+		shouldBeStable("RandomElement(y=(1..10)sin(x))");
+		shouldBeStable("RandomElement(Zip(UnicodeToLetter(A),A,65..75))");
+	}
+
+	@Test
+	void shuffleShouldBeStable() {
+		shouldBeStable("Shuffle(1..10)");
+	}
+
+	@Test
+	void sampleShouldBeStable() {
+		shouldBeStable("Sample(1..10,5)");
+		shouldBeStable("Sample(1..10,5,true)");
+	}
+
+	@Test
+	void sampleShouldBeUniqueAfterSetValue() {
+		add("l1=Sample({2,3,4,5,6,7,8,9,10,12,14},RandomBetween(2,3),false)");
+		GeoBoolean check = add("check=Length(l1)==Length(Unique(l1))");
+		add("SetValue(l1,{7,9})");
+		for (int i = 0; i < 20; i++) {
+			assertTrue(check.getBoolean(), "Should be unique on iteration " + i);
+			getApp().getGgbApi().updateConstruction();
+		}
+	}
+
+	@Test
+	void sequenceRandomShouldBeStable() {
+		shouldBeStable("Sequence(RandomBetween(1,100),k,1,5)");
+		shouldBeStable("Sequence(RandomBetween(1,k),k,1,5)");
+	}
+
+	@Test
+	void latexListElementsShouldStayLatex() {
+		addLatex("f", "\\log x");
+		addLatex("g", "\\log y");
+		add("l1={f,g}");
+		GeoList l2 = add("l2=Shuffle(l1)");
+		add("SetValue(l2,{\"\\log x\", \"\\log y\"})");
+		GeoText firstElement = (GeoText) l2.get(0);
+		assertTrue(firstElement.isLaTeX(), "List element should be LaTeX");
+	}
+
+	@Test
+	void randomSequenceShouldStoreValueInXML() {
+		GeoElement list = add("Sequence(RandomUniform(1,3),k,1,5)");
+		assertNotNull(list.getParentAlgorithm());
+		assertThat(list.getParentAlgorithm().getXML(), containsString("randomResult"));
+	}
+
+	@Test
+	void genericSequenceShouldNotStoreValueInXML() {
+		GeoElement list = add("Sequence(SolveODE(x^2, k, k+1, 10, 0.01), k, 1, 10)");
+		assertNotNull(list.getParentAlgorithm());
+		assertThat(list.getParentAlgorithm().getXML(), not(containsString("randomResult")));
+	}
+
+	@Test
+	void numberShouldNotStoreValueInCommandXML() {
+		// simple numbers should store value in <element>, not command's <output>
+		GeoElement num = add("RandomUniform(1,2)");
+		assertNotNull(num.getParentAlgorithm());
+		assertThat(num.getParentAlgorithm().getXML(), not(containsString("randomResult")));
+	}
+
+	private void addLatex(String label, String latex) {
+		GeoText text = add(label + "=\"" + latex + "\"");
+		text.setLaTeX(true, false);
+	}
+
+	private void shouldBeStable(String cmd) {
+		getApp().getKernel().getConstruction().clearConstruction();
+		add("l=Zip(2y=k*x^2+z^2,k,1..10)");
+		GeoElement a = add("a=" + cmd);
+		String old = a.toValueString(StringTemplate.editTemplate);
+		try {
+			getApp().getXMLio().processXMLString(getApp().getXML(), true, false, false);
+		} catch (XMLParseException e) {
+			throw new IllegalStateException(e);
+		}
+		assertEquals(
+				old, lookup("a").toValueString(StringTemplate.editTemplate), cmd + " is not stable");
+	}
+}

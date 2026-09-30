@@ -1,0 +1,149 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.gui.view.algebra.contextmenu.impl;
+
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.TreeSet;
+
+import org.geogebra.common.kernel.arithmetic.Traversing;
+import org.geogebra.common.kernel.arithmetic.variable.Variable;
+import org.geogebra.common.kernel.geos.BaseSymbolicTest;
+import org.geogebra.common.kernel.geos.GeoAngle;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.kernel.geos.GeoNumeric;
+import org.geogebra.common.kernel.geos.GeoSymbolic;
+import org.geogebra.common.scientific.LabelController;
+import org.geogebra.common.util.DoubleUtil;
+import org.geogebra.editor.share.util.Unicode;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+class CreateSliderTest extends BaseSymbolicTest {
+
+	private CreateSlider createSlider;
+
+	@BeforeEach
+	void setUp() {
+		LabelController controller = new LabelController();
+		createSlider = new CreateSlider(ap, controller);
+	}
+
+	@Test
+	void testExecute() {
+		GeoSymbolic symbolic = add("4.669");
+
+		createSlider.execute(symbolic);
+
+		GeoNumeric numeric = (GeoNumeric) lookup("a");
+		assertThat(numeric.isSliderable(), is(true));
+		assertThat(numeric.getLabelSimple(), is("a"));
+	}
+
+	@Test
+	void testIsAvailable() {
+		GeoSymbolic numeric = add("4.669");
+		assertThat(createSlider.isAvailable(numeric), is(true));
+		GeoSymbolic angle = add("4.669" + Unicode.DEGREE_STRING);
+		assertThat(createSlider.isAvailable(angle), is(true));
+	}
+
+	@Test
+	void testAngleSetSlider() {
+		GeoSymbolic symbolic = add("45°");
+		createSlider.execute(symbolic);
+		GeoAngle angle = (GeoAngle) lookup(Unicode.alpha + "");
+		assertTrue(DoubleUtil.isEqual(angle.getIntervalMin(), 0));
+		assertTrue(DoubleUtil.isEqual(angle.getIntervalMax(), 2 * Math.PI));
+	}
+
+	@Test
+	void testUndefinedVariableCannotBecomeSlider() {
+		GeoElement element = add("undefa");
+		assertThat(createSlider.isAvailable(element), is(false));
+	}
+
+	@Test
+	void testFunctionCannotBecomeSlider() {
+		GeoElement element = add("x^2");
+		assertThat(createSlider.isAvailable(element), is(false));
+	}
+
+	@Test
+	void testExpressionCannotBecomeSlider() {
+		String[] expressions = {"1+2", "2*9", "1/4", "5^6"};
+		for (String expression : expressions) {
+			GeoElement element = add(expression);
+			assertThat(createSlider.isAvailable(element), is(false));
+		}
+	}
+
+	@Test
+	void testCommandsCannotBecomeSlider() {
+		String[] expressions = {"Cross((1,2),(3,4))", "Dot((1,2),(3,4))", "Degree(x^2)"};
+		for (String expression : expressions) {
+			GeoElement element = add(expression);
+			assertThat(createSlider.isAvailable(element), is(false));
+		}
+	}
+
+	@Test
+	void testShowAlgebraIsStoredInXML() {
+		GeoElement symbolic = add("a = 5");
+		createSlider.execute(symbolic);
+		GeoNumeric element = (GeoNumeric) lookup("a");
+
+		String xml = element.getXML();
+		assertThat(xml.matches("[\\s\\S]*<slider [^>]* showAlgebra=\"true\"[\\s\\S]*"), is(true));
+	}
+
+	@Test
+	void testUndoRedoKeepsShowingExtendedAV() {
+		GeoElement symbolic = add("a = 5");
+		createSlider.execute(symbolic);
+
+		app.setXML(app.getXML(), true);
+		GeoNumeric element = (GeoNumeric) lookup("a");
+		assertTrue(element.isAVSliderOrCheckboxVisible());
+	}
+
+	@Test
+	void testWithSubstitute() {
+		add("f(x) = xa + 3");
+		GeoSymbolic symbolic = add("b = 1");
+		add("Substitute(f,a,b)");
+
+		createSlider.execute(symbolic);
+
+		GeoNumeric numeric = (GeoNumeric) lookup("b");
+		assertThat(numeric.isSliderable(), is(true));
+	}
+
+	@Test
+	void testAutoCreateSlider() {
+		Variable var = new Variable(kernel, "n");
+		Traversing.ReplaceUndefinedVariables replacer =
+				new Traversing.ReplaceUndefinedVariables(this.kernel, new TreeSet<>(), null);
+		kernel.getConstruction().setSuppressLabelCreation(true);
+		var.traverse(replacer);
+		GeoElement geo = kernel.lookupLabel("n");
+		assertNotNull(geo);
+	}
+}

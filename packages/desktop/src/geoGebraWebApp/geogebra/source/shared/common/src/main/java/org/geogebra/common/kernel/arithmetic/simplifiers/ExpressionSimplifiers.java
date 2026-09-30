@@ -1,0 +1,111 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.kernel.arithmetic.simplifiers;
+
+import java.util.List;
+
+import org.geogebra.common.kernel.StringTemplate;
+import org.geogebra.common.kernel.arithmetic.ExpressionNode;
+import org.geogebra.common.kernel.arithmetic.ExpressionValue;
+import org.geogebra.common.util.debug.Log;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+
+/**
+ * Simplifier list to run on {@link ExpressionNode}
+ */
+public class ExpressionSimplifiers {
+
+	private final List<SimplifyNode> preItems;
+	private final List<SimplifyNode> postItems;
+	private final boolean logEnabled;
+
+	/**
+	 *
+	 * @param utils {@link SimplifyUtils}
+	 * @param logEnabled pass true to enable the process log of simplifiers.
+	 */
+	public ExpressionSimplifiers(@NonNull SimplifyUtils utils, boolean logEnabled) {
+		this.logEnabled = logEnabled;
+
+		// it is checked before any simplification and after all were run if they produced a
+		// trivial node.
+		CheckIfTrivial checkIfTrivial = new CheckIfTrivial(utils);
+		preItems = List.of(checkIfTrivial);
+
+		postItems = List.of(
+				new ReduceRoot(utils),
+				new ExpandAndFactorOutGCD(utils),
+				new FactorOutGCDFromSurd(utils),
+				new CancelGCDInFraction(utils),
+				new PositiveDenominator(utils),
+				new PlusTagOrder(utils),
+				new DistributeMultiplier(utils),
+				new MoveMinusInOut(utils),
+				checkIfTrivial);
+	}
+
+	/**
+	 * Run the simplifiers on node.
+	 * @param node to run on.
+	 * @return the simplified node.
+	 */
+	public @Nullable ExpressionNode run(@Nullable ExpressionValue node) {
+		if (node == null) {
+			return null;
+		}
+
+		return simplifyWith(postItems, node.wrap());
+	}
+
+	private ExpressionNode simplifyWith(List<SimplifyNode> simplifiers, ExpressionNode inputNode) {
+		ExpressionNode node = inputNode;
+		for (SimplifyNode simplifier : simplifiers) {
+			if (simplifier.isAccepted(node)) {
+				String before = node == null ? "" : node.toValueString(StringTemplate.defaultTemplate);
+				node = simplifier.apply(node);
+				logProgress(simplifier.name(), before, node);
+			}
+		}
+		return node;
+	}
+
+	/**
+	 * Log if a simplifier has changed anything on node.
+	 * @param name of the simplifier.
+	 * @param before the serialized value of the node before the simplifier ran.
+	 * @param node the node after the simplifier ran.
+	 */
+	private void logProgress(String name, String before, ExpressionNode node) {
+		if (!logEnabled) {
+			return;
+		}
+		String after = node.toValueString(StringTemplate.defaultTemplate);
+		if (!after.equals(before)) {
+			Log.debug(name + ": " + after + "( =" + node.evaluateDouble() + ")");
+		}
+	}
+
+	/**
+	 * Run this on root node before further simplifications.
+	 * @param root to simplify
+	 * @return the simplified result
+	 */
+	public ExpressionNode runFirst(ExpressionNode root) {
+		return simplifyWith(preItems, root);
+	}
+}

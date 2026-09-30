@@ -1,0 +1,138 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.kernel.interval.function;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import org.geogebra.common.BaseUnitTest;
+import org.geogebra.editor.share.util.Unicode;
+import org.junit.jupiter.api.Test;
+
+class IntervalFunctionSupportTest extends BaseUnitTest {
+	@Test
+	void testSupportedOperations() {
+		shouldBeSupported("x + 1");
+		shouldBeSupported("x - 1");
+		shouldBeSupported("x * 5");
+		shouldBeSupported("x / 5");
+		shouldBeSupported("x^3");
+		shouldBeSupported("nroot(x, 4)");
+		shouldBeSupported("sin(x)");
+		shouldBeSupported("cos(x)");
+		shouldBeSupported("sqrt(x)");
+		shouldBeSupported("tan(x)");
+		shouldBeSupported("exp(x)");
+		shouldBeSupported("log(x)");
+		shouldBeSupported("arccos(x)");
+		shouldBeSupported("arcsin(x)");
+		shouldBeSupported("arctan(x)");
+		shouldBeSupported("abs(x)");
+		shouldBeSupported("cosh(x)");
+		shouldBeSupported("sinh(x)");
+		shouldBeSupported("tanh(x)");
+		shouldBeSupported("log10(x)");
+		shouldBeSupported("log(x)");
+		shouldBeSupported("sin(x)^3");
+		shouldBeSupported("sin(x)^(2/3)");
+		shouldBeSupported("sin(x)^2.141");
+		shouldBeSupported("x^(-2)");
+		shouldBeSupported("sin(e^x)");
+		shouldBeSupported("2^sin(x)");
+		shouldBeSupported("2^x");
+		shouldBeSupported("2^(1/x)");
+		shouldBeSupported("x^" + Unicode.INFINITY);
+	}
+
+	private void shouldBeSupported(String command) {
+		assertTrue(
+				IntervalFunctionSupport.isSupported(add(command)),
+				command + " is not supported, but it should be.");
+	}
+
+	@Test
+	void testSupportOneVariableOnly() {
+		shouldBeNotSupported("x + x");
+		shouldBeNotSupported("x^2 + x");
+		shouldBeNotSupported("abs(x)/x");
+		shouldBeNotSupported("(1/x)sin(x)");
+		shouldBeNotSupported("sin(x^4) + x");
+		shouldBeNotSupported("tan(x)/x");
+		shouldBeNotSupported("x+3x");
+	}
+
+	private void shouldBeNotSupported(String command) {
+		assertFalse(
+				IntervalFunctionSupport.isSupported(add(command)),
+				command + " is supported, but it should not be.");
+	}
+
+	@Test
+	void powerShouldBeNumber() {
+		add("v = (1, 2)");
+		shouldBeNotSupported("x^v");
+		shouldBeNotSupported("abs(x^v)");
+		add("A = (1, 2)");
+		shouldBeNotSupported("x^A");
+	}
+
+	@Test
+	void testUnsupportedOperations() {
+		shouldBeNotSupported("x!");
+		shouldBeNotSupported("gamma(x)");
+		shouldBeNotSupported("x^2x");
+		shouldBeNotSupported("(x * (1, 1)) * (1, 1)");
+		shouldBeNotSupported("acosh(x)");
+		shouldBeNotSupported("sin(x)^(ln(x))");
+		shouldBeNotSupported("Curve(t,t,t,1,5)");
+	}
+
+	@Test
+	void ifsShouldBeNotSupported() {
+		shouldBeNotSupported("If[x < 1, 0]");
+		shouldBeNotSupported("If[x < 1, 2x]");
+		shouldBeNotSupported("If[x < 1, x + 1]");
+		shouldBeNotSupported("If[1 < x, x + 1]");
+		shouldBeNotSupported("If[x != 1, x + 1]");
+		shouldBeNotSupported("If[0 < x < 1, x + 1]");
+		shouldBeNotSupported("If[0 < x < sin(1), x + 1]");
+		shouldBeNotSupported("If[3x < x < 1, x + 1]");
+		shouldBeNotSupported("If[0 < sin(x) < 2, x + 1]");
+		shouldBeNotSupported("If[3x < x <= x, x + 1]");
+		shouldBeNotSupported("If[sin(2) < x, x^2]");
+		shouldBeNotSupported("If[x < sin(2), x^2]");
+		shouldBeNotSupported("If[sin(x) < 0, x + 1]");
+		shouldBeNotSupported("If[0 < sin(x), x + 1]");
+		shouldBeNotSupported("If[x < 1, 2x + x^3]");
+		shouldBeNotSupported("If[1 < x, 2x + x^3]");
+		shouldBeNotSupported("If[x < 1, x, x + 1]");
+		shouldBeNotSupported("If[x != 1, x, x + 1]");
+		shouldBeNotSupported("If[-1 < x < 1, x, x + 1]");
+		shouldBeNotSupported("If[-1 + cos(1) < x < sin(2), x, x + 1]");
+		shouldBeNotSupported("If[sin(x) < 0, 0, 1]");
+		shouldBeNotSupported("If[x < 1, x * sin(x), x + 1]");
+		shouldBeNotSupported("If[x < 1, x, x * sin(x)]");
+		shouldBeNotSupported("If[x < 1, x/tan(x), x * sin(x)]");
+		shouldBeNotSupported("If[x < 1, x * sin(x) + 1]");
+		shouldBeNotSupported("if(x < -2, -2, x > 0, 4)");
+		shouldBeNotSupported("if(x < -2, -2, x > 0, 4, 2)");
+		shouldBeNotSupported("if(x < -2, x + 1, x > 0, x^4)");
+		shouldBeNotSupported("if(-4 < x < -2, 3x, 2 < x < 4, 4x)");
+		shouldBeNotSupported("if(x < -2, x * (ln(x)), x > 0, x^4)");
+		shouldBeNotSupported("if(sin(x) < 0, 1, cos(x) > 0, x^4)");
+	}
+}

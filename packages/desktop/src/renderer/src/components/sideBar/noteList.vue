@@ -30,6 +30,14 @@
         @keydown.enter.prevent="createDocumentFromKeyboard"
         @blur="createDocumentOnBlur"
       />
+      <div v-if="showCreateInput && createCacheType === 'geogebra'" class="geogebra-create-options">
+        <label>{{ t('sideBar.tree.geoGebraMode') }}</label>
+        <select v-model="geoGebraMode">
+          <option v-for="mode of geoGebraModes" :key="mode.value" :value="mode.value">
+            {{ t(mode.labelKey) }}
+          </option>
+        </select>
+      </div>
       <template v-if="visibleFiles.length">
         <div
           v-for="file of visibleFiles"
@@ -93,6 +101,8 @@ import {
   getVisibleNoteFiles
 } from '../../util/noteWorkspace'
 import type { TreeFileNode, TreeNode } from './types'
+import type { GeoGebraMode } from '@shared/types/files'
+import { GEO_GEBRA_MODES } from '../../util/geogebra'
 
 const props = defineProps<{
   projectTree: TreeNode | null
@@ -123,10 +133,33 @@ const visibleFiles = computed<TreeFileNode[]>(() => {
 })
 const showCreateInput = computed<boolean>(() => {
   if (!listTarget.value) return false
-  if (selectedKind.value !== 'area' && selectedKind.value !== 'document') return false
   const cache = createCache.value as { dirname?: string; type?: string }
-  if (cache.type !== 'document' && cache.type !== 'file' && cache.type !== 'drawing') return false
+  const canCreateInList =
+    selectedKind.value === 'area' ||
+    selectedKind.value === 'document' ||
+    ((selectedKind.value === 'root' || selectedKind.value === 'group') &&
+      (cache.type === 'drawing' || cache.type === 'geogebra'))
+  if (!canCreateInList) return false
+  if (
+    cache.type !== 'document' &&
+    cache.type !== 'file' &&
+    cache.type !== 'drawing' &&
+    cache.type !== 'geogebra'
+  )
+    return false
   return cache.dirname === listTarget.value.pathname
+})
+const createCacheType = computed<string | undefined>(() => {
+  return (createCache.value as { type?: string }).type
+})
+const geoGebraModes = GEO_GEBRA_MODES
+const geoGebraMode = computed<GeoGebraMode>({
+  get: () => (createCache.value as { geoGebraMode?: GeoGebraMode }).geoGebraMode ?? 'graphing',
+  set: (value) => {
+    const cache = createCache.value as { dirname?: string; type?: string }
+    if (!cache.dirname || !cache.type) return
+    projectStore.createCache = { dirname: cache.dirname, type: cache.type, geoGebraMode: value }
+  }
 })
 const listTitle = computed(() => {
   if (selectedKind.value === 'area' || selectedKind.value === 'document') {
@@ -227,11 +260,11 @@ const handleFileClick = (file: TreeFileNode): void => {
   projectStore.SELECT_NOTE_PATH(window.path.dirname(pathname))
   projectStore.CHANGE_ACTIVE_ITEM(file)
   if (file.isDrawing || /\.drawio$/i.test(pathname)) {
-    void window.electron.ipcRenderer.invoke(
-      'mt::drawio::open',
-      pathname,
-      getDrawioConfiguration()
-    )
+    void window.electron.ipcRenderer.invoke('mt::drawio::open', pathname, getDrawioConfiguration())
+    return
+  }
+  if (file.isGeoGebra || /\.ggb$/i.test(pathname)) {
+    void window.electron.ipcRenderer.invoke('mt::geogebra::open', pathname)
     return
   }
   const openedTab = tabs.value.find((tab) =>
@@ -293,6 +326,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
   border-left: 1px solid var(--itemBgColor);
   background: var(--sideBarBgColor);
+  color: var(--tree-text-color, var(--sideBarTitleColor));
 }
 
 .note-list-header {
@@ -313,7 +347,7 @@ onBeforeUnmount(() => {
   flex: 1;
   min-width: 0;
   font-size: 12px;
-  color: var(--sideBarTitleColor);
+  color: var(--tree-text-color, var(--sideBarTitleColor));
 }
 
 .note-list-body {
@@ -330,10 +364,27 @@ onBeforeUnmount(() => {
   height: 22px;
   outline: none;
   padding: 0 8px;
-  color: var(--sideBarColor);
+  color: var(--tree-text-color, var(--sideBarTitleColor));
   border: 1px solid var(--floatBorderColor);
   background: var(--inputBgColor);
   border-radius: 3px;
+}
+
+.geogebra-create-options {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 12px 8px;
+  font-size: 12px;
+  color: var(--tree-text-color, var(--sideBarTitleColor));
+}
+
+.geogebra-create-options select {
+  min-width: 130px;
+  flex: 1;
+  color: inherit;
+  background: var(--editorBgColor);
+  border: 1px solid var(--floatBorderColor);
 }
 
 .note-list-item {
@@ -342,6 +393,7 @@ onBeforeUnmount(() => {
   min-height: 32px;
   padding: 0 12px;
   cursor: default;
+  color: var(--tree-text-color, var(--sideBarTitleColor));
 }
 
 .note-list-item:hover {
@@ -350,6 +402,10 @@ onBeforeUnmount(() => {
 
 .note-list-item.current {
   background: var(--sideBarItemHoverBgColor);
+  color: var(--themeColor);
+}
+
+.note-list-item.current .note-list-name {
   color: var(--themeColor);
 }
 
@@ -370,21 +426,22 @@ onBeforeUnmount(() => {
   outline: none;
   border: 1px solid var(--floatBorderColor);
   border-radius: 3px;
-  color: var(--sideBarTitleColor) !important;
+  color: var(--tree-text-color, var(--sideBarTitleColor)) !important;
   background-color: var(--inputBgColor) !important;
-  -webkit-text-fill-color: var(--sideBarTitleColor);
+  -webkit-text-fill-color: var(--tree-text-color, var(--sideBarTitleColor));
   caret-color: var(--themeColor);
   font: inherit;
 }
 
 .note-list-main > input.rename::selection {
-  color: var(--sideBarTitleColor);
+  color: var(--tree-text-color, var(--sideBarTitleColor));
   background-color: var(--themeColor);
 }
 
 .note-list-name {
   flex: 1;
   min-width: 0;
+  color: var(--tree-text-color, var(--sideBarTitleColor));
 }
 
 .note-action-button {
@@ -398,13 +455,13 @@ onBeforeUnmount(() => {
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: var(--sideBarIconColor);
+  color: var(--tree-icon-color, var(--sideBarIconColor));
   cursor: pointer;
 }
 
 .note-action-button:hover {
   background: var(--sideBarItemHoverBgColor);
-  color: var(--sideBarTitleColor);
+  color: var(--tree-text-color, var(--sideBarTitleColor));
 }
 
 .note-list-empty {

@@ -1,0 +1,188 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.gui.dialog.options.model;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
+import org.geogebra.common.BaseUnitTest;
+import org.geogebra.common.kernel.geos.GeoConic;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.kernel.geos.GeoFunction;
+import org.geogebra.common.kernel.geos.GeoLine;
+import org.geogebra.common.main.settings.config.AppConfigGeometry;
+import org.geogebra.common.main.settings.config.AppConfigGraphing;
+import org.geogebra.common.properties.impl.objects.IsFixedObjectProperty;
+import org.geogebra.common.properties.impl.objects.delegate.NotApplicablePropertyException;
+import org.junit.jupiter.api.Test;
+
+class FixUnfixTest extends BaseUnitTest {
+
+	@Test
+	void testDefaultFixForFunctionGraphing() {
+		getApp().setConfig(new AppConfigGraphing());
+		assertTrue(getApp().getConfig().isObjectDraggingRestricted());
+
+		GeoFunction function = add("f(x) = x+1");
+		GeoConic conic = add("x*x+y*y=5");
+		GeoLine line = add("y=5");
+
+		assertTrue(function.isLocked());
+		assertTrue(conic.isLocked());
+		assertTrue(line.isLocked());
+	}
+
+	@Test
+	void testDefaultFixForFunctionGeometry() {
+		getApp().setConfig(new AppConfigGeometry());
+		assertFalse(getApp().getSettings().getAlgebra().isEquationChangeByDragRestricted());
+
+		GeoFunction function = add("f(x) = x+1");
+		GeoConic conic = add("x*x+y*y=5");
+		GeoLine line = add("y=5");
+
+		assertTrue(function.isLocked());
+		assertTrue(conic.isLocked());
+		assertTrue(line.isLocked());
+	}
+
+	@Test
+	void testUnfixForFunctionGraphing() {
+		getApp().setConfig(new AppConfigGraphing());
+
+		GeoFunction function = add("f(x) = x+1");
+		GeoConic conic = add("x*x+y*y=5");
+		GeoLine line = add("y=5");
+
+		function.setFixed(false);
+		conic.setFixed(false);
+		line.setFixed(false);
+
+		assertTrue(function.isLocked());
+		assertTrue(conic.isLocked());
+		assertTrue(line.isLocked());
+	}
+
+	@Test
+	void testUnfixForFunctionGeometry() {
+		getApp().setConfig(new AppConfigGeometry());
+
+		GeoFunction function = add("f(x) = x+1");
+		GeoConic conic = add("x*x+y*y=5");
+		GeoLine line = add("y=5");
+
+		function.setFixed(false);
+		conic.setFixed(false);
+		line.setFixed(false);
+
+		assertFalse(function.isLocked());
+		assertFalse(conic.isLocked());
+		assertFalse(line.isLocked());
+	}
+
+	@Test
+	void testFixHiddenGraphing() {
+		getApp().setConfig(new AppConfigGraphing());
+
+		GeoFunction function = add("f(x) = x+1");
+		GeoConic conic = add("x*x+y*y=5");
+		GeoLine line = add("y=5");
+
+		GeoElement[] geos = new GeoElement[] {function, conic, line};
+
+		for (GeoElement geo : geos) {
+			assertThrows(
+					NotApplicablePropertyException.class,
+					() -> new IsFixedObjectProperty(getLocalization(), geo));
+		}
+	}
+
+	@Test
+	void testFixHiddenGeometry() {
+		getApp().setConfig(new AppConfigGeometry());
+
+		GeoFunction function = add("f(x) = x+1");
+		GeoConic conic = add("x*x+y*y=5");
+		GeoLine line = add("y=5");
+
+		try {
+			new IsFixedObjectProperty(getLocalization(), function);
+			new IsFixedObjectProperty(getLocalization(), conic);
+			new IsFixedObjectProperty(getLocalization(), line);
+		} catch (NotApplicablePropertyException e) {
+			fail(e.getMessage());
+		}
+	}
+
+	@Test
+	void testFixedPropertyFunctionInGraphing() {
+		getApp().setConfig(new AppConfigGraphing());
+		assertTrue(getApp().getSettings().getAlgebra().isEquationChangeByDragRestricted());
+
+		GeoFunction function = add("f(x) = x+1");
+		GeoConic conic = add("x*x+y*y=5");
+		GeoLine line = add("y=5");
+		FixObjectModel fixObjectModel = getModel();
+		Object[] geos = new Object[] {function, conic, line};
+
+		fixObjectModel.setGeos(geos);
+		fixObjectModel.updateProperties();
+
+		for (int i = 0; i < geos.length; ++i) {
+			assertTrue(fixObjectModel.getValueAt(i));
+			assertFalse(fixObjectModel.isValidAt(i));
+		}
+	}
+
+	@Test
+	void testFixedPropertyFunctionInGeometry() {
+		getApp().setConfig(new AppConfigGeometry());
+		assertFalse(getApp().getSettings().getAlgebra().isEquationChangeByDragRestricted());
+
+		GeoFunction function = add("f(x) = x+1");
+		GeoConic conic = add("x*x+y*y=5");
+		GeoLine line = add("y=5");
+		FixObjectModel fixObjectModel = getModel();
+		Object[] geos = new Object[] {function, conic, line};
+
+		fixObjectModel.setGeos(geos);
+		fixObjectModel.updateProperties();
+
+		for (int i = 0; i < geos.length; ++i) {
+			assertTrue(fixObjectModel.getValueAt(i));
+			assertTrue(fixObjectModel.isValidAt(i));
+		}
+	}
+
+	private FixObjectModel getModel() {
+		return new FixObjectModel(
+				new BooleanOptionModel.IBooleanOptionListener() {
+					@Override
+					public void updateCheckbox(boolean isEqual) {
+						// stub
+					}
+
+					@Override
+					public Object updatePanel(Object[] geos2) {
+						return null;
+					}
+				},
+				getApp());
+	}
+}

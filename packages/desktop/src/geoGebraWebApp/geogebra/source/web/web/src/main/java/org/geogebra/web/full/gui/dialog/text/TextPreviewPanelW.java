@@ -1,0 +1,254 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.web.full.gui.dialog.text;
+
+import org.geogebra.common.awt.AwtFactory;
+import org.geogebra.common.awt.GColor;
+import org.geogebra.common.awt.GFont;
+import org.geogebra.common.awt.GRectangle;
+import org.geogebra.common.euclidian.EuclidianController;
+import org.geogebra.common.euclidian.EuclidianStatic;
+import org.geogebra.common.euclidian.EuclidianView;
+import org.geogebra.common.euclidian.draw.DrawText;
+import org.geogebra.common.gui.dialog.TextPreviewer;
+import org.geogebra.common.kernel.Kernel;
+import org.geogebra.common.kernel.geos.GeoText;
+import org.geogebra.common.main.App;
+import org.geogebra.common.main.settings.EuclidianSettings;
+import org.geogebra.web.html5.euclidian.EuclidianControllerW;
+import org.geogebra.web.html5.euclidian.EuclidianPanelWAbstract;
+import org.geogebra.web.html5.euclidian.EuclidianViewW;
+import org.gwtproject.canvas.client.Canvas;
+import org.gwtproject.dom.style.shared.Position;
+import org.gwtproject.user.client.ui.AbsolutePanel;
+import org.gwtproject.user.client.ui.Panel;
+import org.gwtproject.user.client.ui.Widget;
+
+/**
+ *
+ * Web implementation of TextPreviewPanel
+ *
+ * @author G. Sturr
+ *
+ */
+public final class TextPreviewPanelW extends TextPreviewer {
+
+	private TextPreviewEuclidianViewPanelW evPanel;
+
+	/**
+	 * @param kernel
+	 *            kernel
+	 */
+	public TextPreviewPanelW(Kernel kernel) {
+		super(kernel);
+	}
+
+	/**
+	 * @return Widget that encloses the EuclidianView
+	 */
+	public Widget getPanel() {
+		return getEVPanel();
+	}
+
+	/**
+	 * Updates the preferred size of this panel to match the estimated size of
+	 * the given preview geo. This forces the enclosing scrollpane to show
+	 * scrollbars when the size of the preview geo grows larger than the
+	 * scrollpane viewport.
+	 *
+	 * Note: The preview geo uses absolute screen coords, so we can't easily get
+	 * the bounding box dimensions and must use dummy containers to estimate
+	 * these dimensions.
+	 *
+	 * @param previewGeo
+	 *            preview content
+	 */
+	@Override
+	protected void updateViewportSize(GeoText previewGeo) {
+
+		int padding = 5; // account for inset
+
+		boolean isLatex = previewGeo.isLaTeX();
+		boolean serif = previewGeo.isSerifFont();
+
+		int size = (int) (previewGeo.getFontSizeMultiplier() * getApp().getFontSize());
+		GFont textFont = getApp().getFontCommon(serif, previewGeo.getFontStyle(), size);
+
+		GRectangle rect = AwtFactory.getPrototype().newRectangle();
+		if (isLatex) {
+			EuclidianStatic.drawMultilineLaTeX(
+					getApp(),
+					ev.getTempGraphics2D(textFont),
+					previewGeo,
+					ev.getTempGraphics2D(textFont),
+					textFont,
+					GColor.BLACK,
+					GColor.WHITE,
+					previewGeo.getTextString(),
+					0,
+					0,
+					serif,
+					null,
+					rect);
+
+		} else {
+			EuclidianStatic.drawMultiLineText(
+					getApp(),
+					previewGeo.getTextString(),
+					0,
+					0,
+					((EuclidianViewW) ev).getG2P(),
+					serif,
+					textFont,
+					rect,
+					null,
+					DrawText.DEFAULT_MARGIN);
+		}
+		int w = (int) rect.getWidth() + padding;
+		int h = (int) rect.getHeight() + padding;
+		((EuclidianViewW) ev).setPreferredSize(w, h);
+		evPanel.setSize(w + "px", h + "px");
+	}
+
+	@Override
+	protected void removeEVMouseListeners() {
+		// nothing to do here
+	}
+
+	@Override
+	protected EuclidianViewW getEuclidianView() {
+		if (ev == null) {
+			ev = new PreviewEuclidianView(
+					getEVPanel(), new EuclidianControllerW(kernel), EuclidianView.EVNO_GENERAL, null);
+		}
+		return (EuclidianViewW) ev;
+	}
+
+	private TextPreviewEuclidianViewPanelW getEVPanel() {
+		if (evPanel == null) {
+			evPanel = new TextPreviewEuclidianViewPanelW();
+		}
+		return evPanel;
+	}
+
+	/**
+	 * Update UI size
+	 */
+	public void onResize() {
+		getEVPanel().onResize();
+	}
+
+	/**
+	 * Extension of EuclidianViewW for displaying preview text strings.
+	 */
+	private static final class PreviewEuclidianView extends EuclidianViewW {
+
+		private PreviewEuclidianView(
+				TextPreviewEuclidianViewPanelW panel,
+				EuclidianController ec,
+				int evno,
+				EuclidianSettings settings) {
+			super(panel, ec, evno, settings);
+
+			// the show axis and show grid parameters currently do nothing, so
+			// we do it here
+			this.setShowAxes(false, false);
+			this.showGrid(false);
+		}
+
+		/**
+		 * Overrides attachView with an empty method to prevent this panel from
+		 * attaching to the kernel
+		 */
+		@Override
+		public void attachView() {
+			// do nothing
+		}
+
+		@Override
+		public int getViewID() {
+			return App.VIEW_TEXT_PREVIEW;
+		}
+
+		@Override
+		public boolean isPlotPanel() {
+			return true;
+		}
+	}
+
+	/**
+	 * Panel for EuclidianView.
+	 */
+	private final class TextPreviewEuclidianViewPanelW extends AbsolutePanel
+			implements EuclidianPanelWAbstract {
+
+		private final Canvas canvas;
+
+		private TextPreviewEuclidianViewPanelW() {
+			super();
+			canvas = Canvas.createIfSupported();
+			canvas.getElement().getStyle().setPosition(Position.ABSOLUTE);
+			canvas.getElement().getStyle().setZIndex(0);
+			add(canvas);
+		}
+
+		@Override
+		public AbsolutePanel getAbsolutePanel() {
+			return this;
+		}
+
+		@Override
+		public Panel getEuclidianPanel() {
+			return this;
+		}
+
+		@Override
+		public Canvas getCanvas() {
+			return canvas;
+		}
+
+		@Override
+		public EuclidianView getEuclidianView() {
+			return ev;
+		}
+
+		@Override
+		public void onResize() {
+			// nothing to do on resize
+		}
+
+		@Override
+		public void deferredOnResize() {
+			// nothing to do on resize
+		}
+
+		@Override
+		public void updateNavigationBar() {
+			// not needed for text preview
+		}
+
+		@Override
+		public void reset() {
+			// not needed
+		}
+
+		@Override
+		public void enableZoomPanelEvents(boolean enable) {
+			// not needed
+		}
+	}
+}

@@ -1,0 +1,138 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.gui.view.table.regression;
+
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import org.geogebra.common.kernel.Kernel;
+import org.geogebra.common.kernel.arithmetic.Command;
+import org.geogebra.common.kernel.arithmetic.ExpressionNode;
+import org.geogebra.common.kernel.arithmetic.FunctionVariable;
+import org.geogebra.common.kernel.arithmetic.MyList;
+import org.geogebra.common.kernel.arithmetic.MyVecNode;
+import org.geogebra.common.kernel.commands.Commands;
+import org.geogebra.editor.share.util.Unicode;
+
+public class CustomRegressionSpecification implements RegressionSpecification {
+
+	private final String label;
+	private final double[] exponents;
+	private final Type type;
+	private final String coeffOrdering;
+
+	/** Regression model type. */
+	public enum Type {
+		LINEAR,
+		EXPONENTIAL,
+		EXP_PLUS_CONSTANT
+	}
+
+	/**
+	 * Linear regression spec.
+	 * @param label label for selection dropdown
+	 * @param exponents term exponents
+	 */
+	public CustomRegressionSpecification(String label, double... exponents) {
+		this.label = asUnicode(label);
+		this.exponents = exponents;
+		type = Type.LINEAR;
+		coeffOrdering =
+				Stream.of("c", "b", "a").filter(label::contains).collect(Collectors.joining(""));
+	}
+
+	/**
+	 * Non-linear regression spec
+	 * @param label label for selection dropdown
+	 * @param type regression type
+	 */
+	public CustomRegressionSpecification(String label, String coeffOrdering, Type type) {
+		this.label = asUnicode(label);
+		this.exponents = new double[0];
+		this.type = type;
+		this.coeffOrdering = coeffOrdering;
+	}
+
+	private String asUnicode(String label) {
+		return label
+				.replace("^2", String.valueOf(Unicode.SUPERSCRIPT_2))
+				.replace("*", String.valueOf(Unicode.CENTER_DOT));
+	}
+
+	@Override
+	public String getLabel() {
+		return label;
+	}
+
+	@Override
+	public Command buildCommand(Kernel kernel, MyVecNode points) {
+		Command cleanData = new Command(kernel, Commands.RemoveUndefined.getCommand(), false);
+		cleanData.addArgument(points.wrap());
+		Commands cmdName = type == Type.EXPONENTIAL ? Commands.FitExp : Commands.Fit;
+		Command cmd = new Command(kernel, cmdName.name(), false);
+		cmd.addArgument(cleanData.wrap());
+		if (type == Type.LINEAR) {
+			MyList functions = new MyList(kernel);
+			FunctionVariable x = new FunctionVariable(kernel);
+			for (double exponent : exponents) {
+				functions.addListElement(x.wrap().power(exponent));
+			}
+			cmd.addArgument(functions.wrap());
+		} else if (type == Type.EXP_PLUS_CONSTANT) {
+			FunctionVariable x = new FunctionVariable(kernel);
+			ExpressionNode model = new ExpressionNode(kernel, Double.NaN)
+					.multiplyR(new ExpressionNode(kernel, Double.NaN).multiply(x).exp())
+					.plus(new ExpressionNode(kernel, Double.NaN));
+			cmd.addArgument(model);
+		}
+		cmd.setRespectingFilters(false);
+		return cmd;
+	}
+
+	@Override
+	public String getFormula() {
+		return null;
+	}
+
+	@Override
+	public String getCoeffOrdering() {
+		return coeffOrdering;
+	}
+
+	@Override
+	public boolean hasCorrelationCoefficient() {
+		return true;
+	}
+
+	@Override
+	public boolean canPlot() {
+		return false;
+	}
+
+	@Override
+	public boolean hasCoefficientOfDetermination() {
+		return false;
+	}
+
+	@Override
+	public char getCoeffName(int i) {
+		if (i == 1 && "ca".equals(getCoeffOrdering())) {
+			return 'c';
+		}
+		return (char) ('a' + i);
+	}
+}

@@ -1,0 +1,987 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.kernel.geos;
+
+import static org.geogebra.common.kernel.geos.GeoInputBox.isGeoLinkable;
+import static org.geogebra.test.TestStringUtil.unicode;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.IsEqual.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
+import java.util.Collections;
+import java.util.List;
+
+import org.geogebra.common.AppCommonFactory;
+import org.geogebra.common.BaseUnitTest;
+import org.geogebra.common.awt.GColor;
+import org.geogebra.common.euclidian.LatexRendererSettings;
+import org.geogebra.common.geogebra3D.kernel3D.geos.GeoVector3D;
+import org.geogebra.common.io.FactoryProviderCommon;
+import org.geogebra.common.io.MathFieldCommon;
+import org.geogebra.common.jre.headless.AppCommon;
+import org.geogebra.common.jre.headless.EuclidianViewNoGui;
+import org.geogebra.common.kernel.Kernel;
+import org.geogebra.common.kernel.StringTemplate;
+import org.geogebra.common.kernel.kernelND.GeoSurfaceCartesian2D;
+import org.geogebra.common.plugin.GeoClass;
+import org.geogebra.editor.share.catalog.Tag;
+import org.geogebra.editor.share.catalog.TemplateCatalog;
+import org.geogebra.editor.share.controller.EditorState;
+import org.geogebra.editor.share.event.KeyEvent;
+import org.geogebra.editor.share.input.KeyboardInputAdapter;
+import org.geogebra.editor.share.serializer.TeXSerializer;
+import org.geogebra.editor.share.tree.CharPlaceholderNode;
+import org.geogebra.editor.share.tree.FunctionNode;
+import org.geogebra.editor.share.tree.Node;
+import org.geogebra.editor.share.util.Unicode;
+import org.geogebra.ggbjdk.java.awt.geom.Rectangle;
+import org.geogebra.test.annotation.Issue;
+import org.geogebra.test.euclidian.TextFieldCommonJre;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+
+import com.himamis.retex.renderer.share.platform.FactoryProvider;
+
+class GeoInputBoxLinkedGeoTest extends BaseUnitTest {
+
+	private GeoInputBox inputBox;
+
+	@Override
+	public AppCommon createAppCommon() {
+		return AppCommonFactory.create3D();
+	}
+
+	@BeforeAll
+	static void prepare() {
+		FactoryProvider.setInstance(new FactoryProviderCommon());
+	}
+
+	@Test
+	void shouldNotShowQuotesForText() {
+		setupInput("txt", "\"GeoGebra Rocks\"");
+		t("ib", "GeoGebra Rocks");
+		updateInput("GeoGebra Really Rocks");
+		t("txt", "GeoGebra Really Rocks");
+		hasType("txt", GeoClass.TEXT);
+	}
+
+	@Test
+	void shouldNotRemoveCommasForText() {
+		setupInput("txt", "\"Hello Friends\"");
+		final MathFieldCommon mf = new MathFieldCommon(new TemplateCatalog(), null);
+		SymbolicEditorCommon editor = new SymbolicEditorCommon(mf, getApp());
+		editor.attach((GeoInputBox) lookup("ib"), new Rectangle(), LatexRendererSettings.create());
+		mf.getInternal().setPlainText("Hello, Friends");
+		editor.onEnter();
+		t("txt", "Hello, Friends");
+	}
+
+	@Test
+	void shouldAllowBracketForMatrices() {
+		setupInput("m1", "{{1,2},{3,4}}");
+		final MathFieldCommon mf = new MathFieldCommon(new TemplateCatalog(), null);
+		SymbolicEditorCommon editor = new SymbolicEditorCommon(mf, getApp());
+		editor.attach((GeoInputBox) lookup("ib"), new Rectangle(), LatexRendererSettings.create());
+		editor.getMathFieldInternal().getMathFieldController().useSimpleMatrixPlaceholders(true);
+		editor.selectEntryAt(50, 0);
+		assertTrue(mf.getInternal().getEditorState().hasSelection(), "matrix entry should be selected");
+		mf.getInternal().onKeyTyped(new KeyEvent(0, 0, '(', KeyEvent.KeyboardType.EXTERNAL));
+		assertEquals("{{1,(2)},{3,4}}", mf.getInternal().getText());
+	}
+
+	@Test
+	void shouldShowNewlineQuotesForText() {
+		setupInput("txt", "\"GeoGebra\\\\nRocks\"");
+		assertEquals("GeoGebra\\\\nRocks", inputBox.getTextForEditor());
+		updateInput("GeoGebra\\\\nReally\\\\nRocks");
+		t("txt", "GeoGebra\nReally\nRocks");
+	}
+
+	@Test
+	void shouldNotFireEventOnFocus() {
+		setupInput("txt", "\"GeoGebra\\\\nRocks\"");
+		final MathFieldCommon mf = new MathFieldCommon(new TemplateCatalog(), null);
+		SymbolicEditorCommon editor = new SymbolicEditorCommon(mf, getApp());
+		editor.setKeyListener(key -> fail("Unexpected typing:" + key));
+		editor.attach((GeoInputBox) lookup("ib"), new Rectangle(), LatexRendererSettings.create());
+	}
+
+	@Test
+	void shouldUpdateColor() {
+		getApp().getEuclidianView1().setViewTextField(new TextFieldCommonJre());
+		setupInput("a", "1");
+		final MathFieldCommon mf = new MathFieldCommon(new TemplateCatalog(), null);
+		SymbolicEditorCommon editor = new SymbolicEditorCommon(mf, getApp());
+		editor.attach((GeoInputBox) lookup("ib"), new Rectangle(), LatexRendererSettings.create());
+		((EuclidianViewNoGui) getApp().getEuclidianView1()).setSymbolicEditor(editor);
+		inputBox.setObjColor(GColor.GREEN);
+		inputBox.updateVisualStyle(GProperty.COLOR);
+		assertEquals(GColor.GREEN, editor.getForegroundColor());
+	}
+
+	@Test
+	void testEditorDescription() {
+		getApp().getEuclidianView1().setViewTextField(new TextFieldCommonJre());
+		setupInput("a", "42");
+		final MathFieldCommon mf = new MathFieldCommon(new TemplateCatalog(), null);
+		SymbolicEditorCommon editor = new SymbolicEditorCommon(mf, getApp());
+		editor.attach((GeoInputBox) lookup("ib"), new Rectangle(), LatexRendererSettings.create());
+		assertEquals("42", editor.getDescription());
+	}
+
+	@Test
+	void enteringNewValueShouldKeepVectorType() {
+		setupAndCheckInput("v", "(1, 3)");
+		t("Rename(v,\"V\")");
+		updateInput("(1, 5)");
+		t("V", "(1, 5)");
+		hasType("V", GeoClass.VECTOR);
+	}
+
+	@Test
+	void enteringNewValueShouldKeepVectorType3D() {
+		setupAndCheckInput("v3", "(1, 3, 6)");
+		updateInput("(1, 5)");
+		t("v3", "(1, 5, 0)");
+		hasType("v3", GeoClass.VECTOR3D);
+	}
+
+	@Test
+	void enteringNewValueShouldKeepPlaneType() {
+		setupAndCheckInput("p", "x + y - z = 0");
+		updateInput("x = y");
+		t("p", "x = y");
+		hasType("p", GeoClass.PLANE3D);
+	}
+
+	@Test
+	void enteringNewValueShouldKeepComplexNumber() {
+		setupAndCheckInput("P", "1 + " + Unicode.IMAGINARY);
+		updateInput("7");
+		t("P", "7 + 0" + Unicode.IMAGINARY);
+		assertEquals("7", lookup("P").getDefinition(StringTemplate.defaultTemplate));
+		hasType("P", GeoClass.POINT);
+	}
+
+	@Test
+	void enteringShortLinearExprShouldKeepLineType() {
+		setupAndCheckInput("l", "y = 2 * x + 3");
+		updateInput("3x + 5");
+		t("l", "y = (3 * x) + 5");
+		hasType("l", GeoClass.LINE);
+	}
+
+	@Test
+	void symbolicShouldShowDefinition() {
+		setupInput("l", "1 + 1 / 5");
+		((GeoNumeric) lookup("l")).setSymbolicMode(true, false);
+		inputBox.setSymbolicMode(true, false);
+		assertEquals("1+(1)/(5)", inputBox.getTextForEditor());
+		((GeoNumeric) lookup("l")).setSymbolicMode(false, false);
+		assertEquals("1+(1)/(5)", inputBox.getTextForEditor());
+	}
+
+	@Test
+	void nonsymbolicShouldShowDefinitionForFraction() {
+		setupInput("l", "1 + 1 / 5");
+		((GeoNumeric) lookup("l")).setSymbolicMode(true, true);
+		inputBox.setSymbolicMode(false, false);
+		assertEquals("6 / 5", inputBox.getText());
+		((GeoNumeric) lookup("l")).setSymbolicMode(false, true);
+		assertEquals("1.2", inputBox.getText());
+	}
+
+	@Test
+	void symbolicShouldShowPercentageForPercentage() {
+		setupInput("l", "3%");
+		assertEquals("3\\%", inputBox.getText());
+		assertEquals("3%", inputBox.getTextForEditor());
+	}
+
+	@Test
+	void shouldShowValueForSimpleNumeric() {
+		setupInput("l", "5");
+		inputBox.setSymbolicMode(true, false);
+		assertEquals("5", inputBox.getText());
+		assertEquals("5", inputBox.getTextForEditor());
+	}
+
+	@Test
+	void shouldBeEmptyAfterSettingLineUndefined() {
+		setupInput("f", "y = 5");
+		t("SetValue(f, ?)");
+		assertEquals("", inputBox.getText());
+	}
+
+	@Test
+	void argumentsForFunctionCopyShouldBeVisible() {
+		add("f:x");
+		setupInput("g", "3f");
+		assertEquals("3*f(x)", inputBox.getTextForEditor());
+		updateInput("f(x)");
+		assertEquals("f(x)", inputBox.getTextForEditor());
+	}
+
+	@Test
+	void symbolicShouldBeEmptyAfterSettingLineUndefined() {
+		setupInput("f", "y = 5");
+		t("SetValue(f, ?)");
+		inputBox.setSymbolicMode(true, false);
+		assertEquals("", inputBox.getTextForEditor());
+	}
+
+	@Test
+	void shouldBeEmptyAfterSettingPlaneUndefined() {
+		setupInput("eq1", "4x + 3y + 2z = 1");
+		t("SetValue(eq1, ?)");
+		assertEquals("", inputBox.getText());
+	}
+
+	@Test
+	void symbolicShouldBeEmptyAfterSettingPlaneUndefined() {
+		setupInput("eq1", "4x + 3y + 2z = 1");
+		t("SetValue(eq1, ?)");
+		inputBox.setSymbolicMode(true, false);
+		assertEquals("", inputBox.getText());
+		assertEquals("", inputBox.getTextForEditor());
+	}
+
+	@Test
+	void symbolicShouldShowDefinitionFor3DPoints() {
+		setupInput("P", "(?,?,?)");
+		inputBox.setSymbolicMode(true, false);
+		assertEquals("(?,?,?)", inputBox.getTextForEditor());
+		updateInput("(sqrt(2), 1/3, 0)");
+		assertEquals("(sqrt(2),(1)/(3),0)", inputBox.getTextForEditor());
+		add("SetValue(P,?)");
+		assertEquals("(?,?,?)", inputBox.getTextForEditor());
+	}
+
+	@Test
+	void shouldAcceptLinesConicsAndFunctionsForImplicitCurve() {
+		setupInput("eq1", "x^3 = y^2");
+		updateInput("x = y"); // line
+		assertEquals("x=y", inputBox.getTextForEditor());
+		updateInput("y = x"); // function (linear)
+		assertEquals("y=x", inputBox.getTextForEditor());
+		updateInput("y = x^2"); // function (quadratic)
+		assertEquals(unicode("y=x^2"), inputBox.getTextForEditor());
+		updateInput("x^2 = y^2"); // conic
+		assertEquals(unicode("x^2=y^2"), inputBox.getTextForEditor());
+	}
+
+	@Test
+	void shouldAcceptLinesAndFunctionsForConics() {
+		setupInput("eq1", "x^2 = y^2");
+		updateInput("x = y"); // line
+		assertEquals("x=y", inputBox.getTextForEditor());
+		updateInput("y = x"); // function (linear)
+		assertEquals("y=x", inputBox.getTextForEditor());
+		updateInput("y = x^2"); // function (quadratic)
+		assertEquals(unicode("y=x^2"), inputBox.getTextForEditor());
+	}
+
+	@Test
+	void shouldAcceptFunctionsForLines() {
+		setupInput("eq1", "x = y");
+		updateInput("y = x"); // function (linear)
+		assertEquals("y=x", inputBox.getTextForEditor());
+	}
+
+	@Test
+	void shouldBeEmptyAfterPlaneInputUndefined() {
+		setupInput("eq1", "4x + 3y + 2z = 1");
+		GeoElement ib2 = add("in2=InputBox(eq1)");
+		updateInput("?");
+		// both input boxes undefined, we prefer empty string over question mark
+		// even if that's what the user typed (APPS-1246)
+		assertEquals("", inputBox.getText());
+		assertEquals("", ((GeoInputBox) ib2).getText());
+	}
+
+	@Test
+	void shouldBeEmptyAfterImplicitUndefined() {
+		setupInput("eq1", "x^2=y^3");
+		updateInput("?");
+		assertEquals("", inputBox.getText());
+		assertEquals(
+				"eq1\\mathpunct{:}\\,?",
+				lookup("eq1")
+						.getLaTeXAlgebraDescriptionWithFallback(false, StringTemplate.latexTemplate, false));
+	}
+
+	@Test
+	void shouldBeEmptyAfterDependentNumberUndefined() {
+		add("a=1");
+		setupInput("b", "3a");
+		updateInput("x=y");
+		assertEquals(
+				"b\\, = \\,?",
+				lookup("b")
+						.getLaTeXAlgebraDescriptionWithFallback(false, StringTemplate.latexTemplate, false));
+	}
+
+	@Test
+	void shouldAllowQuestionMarkWhenLinkedToText() {
+		setupInput("txt", "\"GeoGebra Rocks\"");
+		updateInput("?");
+		assertEquals("?", inputBox.getTextForEditor());
+	}
+
+	@Test
+	void shouldBeEmptyAfterSettingComplexUndefined() {
+		setupInput("z1", "3 + i");
+		t("SetValue(z1, ?)");
+		assertEquals("", inputBox.getText());
+	}
+
+	@Test
+	void symbolicShouldBeEmptyAfterSettingComplexUndefined() {
+		setupInput("z1", "3 + i");
+		t("SetValue(z1, ?)");
+		inputBox.setSymbolicMode(true, false);
+		assertEquals("", inputBox.getText());
+		assertEquals("", inputBox.getTextForEditor());
+	}
+
+	@Test
+	void functionParameterShouldNotChangeToX() {
+		add("f(c) = c / ?");
+		inputBox = add("ib=InputBox(f)");
+		inputBox.setSymbolicMode(false, false);
+		assertEquals("c / ?", inputBox.getText());
+		updateInput("?");
+		assertEquals("", inputBox.getText());
+		updateInput("c / 3");
+		assertEquals("c / 3", inputBox.getText());
+	}
+
+	@Test
+	void independentVectorsMustBeColumnEditable() {
+		setupInput("l", "(1, 2, 3)");
+		assertEquals("{{1}, {2}, {3}}", inputBox.getTextForEditor());
+	}
+
+	@Test
+	void symbolicShouldSupportVectorsWithVariables() {
+		add("a: 1");
+		setupInput("l", "(1, 2, a)");
+		assertEquals("{{1}, {2}, {a}}", inputBox.getTextForEditor());
+	}
+
+	@Test
+	void compound2DVectorsMustBeFlatEditable() {
+		add("u: (1, 2)");
+		add("v: (3, 4)");
+		setupInput("l", "u + v");
+		assertEquals("u+v", inputBox.getTextForEditor());
+	}
+
+	@Test
+	void compound3DVectorsMustBeFlatEditable() {
+		add("u: (1, 2, 3)");
+		add("v: (3, 4, 5)");
+		setupInput("l", "u + v");
+		assertEquals("u+v", inputBox.getTextForEditor());
+	}
+
+	@Test
+	void twoVariableFunctionParameterShouldNotChangeToX() {
+		add("g(p, q) = p / ?");
+		inputBox = add("ib=InputBox(g)");
+		inputBox.setSymbolicMode(false, false);
+		assertEquals("p / ?", inputBox.getText());
+		updateInput("?");
+		assertEquals("", inputBox.getText());
+		updateInput("p / q");
+		assertEquals("p / q", inputBox.getText());
+	}
+
+	@Test
+	void testGeoNumericExtendsMinMaxInSymbolic() {
+		GeoNumeric numeric = add("a = 5");
+		numeric.setAVSliderOrCheckboxVisible(true);
+		numeric.initAlgebraSlider();
+		assertFalse(numeric.getIntervalMax() >= 20);
+		assertFalse(numeric.getIntervalMin() <= -20);
+
+		GeoInputBox inputBox = add("ib = InputBox(a)");
+
+		inputBox.updateLinkedGeo("20");
+		inputBox.updateLinkedGeo("-20");
+
+		assertTrue(numeric.getIntervalMax() >= 20);
+		assertTrue(numeric.getIntervalMin() <= -20);
+	}
+
+	@Test
+	void testGeoNumericIsClampedToMinMaxInNonSymbolic() {
+		GeoNumeric numeric = add("a = 0");
+		numeric.setAVSliderOrCheckboxVisible(true);
+		numeric.initAlgebraSlider();
+
+		assertEquals(-5, numeric.getIntervalMin(), Kernel.MAX_PRECISION);
+		assertEquals(5, numeric.getIntervalMax(), Kernel.MAX_PRECISION);
+
+		inputBox = add("ib = InputBox(a)");
+		inputBox.setSymbolicMode(false);
+
+		inputBox.updateLinkedGeo("-10");
+		assertEquals(-5, numeric.getValue(), Kernel.MAX_PRECISION);
+
+		inputBox.updateLinkedGeo("10");
+		assertEquals(5, numeric.getValue(), Kernel.MAX_PRECISION);
+	}
+
+	private void hasType(String label, GeoClass geoClass) {
+		assertEquals(lookup(label).getGeoClassType(), geoClass);
+	}
+
+	private void updateInput(String string) {
+		inputBox.textObjectUpdated(new ConstantTextObject(string));
+	}
+
+	private void setupAndCheckInput(String label, String value) {
+		setupInput(label, value);
+		assertEquals(value, inputBox.getLinkedGeo().toValueString(StringTemplate.testTemplate));
+	}
+
+	private void setupInput(String label, String value) {
+		add(label + ":" + value);
+		inputBox = add("ib=InputBox(" + label + ")");
+	}
+
+	@Test
+	void symbolicShouldBeEmptyAfterSettingConicUndefined() {
+		setupInput("eq1", "xx+yy = 1");
+		inputBox.setSymbolicMode(true, false);
+		updateInput("?");
+		assertEquals("", inputBox.getTextForEditor());
+		getApp().setXML(getApp().getXML(), true);
+		assertEquals("", inputBox.getTextForEditor());
+		assertEquals(
+				"eq1\\mathpunct{:}\\,?",
+				lookup("eq1")
+						.getLaTeXAlgebraDescriptionWithFallback(false, StringTemplate.latexTemplate, false));
+	}
+
+	@Test
+	void symbolicShouldBeEmptyAfterSettingQuadricUndefined() {
+		setupInput("eq1", "x^2 + y^2 + z^2 = 1");
+		inputBox.setSymbolicMode(true, false);
+		inputBox.updateLinkedGeo("?");
+		assertEquals("", inputBox.getTextForEditor());
+		getApp().setXML(getApp().getXML(), true);
+		assertEquals("", inputBox.getTextForEditor());
+		assertEquals(
+				"eq1\\mathpunct{:}\\,?",
+				lookup("eq1")
+						.getLaTeXAlgebraDescriptionWithFallback(false, StringTemplate.latexTemplate, false));
+	}
+
+	@Test
+	void minusShouldStayInNumerator() {
+		setupInput("f", "x");
+		inputBox.setSymbolicMode(true, false);
+		updateInput("(-1)/4 x");
+		assertEquals("(-1)/(4)*x", inputBox.getTextForEditor());
+		assertEquals("\\frac{-1}{4} \\cdot x", inputBox.getText());
+	}
+
+	@Test
+	void minusShouldStayInFrontOfFraction() {
+		setupInput("f", "x");
+		inputBox.setSymbolicMode(true, false);
+		updateInput("-(1/4) x");
+		assertEquals("-((1)/(4))*x", inputBox.getTextForEditor());
+		assertEquals("-\\frac{1}{4} \\cdot x", inputBox.getText());
+	}
+
+	@Test
+	@Issue("APPS-7719")
+	void inputBoxShouldNotInsertSpaceAfterNegativeCoefficient() {
+		setupInput("f", "-2x");
+		inputBox.setSymbolicMode(true, false);
+		assertEquals("-2x", inputBox.getTextForEditor());
+		assertEquals("-2x", inputBox.getText());
+	}
+
+	@Test
+	@Issue("APPS-7719")
+	void inputBoxShouldNotInsertSpaceBeforePower() {
+		setupInput("f", "2+3x^2");
+		inputBox.setSymbolicMode(true, false);
+		assertEquals("2+3x" + Unicode.SUPERSCRIPT_2, inputBox.getTextForEditor());
+		assertEquals("2 + 3x^{2}", inputBox.getText());
+	}
+
+	@Test
+	@Issue("APPS-7719")
+	void inputBoxShouldNotInsertSpaceBeforeBracket() {
+		setupInput("f", "3(x-4)");
+		inputBox.setSymbolicMode(true, false);
+		assertEquals("3(x-4)", inputBox.getTextForEditor());
+		assertEquals("3\\left(x - 4 \\right)", inputBox.getText());
+	}
+
+	@Test
+	@Issue("APPS-7719")
+	void inputBoxShouldNotInsertSpaceAfterBracket() {
+		setupInput("f", "(x+2)x");
+		inputBox.setSymbolicMode(true, false);
+		assertEquals("(x+2)x", inputBox.getTextForEditor());
+		assertEquals("\\left(x + 2 \\right)x", inputBox.getText());
+	}
+
+	@Test
+	@Issue("APPS-7719")
+	void inputBoxShouldNotInsertSpaceBetweenBrackets() {
+		setupInput("f", "3(x-1)(x-2)");
+		inputBox.setSymbolicMode(true, false);
+		assertEquals("3(x-1)(x-2)", inputBox.getTextForEditor());
+		assertEquals("3\\left(x - 1 \\right)\\left(x - 2 \\right)", inputBox.getText());
+	}
+
+	@Test
+	void implicitMultiplicationWithParenthesis() {
+		add("c = 2");
+		add("a = c + 2");
+		setupInput("a", "2");
+		updateInput("cc(2)");
+		assertEquals("c*c*2", inputBox.getTextForEditor());
+	}
+
+	@Test
+	void implicitMultiplicationWithEvaluatable() {
+		add("f: y = 2 * x + 3");
+		setupInput("g", "x");
+		updateInput("xf(x) + 4");
+		assertEquals("x*f(x)+4", inputBox.getTextForEditor());
+	}
+
+	@Test
+	void symbolicShouldBeEmptyAfterSettingComplexFunctionUndefined() {
+		setupInput("f", "x+i");
+		inputBox.setSymbolicMode(true, false);
+		inputBox.updateLinkedGeo("?");
+		assertEquals("", inputBox.getTextForEditor());
+		getApp().setXML(getApp().getXML(), true);
+		assertEquals("", inputBox.getTextForEditor());
+		assertEquals("ComplexFunction", lookup("f").getTypeString());
+		// \text{undefined} also acceptable but ? is consistent with real-valued functions
+		assertEquals(
+				"f(x) = ?",
+				lookup("f")
+						.getLaTeXAlgebraDescriptionWithFallback(false, StringTemplate.defaultTemplate, false));
+	}
+
+	@Test
+	void shouldAcceptNumberForComplexFunctions() {
+		setupInput("f", "x+i");
+		add("pt=f(1-i)");
+		inputBox.setSymbolicMode(true, false);
+		inputBox.updateLinkedGeo("2");
+		assertEquals(
+				"2 + 0" + Unicode.IMAGINARY, lookup("pt").toValueString(StringTemplate.testTemplate));
+	}
+
+	@Test
+	void vector2dKeepsInput() {
+		GeoVector vec1 = addAvInput("u=(1, 2)");
+		GeoInputBox inputBox = add("InputBox(u)");
+		GeoVector vec2 = addAvInput("v=(sqrt(3), 3/2)");
+		vec1.set(vec2);
+		assertThat(inputBox.getTextForEditor(), equalTo("{{sqrt(3)}, {3 / 2}}"));
+		addAvInput("SetValue(u,?)");
+		assertThat(inputBox.getTextForEditor(), equalTo("{{?}, {?}}"));
+	}
+
+	@Test
+	void vector3dKeepsInput() {
+		GeoVector3D vec1 = addAvInput("u=(1, 2, 3)");
+		GeoInputBox inputBox = add("InputBox(u)");
+		GeoVector3D vec2 = addAvInput("v=(5/6, 3/2, sqrt(5))");
+		vec1.set(vec2);
+		assertThat(inputBox.getTextForEditor(), equalTo("{{5 / 6}, {3 / 2}, {sqrt(5)}}"));
+		addAvInput("SetValue(u,?)");
+		assertThat(inputBox.getTextForEditor(), equalTo("{{?}, {?}, {?}}"));
+	}
+
+	@Test
+	void shouldPreferScalarProductOverDistance() {
+		add("a=1");
+		GeoInputBox inputBox = add("InputBox(a)");
+		add("A=(1,2)");
+		add("B=(1,3)");
+		inputBox.updateLinkedGeo("AB");
+		assertEquals(7, lookup("a").evaluateDouble(), 0);
+	}
+
+	@Test
+	void shouldNotAutocreatePoints() {
+		add("A=(1,1)");
+		GeoInputBox inputBox = add("InputBox(A)");
+		add("B=(1,3)");
+		inputBox.updateLinkedGeo("B2");
+		assertThat(lookup("A"), hasValue("(2, 6)"));
+		inputBox.updateLinkedGeo("O");
+		assertThat(lookup("A"), hasValue("(?, ?)"));
+	}
+
+	@Test
+	void shouldNotAcceptCommands() {
+		add("A=(1,1)");
+		GeoInputBox inputBox = add("InputBox(A)");
+		inputBox.updateLinkedGeo("Midpoint((0,0),(1,2))");
+		assertTrue(inputBox.hasError(), "Command should trigger error");
+	}
+
+	@Test
+	void shouldNotAcceptRenaming() {
+		add("A=(1,1)");
+		GeoInputBox inputBox = add("InputBox(A)");
+		inputBox.updateLinkedGeo("B=(7,7)");
+		assertTrue(inputBox.hasError(), "Rename should trigger error");
+		inputBox.updateLinkedGeo("B:(7,7)");
+		assertTrue(inputBox.hasError(), "Rename should trigger error");
+		inputBox.updateLinkedGeo("B:=(7,7)");
+		assertTrue(inputBox.hasError(), "Rename should trigger error");
+	}
+
+	@Test
+	void pointOnPathShouldBeRestricted() {
+		GeoElement point = add("A=Point(y=2)");
+		GeoInputBox inputBox = add("InputBox(A)");
+		inputBox.updateLinkedGeo("(3,7)");
+		assertThat(point, hasValue("(3, 2)"));
+	}
+
+	@Test
+	void pointInRegionShouldBeRestricted() {
+		GeoElement point = add("A=PointIn(xx+yy=2)");
+		GeoInputBox inputBox = add("InputBox(A)");
+		inputBox.updateLinkedGeo("(5,-5)");
+		assertThat(point, hasValue("(1, -1)"));
+	}
+
+	@Test
+	void pointShouldUseAustrianCoords() {
+		getApp().getSettings().getGeneral().setCoordFormat(Kernel.COORD_STYLE_AUSTRIAN);
+		GeoElement point = add("A=(1,2)");
+		GeoInputBox inputBox = add("InputBox(A)");
+		assertThat(inputBox.getTextForEditor(), is("(1" + Unicode.verticalLine + "2)"));
+		inputBox.updateLinkedGeo("(5" + Unicode.verticalLine + "-5)");
+		assertThat(point, hasValue("(5 | -5)"));
+	}
+
+	@Test
+	void pointShouldAcceptEmptyAustrianCoords() {
+		getApp().getSettings().getGeneral().setCoordFormat(Kernel.COORD_STYLE_AUSTRIAN);
+		add("A=(1,2)");
+		GeoInputBox inputBox = add("InputBox(A)");
+		inputBox.updateLinkedGeo("(" + Unicode.verticalLine + ")");
+		assertThat(inputBox.hasError(), is(false));
+	}
+
+	@Test
+	void pointShouldAcceptEmptyCoords() {
+		add("A=(1,2)");
+		GeoInputBox inputBox = add("InputBox(A)");
+		inputBox.updateLinkedGeo("(,)");
+		assertThat(inputBox.hasError(), is(false));
+	}
+
+	@Test
+	void hasSpecialEditorTest() {
+		GeoElement mat1 = add("mat1={{1,2,3}}");
+		assertTrue(mat1.hasSpecialEditor());
+
+		add("slider1 = 7");
+		GeoElement mat2 = add("mat2={{1,2,slider1}}");
+		assertTrue(mat2.hasSpecialEditor());
+		mat2 = add("mat2={{1,2,slider1},Reverse[{1,2,3}]}");
+		assertFalse(mat2.hasSpecialEditor());
+
+		GeoElement l1 = add("l1: 3x + 2y = 4");
+		assertFalse(l1.hasSpecialEditor());
+
+		GeoElement l2 = add("l2: 3x + 2y = 5z - 4");
+		assertFalse(l2.hasSpecialEditor());
+
+		GeoElement A = add("A = (1, 2)");
+		assertTrue(A.hasSpecialEditor());
+
+		GeoElement B = add("B = (1, 2, 3)");
+		assertTrue(B.hasSpecialEditor());
+
+		GeoElement C = add("C = A + B");
+		assertFalse(C.hasSpecialEditor());
+
+		GeoElement v = add("v = (1, 2, 3)");
+		assertTrue(v.hasSpecialEditor());
+
+		GeoElement z_1 = add("z_1 = 3 + i");
+		assertFalse(z_1.hasSpecialEditor());
+	}
+
+	@Test
+	void imaginaryUnitShouldBeDisplayedAsI() {
+		add("m1 = {{1}, {2}}");
+		GeoInputBox inputBox = add("InputBox(m1)");
+		inputBox.setSymbolicMode(false);
+		inputBox.updateLinkedGeo("{{" + Unicode.IMAGINARY + "},{3}}");
+		assertEquals("{{i},{3}}", inputBox.getTextForEditor());
+
+		inputBox.setSymbolicMode(true);
+		inputBox.updateLinkedGeo("{{" + Unicode.IMAGINARY + "},{3}}");
+		assertEquals("{{i},{3}}", inputBox.getTextForEditor());
+	}
+
+	@Test
+	void testTypoInIndices() {
+		add("a_0 = 3");
+		add("f(b_0) = 3");
+		GeoInputBox inputBox = add("InputBox(f)");
+		inputBox.updateLinkedGeo("a_{O} + b_{o}");
+		assertEquals("a_0+b_0", inputBox.getTextForEditor());
+	}
+
+	@Test
+	void testComplexMatrices() {
+		add("m = {{1, i},{i, 2}}");
+		GeoInputBox inputBox = add("InputBox(m)");
+		assertEquals("\\begin{pmatrix} 1 & i \\\\ i & 2 \\end{pmatrix}", inputBox.getText());
+	}
+
+	@Test
+	void testComplexMatrixEdit() {
+		setupInput("m", "{{?, ?},{?, ?}}");
+		updateInput("{{i, 1},{i, 2}}");
+		assertEquals("\\begin{pmatrix} i & 1 \\\\ i & 2 \\end{pmatrix}", inputBox.getText());
+		assertThat(inputBox.hasError(), equalTo(false));
+	}
+
+	@Test
+	void testEmpty2DPointShouldNotRaiseError() {
+		add("A = (?, ?)");
+		GeoInputBox inputBox = add("InputBox(A)");
+		inputBox.updateLinkedGeo("(,)");
+		assertFalse(inputBox.hasError());
+	}
+
+	@Test
+	void testEmpty3DPointShouldNotRaiseError() {
+		add("m1 = {{?},{?},{?}}");
+		GeoInputBox inputBox = add("InputBox(m1)");
+		inputBox.updateLinkedGeo("{,,}");
+		assertFalse(inputBox.hasError());
+	}
+
+	@Test
+	void testEmpty2DMatrixShouldNotRaiseError() {
+		add("m1 = {{1,2},{3,4}}");
+		GeoInputBox inputBox = add("InputBox(m1)");
+		inputBox.updateLinkedGeo("{{?,?,?},{?,?,?}}");
+		assertFalse(inputBox.hasError());
+	}
+
+	@Test
+	void testEmptyVectorShouldNotRaiseError() {
+		add("u = (?,?,?)");
+		GeoInputBox inputBox = add("InputBox(u)");
+		inputBox.updateLinkedGeo("(,,)");
+		assertFalse(inputBox.hasError());
+	}
+
+	@Test
+	void testUndefinedPoint() {
+		add("A=(?,?)");
+		GeoInputBox inputBox = add("InputBox(A)");
+		assertEquals(
+				"\\left({" + TeXSerializer.PLACEHOLDER + "," + TeXSerializer.PLACEHOLDER + "}\\right)",
+				inputBox.getText());
+	}
+
+	@Test
+	void testUndefinedVectorWithFraction() {
+		add("u=(?,?/?)");
+		GeoInputBox inputBox = add("InputBox(u)");
+		assertEquals(
+				"\\begin{pmatrix} "
+						+ TeXSerializer.PLACEHOLDER + " \\\\ {"
+						+ "{\\frac{" + TeXSerializer.PLACEHOLDER + "}{" + TeXSerializer.PLACEHOLDER + "}}"
+						+ "} \\end{pmatrix}",
+				inputBox.getText());
+	}
+
+	@Test
+	void complexToRealFunctionShouldNotBeRedefined() {
+		add("h(x) = x + i");
+		GeoInputBox inputBox = add("InputBox(h)");
+		assertThat(inputBox.getLinkedGeo().getClass(), is(GeoSurfaceCartesian2D.class));
+		inputBox.updateLinkedGeo("2x/3");
+		assertThat(inputBox.getLinkedGeo().getClass(), is(GeoSurfaceCartesian2D.class));
+	}
+
+	@Test
+	void testLinkableGeos() {
+		shouldBeLinkable("(1,1)");
+		add("a=1");
+		shouldBeLinkable("2*a+3");
+		shouldBeLinkable("Point(xAxis)");
+		add("poly = Polygon({(0,0),(0,1),(1,1)})");
+		shouldBeLinkable("PointIn(poly)");
+	}
+
+	private void shouldBeLinkable(String command) {
+		assertTrue(isGeoLinkable(add(command)));
+	}
+
+	@Test
+	void testNonLinkableGeo() {
+		shouldNotBeLinkable("Circle((0,0), 5)");
+		shouldNotBeLinkable("3*Sequence[10]");
+	}
+
+	private void shouldNotBeLinkable(String command) {
+		assertFalse(isGeoLinkable(add(command)));
+	}
+
+	@Test
+	void testHyphenMinusShouldBeReplaced() {
+		add("text1=\" \"");
+		GeoInputBox inputBox = add("InputBox(text1)");
+		inputBox.updateLinkedGeo("12" + Unicode.MINUS + "10");
+		assertThat(inputBox.getTextForEditor(), is("12-10"));
+	}
+
+	@Test
+	void shouldKeepComplexFunction() {
+		add("f(w) = w + i");
+		inputBox = add("ib=InputBox(f)");
+		updateInput("w/");
+		assertThat(lookup("f"), not(isDefined()));
+		inputBox = (GeoInputBox) lookup("ib");
+		assertEquals(Collections.singletonList("w"), inputBox.getFunctionVars());
+		updateInput("w-i");
+		t("f", "w - " + Unicode.IMAGINARY);
+	}
+
+	@Test
+	void shouldEscapeText() {
+		setupInput("txt", "\"--^\\\"");
+		assertEquals("\\text{-{}-{}\\^{} \\backslash{}}", inputBox.getText());
+	}
+
+	@Issue("APPS-7006")
+	@Test
+	void shouldPreserveVisibilityFlags() {
+		GeoNumeric i = add("i=1");
+		i.createSlider();
+		add("f(x, y)=3xy");
+		List<Integer> viewFlags = List.of(AppCommon.VIEW_EUCLIDIAN2, AppCommon.VIEW_ALGEBRA);
+		inputBox = add("ib=InputBox(f)");
+		add("eq1: f - i = 0");
+		GeoElement eq1 = lookup("eq1");
+		eq1.setViewFlags(viewFlags);
+		updateInput("2^x");
+		assertEquals(viewFlags, lookup("eq1").getViewSet());
+	}
+
+	@Issue("APPS-7703")
+	@Test
+	void shouldSelectPlaceholderInUndefinedPointCoordinate() {
+		setupInput("A", "(?, ?)");
+		final MathFieldCommon mf = new MathFieldCommon(new TemplateCatalog(), null);
+		SymbolicEditorCommon editor = new SymbolicEditorCommon(mf, getApp());
+
+		editor.attach(inputBox, new Rectangle(), LatexRendererSettings.create());
+		editor.selectEntryAt(0, 0);
+
+		EditorState editorState = mf.getInternal().getEditorState();
+		assertNull(editorState.getSelectionStart());
+		assertNull(editorState.getSelectionEnd());
+		assertInstanceOf(
+				CharPlaceholderNode.class,
+				editorState.getCurrentNode().getChild(editorState.getCurrentOffset()));
+	}
+
+	@Issue("APPS-7703")
+	@Test
+	void shouldSelectWholeFractionInPointCoordinate() {
+		setupInput("A", "(1/2, 3)");
+		final MathFieldCommon mf = new MathFieldCommon(new TemplateCatalog(), null);
+		SymbolicEditorCommon editor = new SymbolicEditorCommon(mf, getApp());
+
+		editor.attach(inputBox, new Rectangle(), LatexRendererSettings.create());
+		editor.selectEntryAt(0, 0);
+
+		Node selectionStart = mf.getInternal().getEditorState().getSelectionStart();
+		Node selectionEnd = mf.getInternal().getEditorState().getSelectionEnd();
+
+		assertInstanceOf(FunctionNode.class, selectionStart);
+		assertEquals(Tag.FRAC, ((FunctionNode) selectionStart).getName());
+		assertEquals(selectionStart, selectionEnd);
+	}
+
+	@Issue("APPS-7703")
+	@Test
+	void tabShouldSelectNextPlaceholder() {
+		setupInput("A", "(4, ?)");
+		final MathFieldCommon mf = new MathFieldCommon(new TemplateCatalog(), null);
+		SymbolicEditorCommon editor = new SymbolicEditorCommon(mf, getApp());
+
+		editor.attach(inputBox, new Rectangle(), LatexRendererSettings.create());
+		editor.selectEntryAt(0, 0);
+
+		EditorState editorState = mf.getInternal().getEditorState();
+		mf.getInternal().onTab(false);
+		assertNull(editorState.getSelectionStart());
+		assertNull(editorState.getSelectionEnd());
+		assertInstanceOf(
+				CharPlaceholderNode.class,
+				editorState.getCurrentNode().getChild(editorState.getCurrentOffset()));
+	}
+
+	@Issue("APPS-7703")
+	@Test
+	void tabShouldSelectNextPlaceholderAfterFractionInCoordinate() {
+		setupInput("A", "(?,?)");
+		final MathFieldCommon mf = new MathFieldCommon(new TemplateCatalog(), null);
+		SymbolicEditorCommon editor = new SymbolicEditorCommon(mf, getApp());
+
+		editor.attach(inputBox, new Rectangle(), LatexRendererSettings.create());
+		editor.selectEntryAt(0, 0);
+
+		KeyboardInputAdapter.type(mf.getInternal(), "1/2");
+		mf.getInternal().onTab(false);
+
+		EditorState editorState = mf.getInternal().getEditorState();
+		assertNull(editorState.getSelectionStart());
+		assertNull(editorState.getSelectionEnd());
+		assertInstanceOf(
+				CharPlaceholderNode.class,
+				editorState.getCurrentNode().getChild(editorState.getCurrentOffset()));
+	}
+}

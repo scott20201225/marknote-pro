@@ -1,0 +1,110 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.gui.view.algebra.filter;
+
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import org.geogebra.common.kernel.algos.AlgoElement;
+import org.geogebra.common.kernel.algos.Algos;
+import org.geogebra.common.kernel.algos.GetCommand;
+import org.geogebra.common.kernel.arithmetic.EquationValue;
+import org.geogebra.common.kernel.commands.Commands;
+import org.geogebra.common.kernel.geos.GeoFunction;
+import org.geogebra.common.kernel.kernelND.GeoElementND;
+
+/**
+ * Filters the value of functions and equations that are not safe to show to the user.
+ */
+public class FunctionAndEquationFilter implements AlgebraOutputFilter {
+
+	private List<Commands> fitCommands = Arrays.asList(
+			Commands.FitExp,
+			Commands.Fit,
+			Commands.FitGrowth,
+			Commands.FitImplicit,
+			Commands.FitLine,
+			Commands.FitLineX,
+			Commands.FitLineY,
+			Commands.FitLog,
+			Commands.FitLogistic,
+			Commands.FitPoly,
+			Commands.FitPow,
+			Commands.FitSin);
+
+	private Set<GetCommand> allowedCommands;
+
+	/**
+	 * Recursively checks the algo parents to determine whether the element's value is safe to show
+	 * to the user.
+	 * @param element The GeoElementND for which we check whether it's allowed to show its value
+	 * @return True if it's allowed to show the element's value, otherwise false.
+	 */
+	@Override
+	public boolean isAllowed(GeoElementND element) {
+		if (!isFunctionOrEquation(element)) {
+			return true;
+		}
+		return isAllowedFunctionOrEquation(element);
+	}
+
+	private static boolean isFunctionOrEquation(GeoElementND element) {
+		return element instanceof EquationValue || element instanceof GeoFunction;
+	}
+
+	private boolean isAllowedFunctionOrEquation(GeoElementND element) {
+		return isParentAlgorithmAllowedFor(element) && areParentAlgoInputsAllowedFor(element);
+	}
+
+	private boolean areParentAlgoInputsAllowedFor(GeoElementND element) {
+		AlgoElement algoElement = element.getParentAlgorithm();
+
+		if (algoElement != null) {
+			GeoElementND[] inputGeos = algoElement.getInput();
+			if (inputGeos != null) {
+				for (GeoElementND inputGeo : inputGeos) {
+					boolean isAllowed =
+							isParentAlgorithmAllowedFor(element) && areParentAlgoInputsAllowedFor(inputGeo);
+					if (!isAllowed) {
+						return false;
+					}
+				}
+			}
+		}
+		return true;
+	}
+
+	private boolean isParentAlgorithmAllowedFor(GeoElementND geoElement) {
+		AlgoElement parentAlgorithm = geoElement.getParentAlgorithm();
+		return parentAlgorithm == null || getAllowedCommands().contains(parentAlgorithm.getClassName());
+	}
+
+	private Collection<GetCommand> getAllowedCommands() {
+		if (allowedCommands == null) {
+			allowedCommands = new HashSet<>();
+			allowedCommands.add(Algos.Expression);
+			allowedCommands.add(Commands.Point);
+			allowedCommands.add(Commands.Line);
+			allowedCommands.addAll(fitCommands);
+			allowedCommands.add(Commands.RemoveUndefined);
+		}
+		return allowedCommands;
+	}
+}

@@ -14,6 +14,7 @@ import type { WindowTypeValue } from '../windows/base'
 import type EditorWindow from '../windows/editor'
 import { isChildOfDirectory } from '../../common/filesystem/paths'
 import { hideDrawioView, isDrawioFile, openDrawioFile } from '../drawio'
+import { hideGeoGebraView, isGeoGebraFile, openGeoGebraFile } from '../geogebra'
 
 class WindowActivityList {
   // Oldest             Newest
@@ -404,7 +405,17 @@ class WindowManager extends TypedEmitter<WindowManagerEvents> {
         }
         return
       }
+      if (isGeoGebraFile(filePath)) {
+        const workspaceRoot = editor.openedRootDirectory
+        if (workspaceRoot && isChildOfDirectory(workspaceRoot, filePath)) {
+          void openGeoGebraFile(filePath, win)
+        } else {
+          void shell.openPath(filePath)
+        }
+        return
+      }
       hideDrawioView(win)
+      hideGeoGebraView(win)
       editor.openTab(filePath, options, true)
     })
 

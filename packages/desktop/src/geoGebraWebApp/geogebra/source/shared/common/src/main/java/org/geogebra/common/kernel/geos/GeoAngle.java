@@ -1,0 +1,552 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.kernel.geos;
+
+import org.geogebra.common.io.XMLStringBuilder;
+import org.geogebra.common.kernel.Construction;
+import org.geogebra.common.kernel.Kernel;
+import org.geogebra.common.kernel.StringTemplate;
+import org.geogebra.common.kernel.algos.AlgoAngle;
+import org.geogebra.common.kernel.arithmetic.MyDouble;
+import org.geogebra.common.kernel.kernelND.GeoElementND;
+import org.geogebra.common.plugin.GeoClass;
+import org.geogebra.common.util.DoubleUtil;
+import org.geogebra.editor.share.util.Unicode;
+
+/**
+ *
+ * @author Markus
+ */
+public class GeoAngle extends GeoNumeric implements AngleProperties {
+
+	private int arcSize;
+
+	// states whether a special right angle appearance should be used to draw
+	// this angle
+	private boolean emphasizeRightAngle = true;
+
+	private double rawValue;
+	/** Default minimum value when displayed as slider */
+	public static final double DEFAULT_SLIDER_MIN_ANGLE = 0;
+	/** Default maximum value when displayed as slider */
+	public static final double DEFAULT_SLIDER_MAX_ANGLE = Kernel.PI_2;
+	/** Default increment when displayed as slider */
+	public static final double DEFAULT_SLIDER_INCREMENT_ANGLE = Math.PI / 180.0;
+	/** e.g. Kernel.ANGLE_DEGREE to force degrees */
+	private int forcedAngleUnit = -1;
+
+	/**
+	 * different angle styles
+	 *
+	 */
+	public enum AngleStyle {
+		/**
+		 * (old allowReflexAngle=true)
+		 */
+		ANTICLOCKWISE(0, "0", "360"),
+		/**
+		 * Force angle not to be reflex ie [0,180] (old allowReflexAngle=true)
+		 */
+		NOTREFLEX(1, "0", "180"),
+		/**
+		 * Force angle to be reflex ie [180,360]
+		 */
+		ISREFLEX(2, "180", "360"),
+		/**
+		 * allow angles to be in the range (-infinity, infinity)
+		 * only for Angles which aren't drawable
+		 */
+		UNBOUNDED(3, "-" + Unicode.INFINITY, String.valueOf(Unicode.INFINITY));
+
+		private final int xmlVal;
+		private final String min;
+		private final String max;
+
+		/**
+		 * @return number for this style in XML
+		 */
+		public int getXmlVal() {
+			return xmlVal;
+		}
+
+		AngleStyle(int xmlVal, String min, String max) {
+			this.xmlVal = xmlVal;
+			this.min = min;
+			this.max = max;
+		}
+
+		/**
+		 * @param style
+		 *            integer from XML
+		 * @return Enum
+		 */
+		public static AngleStyle getStyle(int style) {
+			for (AngleStyle l : AngleStyle.values()) {
+				if (l.xmlVal == style) {
+					return l;
+				}
+			}
+
+			return AngleStyle.ANTICLOCKWISE;
+		}
+
+		public String getMin() {
+			return min + Unicode.DEGREE_CHAR;
+		}
+
+		public String getMax() {
+			return max + Unicode.DEGREE_CHAR;
+		}
+	}
+
+	private AngleStyle angleStyle = AngleStyle.ANTICLOCKWISE;
+
+	/**
+	 * @author Loic
+	 * @return Array of decoration types.
+	 */
+	public static Integer[] getDecoTypes() {
+		return new Integer[] {
+			DECORATION_NONE,
+			DECORATION_ANGLE_TWO_ARCS,
+			DECORATION_ANGLE_THREE_ARCS,
+			DECORATION_ANGLE_ONE_TICK,
+			DECORATION_ANGLE_TWO_TICKS,
+			DECORATION_ANGLE_THREE_TICKS,
+			DECORATION_ANGLE_ARROW_ANTICLOCKWISE,
+			DECORATION_ANGLE_ARROW_CLOCKWISE
+		};
+	}
+
+	/**
+	 * Creates new GeoAngle
+	 *
+	 * @param c
+	 *            Construction
+	 */
+	public GeoAngle(Construction c) {
+		super(c);
+		// setAlphaValue(ConstructionDefaults.DEFAULT_ANGLE_ALPHA);
+		// setLabelMode(GeoElement.LABEL_NAME);
+
+		// moved from GeoElement's constructor
+		// must be called from the subclass, see
+		// http://benpryor.com/blog/2008/01/02/dont-call-subclass-methods-from-a-superclass-constructor/
+		setConstructionDefaults(); // init visual settings
+
+		// setEuclidianVisible(false);
+	}
+
+	/**
+	 * Creates angle of given size
+	 *
+	 * @param c
+	 *            Construction
+	 * @param x
+	 *            Size of the angle
+	 * @param style
+	 *            eg UNBOUNDED
+	 * @param forcedAngleUnit
+	 *            keep degrees
+	 */
+	public GeoAngle(Construction c, double x, AngleStyle style, int forcedAngleUnit) {
+		this(c);
+
+		this.forcedAngleUnit = forcedAngleUnit;
+		// must set style before value
+		setAngleStyle(style);
+		setValue(x);
+	}
+
+	/**
+	 * Creates new angle of given size
+	 *
+	 * @param c
+	 *            Construction
+	 * @param x
+	 *            Size of the angle
+	 */
+	public GeoAngle(Construction c, double x) {
+		this(c);
+		setValue(x);
+	}
+
+	@Override
+	public void setAllVisualPropertiesExceptEuclidianVisible(
+			GeoElement geo, boolean keepAdvanced, boolean setAuxiliaryProperty) {
+		super.setAllVisualPropertiesExceptEuclidianVisible(geo, keepAdvanced, setAuxiliaryProperty);
+
+		if (geo.isGeoAngle()) {
+			setAngleStyle(((GeoAngle) geo).getAngleStyle());
+		}
+	}
+
+	@Override
+	public GeoClass getGeoClassType() {
+		return GeoClass.ANGLE;
+	}
+
+	@Override
+	public final boolean isGeoAngle() {
+		return true;
+	}
+
+	@Override
+	public final int getAngleDim() {
+		return 1;
+	}
+
+	@Override
+	public void set(GeoElementND geo) {
+		GeoNumberValue num = (GeoNumberValue) geo;
+		if (num instanceof GeoAngle asAngle) {
+			setValue(asAngle.getRawAngle());
+			forcedAngleUnit = asAngle.forcedAngleUnit;
+		} else {
+			setValue(num.getDouble());
+		}
+		reuseDefinition(geo);
+	}
+
+	@Override
+	public void setBasicVisualStyle(GeoElement geo) {
+		super.setBasicVisualStyle(geo);
+
+		if (geo.isGeoAngle()) {
+			GeoAngle ang = (GeoAngle) geo;
+			arcSize = ang.arcSize;
+			if (!ang.isIndependent() || this.isDefaultGeo()) { // avoids also
+				// default angle
+				// to apply its
+				// style (angle
+				// interval)
+				// to all new angles (e.g. independent angles)
+				setAngleStyle(ang.angleStyle); // to update the value
+			}
+			emphasizeRightAngle = ang.emphasizeRightAngle;
+		}
+	}
+
+	/**
+	 * Sets the value of this angle. Every value is limited between 0 and 2pi.
+	 * Under some conditions a value &gt; pi will be changed to (2pi - value).
+	 *
+	 * @see #setAngleStyle(int)
+	 */
+	@Override
+	public synchronized void setValue(double val, boolean changeAnimationValue) {
+		double angVal = calcAngleValue(val);
+		super.setValue(angVal, changeAnimationValue);
+		if (angleStyle == AngleStyle.UNBOUNDED) {
+			rawValue = value;
+		}
+	}
+
+	/**
+	 * Converts the val to a value between 0 and 2pi.
+	 */
+	private double calcAngleValue(double val) {
+
+		// limit to [0, 2pi]
+		double angVal;
+
+		if (angleStyle != AngleStyle.UNBOUNDED) {
+			angVal = DoubleUtil.convertToAngleValue(val);
+		} else {
+			angVal = val;
+		}
+
+		rawValue = angVal;
+
+		// if needed: change angle
+		switch (angleStyle) {
+			case NOTREFLEX:
+				if (angVal > Math.PI) {
+					angVal = 2.0 * Math.PI - angVal;
+				}
+				break;
+
+			case ISREFLEX:
+				if (angVal < Math.PI) {
+					angVal = 2.0 * Math.PI - angVal;
+				}
+				break;
+
+			default:
+				break;
+		}
+
+		return angVal;
+	}
+
+	@Override
+	public GeoAngle copy() {
+		GeoAngle angle = new GeoAngle(cons);
+		copyPropertiesTo(angle);
+		return angle;
+	}
+
+	protected void copyPropertiesTo(GeoAngle angle) {
+		angle.setValue(rawValue);
+		angle.setAngleStyle(angleStyle);
+		angle.setDrawable(isDrawable, false);
+	}
+
+	/**
+	 * Depending upon angleStyle, some values &gt; pi will be changed to (2pi -
+	 * value). raw_value contains the original value.
+	 *
+	 * @param allowReflexAngle
+	 *            If true, angle is allowed to be &gt; 180 degrees
+	 *
+	 * @see #setValue(double)
+	 */
+	@Override
+	public final void setAllowReflexAngle(boolean allowReflexAngle) {
+		switch (angleStyle) {
+			case NOTREFLEX:
+				if (allowReflexAngle) {
+					setAngleStyle(AngleStyle.ANTICLOCKWISE);
+				}
+				break;
+			case ISREFLEX:
+				// do nothing
+				break;
+			default: // ANGLE_ISANTICLOCKWISE
+				if (!allowReflexAngle) {
+					setAngleStyle(AngleStyle.NOTREFLEX);
+				}
+				break;
+		}
+		if (allowReflexAngle) {
+			setAngleStyle(AngleStyle.ANTICLOCKWISE);
+		} else {
+			setAngleStyle(AngleStyle.NOTREFLEX);
+		}
+	}
+
+	/**
+	 * Forces angle to be reflex or switches it to anticlockwise
+	 *
+	 * @param forceReflexAngle
+	 *            switch to reflex for true
+	 */
+	@Override
+	public final void setForceReflexAngle(boolean forceReflexAngle) {
+		if (forceReflexAngle) {
+			setAngleStyle(AngleStyle.ISREFLEX);
+		} else if (angleStyle == AngleStyle.ISREFLEX) {
+			setAngleStyle(AngleStyle.ANTICLOCKWISE);
+		}
+	}
+
+	@Override
+	public void setAngleStyle(int style) {
+		setAngleStyle(AngleStyle.getStyle(style));
+	}
+
+	/**
+	 * Changes angle style and recomputes the value from raw. See
+	 * GeoAngle.ANGLE_*
+	 *
+	 * @param angleStyle
+	 *            clockwise, anticlockwise, (force) reflex or (force) not reflex
+	 */
+	@Override
+	public void setAngleStyle(AngleStyle angleStyle) {
+		if (angleStyle == this.angleStyle) {
+			return;
+		}
+
+		this.angleStyle = angleStyle;
+
+		// we have to reset the value of this angle
+		if (algoParent == null) {
+			setValue(rawValue);
+		} else {
+			algoParent.update();
+		}
+	}
+
+	/**
+	 * Returns angle style. See GeoAngle.ANGLE_*
+	 *
+	 * @return Clockwise, counterclockwise reflex or not reflex
+	 */
+	@Override
+	public AngleStyle getAngleStyle() {
+		return angleStyle;
+	}
+
+	/**
+	 *
+	 * @return true if has a "super" orientation (e.g. in 3D, from a specific
+	 *         oriented plane)
+	 */
+	@Override
+	public boolean hasOrientation() {
+		return true; // orientation of xOyPlane
+	}
+
+	/**
+	 * Returns the raw value of angle
+	 *
+	 * @return raw value of angle (irrespective of angle style)
+	 */
+	public final double getRawAngle() {
+		return rawValue;
+	}
+
+	@Override
+	public final String toValueString(StringTemplate tpl) {
+		if (isEuclidianVisible()) {
+			return kernel
+					.formatAngle(
+							value,
+							toDecimal(),
+							1 / getAnimationStep(),
+							tpl,
+							angleStyle == AngleStyle.UNBOUNDED,
+							forcedAngleUnit)
+					.toString();
+		}
+		return kernel
+				.formatAngle(value, toDecimal(), tpl, angleStyle == AngleStyle.UNBOUNDED, forcedAngleUnit)
+				.toString();
+	}
+
+	// overwrite
+	@Override
+	public final MyDouble getNumber() {
+		MyDouble ret = new MyDouble(kernel, value);
+		ret.setAngle();
+		return ret;
+	}
+
+	/**
+	 * returns size of the arc in pixels
+	 *
+	 * @return arc size in pixels
+	 */
+	@Override
+	public int getArcSize() {
+		return arcSize;
+	}
+
+	/**
+	 * Change the size of the arc in pixels,
+	 *
+	 * @param i
+	 *            arc size, should be in [10,100]
+	 */
+	@Override
+	public void setArcSize(int i) {
+		arcSize = i;
+	}
+
+	/**
+	 * returns all class-specific xml tags for saveXML
+	 */
+	@Override
+	protected void getXMLTags(XMLStringBuilder sb) {
+		// from ggb44 need to save before value in case it's unbounded
+		XMLBuilder.appendAngleStyle(sb, angleStyle, emphasizeRightAngle);
+		getValueXML(sb, rawValue);
+		getStyleXMLAfter(sb);
+	}
+
+	@Override
+	protected void getStyleXML(XMLStringBuilder sb) {
+		XMLBuilder.appendAngleStyle(sb, angleStyle, emphasizeRightAngle);
+		getStyleXMLAfter(sb);
+	}
+
+	private void getStyleXMLAfter(XMLStringBuilder sb) {
+		// if angle is drawable then we need to save visual options too
+		if (isDrawable() || hasIntervalMin() || hasIntervalMax()) {
+			// save slider info before show to have min and max set
+			// before setEuclidianVisible(true) is called
+			getXMLSliderTag(sb);
+			getLineStyleXML(sb);
+
+			// arc size
+			sb.startTag("arcSize").attr("val", arcSize).endTag();
+		}
+		getBasicStyleXML(sb);
+	}
+
+	@Override
+	public void setDecorationType(int type) {
+		setDecorationType(type, getDecoTypes().length);
+	}
+
+	/**
+	 * Returns true if this angle should be drawn differently when right
+	 *
+	 * @return true iff this angle should be drawn differently when right
+	 */
+	@Override
+	public boolean isEmphasizeRightAngle() {
+		return emphasizeRightAngle;
+	}
+
+	/**
+	 * Sets this angle should be drawn differently when right
+	 *
+	 * @param emphasizeRightAngle
+	 *            true iff this angle should be drawn differently when right
+	 */
+	@Override
+	public void setEmphasizeRightAngle(boolean emphasizeRightAngle) {
+		this.emphasizeRightAngle = emphasizeRightAngle;
+	}
+
+	@Override
+	public void setUndefined() {
+		super.setUndefined();
+		rawValue = Double.NaN;
+	}
+
+	@Override
+	public boolean isDrawable() {
+		return isDrawable
+				|| getDrawAlgorithm() != getParentAlgorithm()
+				|| isIndependent() && isLabelSet()
+				|| getParentAlgorithm() instanceof AlgoAngle;
+	}
+
+	@Override
+	public boolean hasDrawable3D() {
+		return true;
+	}
+
+	@Override
+	public boolean canHaveClickScript() {
+		return isDrawable();
+	}
+
+	/**
+	 * Force this angle to show value in degrees, even when radian mode is used in Kernel.
+	 */
+	public void setForcedAngleUnit(int forcedAngleUnit) {
+		this.forcedAngleUnit = forcedAngleUnit;
+	}
+
+	public int getForcedAngleUnit() {
+		return forcedAngleUnit;
+	}
+}

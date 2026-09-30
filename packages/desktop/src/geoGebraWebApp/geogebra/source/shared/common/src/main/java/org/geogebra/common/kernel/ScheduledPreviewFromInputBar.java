@@ -1,0 +1,395 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.kernel;
+
+import java.util.HashSet;
+import java.util.Set;
+
+import org.geogebra.common.kernel.arithmetic.Inspecting;
+import org.geogebra.common.kernel.arithmetic.SymbolicMode;
+import org.geogebra.common.kernel.arithmetic.ValidExpression;
+import org.geogebra.common.kernel.commands.EvalInfo;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.kernel.geos.GeoElementSetup;
+import org.geogebra.common.kernel.geos.GeoFunction;
+import org.geogebra.common.kernel.kernelND.GeoElementND;
+import org.geogebra.common.main.MyError;
+import org.geogebra.common.main.PreviewFeature;
+import org.geogebra.common.main.error.ErrorHandler;
+import org.geogebra.common.main.error.ErrorHelper;
+import org.geogebra.common.util.StringUtil;
+import org.geogebra.common.util.debug.Log;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+
+import com.google.j2objc.annotations.Weak;
+
+/**
+ * Periodically tries evaluating current input and creates preview
+ *
+ * @author Mathieu + Zbynek
+ */
+public class ScheduledPreviewFromInputBar implements Runnable {
+
+	private static final int DEFAULT_MAX_LENGTH = 1000;
+
+	@Weak
+	private final Kernel kernel;
+
+	private final int timeoutMs;
+	private String input = "";
+	private boolean inputValid;
+	private ErrorHandler validation;
+	private int maxLength = DEFAULT_MAX_LENGTH;
+	private boolean notFirstInput;
+	private GeoElement @Nullable [] previewGeos;
+	private String[] sliders;
+
+	private final Set<GeoElementSetup> geoElementSetups = new HashSet<>();
+
+	/**
+	 * @param kernel
+	 *            kernel
+	 */
+	ScheduledPreviewFromInputBar(Kernel kernel) {
+		this(kernel, 200);
+	}
+
+	ScheduledPreviewFromInputBar(Kernel kernel, int timeoutMs) {
+		this.kernel = kernel;
+		notFirstInput = false;
+		this.timeoutMs = timeoutMs;
+	}
+
+	/**
+	 * Adds a {@link GeoElementSetup} which can modify the initial setup of elements
+	 * for the preview.
+	 *
+	 * @param geoElementSetup The {@link GeoElementSetup} to be added
+	 */
+	public void addGeoElementSetup(GeoElementSetup geoElementSetup) {
+		geoElementSetups.add(geoElementSetup);
+	}
+
+	/**
+	 * Removes the previously added {@link GeoElementSetup} from this
+	 * {@code ScheduledPreviewFromInputBar}. Once removed, it will no longer affect
+	 * the initial setup of elements for the preview.
+	 *
+	 * @param geoElementSetup The {@link GeoElementSetup} to be removed
+	 */
+	public void removeGeoElementSetup(GeoElementSetup geoElementSetup) {
+		geoElementSetups.remove(geoElementSetup);
+	}
+
+	private void setInput(String str, ErrorHandler validation) {
+		this.input = str;
+		inputValid = false;
+		this.validation = validation;
+		if (StringUtil.emptyTrim(str)) {
+			Log.debug("empty");
+			maxLength = DEFAULT_MAX_LENGTH;
+			return;
+		}
+		if (str.length() > maxLength) {
+			Log.debug("Timeout at length " + maxLength);
+			return;
+		}
+		long start = System.currentTimeMillis();
+		try {
+			ValidExpression ve =
+					this.kernel.getAlgebraProcessor().getValidExpressionNoExceptionHandling(input);
+
+			if (kernel.getSymbolicMode() == SymbolicMode.SYMBOLIC_AV
+					&& ve.any(Inspecting::isVectorDivision)) {
+				MyError err = new MyError(kernel.getLocalization(), MyError.Errors.IllegalDivision);
+				ErrorHelper.handleError(err, null, kernel.getLocalization(), validation);
+			} else if (ve != null) {
+				inputValid = true;
+			}
+		} catch (MyError t) {
+			ErrorHelper.handleError(t, null, kernel.getLocalization(), validation);
+		} catch (Exception e) {
+			ErrorHelper.handleException(e, kernel.getApplication(), validation);
+		} catch (Error e) {
+			ErrorHelper.handleException(new Exception(e), kernel.getApplication(), validation);
+		}
+		// maxLength is not written if the first preview computed
+		// needed in Android with old phones, probably some other thread
+		// makes the computation too long (so false positive)
+		if (notFirstInput && System.currentTimeMillis() > start + timeoutMs) {
+			maxLength = str.length();
+			inputValid = false;
+		} else {
+			notFirstInput = true;
+			maxLength = DEFAULT_MAX_LENGTH;
+		}
+	}
+
+	/**
+	 * @param currentInput current editor input
+	 * @return current editor input, or an empty string for null
+	 */
+	public @NonNull String getInput(@Nullable String currentInput) {
+		return StringUtil.nullToEmpty(currentInput);
+	}
+
+	@Override
+	public void run() {
+		cleanOldSliders();
+		removeAlgosFromPreviousEvaluation();
+		previewGeos = null;
+		if (StringUtil.emptyTrim(input)) {
+			if (validation != null) {
+				validation.resetError();
+			}
+			this.kernel.notifyUpdatePreviewFromInputBar(null);
+			return;
+		}
+		if (!inputValid) {
+			if (validation != null && maxLength != DEFAULT_MAX_LENGTH) {
+				// timeout -- assume OK as we don't know if it's wrong
+				validation.showError(null);
+			}
+			this.kernel.notifyUpdatePreviewFromInputBar(null);
+			return;
+		}
+		EvalInfo info = new EvalInfo(false, true)
+				.withScripting(false)
+				.withCAS(false)
+				.addDegree(kernel.getAngleUnitUsesDegrees())
+				.withSymbolic(true)
+				.withCopyingPlainVariables(true);
+		Log.debug("preview for: " + input);
+		boolean silentModeOld = this.kernel.isSilentMode();
+		boolean suppressLabelsOld = this.kernel.getConstruction().isSuppressLabelsActive();
+		previewGeos = null;
+		long start = System.currentTimeMillis();
+		try {
+			this.kernel.setSilentMode(true);
+			ValidExpression ve =
+					this.kernel.getAlgebraProcessor().getValidExpressionNoExceptionHandling(input);
+
+			if (!isCASeval(ve) && kernel.getSymbolicMode() != SymbolicMode.SYMBOLIC_AV) {
+				GeoElement existingGeo = this.kernel.lookupLabel(ve.getLabel());
+				if (existingGeo == null) {
+
+					GeoElementND[] inputGeos = evalValidExpression(ve, info);
+					previewGeos = null;
+					if (inputGeos != null) {
+						buildPreviewGeos(inputGeos, ve.getLabel());
+					}
+					this.kernel.notifyUpdatePreviewFromInputBar(previewGeos);
+				} else if (PreviewFeature.isAvailable(PreviewFeature.MOB_PREVIEW_WHEN_EDITING)
+						&& !existingGeo.hasChildren()
+						&& existingGeo.isIndependent()) {
+					previewRedefine(ve, existingGeo, info);
+				} else {
+					Log.debug("existing geo: " + existingGeo);
+					kernel.notifyUpdatePreviewFromInputBar(null);
+					resetIfValid();
+				}
+			} else {
+				Log.debug("cas cell ");
+				resetIfValid();
+				kernel.notifyUpdatePreviewFromInputBar(null);
+			}
+
+			if (previewGeos != null) {
+				resetIfValid();
+			}
+		} catch (Throwable ee) {
+			Log.debug("-- invalid input" + ee + ":" + input);
+			this.kernel.setSilentMode(true);
+			this.kernel.notifyUpdatePreviewFromInputBar(null);
+		} finally {
+			this.kernel.setSilentMode(silentModeOld);
+			this.kernel.getConstruction().setSuppressLabelCreation(suppressLabelsOld);
+		}
+		if (System.currentTimeMillis() > start + timeoutMs) {
+			maxLength = input.length();
+			inputValid = false;
+		}
+	}
+
+	private void buildPreviewGeos(GeoElementND[] inputGeos, String label) {
+		// TODO use this if we want text centering
+		// InputHelper.updateProperties(inputGeos, kernel
+		// .getApplication().getActiveEuclidianView(), -2);
+		int unlabeled = 0;
+		for (GeoElementND geo : inputGeos) {
+			if (geo instanceof GeoFunction) {
+				boolean validFunction = ((GeoFunction) geo).validate(label == null, false);
+				if (!validFunction) {
+					geo.setUndefined();
+				}
+			}
+			if (!geo.isLabelSet()) {
+				geo.setSelectionAllowed(false);
+				unlabeled++;
+			}
+		}
+		previewGeos = new GeoElement[unlabeled];
+		int i = 0;
+		for (GeoElementND geo : inputGeos) {
+			if (!geo.isLabelSet()) {
+				GeoElement geoElement = geo.toGeoElement();
+				geoElementSetups.forEach(setup -> setup.applyTo(geoElement));
+				previewGeos[i++] = geoElement;
+			}
+		}
+	}
+
+	private void previewRedefine(ValidExpression ve, GeoElement existingGeo, EvalInfo info) {
+		ve.setLabels(null);
+		resetIfValid(); // reset if no syntax error, command errors triggered below
+		GeoElementND[] inputGeos = evalValidExpression(ve, info);
+		if (inputGeos != null && inputGeos.length == 1) {
+			GeoElementND redefined = inputGeos[0];
+			if (redefined.getGeoClassType() == existingGeo.getGeoClassType()) {
+				existingGeo.set(redefined);
+				geoElementSetups.forEach(setup -> setup.applyTo(existingGeo));
+				kernel.notifyUpdatePreviewFromInputBar(new GeoElement[] {existingGeo});
+			}
+		}
+	}
+
+	private void resetIfValid() {
+		if (validation != null && inputValid) {
+			validation.resetError();
+		}
+	}
+
+	private GeoElementND[] evalValidExpression(ValidExpression ve, EvalInfo info) {
+		return kernel
+				.getAlgebraProcessor()
+				.processAlgebraCommandNoExceptionHandling(
+						ve,
+						false,
+						validation,
+						null,
+						info.withSliders(kernel.getApplication().isHTML5Applet()
+								&& kernel.getApplication().getConfig().hasSlidersInAV()));
+	}
+
+	/**
+	 * Removes the algos (and their outputs) created for the previous preview from
+	 * the construction, so that they no longer get updated with their inputs.
+	 */
+	private void removeAlgosFromPreviousEvaluation() {
+		if (previewGeos != null) {
+			for (GeoElementND geo : previewGeos) {
+				geo.remove();
+				if (geo.getParentAlgorithm() != null) {
+					geo.getParentAlgorithm().remove();
+				}
+			}
+		}
+	}
+
+	private static boolean isCASeval(ValidExpression ve) {
+		String label = ve.getLabel();
+		if (label != null && label.startsWith("$")) {
+			int row = -1;
+			try {
+				row = Integer.parseInt(label.substring(1)) - 1;
+			} catch (Exception expected) {
+				// spreadsheet reference
+			}
+			return row > 0;
+		}
+		return false;
+	}
+
+	private void cleanOldSliders() {
+		if (sliders != null) {
+			for (String sliderLabel : sliders) {
+				GeoElement slider = kernel.lookupLabel(sliderLabel.trim());
+				slider.setFixed(false);
+				slider.remove();
+			}
+			kernel.notifyRepaint();
+			sliders = null;
+		}
+	}
+
+	/**
+	 * try to create/update preview for input typed
+	 *
+	 * @param newInput
+	 *            current algebra input
+	 * @param validate
+	 *            validation callback
+	 */
+	public void updatePreviewFromInputBar(String newInput, ErrorHandler validate) {
+		if (this.input.equals(newInput)) {
+			Log.debug("no update needed (same input)");
+			return;
+		}
+		setInput(newInput, validate);
+		kernel.getApplication().schedulePreview(this);
+	}
+
+	/**
+	 * preview is not recalculated if input has not changed since last
+	 * calculation
+	 *
+	 * @param newInput
+	 *            input
+	 * @return GeoElement[] preview for this input
+	 */
+	public GeoElement[] getPreview(String newInput) {
+
+		if (this.input.equals(newInput)) {
+			Log.debug("no update needed (same input)");
+			return previewGeos;
+		}
+
+		// create new preview immediately
+		kernel.getApplication().cancelPreview();
+		setInput(newInput, validation);
+		run();
+		return previewGeos;
+	}
+
+	/**
+	 * @param string
+	 *            slider names
+	 */
+	public void addSliders(String string) {
+		cleanOldSliders();
+		sliders = string.split(",");
+	}
+
+	/**
+	 * @return whether last input parses OK
+	 */
+	public boolean isValid() {
+		return inputValid;
+	}
+
+	/**
+	 * Clears preview.
+	 */
+	public void clear() {
+		input = "";
+		inputValid = false;
+		removeAlgosFromPreviousEvaluation();
+		previewGeos = null;
+		setInput("", null);
+	}
+}

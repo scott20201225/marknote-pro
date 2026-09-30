@@ -1,0 +1,102 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.gui.popup.autocompletion;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.lessThan;
+
+import org.geogebra.common.util.shape.Rectangle;
+import org.geogebra.common.util.shape.Size;
+import org.junit.jupiter.api.Test;
+
+class AutocompletionPopupPositionerTest {
+
+	private static final double MARGIN = 8;
+	private static final double INPUT_HEIGHT = 56;
+	private static final Size SINGLE_LINE_POPUP = new Size(320, 48 + 16);
+	private static final Rectangle PHONE_FRAME = new Rectangle(8, 320, 8, 780);
+	private static final Rectangle PHONE_FRAME_LANDSCAPE = new Rectangle(8, 780, 8, 320);
+	private static final Rectangle DESKTOP_FRAME = new Rectangle(0, 1000, 0, 1000);
+
+	private final AutocompletionPopupPositioner positioner = new AutocompletionPopupPositioner();
+
+	@Test
+	void testVerticalPositionUnspecifiedPopupAboveInputBar() {
+		Rectangle inputFrame = new Rectangle(
+				0, PHONE_FRAME.getWidth(), PHONE_FRAME.getHeight() - INPUT_HEIGHT, PHONE_FRAME.getHeight());
+		Rectangle frame = positioner.calculatePopupFrame(
+				inputFrame, SINGLE_LINE_POPUP, PHONE_FRAME, VerticalPosition.UNSPECIFIED);
+		assertThat(frame.getMaxY(), equalTo(inputFrame.getMinY()));
+	}
+
+	@Test
+	void testVerticalPositionUnspecifiedPopupBelowInputBar() {
+		Rectangle inputFrame =
+				new Rectangle(0, PHONE_FRAME.getWidth(), INPUT_HEIGHT / 2, INPUT_HEIGHT / 2 + INPUT_HEIGHT);
+		Rectangle frame = positioner.calculatePopupFrame(
+				inputFrame, SINGLE_LINE_POPUP, PHONE_FRAME, VerticalPosition.UNSPECIFIED);
+		assertThat(frame.getMinY(), equalTo(inputFrame.getMaxY()));
+	}
+
+	@Test
+	void testVerticalPositionAbove() {
+		Rectangle inputFrame =
+				new Rectangle(0, PHONE_FRAME.getWidth(), INPUT_HEIGHT * 2, INPUT_HEIGHT * 3);
+		Rectangle frame = positioner.calculatePopupFrame(
+				inputFrame, SINGLE_LINE_POPUP, PHONE_FRAME, VerticalPosition.ABOVE);
+		assertThat(frame.getMaxY(), equalTo(inputFrame.getMinY()));
+	}
+
+	@Test
+	void testHorizontalPositionForPhone() {
+		Rectangle inputFrame = new Rectangle(0, PHONE_FRAME.getWidth(), 0, INPUT_HEIGHT);
+		Rectangle frame = positioner.calculatePopupFrame(
+				inputFrame, SINGLE_LINE_POPUP, PHONE_FRAME, VerticalPosition.UNSPECIFIED);
+		assertThat(frame.getMinX(), equalTo(MARGIN));
+		assertThat(frame.getMaxX(), equalTo(PHONE_FRAME.getWidth() - MARGIN));
+	}
+
+	@Test
+	void testHorizontalPositionForDesktop() {
+		Rectangle inputFrame = new Rectangle(48, 256, 0, INPUT_HEIGHT);
+		Rectangle frame = positioner.calculatePopupFrame(
+				inputFrame, SINGLE_LINE_POPUP, DESKTOP_FRAME, VerticalPosition.UNSPECIFIED);
+		assertThat(frame.getMinX(), equalTo(inputFrame.getMinX()));
+		assertThat(frame.getWidth(), equalTo(520.0));
+	}
+
+	@Test
+	void testHorizontalPositionEdgeCase() {
+		int inputWidth = 56;
+		// Input is aligned to the right edge of the frame with 56 width
+		Rectangle inputFrame = new Rectangle(
+				PHONE_FRAME_LANDSCAPE.getWidth() - inputWidth,
+				PHONE_FRAME_LANDSCAPE.getWidth(),
+				0,
+				INPUT_HEIGHT);
+
+		Rectangle frame = positioner.calculatePopupFrame(
+				inputFrame, SINGLE_LINE_POPUP, PHONE_FRAME_LANDSCAPE, VerticalPosition.UNSPECIFIED);
+
+		// Expect that suggestion popup does not left align with input box
+		// And has a greater width than the input box
+		assertThat(frame.getWidth(), greaterThan((double) inputWidth));
+		assertThat(frame.getMinX(), lessThan(inputFrame.getMinX()));
+	}
+}

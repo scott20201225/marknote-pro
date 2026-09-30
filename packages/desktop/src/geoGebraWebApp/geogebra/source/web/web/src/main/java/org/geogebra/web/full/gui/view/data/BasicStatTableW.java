@@ -1,0 +1,189 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.web.full.gui.view.data;
+
+import org.geogebra.common.gui.view.data.DataVariable.GroupType;
+import org.geogebra.common.gui.view.data.StatTableModel;
+import org.geogebra.common.gui.view.data.StatTableModel.StatTableListener;
+import org.geogebra.common.kernel.algos.AlgoElement;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.kernel.geos.GeoList;
+import org.geogebra.common.kernel.statistics.Regression;
+import org.geogebra.common.kernel.statistics.Statistic;
+import org.geogebra.web.html5.main.AppW;
+import org.gwtproject.user.client.ui.FlowPanel;
+
+/**
+ * Displays statistics for DataAnalysisView when in one variable or regression
+ * mode.
+ *
+ * @author G. Sturr
+ *
+ */
+public class BasicStatTableW extends FlowPanel implements StatPanelInterfaceW, StatTableListener {
+	protected final AppW app;
+	private StatTableModel model;
+
+	protected DataAnalysisViewW daView;
+	protected StatTableW statTable;
+
+	public BasicStatTableW(AppW app, DataAnalysisViewW statDialog) {
+		this(app, statDialog, true);
+	} // END constructor
+
+	/**
+	 * @param app
+	 *            application
+	 * @param statDialog
+	 *            stats dialog
+	 * @param defaultModel
+	 *            model
+	 */
+	public BasicStatTableW(AppW app, DataAnalysisViewW statDialog, boolean defaultModel) {
+		this.daView = statDialog;
+		this.app = app;
+		setStyleName("daStatistics");
+
+		if (defaultModel) {
+			setModel(new StatTableModel(app, this));
+		}
+	}
+
+	/**
+	 * @param model
+	 *            stat model
+	 */
+	public void setModel(StatTableModel model) {
+		this.model = model;
+		initStatTable();
+	}
+
+	protected void initStatTable() {
+
+		statTable = new StatTableW();
+		statTable.setStatTable(
+				getModel().getRowCount(),
+				getModel().getRowNames(),
+				getColumnCount(),
+				getModel().getColumnNames());
+		clear();
+		add(statTable);
+	}
+
+	/**
+	 * @return the row names of the underlying stat table model.
+	 */
+	public String[] getRowNames() {
+		return getModel().getRowNames();
+	}
+
+	/**
+	 * @return the column names of the underlying stat table model.
+	 */
+	public String[] getColumnNames() {
+		return getModel().getColumnNames();
+	}
+
+	/**
+	 * @return the number of data rows, excluding the header row
+	 */
+	public int getRowCount() {
+		return getModel().getRowCount() - 1;
+	}
+
+	/**
+	 * @return the number of data columns.
+	 */
+	public int getColumnCount() {
+		return 2;
+	}
+
+	// =======================================================
+
+	/**
+	 * Evaluates all statistics for the selected data list. If data source is
+	 * not valid, the result cells are set blank.
+	 *
+	 */
+	@Override
+	public void updatePanel() {
+		statTable.setStatTable(
+				getModel().getRowCount(),
+				getModel().getRowNames(),
+				getColumnCount(),
+				getModel().getColumnNames());
+		app.getAsyncManager().scheduleCallback(getModel()::updatePanel);
+	}
+
+	protected AlgoElement getAlgo(Statistic algoName, GeoList dataList, GeoElement geoRegression) {
+		return getModel().getAlgo(algoName, dataList, geoRegression);
+	}
+
+	@Override
+	public void setLabels() {
+		statTable.setLabels(getModel().getRowNames(), getModel().getColumnNames(), false);
+	}
+
+	@Override
+	public GeoList getDataSelected() {
+		return daView.getController().getDataSelected();
+	}
+
+	@Override
+	public GeoElement getRegressionModel() {
+		return daView.getRegressionModel();
+	}
+
+	@Override
+	public Regression getRegressionMode() {
+		return daView.getModel().getRegressionMode();
+	}
+
+	@Override
+	public boolean isValidData() {
+		return daView.getController().isValidData();
+	}
+
+	@Override
+	public void setValueAt(double value, int row, int column) {
+		statTable.setValueAt(daView.getModel().format(value), row, column + 1);
+	}
+
+	@Override
+	public boolean isViewValid() {
+		return daView == null || daView.getDataSource() == null;
+	}
+
+	@Override
+	public int getMode() {
+		return daView.getModel().getMode();
+	}
+
+	@Override
+	public GroupType groupType() {
+		return daView.groupType();
+	}
+
+	@Override
+	public boolean isNumericData() {
+		return daView.getDataSource().isNumericData();
+	}
+
+	public StatTableModel getModel() {
+		return model;
+	}
+}

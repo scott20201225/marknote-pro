@@ -1,0 +1,253 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.properties;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
+import org.geogebra.common.gui.view.probcalculator.ProbabilityCalculatorView;
+import org.geogebra.common.kernel.commands.AlgebraProcessor;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.kernel.geos.GeoSymbolic;
+import org.geogebra.common.kernel.kernelND.GeoElementND;
+import org.geogebra.common.main.App;
+import org.geogebra.common.main.Localization;
+import org.geogebra.common.ownership.GlobalScope;
+import org.geogebra.common.ownership.SuiteScope;
+import org.geogebra.common.plugin.ScriptType;
+import org.geogebra.common.properties.factory.PropertiesArray;
+import org.geogebra.common.properties.impl.distribution.DistributionParameterProperty;
+import org.geogebra.common.properties.impl.distribution.DistributionTypeProperty;
+import org.geogebra.common.properties.impl.distribution.IntervalProperty;
+import org.geogebra.common.properties.impl.distribution.IsCumulativeProperty;
+import org.geogebra.common.properties.impl.distribution.ProbabilityResultValuesProperty;
+import org.geogebra.common.properties.impl.undo.UndoSavingPropertyObserver;
+import org.geogebra.common.properties.util.PropertyArrayValueObserving;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+
+/**
+ * Factory class for creating {@link PropertyView}s.
+ */
+public class PropertyViewFactory {
+	/**
+	 * Converts a {@link PropertiesArray} into a list of {@code PropertyView}s.
+	 * @param propertiesArray the {@code PropertiesArray} to convert
+	 * @return the list of {@code PropertyView}s
+	 */
+	public static @NonNull List<PropertyView> propertyViewListOf(
+			@NonNull PropertiesArray propertiesArray) {
+		List<PropertyView> propertyViewList = Arrays.stream(propertiesArray.getProperties())
+				.map(PropertyView::of)
+				.filter(Objects::nonNull)
+				.collect(Collectors.toList());
+
+		// Set ordinal position of expandable lists
+		for (int i = 0; i < propertyViewList.size(); i++) {
+			PropertyView propertyView = propertyViewList.get(i);
+			if (!(propertyView instanceof PropertyView.ExpandableList)) {
+				continue;
+			}
+			PropertyView.ExpandableList expandableList = (PropertyView.ExpandableList) propertyView;
+
+			boolean previousIsExpandableList =
+					i > 0 && propertyViewList.get(i - 1) instanceof PropertyView.ExpandableList;
+			boolean nextIsExpandableList = i < propertyViewList.size() - 1
+					&& propertyViewList.get(i + 1) instanceof PropertyView.ExpandableList;
+
+			if (previousIsExpandableList && !nextIsExpandableList) {
+				expandableList.ordinalPosition = PropertyView.ExpandableList.OrdinalPosition.Last;
+			} else if (!previousIsExpandableList && nextIsExpandableList) {
+				expandableList.ordinalPosition = PropertyView.ExpandableList.OrdinalPosition.First;
+			} else if (previousIsExpandableList) {
+				expandableList.ordinalPosition = PropertyView.ExpandableList.OrdinalPosition.InBetween;
+			} else {
+				expandableList.ordinalPosition = PropertyView.ExpandableList.OrdinalPosition.Alone;
+			}
+		}
+
+		// Convert a single expandable list to it's children
+		if (propertyViewList.size() == 1
+				&& propertyViewList.get(0) instanceof PropertyView.ExpandableList
+				&& ((PropertyView.ExpandableList) propertyViewList.get(0)).getCheckbox() == null) {
+			PropertyView.ExpandableList expandableList =
+					(PropertyView.ExpandableList) propertyViewList.get(0);
+			return expandableList.getItems();
+		}
+
+		return propertyViewList;
+	}
+
+	/**
+	 * Constructs the {@link Property}s for the settings of the elements, connects the
+	 * undo manager, and transforms them into a {@code PropertyView} to be displayed.
+	 * @param app the active app
+	 * @param elements list of geo elements
+	 * @return the {@code PropertyView} containing the settings for the given objects
+	 * or {@code null} if the list of elements is empty
+	 */
+	public static PropertyView.@Nullable TabbedPageSelector propertyViewOfObjectSettings(
+			@NonNull App app, @NonNull List<GeoElement> elements) {
+		if (elements.isEmpty()) {
+			return null;
+		}
+		String title = app.getLocalization().getMenu(getTypeString(elements.get(0)));
+		SuiteScope suiteScope = GlobalScope.getSuiteScope(app);
+		assert suiteScope != null;
+		boolean jsEnabled = !app.getPlatform().isMobile()
+				&& app.getEventDispatcher().availableTypes().contains(ScriptType.JAVASCRIPT);
+		List<PropertiesArray> propertiesArrayList =
+				suiteScope.geoElementPropertiesFactory.createProperties(
+						app.getKernel().getAlgebraProcessor(),
+						app.getLocalization(),
+						app.getImageManager(),
+						jsEnabled,
+						elements);
+		propertiesArrayList.forEach(propertiesArray -> PropertyArrayValueObserving.addObserver(
+				propertiesArray, new UndoSavingPropertyObserver(app.getUndoManager())));
+		return new PropertyView.TabbedPageSelector(title, propertiesArrayList, 0);
+	}
+
+	/**
+	 * Constructs the {@link Property}s for the settings of the app
+	 * and transforms them into a {@code PropertyView} to be displayed.
+	 * @param app the current app for which to create the settings
+	 * @param propertiesRegistry the {@link PropertiesRegistry}
+	 * to be used for registering the newly constructed properties
+	 * @param openedFromBurgerMenu whether the app settings were opened from the burger menu's
+	 * settings item or from the top bar's gear icon, determining the initially open tab
+	 * @return the {@code PropertyView} containing the app settings
+	 */
+	public static PropertyView.@NonNull TabbedPageSelector propertyViewOfAppSettings(
+			@NonNull App app,
+			@NonNull PropertiesRegistry propertiesRegistry,
+			boolean openedFromBurgerMenu) {
+		List<PropertiesArray> propertyArrayList = app.getConfig()
+				.createPropertiesFactory()
+				.createProperties(app, app.getLocalization(), propertiesRegistry);
+		int initialSelectedTabIndex =
+				calculateInitialSelectedTabIndex(propertyArrayList, openedFromBurgerMenu);
+		return new PropertyView.TabbedPageSelector(
+				app.getLocalization().getMenu("Settings"), propertyArrayList, initialSelectedTabIndex);
+	}
+
+	/**
+	 * Constructs the {@link Property}s for the distribution view and transforms them into a list of
+	 * {@code PropertyView} to be displayed.
+	 * @param localization the localization to translate property names with
+	 * @param algebraProcessor the algebra processor to use for probability result calculations
+	 * @param probabilityCalculatorView the backing probability calculator view
+	 * @param propertiesRegistry the {@link PropertiesRegistry} to register the properties with
+	 * @return the list of {@code PropertyView} to be displayed in the distribution view
+	 */
+	public static @NonNull List<PropertyView> propertyViewOfDistributionSettings(
+			@NonNull Localization localization,
+			@NonNull AlgebraProcessor algebraProcessor,
+			@NonNull ProbabilityCalculatorView probabilityCalculatorView,
+			@NonNull PropertiesRegistry propertiesRegistry) {
+		List<Property> properties = List.of(
+				new DistributionTypeProperty(localization, probabilityCalculatorView),
+				new IsCumulativeProperty(localization, probabilityCalculatorView),
+				new IntervalProperty(localization, probabilityCalculatorView),
+				new DistributionParameterProperty(
+						algebraProcessor, probabilityCalculatorView, localization, 0),
+				new DistributionParameterProperty(
+						algebraProcessor, probabilityCalculatorView, localization, 1),
+				new DistributionParameterProperty(
+						algebraProcessor, probabilityCalculatorView, localization, 2),
+				new ProbabilityResultValuesProperty(
+						localization, algebraProcessor, probabilityCalculatorView));
+		properties.forEach(propertiesRegistry::register);
+		return properties.stream().map(PropertyView::of).toList();
+	}
+
+	/**
+	 * Constructs the {@link Property}s for the distribution and parameters and transforms them
+	 * into a list of {@code PropertyView} to be displayed.
+	 * @param localization the localization to translate property names with
+	 * @param algebraProcessor the algebra processor to use for probability result calculations
+	 * @param probabilityCalculatorView the backing probability calculator view
+	 * @param propertiesRegistry the {@link PropertiesRegistry} to register the properties with
+	 * @return the list of {@code PropertyView} to be displayed in the distribution view in classic
+	 */
+	public static @NonNull List<PropertyView> propertyClassicDistributionParametersSettings(
+			@NonNull Localization localization,
+			@NonNull AlgebraProcessor algebraProcessor,
+			@NonNull ProbabilityCalculatorView probabilityCalculatorView,
+			@NonNull PropertiesRegistry propertiesRegistry) {
+		List<Property> properties = List.of(
+				new DistributionTypeProperty(localization, probabilityCalculatorView),
+				new DistributionParameterProperty(
+						algebraProcessor, probabilityCalculatorView, localization, 0),
+				new DistributionParameterProperty(
+						algebraProcessor, probabilityCalculatorView, localization, 1),
+				new DistributionParameterProperty(
+						algebraProcessor, probabilityCalculatorView, localization, 2));
+		properties.forEach(propertiesRegistry::register);
+		return properties.stream().map(PropertyView::of).toList();
+	}
+
+	/**
+	 * Constructs the {@link Property}s for the distribution settings other than distribution and
+	 * parameters and transforms them into a list of {@code PropertyView} to be displayed.
+	 * @param localization the localization to translate property names with
+	 * @param algebraProcessor the algebra processor to use for probability result calculations
+	 * @param probabilityCalculatorView the backing probability calculator view
+	 * @param propertiesRegistry the {@link PropertiesRegistry} to register the properties with
+	 * @return the list of {@code PropertyView} to be displayed in the distribution view in classic
+	 */
+	public static @NonNull List<PropertyView> propertyClassicDistributionViewSettings(
+			@NonNull Localization localization,
+			@NonNull AlgebraProcessor algebraProcessor,
+			@NonNull ProbabilityCalculatorView probabilityCalculatorView,
+			@NonNull PropertiesRegistry propertiesRegistry) {
+		List<Property> properties = List.of(
+				new IsCumulativeProperty(localization, probabilityCalculatorView),
+				new IntervalProperty(localization, probabilityCalculatorView),
+				new ProbabilityResultValuesProperty(
+						localization, algebraProcessor, probabilityCalculatorView));
+		properties.forEach(propertiesRegistry::register);
+		return properties.stream().map(PropertyView::of).toList();
+	}
+
+	private static String getTypeString(GeoElement geoElement) {
+		if (!(geoElement instanceof GeoSymbolic geoSymbolic)) {
+			return geoElement.getTypeString();
+		}
+		GeoElementND twinGeo = geoSymbolic.getTwinGeo();
+		if (twinGeo == null) {
+			return "Settings";
+		}
+		return twinGeo.toGeoElement().getTypeString();
+	}
+
+	private static int calculateInitialSelectedTabIndex(
+			List<PropertiesArray> propertiesArrayList, boolean openedFromBurgerMenu) {
+		if (openedFromBurgerMenu) {
+			return 0;
+		}
+		for (int index = 0; index < propertiesArrayList.size(); index++) {
+			String name = propertiesArrayList.get(index).getRawName();
+			if ("DrawingPad".equals(name) || "GraphicsView3D".equals(name)) {
+				return index;
+			}
+		}
+		return 0;
+	}
+}

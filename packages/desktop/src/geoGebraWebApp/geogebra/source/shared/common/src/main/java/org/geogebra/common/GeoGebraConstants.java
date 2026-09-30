@@ -1,0 +1,278 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common;
+
+/**
+ * Application-wide constants (version strings, URLs)
+ */
+public interface GeoGebraConstants {
+
+	// GeoGebra version
+	// DO NOT CHANGE the format of VERSION_STRING (or add commented out version)
+	// as it is read by the build system
+	// and updated automatically by the "Version Bump" task
+	/** last build date */
+	String BUILD_DATE = "18 September 2026";
+	/** complete version string */
+	String VERSION_STRING = "5.4.931.0";
+	/** proper noun, should NOT be translated / transliterated */
+	String APPLICATION_NAME = "GeoGebra";
+
+	/** App versions */
+	enum Version {
+		CAS,
+		GRAPHING,
+		GRAPHING_3D,
+		GEOMETRY,
+		SCIENTIFIC,
+		SUITE,
+		MIXED_REALITY,
+		NOTES,
+		PROBABILITY,
+		CLASSIC;
+
+		/**
+		 * @return translatable name of this app type
+		 */
+		public String getTransKey() {
+			switch (this) {
+				case GRAPHING:
+					return "GeoGebraGraphingCalculator";
+				case GRAPHING_3D:
+					return "GeoGebra3DGrapher";
+				case SCIENTIFIC:
+					return "GeoGebraScientificCalculator";
+				case CAS:
+					return "GeoGebraCASCalculator";
+				case GEOMETRY:
+					return "GeoGebraGeometry";
+				case NOTES:
+					return "GeoGebraNotes";
+				case SUITE:
+					return "GeoGebraCalculatorSuite";
+				default:
+					return null;
+			}
+		}
+	}
+
+	/**
+	 * Platform
+	 */
+	enum Platform {
+		DESKTOP("d"),
+
+		/** GeoGebra Graphing Calculator */
+		ANDROID("a"),
+
+		WEB("w"),
+
+		IOS("i"),
+
+		IOS_WEBVIEW("iw"),
+
+		WEB_FOR_BROWSER_2D("w2d"),
+
+		OFFLINE("offline"),
+
+		SMART("smart"),
+
+		POWERPOINT("p");
+
+		private final String name;
+
+		Platform(String name) {
+			this.name = name;
+		}
+
+		public String getName() {
+			return name;
+		}
+
+		/**
+		 * @param prerelease
+		 *            whether we run prerelease
+		 * @return eg X.Y.Zd-prerelease
+		 */
+		public String getVersionString(boolean prerelease, String appCode) {
+
+			StringBuilder suffix = new StringBuilder(10);
+			suffix.append(name);
+			if (!"classic".equals(appCode)) {
+				suffix.append(appCode);
+			}
+			if (prerelease) {
+				suffix.append("-prerelease");
+			}
+
+			// everything except old Java desktop version should be version
+			// 6.0.x.x
+			// change 5.4.274.0 to 6.0.274.0
+			return (this == DESKTOP ? VERSION_STRING : getVersionString6()) + "-" + suffix;
+		}
+
+		/**
+		 *
+		 * @return true if this is a phone version.
+		 */
+		public boolean isPhone() {
+			return "i".equals(name);
+		}
+
+		/**
+		 * @return true if the current platform is either Android or iOS.
+		 */
+		public boolean isMobile() {
+			return this == ANDROID || this == IOS;
+		}
+	}
+
+	String SUITE_APPNAME = "GeoGebraCalculatorSuite";
+
+	String GRAPHING_APPCODE = "graphing";
+	String GEOMETRY_APPCODE = "geometry";
+	String G3D_APPCODE = "3d";
+	String SCIENTIFIC_APPCODE = "scientific";
+	String CAS_APPCODE = "cas";
+	String SUITE_APPCODE = "suite";
+	String CLASSIC_APPCODE = "classic";
+	String EVALUATOR_APPCODE = "evaluator";
+	String NOTES_APPCODE = "notes";
+	String PROBABILITY_APPCODE = "probability";
+	String BAYERN_GRAPHING_APPCODE = "bayern_gr";
+	String WTR_APPCODE = "wtr";
+
+	String SUITE_SHORT_NAME = "CalculatorSuite.short";
+
+	String SUITE_URL_NAME = "calculator";
+
+	/**
+	 * used by version checker, so that sys admins can disable version checking
+	 * for *all* ggb versions with
+	 * HKEY_LOCAL_MACHINE/Software/JavaSoft/Prefs/geogebra/version_check_allow =
+	 * false
+	 */
+	String PREFERENCES_ROOT_GLOBAL = "/geogebra";
+
+	/** root preferences node, eg HKEY_CURRENT_USER/Software/JavaSoft/Prefs/geogebra42/ */
+	String PREFERENCES_ROOT = "/geogebra50";
+	/** File format version */
+	String XML_FILE_FORMAT = "5.0";
+
+	// This is used for checking if a minor update exists (on each run):
+	String VERSION_URL_MINOR = "https://download.geogebra.org/installers/5.4/version.txt";
+
+	// This is used for checking whether a major update exists (monthly):
+	String VERSION_URL = "https://download.geogebra.org/installers/version.txt";
+
+	String INSTALLERS_URL = "https://www.geogebra.org/download";
+
+	// archive
+	/** short version, for online archive */
+	String SHORT_VERSION_STRING = "5.4";
+	// File format versions
+	/** XSD for ggb files */
+	String GGB_XSD_FILENAME = "ggb.xsd";
+	/** XSD for ggt (macro) files */
+	String GGT_XSD_FILENAME = "ggt.xsd";
+	// URLs
+
+	/** http prefix */
+	String HTTP = "http://";
+	/** https prefix */
+	String HTTPS = "https://";
+	/** mailto prefix */
+	String MAILTO = "mailto:";
+
+	/** GeoGebra URL */
+	String GEOGEBRA_WEBSITE = "https://www.geogebra.org/";
+	/** GeoGebraTube beta URL, used when Feature.TUBE_BETA == true */
+	String GEOGEBRA_WEBSITE_BETA = "https://beta.geogebra.org/";
+
+	String GEOGEBRA_HELP_WEBSITE = "https://geogebra.github.io/docs/manual/";
+
+	/**
+	 * minimal precision in LocusEquation: by default rounding is at least 4
+	 * decimals (this changes dynamically when zooming in)
+	 */
+	long PROVER_MIN_PRECISION = 10000;
+
+	/** CSS class name for GeoGebraWeb container tag */
+	String GGM_CLASS_NAME = "geogebraweb";
+	/** mimetype of GGB files */
+	String GGW_MIME_TYPE = "application/vnd.geogebra.file";
+	/** Privacy Policy */
+	String PRIVACY_POLICY_URL = "https://www.geogebra.org/privacy";
+	/** license URL */
+	String GGB_LICENSE_URL = "https://www.geogebra.org/license";
+
+	String BYCS_LICENCE_URL = "https://www.bycs.de/rechtliche-dokumente/board/impressum/index.html";
+
+	/**
+	 * URL of the webpage to call if a file should be uploaded. If you want to
+	 * test GeoGebra Materials uploads on a test server, use a test IP URL
+	 * instead, e.g.: "http://140.78.116.131:8082/upload"
+	 */
+	String uploadURL = "https://www.geogebra.org/upload";
+
+	String uploadURLBeta = "https://beta.geogebra.org/upload";
+
+	String GEOGEBRA_LOADING_PNG = "https://www.geogebra.org/images/GeoGebra_loading.png";
+	String APPLET_PLAY_PNG = "https://www.geogebra.org/images/applet_play.png";
+
+	// //////////////////////////////////////////////////////////////////////////
+	// AUTHENTICATING WITH GOOGLE
+	// ///////////////////////////////////////////////
+	// //////////////////////////////////////////////////////////////////////////
+
+	/**
+	 * This app's personal client ID assigned by the Google APIs Console
+	 * (http://code.google.com/apis/console).
+	 */
+	String GOOGLE_CLIENT_ID =
+			"656990710877-g0tjpnhriv39e59f5s5ubs81sv2686m6" + ".apps.googleusercontent.com";
+
+	/**
+	 * The Graphing Chrome app's client ID from the Google APIs Console
+	 * (http://code.google.com/apis/console).
+	 */
+	String CHROME_APP_CLIENT_ID =
+			"656990710877-3uu4empvnqi7co987usqk0talj3hnt2r.apps.googleusercontent.com";
+
+	// The auth scope being requested. This scope will allow the application to
+	// identify who the authenticated user is.
+	String PLUS_ME_SCOPE = "https://www.googleapis.com/auth/plus.me";
+	String DRIVE_SCOPE =
+			"https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly";
+	String USERINFO_EMAIL_SCOPE = "https://www.googleapis.com/auth/userinfo.email";
+	String USERINFO_PROFILE_SCOPE = "https://www.googleapis.com/auth/userinfo.profile";
+	String API_USERINFO = "https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token=";
+
+	String FORUM_URL = "https://help.geogebra.org/";
+	String REPORT_BUG_URL = "https://www.reddit.com/r/geogebra/";
+
+	String EDIT_URL_BASE = "https://www.geogebra.org/material/edit/id/";
+
+	/**
+	 * Get the version string for versions 6.0.*
+	 *
+	 * @return version string
+	 */
+	static String getVersionString6() {
+		return VERSION_STRING.replace("5.4.", "6.0.");
+	}
+}

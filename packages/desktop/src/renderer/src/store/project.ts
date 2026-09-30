@@ -28,6 +28,7 @@ import {
 } from '../util/noteWorkspace'
 import type { TreeFileNode, TreeNode } from '../components/sideBar/types'
 import type { FileChangeDetail } from '@shared/types/files'
+import type { GeoGebraMode } from '@shared/types/files'
 import { getDrawioConfiguration } from '../util/drawioConfiguration'
 
 type ProjectTree = TreeNode
@@ -94,6 +95,7 @@ const getBasename = (pathname: string): string => {
 }
 
 const isDrawingPath = (pathname: string): boolean => /\.drawio$/i.test(pathname)
+const isGeoGebraPath = (pathname: string): boolean => /\.ggb$/i.test(pathname)
 
 const isProjectPathMatch = (a: string, b: string): boolean => {
   if (window.fileUtils.isSamePathSync(a, b)) return true
@@ -128,6 +130,7 @@ interface OpenProjectOptions {
 interface CreateCacheEntry {
   dirname: string
   type: 'file' | 'directory' | string
+  geoGebraMode?: GeoGebraMode
 }
 
 interface ClipboardEntry {
@@ -506,8 +509,9 @@ export const useProjectStore = defineStore('project', () => {
         mtimeMs: stat.mtimeMs ?? Date.now(),
         isDirectory: false,
         isFile: true,
-        isMarkdown: !isDrawingPath(dest),
-        isDrawing: isDrawingPath(dest)
+        isMarkdown: !isDrawingPath(dest) && !isGeoGebraPath(dest),
+        isDrawing: isDrawingPath(dest),
+        isGeoGebra: isGeoGebraPath(dest)
       },
       String(preferencesStore.fileSortBy),
       String(preferencesStore.fileSortOrder)
@@ -908,10 +912,21 @@ export const useProjectStore = defineStore('project', () => {
         window.electron.clipboard.writeText(pathname)
       }
     })
-    bus.on('SIDEBAR::new', (type: unknown) => {
+    bus.on('SIDEBAR::new', (payload: unknown) => {
+      const request =
+        typeof payload === 'object' && payload !== null
+          ? (payload as { type?: unknown; geoGebraMode?: unknown })
+          : { type: payload }
+      const type = String(request.type ?? '')
       const { pathname, isDirectory } = activeItem.value
       const dirname = isDirectory ? pathname : window.path.dirname(pathname)
-      createCache.value = { dirname, type: String(type) }
+      createCache.value = {
+        dirname,
+        type,
+        ...(type === 'geogebra'
+          ? { geoGebraMode: (request.geoGebraMode ?? 'graphing') as GeoGebraMode }
+          : {})
+      }
       bus.emit('SIDEBAR::show-new-input')
     })
     bus.on('SIDEBAR::remove', () => {
@@ -1023,6 +1038,7 @@ export const useProjectStore = defineStore('project', () => {
   async function CREATE_FILE_DIRECTORY(name: string): Promise<void> {
     const cache = createCache.value as CreateCacheEntry
     const { dirname, type } = cache
+    const geoGebraMode = cache.geoGebraMode ?? 'graphing'
     const inputName = name.trim()
     if (!inputName) {
       createCache.value = {}
@@ -1051,6 +1067,12 @@ export const useProjectStore = defineStore('project', () => {
       storedName = name.trim()
       if (!storedName.toLowerCase().endsWith('.drawio')) {
         storedName += '.drawio'
+      }
+    } else if (type === 'geogebra') {
+      fileType = 'file'
+      storedName = name.trim()
+      if (!storedName.toLowerCase().endsWith('.ggb')) {
+        storedName += '.ggb'
       }
     } else {
       fileType = 'directory'
@@ -1086,7 +1108,7 @@ export const useProjectStore = defineStore('project', () => {
     create(fullName, fileType)
       .then(() => {
         createCache.value = {}
-        if (fileType === 'file' && type !== 'drawing') {
+        if (fileType === 'file' && type !== 'drawing' && type !== 'geogebra') {
           newFileNameCache.value = fullName
         }
         if (type === 'drawing') {
@@ -1095,6 +1117,9 @@ export const useProjectStore = defineStore('project', () => {
             fullName,
             getDrawioConfiguration()
           )
+        }
+        if (type === 'geogebra') {
+          return window.electron.ipcRenderer.invoke('mt::geogebra::open', fullName, geoGebraMode)
         }
       })
       .catch((err) => {
@@ -1126,7 +1151,9 @@ export const useProjectStore = defineStore('project', () => {
       }
       storedName = isDrawingPath(src)
         ? `${name.trim().replace(/\.drawio$/i, '')}.drawio`
-        : toStoredNoteName(name, kind)
+        : isGeoGebraPath(src)
+          ? `${name.trim().replace(/\.ggb$/i, '')}.ggb`
+          : toStoredNoteName(name, kind)
     }
     if (!storedName) return
     const dest = dirname + PATH_SEPARATOR + storedName

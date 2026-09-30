@@ -1,0 +1,89 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.properties.impl.graphics;
+
+import java.util.List;
+
+import org.geogebra.common.geogebra3D.euclidian3D.EuclidianView3D;
+import org.geogebra.common.main.Localization;
+import org.geogebra.common.plugin.EuclidianStyleConstants;
+import org.geogebra.common.properties.IconsEnumeratedProperty;
+import org.geogebra.common.properties.PropertyResource;
+import org.geogebra.common.properties.impl.AbstractEnumeratedProperty;
+import org.jspecify.annotations.Nullable;
+
+public class ViewDirectionProperty extends AbstractEnumeratedProperty<Integer>
+		implements IconsEnumeratedProperty<Integer> {
+	private static final PropertyResource[] icons = {
+		PropertyResource.ICON_VIEW_DIRECTION_XY,
+		PropertyResource.ICON_VIEW_DIRECTION_XZ,
+		PropertyResource.ICON_VIEW_DIRECTION_YZ
+	};
+	private static final String[] rawLabels = {"stylebar.ViewXY", "stylebar.ViewXZ", "stylebar.ViewYZ"
+	};
+	private final EuclidianView3D euclidianView;
+	private int viewDirection = -1;
+
+	/**
+	 * Creates a view direction property
+	 * @param localization localization
+	 * @param euclidianView euclidian view
+	 */
+	public ViewDirectionProperty(Localization localization, EuclidianView3D euclidianView) {
+		super(localization, "stylebar.ViewDirection");
+		this.euclidianView = euclidianView;
+		setValues(List.of(
+				EuclidianStyleConstants.VIEW_DIRECTION_XY,
+				EuclidianStyleConstants.VIEW_DIRECTION_XZ,
+				EuclidianStyleConstants.VIEW_DIRECTION_YZ));
+	}
+
+	@Override
+	public PropertyResource[] getValueIcons() {
+		return icons;
+	}
+
+	@Override
+	protected void doSetValue(Integer value) {
+		if (value != viewDirection) {
+			viewDirection = value;
+		}
+		switch (value) {
+			case EuclidianStyleConstants.VIEW_DIRECTION_XY:
+				euclidianView.setRotAnimation(-90, 90, true);
+				break;
+			case EuclidianStyleConstants.VIEW_DIRECTION_XZ:
+				euclidianView.setRotAnimation(-90, 0, true);
+				break;
+			case EuclidianStyleConstants.VIEW_DIRECTION_YZ:
+				euclidianView.setRotAnimation(0, 0, true);
+				break;
+			default:
+			// do nothing
+		}
+	}
+
+	@Override
+	public Integer getValue() {
+		return viewDirection;
+	}
+
+	@Override
+	public @Nullable String[] getToolTipLabels() {
+		return rawLabels;
+	}
+}

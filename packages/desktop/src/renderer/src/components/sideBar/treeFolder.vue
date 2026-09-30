@@ -65,6 +65,18 @@
         @keydown.enter.prevent="handleInputEnterFromKeyboard"
         @blur="handleInputBlur"
       />
+      <div
+        v-if="showTreeCreateInput && createCacheType === 'geogebra'"
+        class="geogebra-create-options"
+        :style="{ 'margin-left': `${depth * 5 + 15}px` }"
+      >
+        <label>{{ t('sideBar.tree.geoGebraMode') }}</label>
+        <select v-model="geoGebraMode">
+          <option v-for="mode of geoGebraModes" :key="mode.value" :value="mode.value">
+            {{ t(mode.labelKey) }}
+          </option>
+        </select>
+      </div>
       <File v-for="file of visibleFiles" :key="file.id" :file="file" :depth="depth + 1" />
     </div>
   </div>
@@ -92,6 +104,8 @@ import {
   getVisibleNoteFolders
 } from '../../util/noteWorkspace'
 import type { TreeFileNode, TreeFolderNode } from './types'
+import type { GeoGebraMode } from '@shared/types/files'
+import { GEO_GEBRA_MODES } from '../../util/geogebra'
 
 const props = defineProps<{
   folder: TreeFolderNode
@@ -155,12 +169,22 @@ const createCacheDirname = computed<string | undefined>(() => {
 const createCacheType = computed<string | undefined>(() => {
   return (createCache.value as { type?: string }).type
 })
+const geoGebraModes = GEO_GEBRA_MODES
+const geoGebraMode = computed<GeoGebraMode>({
+  get: () => (createCache.value as { geoGebraMode?: GeoGebraMode }).geoGebraMode ?? 'graphing',
+  set: (value) => {
+    const cache = createCache.value as { dirname?: string; type?: string }
+    if (!cache.dirname || !cache.type) return
+    projectStore.createCache = { dirname: cache.dirname, type: cache.type, geoGebraMode: value }
+  }
+})
 const isCreatingNoteInListMode = computed<boolean>(() => {
   return (
     props.noteNavigationMode === 'tree-list' &&
     (createCacheType.value === 'document' ||
       createCacheType.value === 'file' ||
-      createCacheType.value === 'drawing')
+      createCacheType.value === 'drawing' ||
+      createCacheType.value === 'geogebra')
   )
 })
 const showTreeCreateInput = computed<boolean>(() => {
@@ -296,16 +320,17 @@ onMounted(() => {
     height: 30px;
     padding-right: 15px;
     gap: 6px;
+    color: var(--tree-text-color, var(--sideBarTitleColor));
     & > .icon-arrow {
       flex-shrink: 0;
-      color: var(--sideBarIconColor);
+      color: var(--tree-icon-color, var(--sideBarIconColor));
       margin-right: 5px;
       transition: transform 0.25s ease-out;
       transform: rotate(90deg);
     }
     & > .icon-node-type {
       flex-shrink: 0;
-      color: var(--sideBarIconColor);
+      color: var(--tree-icon-color, var(--sideBarIconColor));
       opacity: 0.9;
     }
     & > .icon-arrow.fold {
@@ -325,6 +350,7 @@ onMounted(() => {
 .folder-name > input.rename {
   flex: 1;
   min-width: 0;
+  color: var(--tree-text-color, var(--sideBarTitleColor));
 }
 
 .folder-action-button {
@@ -338,13 +364,13 @@ onMounted(() => {
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: var(--sideBarIconColor);
+  color: var(--tree-icon-color, var(--sideBarIconColor));
   cursor: pointer;
 }
 
 .folder-action-button:hover {
   background: var(--sideBarItemHoverBgColor);
-  color: var(--sideBarTitleColor);
+  color: var(--tree-text-color, var(--sideBarTitleColor));
 }
 .new-input,
 input.rename {
@@ -352,10 +378,27 @@ input.rename {
   height: 22px;
   margin: 5px 0;
   padding: 0 6px;
-  color: var(--sideBarColor);
+  color: var(--tree-text-color, var(--sideBarTitleColor));
   border: 1px solid var(--floatBorderColor);
   background: var(--floatBorderColor);
   width: 70%;
   border-radius: 3px;
+}
+
+.geogebra-create-options {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: var(--tree-text-color, var(--sideBarTitleColor));
+}
+
+.geogebra-create-options select {
+  min-width: 130px;
+  color: inherit;
+  background: var(--editorBgColor);
+  border: 1px solid var(--floatBorderColor);
 }
 </style>

@@ -1,0 +1,89 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.properties.impl.objects;
+
+import java.util.List;
+
+import org.geogebra.common.kernel.commands.AlgebraProcessor;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.main.Localization;
+import org.geogebra.common.properties.aliases.StringProperty;
+import org.geogebra.common.properties.factory.GeoElementPropertiesFactory;
+import org.geogebra.common.properties.impl.collections.AbstractPropertyCollection;
+import org.geogebra.common.properties.impl.facade.StringPropertyListFacade;
+import org.geogebra.common.properties.impl.objects.delegate.NotApplicablePropertyException;
+
+/**
+ * A slider interval property (collection). Contains min, max and step properties, operating on a
+ * list of slider {@code GeoElement}s.
+ */
+public class SliderIntervalProperty extends AbstractPropertyCollection<StringProperty> {
+
+	/**
+	 * Creates a slider interval property collection. Contains min, max and step properties.
+	 * @param propertiesFactory factory
+	 * @param processor algebra processor
+	 * @param localization localization
+	 * @param elements geo elements
+	 * @throws NotApplicablePropertyException if this property is not applicable to any of the
+	 * geo elements
+	 */
+	public SliderIntervalProperty(
+			GeoElementPropertiesFactory propertiesFactory,
+			AlgebraProcessor processor,
+			Localization localization,
+			List<GeoElement> elements)
+			throws NotApplicablePropertyException {
+		super(localization, "Interval");
+
+		setProperties(new StringProperty[] {
+			propertiesFactory.createPropertyFacadeThrowing(
+					elements,
+					element -> new MinProperty(processor, localization, element),
+					StringPropertyListFacade::new),
+			propertiesFactory.createPropertyFacadeThrowing(
+					elements,
+					element -> new MaxProperty(processor, localization, element),
+					StringPropertyListFacade::new),
+			propertiesFactory.createPropertyFacadeThrowing(
+					elements,
+					element -> new AnimationStepProperty(processor, localization, element, true),
+					StringPropertyListFacade::new),
+		});
+	}
+
+	/**
+	 * @return the property controlling the slider's minimum value
+	 */
+	public StringProperty getMinProperty() {
+		return getProperties()[0];
+	}
+
+	/**
+	 * @return the property controlling the slider's maximum value
+	 */
+	public StringProperty getMaxProperty() {
+		return getProperties()[1];
+	}
+
+	/**
+	 * @return the property controlling the slider's animation step
+	 */
+	public StringProperty getStepProperty() {
+		return getProperties()[2];
+	}
+}

@@ -1,0 +1,68 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ * 
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ * 
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+plugins {
+    alias(libs.plugins.geogebra.java.library)
+    `maven-publish`
+    jacoco
+    alias(libs.plugins.geogebra.pmd)
+    alias(libs.plugins.geogebra.spotbugs)
+    alias(libs.plugins.geogebra.javacc)
+}
+
+group = "org.geogebra"
+version = "1.0"
+
+publishing {
+    publications {
+        create<MavenPublication>("library") {
+            from(components["java"])
+        }
+    }
+}
+
+dependencies {
+    javacc(libs.javacc)
+    api(project(":renderer-base"))
+    implementation(libs.j2objc.annotations)
+    testImplementation(platform(libs.junit.bom))
+    testImplementation(libs.junit.jupiter)
+    // Add launcher explicitly to avoid legacy loading
+    // https://docs.gradle.org/8.12/userguide/upgrading_version_8.html#manually_declaring_dependencies
+    testRuntimeOnly(libs.junit.launcher)
+}
+
+tasks.compileJavacc {
+    arguments = mapOf(
+            "static" to "false",
+            "grammar_encoding" to "UTF-8",
+            "unicode_input" to "true",
+            "JAVA_TEMPLATE_TYPE" to "modern",
+            "LEGACY_EXCEPTION_HANDLING" to "false"
+    )
+}
+tasks.compileJava {
+    options.encoding = "UTF-8"
+}
+
+tasks.test {
+    useJUnitPlatform()
+}
+
+tasks.jacocoTestReport {
+    reports {
+        html.outputLocation = layout.buildDirectory.dir("jacocoHtml")
+    }
+}

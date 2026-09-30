@@ -1,0 +1,136 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.geogebra3D.kernel3D.geos;
+
+import org.geogebra.common.kernel.Construction;
+import org.geogebra.common.kernel.StringTemplate;
+import org.geogebra.common.kernel.arithmetic.ValueType;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.kernel.kernelND.GeoDirectionND;
+import org.geogebra.common.kernel.kernelND.GeoElementND;
+import org.geogebra.common.kernel.matrix.Coords;
+import org.geogebra.common.plugin.EventType;
+import org.geogebra.common.plugin.GeoClass;
+
+/**
+ * Simple geo class for the whole space
+ *
+ * @author Mathieu
+ *
+ */
+public class GeoSpace extends GeoElement3D implements GeoDirectionND {
+
+	/**
+	 * @param c
+	 *            construction
+	 */
+	public GeoSpace(Construction c) {
+		super(c);
+		label = "space";
+		setLabelSet(true);
+		setFixed(true);
+	}
+
+	@Override
+	public Coords getLabelPosition() {
+		return null;
+	}
+
+	@Override
+	public GeoClass getGeoClassType() {
+		return GeoClass.SPACE;
+	}
+
+	@Override
+	public GeoElement copy() {
+		return new GeoSpace(cons);
+	}
+
+	@Override
+	public void set(GeoElementND geo) {
+		// no need here
+
+	}
+
+	@Override
+	public boolean isDefined() {
+		return true;
+	}
+
+	@Override
+	public void setUndefined() {
+		// no need here
+	}
+
+	@Override
+	public String toValueString(StringTemplate tpl) {
+		return "";
+	}
+
+	@Override
+	public boolean showInAlgebraView() {
+		return false;
+	}
+
+	@Override
+	protected boolean showInEuclidianView() {
+		return false;
+	}
+
+	@Override
+	public boolean isAvailableAtConstructionStep(int step) {
+		// this method is overwritten
+		// in order to make the space available
+		// in empty constructions too (for step == -1)
+		return true;
+	}
+
+	@Override
+	public Coords getDirectionInD3() {
+		// return null since there's no specific direction
+		// used for commands that should need a direction, like OrthogonalLine
+		return null;
+	}
+
+	@Override
+	public String getLabel(StringTemplate tpl) {
+		if (tpl.isPrintLocalizedCommandNames()) {
+			return getLoc().getMenu(label);
+		}
+		return label;
+	}
+
+	@Override
+	public final HitType getLastHitType() {
+		return HitType.NONE;
+	}
+
+	@Override
+	public ValueType getValueType() {
+		return ValueType.VOID;
+	}
+
+	@Override
+	public boolean isVisibleInputForMacro() {
+		return false;
+	}
+
+	@Override
+	public boolean isProtected(EventType eventType) {
+		return true;
+	}
+}

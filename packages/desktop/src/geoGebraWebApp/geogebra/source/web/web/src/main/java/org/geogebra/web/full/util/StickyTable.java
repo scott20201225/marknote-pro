@@ -1,0 +1,335 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.web.full.util;
+
+import java.util.List;
+
+import org.geogebra.web.html5.gui.util.Dom;
+import org.gwtproject.core.client.Scheduler;
+import org.gwtproject.dom.client.Element;
+import org.gwtproject.dom.client.Node;
+import org.gwtproject.dom.client.NodeList;
+import org.gwtproject.dom.client.TableSectionElement;
+import org.gwtproject.dom.style.shared.Unit;
+import org.gwtproject.user.cellview.client.CellTable;
+import org.gwtproject.user.client.ui.FlowPanel;
+import org.gwtproject.user.client.ui.Panel;
+import org.gwtproject.user.client.ui.ScrollPanel;
+import org.gwtproject.user.client.ui.SimplePanel;
+import org.gwtproject.view.client.ListDataProvider;
+
+import elemental2.dom.EventListener;
+import jsinterop.base.Js;
+
+/**
+ * Table with sticky header.
+ *
+ * @param <T>
+ *            Type of table cells.
+ *
+ */
+public abstract class StickyTable<T> extends FlowPanel {
+	private final SimplePanel buttonHolder;
+	private final CellTableWithBody cellTable;
+	private ListDataProvider<T> dataProvider;
+	private final ScrollPanel scroller;
+
+	/**
+	 * Create a sticky table.
+	 */
+	public StickyTable() {
+		cellTable = new CellTableWithBody();
+
+		cellTable.addStyleName("values");
+
+		scroller = new ScrollPanel();
+		scroller.addStyleName("scroller");
+		CustomScrollbar.apply(scroller);
+		scroller.addStyleName("customScrollbar");
+		FlowPanel wrapper = new FlowPanel();
+		wrapper.add(cellTable);
+		scroller.setWidget(wrapper);
+		buttonHolder = new SimplePanel();
+		buttonHolder.addStyleName("btnRow");
+		add(buttonHolder);
+		add(scroller);
+		addStyleName("mainScrollPanel");
+		cellTable.setVisible(true);
+		createDataProvider();
+	}
+
+	protected void addBodyPointerDownHandler(CellClickHandler clickHandler) {
+		Dom.addEventListener(
+				cellTable.getTableBodyElement(), "pointerdown", getDomEventHandler(clickHandler));
+	}
+
+	protected void addBodyKeyDownHandler(CellClickHandler keyHandler) {
+		Dom.addEventListener(
+				cellTable.getTableBodyElement(), "keydown", getDomEventHandler(keyHandler));
+	}
+
+	protected void addHeadClickHandler(CellClickHandler clickHandler) {
+		Dom.addEventListener(
+				cellTable.getTableHeadElement(), "click", getDomEventHandler(clickHandler));
+	}
+
+	protected void addMouseOverHandler(CellClickHandler clickHandler) {
+		Dom.addEventListener(
+				cellTable.getTableBodyElement(), "mouseover", getDomEventHandler(clickHandler));
+	}
+
+	protected void addMouseOutHandler(CellClickHandler clickHandler) {
+		Dom.addEventListener(
+				cellTable.getTableBodyElement(), "mouseout", getDomEventHandler(clickHandler));
+	}
+
+	private EventListener getDomEventHandler(CellClickHandler eventHandler) {
+		return event -> {
+			Element element = Js.uncheckedCast(event.target);
+			Element cell = getTargetCell(element);
+			if (cell != null) {
+				int col = getParentIndex(cell);
+				int row = getParentIndex(cell.getParentElement());
+				if (eventHandler.onClick(row, col, event)) {
+					event.preventDefault();
+				}
+			}
+		};
+	}
+
+	protected Element getTargetCell(Element start) {
+		Element cell = start;
+		while (cell != null && !cell.hasTagName("TD") && !cell.hasTagName("TH")) {
+			cell = cell.getParentElement();
+		}
+		return cell;
+	}
+
+	/**
+	 * Add initial cells here.
+	 *
+	 */
+	protected abstract void addCells();
+
+	private void createDataProvider() {
+		dataProvider = new ListDataProvider<>();
+		dataProvider.addDataDisplay(cellTable);
+	}
+
+	/**
+	 * @param data
+	 *            to fill with.
+	 */
+	protected abstract void fillValues(List<T> data);
+
+	protected int getParentIndex(Node currHeaderCell) {
+		Element parent = currHeaderCell.getParentElement();
+		if (parent != null) {
+			NodeList<Node> headerNodes = parent.getChildNodes();
+			for (int i = 0; i < headerNodes.getLength(); i++) {
+				Node node = headerNodes.getItem(i);
+				// check if header cell is the one it was clicked on
+				if (node.equals(currHeaderCell)) {
+					return i;
+				}
+			}
+		}
+		return -1;
+	}
+
+	/**
+	 * @param column to get
+	 * @return the header element.
+	 */
+	public Element getHeaderElement(int column) {
+		return Dom.querySelectorForElement(
+				cellTable.getTableHeadElement(), ".values tr th:nth-child(" + (column + 1) + ") .content");
+	}
+
+	/**
+	 * Get element in table header matching a CSS selector.
+	 * @param className selector (.class)
+	 * @return element
+	 */
+	public Element getHeaderElementByClassName(String className) {
+		return Dom.querySelectorForElement(cellTable.getTableHeadElement(), className);
+	}
+
+	/**
+	 * Get element in table body matching a CSS selector.
+	 * @param className selector (.class)
+	 * @return element
+	 */
+	public Element getTableElementByClassName(String className) {
+		return Dom.querySelectorForElement(cellTable.getTableBodyElement(), className);
+	}
+
+	/**
+	 * @param column
+	 *            to get
+	 * @return the list of the specified value column elements (without the header).
+	 */
+	public elemental2.dom.NodeList<elemental2.dom.Element> getColumnElements(int column) {
+		elemental2.dom.Element body = Js.uncheckedCast(cellTable.getTableBodyElement());
+		// gives the columnth element of each row of the value table. (nth-child is 1 indexed)
+		return body.querySelectorAll(".values tr td:nth-child(" + (column + 1) + ")");
+	}
+
+	/**
+	 * Sets height of the body.
+	 *
+	 * @param height
+	 *            to set.
+	 */
+	protected void setBodyHeight(int height) {
+		scroller.getElement().getStyle().setHeight(height, Unit.PX);
+	}
+
+	/**
+	 *
+	 * @return the values table.
+	 */
+	public CellTable<T> getTable() {
+		return cellTable;
+	}
+
+	public SimplePanel getButtonHolder() {
+		return buttonHolder;
+	}
+
+	/**
+	 * Scroll to given position horizontally.
+	 *
+	 * @param pos
+	 *            to scroll.
+	 */
+	public void setHorizontalScrollPosition(final int pos) {
+		Scheduler.get().scheduleDeferred(() -> scroller.setHorizontalScrollPosition(pos));
+	}
+
+	/**
+	 * @return the scroll panel of the values.
+	 */
+	protected ScrollPanel getScroller() {
+		return scroller;
+	}
+
+	/**
+	 * Refreshes table data.
+	 */
+	public void refresh() {
+		refreshData();
+		refreshVisibleRange();
+	}
+
+	private void refreshData() {
+		if (dataProvider == null) {
+			return;
+		}
+		fillValues(dataProvider.getList());
+		dataProvider.refresh();
+	}
+
+	private void refreshVisibleRange() {
+		if (dataProvider == null) {
+			return;
+		}
+		cellTable.setVisibleRange(0, dataProvider.getList().size());
+	}
+
+	/**
+	 * Rebuild the UI
+	 */
+	protected void reset() {
+		TableUtils.clear(cellTable);
+		addCells();
+		fillValues(dataProvider.getList());
+		refreshVisibleRange();
+	}
+
+	/**
+	 * @return the panel wrapping the table
+	 */
+	public Panel getTableWrapper() {
+		return (Panel) scroller.getWidget();
+	}
+
+	/**
+	 * Get a cell element.
+	 * @param row row number
+	 * @param column column number
+	 * @return cell element
+	 */
+	public Element getCell(int row, int column) {
+		return cellTable.getTableBodyElement().getChild(row).getChild(column).cast();
+	}
+
+	/**
+	 * Flush the changes in the model.
+	 */
+	public void flush() {
+		cellTable.flush();
+	}
+
+	/**
+	 * @param col column
+	 * @param row row
+	 * @return whether a cell at given coordinates exists and is not hidden by shadow
+	 */
+	public boolean hasCell(int col, int row) {
+		return col >= 0
+				&& col < cellTable.getColumnCount() - 1
+				&& row >= 0
+				&& row < cellTable.getRowCount() - 1;
+	}
+
+	private final class CellTableWithBody extends CellTable<T> {
+
+		@Override
+		protected TableSectionElement getTableBodyElement() {
+			return super.getTableBodyElement();
+		}
+
+		@Override
+		protected TableSectionElement getTableHeadElement() {
+			return super.getTableHeadElement();
+		}
+	}
+
+	/**
+	 * Sets height of the values to be able to scroll.
+	 * @param height - to set.
+	 */
+	public void setHeight(int height) {
+		setBodyHeight(height);
+	}
+
+	/**
+	 * Open function definition dialog.
+	 * TODO move out of this widget
+	 */
+	public void openDefineFunctions() {
+		// nothing to do here
+	}
+
+	/**
+	 * selects first cell
+	 */
+	public void selectFirstCell() {
+		// nothing to do here
+	}
+}
