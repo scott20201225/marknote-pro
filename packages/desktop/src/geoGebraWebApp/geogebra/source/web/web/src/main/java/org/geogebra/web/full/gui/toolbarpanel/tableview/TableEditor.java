@@ -1,0 +1,240 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.web.full.gui.toolbarpanel.tableview;
+
+import org.geogebra.common.euclidian.event.PointerEventType;
+import org.geogebra.common.gui.view.table.keyboard.TableValuesKeyboardNavigationController;
+import org.geogebra.editor.share.editor.UnhandledKeyListener;
+import org.geogebra.editor.share.event.KeyEvent;
+import org.geogebra.editor.share.util.JavaKeyCodes;
+import org.geogebra.web.full.gui.view.probcalculator.MathTextFieldW;
+import org.geogebra.web.html5.gui.util.ClickStartHandler;
+import org.geogebra.web.html5.gui.util.MathKeyboardListener;
+import org.geogebra.web.html5.main.AppW;
+import org.gwtproject.dom.client.Element;
+import org.gwtproject.dom.client.Node;
+import org.gwtproject.dom.client.NodeList;
+import org.gwtproject.user.client.DOM;
+
+import elemental2.dom.Event;
+import elemental2.dom.MouseEvent;
+
+public final class TableEditor implements UnhandledKeyListener {
+	private final StickyValuesTable table;
+	private final AppW app;
+	public TableValuesKeyboardNavigationController controller;
+	private MathTextFieldW mathTextField;
+	private int editingRow = -1;
+	private int editingColumn = -1;
+	Element wrapper;
+	private Event event;
+	private boolean wasError;
+
+	/**
+	 * @param table table
+	 * @param app app
+	 */
+	public TableEditor(StickyValuesTable table, AppW app) {
+		this.table = table;
+		this.app = app;
+	}
+
+	/**
+	 * @param row row
+	 * @param column column
+	 * @param keepFocusIfEditing if set and the editor is already active, do not reset
+	 */
+	public void startEditing(int row, int column, boolean keepFocusIfEditing) {
+		ensureMathTextFieldExists();
+		app.invokeLater(() -> {
+			if (row != controller.getSelectedRow() || column != controller.getSelectedColumn()) {
+				return;
+			}
+			if (!controller.isColumnEditable(column)) {
+				controller.select(row, column);
+				return;
+			}
+			Element cell = table.getCellIfExists(row, column);
+			if (cell == null) {
+				return;
+			}
+			if (mathTextField.asWidget().isAttached()
+					&& keepFocusIfEditing
+					&& wrapper != null
+					&& wrapper.getParentElement() == cell) {
+				return;
+			}
+			boolean newColumnAndRow =
+					table.tableModel.getColumnCount() > column && table.tableModel.getRowCount() > row;
+			mathTextField.setText(
+					newColumnAndRow
+							? table.tableModel.getCellAt(row, column).getInput()
+							: ""); // make sure we don't load content of previously edited cell
+			table.scrollIntoView(cell);
+			table.getTableWrapper().add(mathTextField); // first add to GWT tree
+			setChildrenDisplay(cell, "none");
+			wasError = cell.removeClassName("errorCell");
+			Element element = mathTextField.asWidget().getElement();
+			if (wrapper == null) {
+				wrapper = DOM.createDiv();
+				wrapper.addClassName("tableEditorWrap");
+			} else {
+				wrapper.getStyle().setProperty("display", "");
+			}
+			wrapper.appendChild(element);
+			cell.appendChild(wrapper); // then move in DOM
+			editingRow = row;
+			editingColumn = column;
+
+			mathTextField.editorClicked();
+			if (event != null) {
+				mathTextField.adjustCaret(((MouseEvent) event).x, ((MouseEvent) event).y);
+				event = null;
+			}
+		});
+	}
+
+	private void setChildrenDisplay(Element cell, String display) {
+		NodeList<Node> childNodes = cell.getChildNodes();
+		for (int i = 0; i < childNodes.getLength(); i++) {
+			Element.as(cell.getChild(i)).getStyle().setProperty("display", display);
+		}
+	}
+
+	void stopEditing() {
+		if (mathTextField != null) {
+			mathTextField.asWidget().removeFromParent();
+		}
+		if (wrapper != null) {
+			Element cell = wrapper.getParentElement();
+			wrapper.removeFromParent();
+			if (cell != null) {
+				setChildrenDisplay(cell, "");
+				if (wasError) {
+					cell.addClassName("errorCell");
+				}
+			}
+		}
+		editingRow = -1;
+		editingColumn = -1;
+		table.flush();
+	}
+
+	private void ensureMathTextFieldExists() {
+		if (mathTextField == null) {
+			mathTextField = new MathTextFieldW(app);
+			mathTextField.setRightMargin(22);
+			mathTextField.addChangeHandler((enter) -> {
+				if (enter) {
+					controller.keyPressed(TableValuesKeyboardNavigationController.Key.RETURN);
+				} else {
+					controller.deselect();
+				}
+			});
+			mathTextField.setTextMode(true);
+			mathTextField.asWidget().setStyleName("tableEditor");
+			mathTextField.setUnhandledKeyListener(this);
+			ClickStartHandler.init(mathTextField.asWidget(), new ClickStartHandler() {
+				@Override
+				public void onClickStart(int x, int y, PointerEventType type) {
+					mathTextField.adjustCaret(x, y);
+				}
+			});
+		}
+	}
+
+	/**
+	 * @return the keyboard listener of the active math text field,
+	 *     or {@code null} if no cell is being edited
+	 */
+	public MathKeyboardListener getKeyboardListener() {
+		return mathTextField == null ? null : mathTextField.getKeyboardListener();
+	}
+
+	@Override
+	public void onArrow(int keyCode, KeyEvent.KeyboardType keyboardType) {
+		switch (keyCode) {
+			case JavaKeyCodes.VK_LEFT:
+				controller.keyPressed(TableValuesKeyboardNavigationController.Key.ARROW_LEFT);
+				break;
+			case JavaKeyCodes.VK_RIGHT:
+				controller.keyPressed(TableValuesKeyboardNavigationController.Key.ARROW_RIGHT);
+				break;
+			case JavaKeyCodes.VK_UP:
+				controller.keyPressed(TableValuesKeyboardNavigationController.Key.ARROW_UP);
+				break;
+			default: // to make SpotBugs happy
+			case JavaKeyCodes.VK_DOWN:
+				controller.keyPressed(TableValuesKeyboardNavigationController.Key.ARROW_DOWN);
+				break;
+		}
+	}
+
+	@Override
+	public boolean onUnhandledKey(int keyCode, KeyEvent.KeyboardType keyboardType, int keyModifiers) {
+		boolean shiftPressed = (keyModifiers & KeyEvent.SHIFT_MASK) > 0;
+		boolean ctrlOrCmdPressed = (keyModifiers & KeyEvent.CTRL_MASK) > 0;
+		if ((shiftPressed && keyCode == JavaKeyCodes.VK_F10)
+				|| keyCode == JavaKeyCodes.VK_CONTEXT_MENU) {
+			controller.keyPressed(TableValuesKeyboardNavigationController.Key.CONTEXT_MENU);
+			return true;
+		} else if (ctrlOrCmdPressed && keyCode == JavaKeyCodes.VK_C) {
+			controller.keyPressed(TableValuesKeyboardNavigationController.Key.COPY);
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Returns pending editor content, or the current model content if this cell is not
+	 * being edited.
+	 * @param row row index
+	 * @param column column index
+	 * @return cell input
+	 */
+	public String getText(int row, int column) {
+		if (mathTextField != null
+				&& editingRow == row
+				&& editingColumn == column
+				&& mathTextField.asWidget().isAttached()) {
+			return mathTextField.getText();
+		}
+		if (row >= 0
+				&& row < table.tableModel.getRowCount()
+				&& column >= 0
+				&& column < table.tableModel.getColumnCount()) {
+			return table.tableModel.getCellAt(row, column).getInput();
+		}
+		return "";
+	}
+
+	/**
+	 * Make sure cursor is adjusted to the position given by the event
+	 * once the editor appears.
+	 * @param evt event
+	 */
+	public void adjustCursor(Event evt) {
+		this.event = evt;
+	}
+
+	/**
+	 * @return whether the editor widget is currently attached to the DOM
+	 */
+	public boolean isAttached() {
+		return mathTextField != null && mathTextField.asWidget().isAttached();
+	}
+}

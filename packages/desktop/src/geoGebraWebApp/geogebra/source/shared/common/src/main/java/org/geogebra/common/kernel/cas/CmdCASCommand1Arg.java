@@ -1,0 +1,65 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.kernel.cas;
+
+import org.geogebra.common.kernel.Kernel;
+import org.geogebra.common.kernel.arithmetic.Command;
+import org.geogebra.common.kernel.commands.CommandProcessor;
+import org.geogebra.common.kernel.commands.Commands;
+import org.geogebra.common.kernel.commands.EvalInfo;
+import org.geogebra.common.kernel.geos.AlgebraicExpression;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.main.MyError;
+
+/**
+ * used by TrigSimplify:, Expand, Factor, IFactor
+ *
+ */
+public class CmdCASCommand1Arg extends CommandProcessor implements UsesCAS {
+	private final Commands cmd;
+
+	/**
+	 * Create new command processor
+	 *
+	 * @param kernel
+	 *            kernel
+	 * @param cmd
+	 *            command to be applied
+	 */
+	public CmdCASCommand1Arg(Kernel kernel, Commands cmd) {
+		super(kernel);
+		this.cmd = cmd;
+	}
+
+	@Override
+	public final GeoElement[] process(Command c, EvalInfo info) throws MyError {
+		int n = c.getArgumentNumber();
+
+		GeoElement[] arg;
+		arg = resArgs(c, info);
+
+		if (n == 1) {
+			if (arg[0] instanceof AlgebraicExpression expression) {
+				AlgoCasBaseSingleArgument algo =
+						new AlgoCasBaseSingleArgument(cons, c.getLabel(), expression, cmd, info);
+				return new GeoElement[] {algo.getResult()};
+			}
+			throw argErr(c, arg[0]);
+		}
+		throw argNumErr(c);
+	}
+}

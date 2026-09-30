@@ -1,0 +1,98 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.kernel.geos;
+
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+
+import org.geogebra.common.BaseUnitTest;
+import org.geogebra.common.kernel.Kernel;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+class PointFromSequenceTest extends BaseUnitTest {
+
+	private Kernel kernel;
+	private GeoPoint point;
+
+	@BeforeEach
+	void setUp() {
+		kernel = getApp().getKernel();
+	}
+
+	@Test
+	void testPointSequence() {
+		point = add("Point(Sequence(Sequence((i, j), i, 1, 10, 0.1)" + ", j, 1, 10, 0.1))");
+		point.set(newPoint(2.9, 7.6));
+		GeoPoint expected = newPoint(3, 7.6);
+		point.set(expected);
+		kernel.updateConstruction();
+		assertArrayEquals(expected.getCoords().get(), point.getCoords().get(), Kernel.MAX_PRECISION);
+	}
+
+	private GeoPoint newPoint(double x, double y) {
+		return new GeoPoint(kernel.getConstruction(), x, y, 1);
+	}
+
+	@Test
+	void testPointOnSimpleSequencePath() {
+		simplePathWithStep(0.1);
+		point.set(newPoint(1.51, 1.51));
+		kernel.updateConstruction();
+		pointShouldBe(1.5, 1.5);
+	}
+
+	private void pointShouldBe(double x, double y) {
+		GeoPoint expected = newPoint(x, y);
+		assertArrayEquals(expected.getCoords().get(), point.getCoords().get(), Kernel.MAX_PRECISION);
+	}
+
+	private void simplePathWithStep(double step) {
+		point = add("Point(Sequence((i, i), i, 1, 10, " + step + "))");
+	}
+
+	@Test
+	void testPointOnSimpleSequencePathStep9() {
+		simplePathWithStep(0.9);
+		point.set(newPoint(1.7, 1.7));
+		kernel.updateConstruction();
+		pointShouldBe(1.9, 1.9);
+	}
+
+	@Test
+	void testPointOnSimpleSequencePathStep3Floor() {
+		simplePathWithStep(0.3);
+		point.set(newPoint(3.2, 3.2));
+		kernel.updateConstruction();
+		pointShouldBe(3.1, 3.1);
+	}
+
+	@Test
+	void testPointOnSimpleSequencePathStep3() {
+		simplePathWithStep(0.3);
+		point.set(newPoint(3.25, 3.25));
+		kernel.updateConstruction();
+		pointShouldBe(3.4, 3.4);
+	}
+
+	@Test
+	void testPointOnSimpleSequencePathStep3Precise() {
+		simplePathWithStep(0.3);
+		point.set(newPoint(3.4, 3.4));
+		kernel.updateConstruction();
+		pointShouldBe(3.4, 3.4);
+	}
+}

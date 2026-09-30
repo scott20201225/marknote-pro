@@ -1,5 +1,7 @@
 import * as contextMenu from './actions'
 import { t } from '../../i18n'
+import { GEO_GEBRA_MODES } from '../../util/geogebra'
+import type { GeoGebraMode } from '@shared/types/files'
 
 // NOTE: This are mutable fields that may change at runtime.
 
@@ -22,6 +24,26 @@ export const getNewDrawing = () => ({
   click(_menuItem: unknown, _browserWindow: unknown) {
     contextMenu.newDrawing()
   }
+})
+
+export const getNewGeoGebra = (mode: GeoGebraMode) => {
+  const modeOption = GEO_GEBRA_MODES.find((option) => option.value === mode)
+  return {
+    label: t(modeOption?.labelKey ?? 'sideBar.tree.geoGebraMode'),
+    id: `newGeoGebra-${mode}-menuItem`,
+    click(_menuItem: unknown, _browserWindow: unknown) {
+      contextMenu.newGeoGebra(mode)
+    }
+  }
+}
+
+export const getNewGeoGebraModes = () =>
+  GEO_GEBRA_MODES.map(({ value }) => getNewGeoGebra(value as GeoGebraMode))
+
+export const getNewGeoGebraMenu = () => ({
+  label: t('contextMenu.sideBar.newGeoGebra'),
+  id: 'newGeoGebraMenuItem',
+  submenu: getNewGeoGebraModes()
 })
 
 export const getNewDirectory = () => ({
@@ -150,6 +172,7 @@ export const NEW_DIRECTORY = getNewDirectory()
 export const NEW_GROUP = getNewGroup()
 export const NEW_AREA = getNewArea()
 export const NEW_DOCUMENT = getNewDocument()
+export const NEW_GEOGEBRA = getNewGeoGebraMenu()
 export const COPY = getCOPY()
 export const COPY_PATH = getCopyPath()
 export const CUT = getCUT()

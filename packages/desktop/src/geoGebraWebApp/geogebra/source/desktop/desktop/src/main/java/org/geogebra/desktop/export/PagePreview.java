@@ -1,0 +1,156 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.desktop.export;
+
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Insets;
+import java.awt.geom.AffineTransform;
+import java.awt.image.BufferedImage;
+import java.awt.print.PageFormat;
+import java.awt.print.Printable;
+
+import javax.swing.JPanel;
+import javax.swing.border.MatteBorder;
+
+import org.geogebra.common.kernel.arithmetic.MyDouble;
+import org.geogebra.common.util.DoubleUtil;
+import org.geogebra.common.util.debug.Log;
+import org.geogebra.desktop.euclidian.EuclidianViewD;
+import org.geogebra.desktop.main.AppD;
+
+class PagePreview extends JPanel {
+
+	private static final long serialVersionUID = 1L;
+
+	protected int m_w;
+	protected int m_h;
+	protected Printable target;
+	protected PageFormat format;
+	protected int pageIndex;
+	protected double scale = 1.0;
+	protected BufferedImage img;
+
+	private final int targetIndex;
+
+	private final AppD app;
+
+	PagePreview(Printable target, PageFormat format, int pageIndex, int targetIndex, AppD app) {
+		this.target = target;
+		this.format = format;
+		this.app = app;
+		this.pageIndex = pageIndex;
+		this.targetIndex = targetIndex;
+		m_w = (int) format.getWidth();
+		m_h = (int) format.getHeight();
+
+		setBackground(Color.white);
+		setBorder(new MatteBorder(1, 1, 2, 2, Color.black));
+		// update();
+	}
+
+	int getTarget() {
+		return targetIndex;
+	}
+
+	void setPageFormat(PageFormat format) {
+		this.format = format;
+		m_w = (int) (format.getWidth() * scale);
+		m_h = (int) (format.getHeight() * scale);
+		update();
+	}
+
+	PageFormat getPageFormat() {
+		return format;
+	}
+
+	void setScale(int scale) {
+		double newScale = scale / 100.0;
+		if (MyDouble.exactEqual(newScale, this.scale)) {
+			this.scale = newScale;
+			m_w = (int) (format.getWidth() * this.scale);
+			m_h = (int) (format.getHeight() * this.scale);
+			update();
+		}
+	}
+
+	@Override
+	public Dimension getPreferredSize() {
+		Insets ins = getInsets();
+		return new Dimension(m_w + ins.left + ins.right, m_h + ins.top + ins.bottom);
+	}
+
+	@Override
+	public Dimension getMaximumSize() {
+		return getPreferredSize();
+	}
+
+	@Override
+	public Dimension getMinimumSize() {
+		return getPreferredSize();
+	}
+
+	private void updateBufferedImage() {
+		img = new BufferedImage(m_w, m_h, BufferedImage.TYPE_INT_RGB);
+		Graphics2D g2 = img.createGraphics();
+		g2.setColor(getBackground());
+		g2.fillRect(0, 0, m_w, m_h);
+		if (!DoubleUtil.isEqual(scale, 1.0)) {
+			g2.scale(scale, scale);
+		}
+
+		try {
+			String scaleStr = null;
+			if (!(target instanceof EuclidianViewD)) {
+
+				int height = EuclidianViewD.printTitle(g2, scaleStr, this.format, this.app);
+				g2.setTransform(new AffineTransform());
+				if (!DoubleUtil.isEqual(scale, 1.0)) {
+					g2.scale(scale, scale);
+				}
+				if (height > 0) {
+					g2.translate(0, height + 20);
+				}
+				if (target instanceof PrintGridable) {
+					((PrintGridable) target).setTitleOffset(height);
+				}
+			}
+			target.print(g2, format, pageIndex);
+		} catch (Exception e) {
+			Log.debug(e);
+		}
+	}
+
+	void update() {
+		try {
+			updateBufferedImage();
+		} catch (Exception | OutOfMemoryError e) {
+			Log.debug(e);
+		}
+		repaint();
+	}
+
+	@Override
+	public void paint(Graphics g) {
+		g.setColor(getBackground());
+		g.fillRect(0, 0, getWidth(), getHeight());
+		g.drawImage(img, 0, 0, this);
+		paintBorder(g);
+	}
+}

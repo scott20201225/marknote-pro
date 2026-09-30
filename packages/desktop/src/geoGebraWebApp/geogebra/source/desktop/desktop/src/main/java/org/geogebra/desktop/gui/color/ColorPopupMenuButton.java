@@ -1,0 +1,211 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.desktop.gui.color;
+
+import java.awt.Dimension;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.HashMap;
+
+import javax.swing.Icon;
+
+import org.geogebra.common.awt.GColor;
+import org.geogebra.common.gui.util.SelectionTable;
+import org.geogebra.common.main.GeoGebraColorConstants;
+import org.geogebra.desktop.awt.GColorD;
+import org.geogebra.desktop.gui.util.GeoGebraIconD;
+import org.geogebra.desktop.gui.util.PopupMenuButtonD;
+import org.geogebra.desktop.main.AppD;
+import org.geogebra.desktop.main.ScaledIcon;
+
+public class ColorPopupMenuButton extends PopupMenuButtonD implements ActionListener {
+
+	private static final long serialVersionUID = 1L;
+
+	private final AppD app;
+
+	public static final int COLORSET_DEFAULT = 0;
+	public static final int COLORSET_BGCOLOR = 1;
+	private final int colorSetType;
+	private final GColor[] colorSet;
+	private GColor defaultColor;
+	private final HashMap<GColor, Integer> lookupMap;
+
+	private final boolean hasSlider;
+	private final Dimension iconSize;
+
+	/**
+	 * @param app application
+	 * @param iconSize size
+	 * @param colorSetType COLORSET_DEFAULT or COLORSET_BACKGROUND
+	 * @param hasSlider whether to use opacity slider
+	 */
+	public ColorPopupMenuButton(AppD app, Dimension iconSize, int colorSetType, boolean hasSlider) {
+
+		super(app, createDummyIcons(iconSize), -1, 9, iconSize, SelectionTable.MODE_ICON);
+		this.app = app;
+		this.iconSize = iconSize;
+		this.colorSetType = colorSetType;
+		this.hasSlider = hasSlider;
+		colorSet = getColorArray(colorSetType);
+		defaultColor = colorSet[0];
+
+		lookupMap = new HashMap<>();
+		for (int i = 0; i < colorSet.length; i++) {
+			lookupMap.put(colorSet[i], i);
+		}
+
+		setToolTipArray(getToolTipArray());
+
+		getMyTable().setUseColorSwatchBorder(true);
+		getMySlider().setMinimum(0);
+		getMySlider().setMaximum(100);
+		getMySlider().setMajorTickSpacing(25);
+		getMySlider().setMinorTickSpacing(5);
+		setSliderValue(100);
+		getMySlider().setVisible(hasSlider);
+
+		updateColorTable();
+		addActionListener(this);
+	}
+
+	/**
+	 * Update color table
+	 */
+	public void updateColorTable() {
+		getMyTable().populateModel(getColorSwatchIcons(colorSet, getSliderValue() / 100f, iconSize));
+	}
+
+	@Override
+	public void actionPerformed(ActionEvent e) {
+		if (this.hasSlider) {
+			Integer si = getSelectedIndex();
+			defaultColor = getSelectedColor();
+			updateColorTable();
+			setSelectedIndex(si);
+		}
+	}
+
+	@Override
+	public Icon getButtonIcon() {
+		Icon icon = super.getButtonIcon();
+		if (icon == null && this.hasSlider) {
+			icon = GeoGebraIconD.createColorSwatchIcon(
+					getSliderValue() / 100f,
+					iconSize,
+					GColorD.getAwtColor(defaultColor),
+					null,
+					app.getImageManager().getPixelRatio());
+		}
+		return icon;
+	}
+
+	/**
+	 * @param color color
+	 * @return index
+	 */
+	public int getColorIndex(GColor color) {
+		int index = -1;
+
+		if (color == null && colorSetType == COLORSET_BGCOLOR) {
+			index = colorSet.length - 1;
+			return index;
+		}
+
+		if (lookupMap.containsKey(color)) {
+			index = lookupMap.get(color);
+		}
+
+		return index;
+	}
+
+	/**
+	 * @return selected color
+	 */
+	public GColor getSelectedColor() {
+		int index = getSelectedIndex();
+		if (index <= -1) {
+			return defaultColor;
+		} else if (colorSetType == COLORSET_BGCOLOR && index > colorSet.length - 1) {
+			return null;
+		} else {
+			return colorSet[index];
+		}
+	}
+
+	private static GColor[] getColorArray(int colorSetType) {
+		return GeoGebraColorConstants.getPopupArray(colorSetType);
+	}
+
+	/**
+	 * @param alpha opacity
+	 * @param color base color
+	 */
+	public void setDefaultColor(double alpha, GColor color) {
+		defaultColor = color;
+		if (color != null) {
+			this.setIcon(GeoGebraIconD.createColorSwatchIcon(
+					alpha,
+					iconSize,
+					GColorD.getAwtColor(color),
+					null,
+					app.getImageManager().getPixelRatio()));
+		} else {
+			this.setIcon(GeoGebraIconD.createNullSymbolIcon(
+					iconSize.width, iconSize.height, app.getImageManager().getPixelRatio()));
+		}
+	}
+
+	private String[] getToolTipArray() {
+		String[] toolTipArray = new String[colorSet.length];
+		for (int i = 0; i < toolTipArray.length; i++) {
+			if (colorSet[i] == null) {
+				toolTipArray[i] = app.getLocalization().getMenu("Transparent");
+			} else {
+				toolTipArray[i] = GeoGebraColorConstants.getGeogebraColorName(app, colorSet[i]);
+			}
+		}
+		return toolTipArray;
+	}
+
+	private Icon[] getColorSwatchIcons(GColor[] colorArray, float alpha, Dimension iconSize) {
+		Icon[] a = new Icon[colorArray.length];
+		for (int i = 0; i < colorArray.length; i++) {
+			if (colorArray[i] != null) {
+				a[i] = GeoGebraIconD.createColorSwatchIcon(
+						alpha,
+						iconSize,
+						GColorD.getAwtColor(colorArray[i]),
+						null,
+						app.getImageManager().getPixelRatio());
+			} else {
+				a[i] = GeoGebraIconD.createNullSymbolIcon(
+						iconSize.width, iconSize.height, app.getImageManager().getPixelRatio());
+			}
+		}
+		return a;
+	}
+
+	private static ScaledIcon[] createDummyIcons(Dimension iconSize) {
+
+		ScaledIcon[] a = new ScaledIcon[27];
+		for (int i = 0; i < 27; i++) {
+			a[i] = GeoGebraIconD.createEmptyIcon(iconSize.width, iconSize.height);
+		}
+		return a;
+	}
+}

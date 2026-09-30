@@ -1,0 +1,131 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.web.html5.main;
+
+import org.gwtproject.timer.client.Timer;
+
+/**
+ * Timer system for view repaints
+ */
+public class TimerSystemW {
+
+	/**
+	 * delay between two timer performs
+	 */
+	public static final int MAIN_LOOP_DELAY = 16;
+
+	/**
+	 * loops to wait before performing a repaint
+	 */
+	public static final int EUCLIDIAN_LOOPS = 0; // no wait, repaint every loop
+
+	public static final int ALGEBRA_LOOPS = 5;
+
+	public static final int SPREADSHEET_LOOPS = ALGEBRA_LOOPS;
+
+	public static final int REPAINT_FLAG = 0;
+
+	public static final int SLEEPING_FLAG = -1;
+
+	/*
+	 * public static int euclidianMillis = 34; // = 30 FPS, half of screen Hz
+	 * public static int algebraMillis = 334; // = 3 FPS public static int
+	 * spreadsheetMillis = 334; // = 3 FPS
+	 */
+
+	private final AppW app;
+
+	private Timer repaintTimer;
+
+	private int idle;
+	private long browserSkipped = 0;
+	private boolean detached = false;
+
+	/**
+	 * Create new timer system
+	 *
+	 * @param app
+	 *            application
+	 */
+	public TimerSystemW(AppW app) {
+		this.app = app;
+		this.idle = 0;
+
+		repaintTimer = new Timer() {
+			@Override
+			public void run() {
+				tick();
+			}
+		};
+
+		repaintTimer.scheduleRepeating(MAIN_LOOP_DELAY);
+	}
+
+	/**
+	 * Execute one timer tick.
+	 */
+	protected void tick() {
+		browserSkipped = 0;
+		if (!suggestRepaint()) {
+			idle++;
+		}
+		if (idle > 30) {
+			idle = 0;
+			repaintTimer.cancel();
+		}
+	}
+
+	/**
+	 * suggests views to repaint
+	 *
+	 * @return whether at least one view needed repaint
+	 */
+	boolean suggestRepaint() {
+		if (app == null || app.getKernel() == null) {
+			return false;
+		}
+		return app.getKernel().notifySuggestRepaint();
+	}
+
+	/**
+	 * Make sure the clock is ticking
+	 */
+	public void ensureRunning() {
+		if (detached) {
+			return;
+		}
+		if (!this.repaintTimer.isRunning()) {
+			repaintTimer.scheduleRepeating(MAIN_LOOP_DELAY);
+		} else {
+			long time = System.currentTimeMillis();
+			if (browserSkipped > 0 && time - browserSkipped > 50) {
+				repaintTimer.run();
+			} else if (browserSkipped == 0) {
+				browserSkipped = time;
+			}
+		}
+	}
+
+	/**
+	 * Stop timer, make sure it's not revived from `ensureTimerRunning`
+	 * which may be called asynchronously
+	 */
+	public void detach() {
+		repaintTimer.cancel();
+		detached = true;
+	}
+}

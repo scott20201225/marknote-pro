@@ -1,0 +1,176 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.kernel.algos;
+
+import org.apache.commons.math3.analysis.solvers.BrentSolver;
+import org.apache.commons.math3.analysis.solvers.NewtonSolver;
+import org.geogebra.common.kernel.Construction;
+import org.geogebra.common.kernel.Kernel;
+import org.geogebra.common.kernel.StringTemplate;
+import org.geogebra.common.kernel.arithmetic.Function;
+import org.geogebra.common.kernel.commands.Commands;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.kernel.geos.GeoFunctionable;
+import org.geogebra.common.kernel.geos.GeoNumberValue;
+import org.geogebra.common.kernel.geos.GeoPoint;
+import org.geogebra.common.kernel.roots.RealRootUtil;
+import org.geogebra.common.util.debug.Log;
+
+/**
+ * Finds one real root of a function in the given interval using Brent's method.
+ */
+public class AlgoRootInterval extends AlgoElement {
+
+	private GeoFunctionable f; // input
+	private GeoNumberValue a;
+	private GeoNumberValue b; // interval bounds
+	private GeoPoint rootPoint; // output
+
+	private BrentSolver rootFinder;
+	NewtonSolver rootPolisher;
+
+	/**
+	 * @param cons
+	 *            construction
+	 * @param label
+	 *            output label
+	 * @param f
+	 *            function
+	 * @param a
+	 *            interval left bound
+	 * @param b
+	 *            interval right bound
+	 */
+	public AlgoRootInterval(
+			Construction cons, String label, GeoFunctionable f, GeoNumberValue a, GeoNumberValue b) {
+		super(cons);
+		this.f = f;
+		this.a = a;
+		this.b = b;
+
+		// output
+		rootPoint = new GeoPoint(cons);
+		setInputOutput(); // for AlgoElement
+		compute();
+		rootPoint.setLabel(label);
+	}
+
+	@Override
+	public Commands getClassName() {
+		return Commands.Root;
+	}
+
+	// for AlgoElement
+	@Override
+	protected void setInputOutput() {
+		input = new GeoElement[3];
+		input[0] = f.toGeoElement();
+		input[1] = a.toGeoElement();
+		input[2] = b.toGeoElement();
+
+		setOnlyOutput(rootPoint);
+		setDependencies();
+	}
+
+	public GeoPoint getRootPoint() {
+		return rootPoint;
+	}
+
+	@Override
+	public final void compute() {
+		rootPoint.setCoords(calcRoot(), 0.0, 1.0);
+	}
+
+	final double calcRoot() {
+		if (!(f.isDefined() && a.isDefined() && b.isDefined())) {
+			return Double.NaN;
+		}
+
+		double root;
+		Function fun = f.getFunctionForRoot();
+
+		if (rootFinder == null) {
+			rootFinder = new BrentSolver();
+
+			rootPolisher = new NewtonSolver();
+		}
+
+		double min = a.getDouble();
+		double max = b.getDouble();
+
+		double newtonRoot;
+
+		try {
+			// Brent's method (Apache)
+			root = rootFinder.solve(AlgoRootNewton.MAX_ITERATIONS, fun, min, max);
+
+		} catch (Exception e) {
+			// e.printStackTrace();
+			Log.debug("problem finding root: " + e.getMessage());
+
+			try {
+				// Let's try again by searching for a valid domain first
+				double[] borders = RealRootUtil.getDefinedInterval(fun, min, max);
+				root = rootFinder.solve(AlgoRootNewton.MAX_ITERATIONS, fun, borders[0], borders[1]);
+			} catch (Exception ex) {
+				// ex.printStackTrace();
+				Log.debug("problem finding root: " + ex.getMessage());
+				return Double.NaN;
+			}
+		}
+
+		// Log.debug("result from Brent: " + root);
+
+		// ******** Polish Root ***************
+		// adapted from EquationSolver
+		// #4691
+
+		try {
+			newtonRoot = rootPolisher.solve(AlgoRootNewton.MAX_ITERATIONS, fun, min, max, root);
+
+			if (Math.abs(fun.value(newtonRoot)) < Math.abs(fun.value(root))) {
+				root = newtonRoot;
+				// Log.debug("polished result from Newton is better: " +
+				// newtonRoot);
+			}
+
+		} catch (Exception e) {
+			Log.debug("problem polishing root: " + e.getMessage());
+		}
+
+		// check result
+		if (Math.abs(fun.value(root)) < Kernel.MIN_PRECISION) {
+			return root;
+		}
+
+		Log.debug("problem with root accuracy");
+		return Double.NaN;
+	}
+
+	@Override
+	public final String toString(StringTemplate tpl) {
+		// Michael Borcherds 2008-03-30
+		// simplified to allow better Chinese translation
+		return getLoc()
+				.getPlainDefault(
+						"RootOfAonIntervalBC",
+						"Root of %0 on interval [%0, %1]",
+						f.getLabel(tpl),
+						a.getLabel(tpl),
+						b.getLabel(tpl));
+	}
+}

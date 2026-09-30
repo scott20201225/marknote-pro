@@ -1,0 +1,155 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.kernel.geos;
+
+import org.geogebra.common.kernel.StringTemplate;
+import org.geogebra.common.kernel.arithmetic.MyList;
+import org.geogebra.common.kernel.kernelND.GeoElementND;
+import org.geogebra.common.kernel.kernelND.GeoVectorND;
+import org.geogebra.editor.share.catalog.TemplateCatalog;
+import org.geogebra.editor.share.serializer.TeXEscaper;
+import org.geogebra.editor.share.serializer.TeXSerializer;
+import org.geogebra.editor.share.util.FormulaConverter;
+import org.geogebra.editor.share.util.Unicode;
+
+class InputBoxRenderer {
+	private final FormulaConverter formulaConverter;
+	private final GeoInputBox inputBox;
+	private GeoElementND linkedGeo;
+	private StringTemplate stringTemplateForLaTeX;
+
+	InputBoxRenderer(GeoInputBox inputBox) {
+		this.inputBox = inputBox;
+		this.linkedGeo = inputBox.getLinkedGeo();
+		updateLatexTemplate();
+		TeXSerializer serializer = new TeXSerializer();
+		serializer.useSimpleMatrixPlaceholders(true);
+		formulaConverter = new FormulaConverter(new TemplateCatalog(), serializer);
+	}
+
+	String getText() {
+		if (inputBox.isSymbolicModeWithSpecialEditor()) {
+			String tempUserEvalInput = inputBox.getTempUserEvalInput();
+			formulaConverter.setTemporaryInput(!"".equals(tempUserEvalInput));
+			return formulaConverter.convert(inputBox.getTextForEditor());
+		}
+		if (linkedGeo.isGeoText()) {
+			String str = ((GeoText) linkedGeo).getTextStringSafe().replace("\n", GeoText.NEW_LINE);
+			if (inputBox.symbolicMode) {
+				return "\\text{" + TeXEscaper.escapeStringTextMode(str) + "}";
+			}
+			return str;
+		}
+
+		String linkedGeoText;
+
+		if (linkedGeo.isGeoNumeric()) {
+			linkedGeoText = getTextForNumeric((GeoNumeric) linkedGeo);
+		} else if (inputBox.isSymbolicMode()) {
+			linkedGeoText = getTextForSymbolic();
+		} else if (isRestrictedPoint()) {
+			linkedGeoText = linkedGeo.toValueString(StringTemplate.editTemplate);
+		} else {
+			linkedGeoText = linkedGeo.getRedefineString(true, true);
+		}
+
+		linkedGeoText = linkedGeoText.replace(Unicode.IMAGINARY, 'i');
+
+		if (isTextUndefined(linkedGeoText)) {
+			return "";
+		}
+
+		return linkedGeoText;
+	}
+
+	private boolean isTextUndefined(String text) {
+		return "?".equals(text);
+	}
+
+	private String getTextForSymbolic() {
+		boolean flatEditableList = linkedGeo.isGeoList() && !linkedGeo.hasSpecialEditor();
+		boolean isComplexFunction =
+				linkedGeo.isGeoSurfaceCartesian() && linkedGeo.getDefinition() != null;
+		if (linkedGeo.isGeoList() && !flatEditableList && !((GeoList) linkedGeo).isMatrix()) {
+			return getStringForFlatList(stringTemplateForLaTeX);
+		} else if (isRestrictedPoint()) {
+			return linkedGeo.toValueString(stringTemplateForLaTeX);
+		} else if (inputBox.hasSymbolicFunction() || flatEditableList || isComplexFunction) {
+			return getLaTeXRedefineString();
+		} else if (hasVector()) {
+			return getVectorRenderString((GeoVectorND) linkedGeo);
+		}
+
+		return toLaTex();
+	}
+
+	/**
+	 * @param tpl template
+	 * @return string for flat list (definition or value, no brackets)
+	 */
+	String getStringForFlatList(StringTemplate tpl) {
+		if (linkedGeo.getDefinition() != null && linkedGeo.getDefinition().unwrap() instanceof MyList) {
+			return ((MyList) linkedGeo.getDefinition().unwrap()).toString(tpl, true, false);
+		}
+		return ((GeoList) linkedGeo).appendElements(new StringBuilder(), tpl).toString();
+	}
+
+	private boolean isRestrictedPoint() {
+		return linkedGeo.isPointInRegion() || linkedGeo.isPointOnPath();
+	}
+
+	private String getTextForNumeric(GeoNumeric numeric) {
+		if (inputBox.symbolicMode) {
+			return numeric.getRedefineString(true, true, stringTemplateForLaTeX);
+		}
+
+		if (numeric.isDefined() && numeric.isIndependent() && !numeric.isAngle()) {
+			return numeric.toValueString(inputBox.tpl);
+		}
+
+		return numeric.getRedefineString(true, true, inputBox.tpl);
+	}
+
+	private String toLaTex() {
+		return linkedGeo.toLaTeXString(true, stringTemplateForLaTeX);
+	}
+
+	private boolean hasVector() {
+		return linkedGeo instanceof GeoVectorND;
+	}
+
+	private String getVectorRenderString(GeoVectorND vector) {
+		return vector.hasSpecialEditor()
+				? vector.toLaTeXString(true, stringTemplateForLaTeX)
+				: getLaTeXRedefineString();
+	}
+
+	private String getLaTeXRedefineString() {
+		return linkedGeo.getRedefineString(true, true, stringTemplateForLaTeX);
+	}
+
+	void updateLatexTemplate() {
+		stringTemplateForLaTeX = inputBox
+				.tpl
+				.derivePrecisionPreservingLaTeXTemplate()
+				.deriveWithOmittedSpaceInCoefficientProducts();
+	}
+
+	void setLinkedGeo(GeoElementND linkedGeo) {
+		this.linkedGeo = linkedGeo;
+	}
+}

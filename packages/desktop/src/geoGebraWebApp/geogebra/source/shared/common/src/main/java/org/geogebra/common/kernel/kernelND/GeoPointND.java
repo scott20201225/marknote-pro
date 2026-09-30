@@ -1,0 +1,573 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.kernel.kernelND;
+
+import java.util.ArrayList;
+
+import org.geogebra.common.annotation.MissingDoc;
+import org.geogebra.common.io.XMLStringBuilder;
+import org.geogebra.common.kernel.LocateableList;
+import org.geogebra.common.kernel.MatrixTransformable;
+import org.geogebra.common.kernel.MyPoint;
+import org.geogebra.common.kernel.Path;
+import org.geogebra.common.kernel.PathOrPoint;
+import org.geogebra.common.kernel.PathParameter;
+import org.geogebra.common.kernel.Region;
+import org.geogebra.common.kernel.RegionParameters;
+import org.geogebra.common.kernel.StringTemplate;
+import org.geogebra.common.kernel.arithmetic.NumberValue;
+import org.geogebra.common.kernel.geos.Animatable;
+import org.geogebra.common.kernel.geos.ChangeableParent;
+import org.geogebra.common.kernel.geos.ConicMirrorable;
+import org.geogebra.common.kernel.geos.Dilateable;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.kernel.geos.GeoLine;
+import org.geogebra.common.kernel.geos.GeoPolygon;
+import org.geogebra.common.kernel.geos.Mirrorable;
+import org.geogebra.common.kernel.geos.PointProperties;
+import org.geogebra.common.kernel.geos.SpreadsheetTraceable;
+import org.geogebra.common.kernel.geos.Translateable;
+import org.geogebra.common.kernel.matrix.CoordSys;
+import org.geogebra.common.kernel.matrix.Coords;
+
+/**
+ *
+ * @author ggb3D
+ *
+ *         interface for stuff common to 2D and 3D points
+ *
+ */
+public interface GeoPointND
+		extends PointProperties,
+				Translateable,
+				SpreadsheetTraceable,
+				MatrixTransformable,
+				CoordStyle,
+				Mirrorable,
+				Dilateable,
+				Animatable,
+				ConicMirrorable {
+
+	/** cannot move */
+	int MOVE_MODE_NONE = 0; // for intersection points and fixed
+	// points
+	/** can move in x,y directions */
+	int MOVE_MODE_XY = 1;
+	/** can move in z direction */
+	int MOVE_MODE_Z = 2;
+	/** use tool default: XY for move, Z for others */
+	int MOVE_MODE_TOOL_DEFAULT = 3;
+	/** can move in xyz directions */
+	int MOVE_MODE_XYZ = 4;
+
+	/** @return whether this point has changeable numbers as coordinates */
+	@Override
+	boolean hasChangeableCoordParentNumbers();
+
+	/**
+	 * @return region parameters if this is point in region
+	 */
+	RegionParameters getRegionParameters();
+
+	/**
+	 * Update coords for 2D from homogeneous coords
+	 */
+	void updateCoords2D();
+
+	/**
+	 * @return x-coord
+	 */
+	double getInhomX();
+
+	/**
+	 * @return y-coord
+	 */
+	double getInhomY();
+
+	/**
+	 * @return z-coord
+	 */
+	double getInhomZ();
+
+	/**
+	 * @return x-coord for 2D
+	 */
+	double getX2D();
+
+	/**
+	 * @return y-coord for 2D
+	 */
+	double getY2D();
+
+	/**
+	 * @param b
+	 *            update
+	 * @param coordsys
+	 *            coordinate system of 2D view
+	 */
+	void updateCoordsFrom2D(boolean b, CoordSys coordsys);
+
+	/**
+	 * @param doPathOrRegion
+	 *            do path or region
+	 */
+	void updateCoordsFrom2D(boolean doPathOrRegion);
+
+	/**
+	 * @return true if all coords are finite
+	 */
+	boolean isFinite();
+
+	/**
+	 * @param absPosition whether the position is absolute (=in screen pixels)
+	 * @param sb string builder to append the correct xml representation as a
+	 *         start point for an object (button, vector, text)
+	 */
+	void appendStartPointXML(XMLStringBuilder sb, boolean absPosition);
+
+	/**
+	 * @return list of locateables this is a start point of
+	 */
+	LocateableList getLocateableList();
+
+	/**
+	 * return the coordinates of the vector (this,Q)
+	 *
+	 * @param Q
+	 *            ending point
+	 * @return coords of the vector
+	 */
+	double[] vectorTo(GeoPointND Q);
+
+	/**
+	 * @return inhomogeneous coords
+	 */
+	Coords getInhomCoords();
+
+	/**
+	 * @param coords
+	 *            homogeneous coords
+	 */
+	void getInhomCoords(double[] coords);
+
+	/**
+	 * @return path parameter
+	 */
+	PathParameter getPathParameter();
+
+	/**
+	 * @return true if this is point in region
+	 */
+	boolean hasRegion();
+
+	/**
+	 * Sets homogeneous coordinates and updates inhomogeneous coordinates
+	 *
+	 * @param x
+	 *            first coord
+	 * @param y
+	 *            second coord
+	 * @param z
+	 *            third coord
+	 */
+	void setCoords(double x, double y, double z);
+
+	/**
+	 * Sets homogeneous coordinates and updates inhomogeneous coordinates
+	 *
+	 * @param x
+	 *            first coord
+	 * @param y
+	 *            second coord
+	 * @param z
+	 *            third coord
+	 * @param w
+	 *            fourth coord
+	 */
+	void setCoords(double x, double y, double z, double w);
+
+	/**
+	 * Sets homogeneous coordinates and updates inhomogeneous coordinates
+	 *
+	 * @param v
+	 *            coords
+	 * @param doPathOrRegion
+	 *            says if path (or region) calculations have to be done
+	 */
+	void setCoords(Coords v, boolean doPathOrRegion);
+
+	/**
+	 * set 2D coords
+	 *
+	 * @param x
+	 *            x-coord
+	 * @param y
+	 *            y-coord
+	 * @param z
+	 *            z-coord
+	 */
+	void setCoords2D(double x, double y, double z);
+
+	/**
+	 * @param dimension
+	 *            dimension
+	 * @return the coords of the point in the given dimension (extended or
+	 *         projected)
+	 */
+	Coords getInhomCoordsInD(int dimension);
+
+	/**
+	 * @return the coords of the point in 3D
+	 */
+	Coords getInhomCoordsInD3();
+
+	/**
+	 * @return the coords of the point in 2D
+	 */
+	Coords getInhomCoordsInD2();
+
+	/**
+	 * @return the coords of the point in 2D
+	 */
+	Coords getCoordsInD2();
+
+	/**
+	 * @return the coords of the point in 3D
+	 */
+	Coords getCoordsInD3();
+
+	/**
+	 * @param dimension
+	 *            dimension
+	 * @return the coords of the point in the given dimension (extended or
+	 *         projected)
+	 */
+	Coords getCoordsInD(int dimension);
+
+	/**
+	 * @param coordSys
+	 *            coord system
+	 * @return the coords of the point in 2D (projected on coord sys)
+	 */
+	Coords getCoordsInD2(CoordSys coordSys);
+
+	/**
+	 * @param coordSys
+	 *            coord system
+	 * @return the coords of the point in 2D (projected on coord sys) or null if
+	 *         not included in coord sys
+	 */
+	Coords getCoordsInD2IfInPlane(CoordSys coordSys);
+
+	/**
+	 * Same as {@link #getCoordsInD2IfInPlane(CoordSys)}, but forces usage of real coordinates
+	 * if necessary
+	 * @param coordSys Coord system
+	 * @return the coords of the point in 2D (projected on coord sys) or null if
+	 *         not included in coord sys
+	 */
+	Coords getCoordsInD2IfInPlaneInRealCoords(CoordSys coordSys);
+
+	/**
+	 * @return path on which this point lies
+	 */
+	Path getPath();
+
+	/**
+	 * @return region in which this point lies
+	 */
+	Region getRegion();
+
+	// -- MOVING THE POINT (3D)
+
+	/**
+	 * sets the move mode (along xOy or along Oz)
+	 *
+	 * @param mode
+	 *            view tool mode
+	 */
+	void switchMoveMode(int mode);
+
+	/**
+	 *
+	 * @return the move mode (along xOy or along Oz)
+	 */
+	int getMoveMode();
+
+	/**
+	 * Update inhomogeneous coords based on homogeneous
+	 */
+	void updateCoords();
+
+	/**
+	 * @param b
+	 *            flag to show/hide this in AV when undefined
+	 */
+	void showUndefinedInAlgebraView(boolean b);
+
+	/**
+	 * @return copy of this point
+	 */
+	@Override
+	GeoPointND copy();
+
+	/**
+	 * @return tue if this is start point and has absolute screen position
+	 */
+	boolean isAbsoluteStartPoint();
+
+	/**
+	 * @return true if this can be displayed in EV
+	 */
+	boolean showInEuclidianView();
+
+	/**
+	 * @return true if tracing
+	 */
+	boolean getTrace();
+
+	/**
+	 *
+	 * @param path
+	 *            a path
+	 * @return distance from point to path
+	 */
+	double distanceToPath(PathOrPoint path);
+
+	/**
+	 * @param path
+	 *            path
+	 * @param isStartPoint
+	 *            whether this is start point of the path
+	 */
+	void addIncidence(GeoElement path, boolean isStartPoint);
+
+	/**
+	 * @param path
+	 *            path this belongs to
+	 */
+	void setPath(Path path);
+
+	@MissingDoc
+	Coords getCoords();
+
+	/**
+	 * @return list of objects that use this as corner
+	 */
+	boolean hasLocateableList();
+
+	/**
+	 * @param locateableList
+	 *            list of locateables with this corner
+	 */
+	void setLocateableList(LocateableList locateableList);
+
+	/**
+	 * Copy coordinates from point.
+	 *
+	 * @param point
+	 *            source point
+	 */
+	void setCoordsFromPoint(GeoPointND point);
+
+	/**
+	 * @param geo
+	 *            incident path
+	 */
+	void removeIncidence(GeoElement geo);
+
+	/**
+	 * @return list of objects (paths) this belongs to
+	 */
+	ArrayList<GeoElement> getIncidenceList();
+
+	/**
+	 * @param geo
+	 *            point
+	 * @return whether the two points are equal
+	 */
+	boolean isEqualPointND(GeoPointND geo);
+
+	/**
+	 * Change coordinates of this point to linear combination of two MyPoints.
+	 *
+	 * @param param1
+	 *            weight of first point
+	 * @param param2
+	 *            weight of second point
+	 * @param leftPoint
+	 *            first point
+	 * @param rightPoint
+	 *            second point
+	 */
+	void set(double param1, double param2, MyPoint leftPoint, MyPoint rightPoint);
+
+	/**
+	 * @param phi
+	 *            angle
+	 * @param center
+	 *            rotation center
+	 */
+	void rotate(NumberValue phi, Coords center);
+
+	/**
+	 * @param r
+	 *            parent region
+	 */
+	void setRegion(Region r);
+
+	/**
+	 * @return animation value (0 to 1)
+	 */
+	double getAnimationValue();
+
+	/**
+	 * @param val
+	 *            animation value (0 to 1)
+	 */
+	void setAnimationValue(double val);
+
+	/**
+	 * @param start
+	 *            whether this point is animating
+	 */
+	void setAnimating(boolean start);
+
+	/**
+	 * @param rwTransVec
+	 *            translation vector (ignored if endPos given)
+	 * @param endPosition
+	 *            end position
+	 * @return whether move happened
+	 */
+	boolean movePoint(Coords rwTransVec, Coords endPosition);
+
+	/**
+	 * @param pointND
+	 *            template element
+	 * @param macroFeedback
+	 *            whether to allow moving macro moveable outputs
+	 */
+	void set(GeoElementND pointND, boolean macroFeedback);
+
+	/**
+	 * Remove reference to path
+	 */
+	void removePath();
+
+	/**
+	 * used for GeoPoint3D
+	 *
+	 * @param ccp
+	 *            changeable coord parent
+	 */
+	void setChangeableParentIfNull(ChangeableParent ccp);
+
+	/**
+	 *
+	 * @return current (3D) view zScale (if set)
+	 */
+	double getZScale();
+
+	/**
+	 * @param tpl
+	 *            - string template
+	 * @return description for points ("Point A" instead of "A = (0,0)")
+	 */
+	String toStringDescription(StringTemplate tpl);
+
+	/**
+	 * Add a number to path parameter.
+	 * @param increment parameter change
+	 * @return whether point moved
+	 */
+	boolean addToPathParameter(double increment);
+
+	/**
+	 * Sets the path parameter t of the point and updates it.
+	 * @param t path parameter
+	 */
+	void updatePathParameter(double t);
+
+	/**
+	 * set region changed with x, y coords
+	 *
+	 * @param x
+	 *            x coord
+	 * @param y
+	 *            y coord
+	 */
+	void setRegionChanged(double x, double y);
+
+	/**
+	 * point changed on a polygon as path
+	 *
+	 * @param polygon
+	 *            polygon
+	 */
+	void pointChanged(GeoPolygon polygon);
+
+	/**
+	 * @return vertical increment
+	 */
+	NumberValue getVerticalIncrement();
+
+	/**
+	 * @param step vertical increment
+	 */
+	void setVerticalIncrement(NumberValue step);
+
+	/**
+	 * Mirror at circle
+	 * @param conic mirror circle
+	 */
+	@Override
+	default void mirror(GeoConicND conic) {
+		if (canBeMirrored(conic)) {
+			if (conic.getType() == GeoConicNDConstants.CONIC_CIRCLE) {
+				// Mirror point in circle
+				double r = conic.getHalfAxes()[0];
+				Coords midpoint = conic.getMidpointND();
+				double a = midpoint.getX();
+				double b = midpoint.getY();
+				if (Double.isInfinite(getCoords().getX()) || Double.isInfinite(getY2D())) {
+					setCoords(a, b, 1.0);
+				} else {
+					double scaleFactor = r
+							* r
+							/ ((getInhomX() - a) * (getInhomX() - a) + (getInhomY() - b) * (getInhomY() - b));
+					setCoords(a + scaleFactor * (getInhomX() - a), b + scaleFactor * (getInhomY() - b), 1.0);
+				}
+			} else if (conic.getType() == GeoConicNDConstants.CONIC_PARALLEL_LINES) {
+				/* In the case the conic is a line we mirror about that line. */
+				GeoLine g = conic.getLines()[0];
+				/* g = Line[P1,P2] */
+				mirror(g);
+				/* g is not needed anymore, so we remove it. */
+				g.remove();
+			}
+		} else {
+			setUndefined();
+		}
+	}
+
+	/**
+	 * @param conic {@link GeoConicND}
+	 * @return Whether this point can be mirrored (both point and conic in xOy-plane)
+	 */
+	boolean canBeMirrored(GeoConicND conic);
+}

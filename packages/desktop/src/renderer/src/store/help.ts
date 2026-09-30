@@ -87,6 +87,8 @@ const documentStateKeys = [
   'muyaIndexCursor',
   'notifications',
   'isDrawing',
+  'isGeoGebra',
+  'geoGebraMode',
   'showHeadingNumbers',
   'headingNumberingIncludesTopLevel',
   'isDrawing'

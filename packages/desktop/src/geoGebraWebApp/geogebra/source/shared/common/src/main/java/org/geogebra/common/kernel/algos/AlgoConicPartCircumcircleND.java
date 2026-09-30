@@ -1,0 +1,282 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.kernel.algos;
+
+import org.geogebra.common.euclidian.EuclidianConstants;
+import org.geogebra.common.kernel.Construction;
+import org.geogebra.common.kernel.commands.Commands;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.kernel.geos.GeoLine;
+import org.geogebra.common.kernel.geos.GeoPoint;
+import org.geogebra.common.kernel.geos.GeoVec3D;
+import org.geogebra.common.kernel.kernelND.GeoConicND;
+import org.geogebra.common.kernel.kernelND.GeoConicNDConstants;
+import org.geogebra.common.kernel.kernelND.GeoConicPartND;
+import org.geogebra.common.kernel.kernelND.GeoPointND;
+import org.geogebra.common.util.debug.Log;
+
+/**
+ * Circle arc or sector defined by three points.
+ */
+public abstract class AlgoConicPartCircumcircleND extends AlgoConicPart {
+
+	protected GeoPointND A;
+	protected GeoPointND B;
+	protected GeoPointND C;
+
+	private GeoLine line; // for degenerate case
+
+	/**
+	 * @param cons
+	 *            construction
+	 * @param label
+	 *            label
+	 * @param A
+	 *            start point
+	 * @param B
+	 *            point on arc
+	 * @param C
+	 *            end point
+	 * @param type
+	 *            conic type
+	 */
+	public AlgoConicPartCircumcircleND(
+			Construction cons, String label, GeoPointND A, GeoPointND B, GeoPointND C, int type) {
+		this(cons, A, B, C, type);
+		conicPart.setLabel(label);
+	}
+
+	/**
+	 * @param cons
+	 *            construction
+	 * @param A
+	 *            start point
+	 * @param B
+	 *            point on arc
+	 * @param C
+	 *            end point
+	 * @param type
+	 *            conic type
+	 */
+	public AlgoConicPartCircumcircleND(
+			Construction cons, GeoPointND A, GeoPointND B, GeoPointND C, int type) {
+		super(cons, type);
+		this.A = A;
+		this.B = B;
+		this.C = C;
+
+		// helper algo to get circle
+		AlgoCircleThreePoints algo = getAlgo();
+		cons.removeFromConstructionList(algo);
+		conic = algo.getCircle();
+
+		conicPart = createConicPart(cons, type);
+		conicPart.addPointOnConic(A);
+		conicPart.addPointOnConic(B);
+		conicPart.addPointOnConic(C);
+
+		setInputOutput(); // for AlgoElement
+		compute();
+		setIncidence();
+	}
+
+	/**
+	 *
+	 * @param cons1
+	 *            construction
+	 * @param type1
+	 *            part type (arc or sector)
+	 * @return output conic part
+	 */
+	protected abstract GeoConicND createConicPart(Construction cons1, int type1);
+
+	/**
+	 *
+	 * @return circle algo
+	 */
+	protected abstract AlgoCircleThreePoints getAlgo();
+
+	private void setIncidence() {
+		A.addIncidence(conicPart, false);
+		B.addIncidence(conicPart, false);
+		C.addIncidence(conicPart, false);
+	}
+
+	@Override
+	public Commands getClassName() {
+		if (type == GeoConicNDConstants.CONIC_PART_ARC) {
+			return Commands.CircumcircleArc;
+		}
+		return Commands.CircumcircleSector;
+	}
+
+	@Override
+	public int getRelatedModeID() {
+		if (type == GeoConicNDConstants.CONIC_PART_ARC) {
+			return EuclidianConstants.MODE_CIRCUMCIRCLE_ARC_THREE_POINTS;
+		}
+		return EuclidianConstants.MODE_CIRCUMCIRCLE_SECTOR_THREE_POINTS;
+	}
+
+	// for AlgoElement
+	@Override
+	protected void setInputOutput() {
+		input = new GeoElement[3];
+		input[0] = (GeoElement) A;
+		input[1] = (GeoElement) B;
+		input[2] = (GeoElement) C;
+
+		setOnlyOutput(conicPart);
+
+		setDependencies();
+	}
+
+	@Override
+	public void compute() {
+		if (!conic.isDefined()) {
+			conicPart.setUndefined();
+			return;
+		}
+
+		conicPart.set(conic);
+		switch (conicPart.getType()) {
+			case GeoConicNDConstants.CONIC_PARALLEL_LINES:
+				computeDegenerate();
+				break;
+
+			case GeoConicNDConstants.CONIC_CIRCLE:
+				computeCircle();
+				break;
+
+			case GeoConicNDConstants.CONIC_SINGLE_POINT:
+				computeSinglePoint();
+				break;
+
+			default:
+				// this should not happen
+				Log.debug("AlgoCirclePartPoints: unexpected conic type: " + conicPart.getType());
+				conicPart.setUndefined();
+		}
+	}
+
+	// arc degenerated to segment or two rays
+	private void computeDegenerate() {
+		if (line == null) { // init lines
+			line = conicPart.getLines()[0];
+			conicPart.getLines()[1].setStartPoint(getC());
+		}
+		line.setStartPoint(getA());
+		line.setEndPoint(getC());
+
+		// make sure the line goes through A and C
+		GeoVec3D.lineThroughPoints(getA(), getC(), line);
+
+		// check if B is between A and C => (1) segment AC
+		// otherwise we got (2) two rays starting at A and C in opposite
+		// directions
+		// case (1): use parameters 0, 1 and positive orientation to tell
+		// conicPart how to behave
+		// case (2): use parameters 0, 1 and negative orientation
+		double lambda = GeoPoint.affineRatio(getA(), getC(), getB());
+		if (lambda < 0 || lambda > 1) {
+			// two rays
+			// second ray with start point C and direction of AC
+			conicPart.getLines()[1].setCoords(line);
+			conicPart.getLines()[1].setStartPoint(getC());
+			// first ray with start point A and opposite direction
+			line.changeSign();
+
+			// tell conicPart about this case: two rays
+			((GeoConicPartND) conicPart).setParameters(0, 1, false);
+		} else {
+			// segment
+			// tell conicPart about this case: one segment
+			((GeoConicPartND) conicPart).setParameters(0, 1, true);
+		}
+	}
+
+	// circle through A, B, C
+	private void computeCircle() {
+		// start angle from vector MA
+		double alpha = Math.atan2(
+				getAy() - conicPart.getTranslationVector().getY(),
+				getAx() - conicPart.getTranslationVector().getX());
+		// end angle from vector MC
+		double beta = Math.atan2(
+				getCy() - conicPart.getTranslationVector().getY(),
+				getCx() - conicPart.getTranslationVector().getX());
+
+		// check orientation of triangle A, B, C to see
+		// whether we have to swap start and end angle
+		double det =
+				(getBx() - getAx()) * (getCy() - getAy()) - (getBy() - getAy()) * (getCx() - getAx());
+
+		((GeoConicPartND) conicPart).setParameters(alpha, beta, det > 0);
+	}
+
+	/**
+	 * compute as single point (A)
+	 */
+	protected void computeSinglePoint() {
+		((GeoConicPartND) conicPart).setParametersToSinglePoint();
+	}
+
+	/**
+	 * Method for LocusEqu.
+	 *
+	 * @return first point.
+	 */
+	public abstract GeoPoint getA();
+
+	/**
+	 * Method for LocusEqu.
+	 *
+	 * @return second point.
+	 */
+	public abstract GeoPoint getB();
+
+	/**
+	 * Method for LocusEqu.
+	 *
+	 * @return third point.
+	 */
+	public abstract GeoPoint getC();
+
+	private double getAx() {
+		return getA().inhomX;
+	}
+
+	private double getAy() {
+		return getA().inhomY;
+	}
+
+	private double getBx() {
+		return getB().inhomX;
+	}
+
+	private double getBy() {
+		return getB().inhomY;
+	}
+
+	private double getCx() {
+		return getC().inhomX;
+	}
+
+	private double getCy() {
+		return getC().inhomY;
+	}
+}

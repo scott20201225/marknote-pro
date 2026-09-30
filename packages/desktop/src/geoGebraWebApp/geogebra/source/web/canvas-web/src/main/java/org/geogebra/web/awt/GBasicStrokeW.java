@@ -1,0 +1,78 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.web.awt;
+
+import org.geogebra.common.awt.GBasicStroke;
+import org.geogebra.ggbjdk.java.awt.DefaultBasicStroke;
+
+public final class GBasicStrokeW {
+	// Constants
+	private static final String[] GWT_JOINS = {"miter", "round", "bevel"};
+	private static final String[] GWT_CAPS = {"butt", "round", "square"};
+
+	private GBasicStrokeW() {}
+
+	/**
+	 * @param join
+	 *            native join from context
+	 * @return join type
+	 */
+	public static int getJoin(String join) {
+		switch (join.charAt(0)) {
+			case 'r':
+				return DefaultBasicStroke.JOIN_ROUND;
+			case 'b':
+				return DefaultBasicStroke.JOIN_BEVEL;
+			default:
+				return DefaultBasicStroke.JOIN_MITER;
+		}
+	}
+
+	/**
+	 * @param cap
+	 *            native join from context
+	 * @return cap type
+	 */
+	public static int getCap(String cap) {
+		switch (cap.charAt(0)) {
+			case 'r':
+				return DefaultBasicStroke.CAP_ROUND;
+			case 's':
+				return DefaultBasicStroke.CAP_SQUARE;
+			default:
+				return DefaultBasicStroke.CAP_BUTT;
+		}
+	}
+
+	/**
+	 * @param stroke
+	 *            stroke
+	 * @return GWT cap
+	 */
+	public static String getEndCapString(GBasicStroke stroke) {
+		return GWT_CAPS[stroke.getEndCap()];
+	}
+
+	/**
+	 * @param stroke
+	 *            stroke
+	 * @return GWT join
+	 */
+	public static String getLineJoinString(GBasicStroke stroke) {
+		return GWT_JOINS[stroke.getLineJoin()];
+	}
+}

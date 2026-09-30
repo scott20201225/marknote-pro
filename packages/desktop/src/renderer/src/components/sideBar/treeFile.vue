@@ -3,7 +3,10 @@
     ref="fileEl"
     :title="file.pathname"
     class="side-bar-file"
-    :style="{ 'padding-left': `${depth * 6 + 10}px`, opacity: file.isMarkdown ? 1 : 0.75 }"
+    :style="{
+      'padding-left': `${depth * 6 + 10}px`,
+      opacity: file.isMarkdown || file.isDrawing || file.isGeoGebra ? 1 : 0.75
+    }"
     :class="[
       {
         current: currentFile?.pathname === file.pathname,
@@ -75,8 +78,12 @@ const displayName = computed<string>(() => getNoteDisplayName(props.file, rootPa
 // from fileMixins
 const handleFileClick = (): void => {
   const { isMarkdown, isDrawing, pathname } = props.file
+  const isMarkdownFile = isMarkdown || /\.md$/i.test(pathname)
+
+  projectStore.SELECT_NOTE_PATH(window.path.dirname(pathname))
+  projectStore.CHANGE_ACTIVE_ITEM(props.file)
+
   if (isDrawing || /\.drawio$/i.test(pathname)) {
-    projectStore.CHANGE_ACTIVE_ITEM(props.file)
     void window.electron.ipcRenderer.invoke(
       'mt::drawio::open',
       pathname,
@@ -84,7 +91,11 @@ const handleFileClick = (): void => {
     )
     return
   }
-  if (!isMarkdown) return
+  if (props.file.isGeoGebra || /\.ggb$/i.test(pathname)) {
+    void window.electron.ipcRenderer.invoke('mt::geogebra::open', pathname)
+    return
+  }
+  if (!isMarkdownFile) return
   const openedTab = tabs.value.find((f) => window.fileUtils.isSamePathSync(f.pathname, pathname))
   if (openedTab) {
     if (currentFile.value?.pathname === openedTab.pathname) {
@@ -164,6 +175,7 @@ onMounted(() => {
   box-sizing: border-box;
   padding-right: 15px;
   gap: 6px;
+  color: var(--tree-text-color, var(--sideBarTitleColor));
   &:hover {
     background: var(--sideBarItemHoverBgColor);
   }
@@ -173,6 +185,7 @@ onMounted(() => {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    color: var(--tree-text-color, var(--sideBarTitleColor));
   }
   &::before {
     content: '';
@@ -190,11 +203,11 @@ onMounted(() => {
 .side-bar-file.current::before {
   height: 100%;
 }
+.side-bar-file.active > .file-name {
+  color: var(--tree-text-color, var(--sideBarTitleColor));
+}
 .side-bar-file.current > .file-name {
   color: var(--themeColor);
-}
-.side-bar-file.active > .file-name {
-  color: var(--sideBarTitleColor);
 }
 
 .side-bar-file > input.rename {
@@ -213,13 +226,13 @@ onMounted(() => {
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: var(--sideBarIconColor);
+  color: var(--tree-icon-color, var(--sideBarIconColor));
   cursor: pointer;
 }
 
 .file-action-button:hover {
   background: var(--sideBarItemHoverBgColor);
-  color: var(--sideBarTitleColor);
+  color: var(--tree-text-color, var(--sideBarTitleColor));
 }
 
 input.rename {
@@ -227,7 +240,7 @@ input.rename {
   outline: none;
   margin: 5px 0;
   padding: 0 8px;
-  color: var(--sideBarColor);
+  color: var(--tree-text-color, var(--sideBarTitleColor));
   border: 1px solid var(--floatBorderColor);
   background: var(--floatBorderColor);
   width: 100%;

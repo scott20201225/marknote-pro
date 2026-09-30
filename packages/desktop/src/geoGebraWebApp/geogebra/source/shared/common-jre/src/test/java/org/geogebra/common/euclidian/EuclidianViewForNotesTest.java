@@ -1,0 +1,88 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.euclidian;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import org.geogebra.common.kernel.StringTemplate;
+import org.geogebra.test.BaseAppTestSetup;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+class EuclidianViewForNotesTest extends BaseAppTestSetup {
+
+	@BeforeEach
+	void setup() {
+		setupNotesApp();
+	}
+
+	@Test
+	void showAllObjectsPortrait() {
+		evaluate("Segment((0,0),(10,10))");
+		getApp().getEuclidianView1().setViewShowAllObjects(false, true);
+		assertEquals(
+				"(-2.64967, -0.31767)",
+				evaluateGeoElement("Corner(1)").toValueString(StringTemplate.editTemplate));
+		assertEquals(
+				"(11.519, 10.31767)",
+				evaluateGeoElement("Corner(3)").toValueString(StringTemplate.editTemplate));
+	}
+
+	@Test
+	void showAllObjectsLandscape() {
+		evaluate("Segment((0,0),(20,10))");
+		getApp().getEuclidianView1().setViewShowAllObjects(false, true);
+		assertEquals(
+				"(-2.47228, -3.67011)",
+				evaluateGeoElement("Corner(1)").toValueString(StringTemplate.editTemplate));
+		assertEquals(
+				"(20.6288, 13.67011)",
+				evaluateGeoElement("Corner(3)").toValueString(StringTemplate.editTemplate));
+	}
+
+	@Test
+	void lineThicknessScaledShouldBeSavedAndReloaded() {
+		getApp().getSettings().getEuclidian(1).setLineThicknessScaled(true);
+		String xml = getApp().getXML();
+		assertTrue(xml.contains("lineThicknessScaled=\"true\""));
+
+		// reset then reload
+		getApp().getSettings().getEuclidian(1).setLineThicknessScaled(false);
+		getApp().setXML(xml, true);
+		assertTrue(getApp().getSettings().getEuclidian(1).getLineThicknessScaled());
+	}
+
+	@Test
+	void lineThicknessScaledShouldDefaultToFalseAndNotBeSaved() {
+		getApp().getSettings().getEuclidian(1).setLineThicknessScaled(false);
+		String xml = getApp().getXML();
+		assertFalse(xml.contains("lineThicknessScaled"));
+
+		getApp().setXML(xml, true);
+		assertFalse(getApp().getSettings().getEuclidian(1).getLineThicknessScaled());
+	}
+
+	@Test
+	void loadingFileWithoutLineThicknessScaledShouldResetIt() {
+		getApp().getSettings().getEuclidian(1).setLineThicknessScaled(true);
+		String xml = getApp().getXML().replace(" lineThicknessScaled=\"true\"", "");
+		getApp().setXML(xml, true);
+		assertFalse(getApp().getSettings().getEuclidian(1).getLineThicknessScaled());
+	}
+}

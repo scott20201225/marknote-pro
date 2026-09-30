@@ -1,0 +1,107 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.web.full.gui.toolbar.mow.toolbox.components;
+
+import java.util.List;
+
+import org.geogebra.web.full.gui.toolbar.mow.toolbox.ToolboxPopupPositioner;
+import org.geogebra.web.html5.gui.util.AriaHelper;
+import org.geogebra.web.html5.gui.view.IconSpec;
+import org.geogebra.web.html5.main.AppW;
+
+public final class IconButtonWithPopup extends ToolIconButton {
+	private final AppW appW;
+	private final List<Integer> tools;
+	private CategoryPopup categoryPopup;
+
+	/**
+	 * Constructor
+	 * @param appW - application
+	 * @param icon - image
+	 * @param ariaLabel - aria label
+	 * @param tools - list of tools
+	 * @param deselectButtons - deselect button callback
+	 */
+	public IconButtonWithPopup(
+			AppW appW, IconSpec icon, String ariaLabel, List<Integer> tools, Runnable deselectButtons) {
+		super(appW, icon, ariaLabel, ariaLabel, () -> {}, null);
+		this.appW = appW;
+		this.tools = tools;
+		AriaHelper.setAriaHasPopup(this);
+		initPopup(tools);
+
+		addFastClickHandler(source -> {
+			deselectButtons.run();
+			showHidePopupAndUpdateSelection();
+			setActive(true);
+		});
+	}
+
+	private void initPopup(List<Integer> tools) {
+		if (categoryPopup == null) {
+			categoryPopup = new CategoryPopup(appW, tools, this::updateButton);
+			categoryPopup.setAutoHideEnabled(false);
+
+			categoryPopup.addCloseHandler((event) -> AriaHelper.setAriaExpanded(this, false));
+		}
+	}
+
+	private void showHidePopupAndUpdateSelection() {
+		showHidePopup();
+		updateSelection();
+	}
+
+	private void showHidePopup() {
+		if (categoryPopup.isShowing()) {
+			categoryPopup.hide();
+		} else {
+			ToolboxPopupPositioner.showRelativeToToolbox(categoryPopup, this, appW);
+		}
+	}
+
+	private void updateSelection() {
+		AriaHelper.setAriaExpanded(this, categoryPopup.isShowing());
+		appW.setMode(categoryPopup.getLastSelectedMode());
+	}
+
+	private void updateButton(int mode) {
+		getIconFromMode(mode, appW.getToolboxIconResource(), iconSpec -> {
+			updateImgAndTxt(iconSpec, mode, appW);
+			setActive(true);
+		});
+	}
+
+	@Override
+	public int getMode() {
+		return categoryPopup != null && categoryPopup.getLastSelectedMode() != -1
+				? categoryPopup.getLastSelectedMode()
+				: tools.get(0);
+	}
+
+	@Override
+	public boolean containsMode(int mode) {
+		return tools.contains(mode);
+	}
+
+	@Override
+	public void setLabels() {
+		super.setLabels();
+		if (categoryPopup != null) {
+			categoryPopup.setLabels();
+		}
+	}
+}

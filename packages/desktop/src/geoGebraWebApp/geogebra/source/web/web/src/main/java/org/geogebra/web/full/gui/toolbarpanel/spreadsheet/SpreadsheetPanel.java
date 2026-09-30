@@ -1,0 +1,480 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.web.full.gui.toolbarpanel.spreadsheet;
+
+import org.geogebra.common.gui.FocusableComponent;
+import org.geogebra.common.main.App;
+import org.geogebra.common.main.ScreenReader;
+import org.geogebra.common.main.settings.SpreadsheetSettings;
+import org.geogebra.common.spreadsheet.core.Modifiers;
+import org.geogebra.common.spreadsheet.core.Spreadsheet;
+import org.geogebra.common.spreadsheet.core.SpreadsheetDelegate;
+import org.geogebra.common.spreadsheet.core.SpreadsheetStatisticsView;
+import org.geogebra.common.spreadsheet.core.SpreadsheetStyleBarModel;
+import org.geogebra.common.spreadsheet.core.ViewportAdjusterDelegate;
+import org.geogebra.common.spreadsheet.kernel.KernelSpreadsheetStatistics;
+import org.geogebra.common.util.MouseCursor;
+import org.geogebra.common.util.shape.Rectangle;
+import org.geogebra.common.util.shape.Size;
+import org.geogebra.editor.share.catalog.TemplateCatalog;
+import org.geogebra.editor.share.util.KeyCodes;
+import org.geogebra.editor.web.KeyCodeUtil;
+import org.geogebra.gwtutil.NavigatorUtil;
+import org.geogebra.web.awt.GGraphics2DW;
+import org.geogebra.web.full.gui.view.probcalculator.MathTextFieldW;
+import org.geogebra.web.html5.euclidian.ReaderWidget;
+import org.geogebra.web.html5.gui.util.AriaHelper;
+import org.geogebra.web.html5.gui.util.LongTouchManager;
+import org.geogebra.web.html5.gui.util.LongTouchTimer;
+import org.geogebra.web.html5.gui.util.MathKeyboardListener;
+import org.geogebra.web.html5.main.AppW;
+import org.geogebra.web.html5.util.GlobalHandlerRegistry;
+import org.gwtproject.canvas.client.Canvas;
+import org.gwtproject.core.client.Scheduler;
+import org.gwtproject.dom.client.NativeEvent;
+import org.gwtproject.dom.client.Style;
+import org.gwtproject.dom.style.shared.Unit;
+import org.gwtproject.event.dom.client.KeyDownEvent;
+import org.gwtproject.event.dom.client.KeyEvent;
+import org.gwtproject.user.client.ui.FlowPanel;
+import org.gwtproject.user.client.ui.RequiresResize;
+import org.gwtproject.user.client.ui.ScrollPanel;
+import org.jspecify.annotations.NonNull;
+
+import elemental2.dom.CanvasRenderingContext2D;
+import elemental2.dom.DomGlobal;
+import elemental2.dom.Event;
+import elemental2.dom.HTMLElement;
+import elemental2.dom.KeyboardEvent;
+import elemental2.dom.PointerEvent;
+import elemental2.dom.Touch;
+import elemental2.dom.TouchEvent;
+import jsinterop.base.Js;
+
+public final class SpreadsheetPanel extends FlowPanel
+		implements RequiresResize, LongTouchTimer.LongTouchHandler {
+
+	public static final int AUTOSCROLL_OFFSET = 30;
+	private final Spreadsheet<?> spreadsheet;
+	private final GGraphics2DW graphics;
+	private final AppW app;
+
+	// The canvas itself cannot be wrapped in a scrollpanel,
+	// otherwise there is jumping between scroll event and repaint
+	// on high-res screens
+	private final ScrollPanel scrollOverlay;
+	private final MathTextFieldW mathField;
+	private final elemental2.dom.Element spreadsheetElement;
+	private final FocusableComponent focusableComponent;
+	double moveTimeout;
+	int viewportChanges;
+	boolean isPointerDown = false;
+	private boolean focusSpreadsheetOnPointerUp;
+	private FocusCommand focusCommand;
+	private boolean isTouchDragging;
+
+	/**
+	 * @param app application
+	 * @param spreadsheet spreadsheet
+	 */
+	public SpreadsheetPanel(AppW app, @NonNull Spreadsheet<?> spreadsheet) {
+		Canvas spreadsheetWidget = Canvas.createIfSupported();
+		spreadsheetWidget.addStyleName("spreadsheetWidget");
+		graphics = new GGraphics2DW(spreadsheetWidget);
+		this.app = app;
+		addStyleName("spreadsheetPanel");
+
+		mathField = new MathTextFieldW(app, new TemplateCatalog());
+
+		this.spreadsheet = spreadsheet;
+		KernelSpreadsheetStatistics spreadsheetStatistics =
+				new KernelSpreadsheetStatistics(app.getKernel());
+		spreadsheet.setStatisticsViewDelegate(
+				new SpreadsheetStatisticsDelegateW(app, spreadsheet), spreadsheetStatistics);
+		spreadsheet.setControlsDelegate(initControlsDelegate());
+		spreadsheet.setSpreadsheetDelegate(initSpreadsheetDelegate());
+		spreadsheet.setViewportAdjustmentHandler(createScrollable());
+
+		add(spreadsheetWidget);
+		scrollOverlay = new ScrollPanel();
+
+		FlowPanel scrollContent = new FlowPanel();
+		AriaHelper.setRole(scrollContent, "application");
+		AriaHelper.setRoleDescription(
+				scrollContent, app.getLocalization().getMenu("Perspective.Spreadsheet"));
+		scrollOverlay.setWidget(scrollContent);
+		scrollOverlay.setStyleName("spreadsheetScrollOverlay");
+		add(scrollOverlay);
+		spreadsheetElement = Js.uncheckedCast(scrollContent.getElement());
+
+		ReaderWidget screenReader = new ReaderWidget("S", scrollContent.getElement());
+		add(screenReader);
+		spreadsheet.setAccessibilityDelegate(screenReader::readText);
+		spreadsheet.setExpressionReader(ScreenReader.getExpressionReader(app));
+
+		GlobalHandlerRegistry registry = app.getGlobalHandlers();
+
+		registry.addEventListener(spreadsheetElement, "pointerdown", event -> {
+			PointerEvent ptr = Js.uncheckedCast(event);
+			Modifiers modifiers = getModifiers(ptr);
+			SpreadsheetStatisticsView<?> statisticsView = spreadsheet.getStatisticsView();
+			focusSpreadsheetOnPointerUp =
+					statisticsView != null && statisticsView.getFocusedDataRange() != null;
+			spreadsheet.handlePointerDown(getEventX(ptr), getEventY(ptr), modifiers);
+			setPointerCapture(event);
+			if (!app.isUnbundled()) {
+				app.getGuiManager().setActivePanelAndToolbar(App.VIEW_SPREADSHEET);
+			}
+			if (modifiers.secondaryButton
+					|| spreadsheet.isEditorActive()
+					|| focusSpreadsheetOnPointerUp) {
+				event.preventDefault();
+			}
+			isPointerDown = true;
+		});
+		registry.addEventListener(spreadsheetElement, "pointerup", event -> {
+			PointerEvent ptr = Js.uncheckedCast(event);
+			spreadsheet.handlePointerUp(getEventX(ptr), getEventY(ptr), getModifiers(ptr));
+			if (!spreadsheet.isEditorActive()) {
+				app.hideKeyboard();
+			}
+
+			if (focusSpreadsheetOnPointerUp) {
+				focusSpreadsheetOnPointerUp = false;
+			}
+			isPointerDown = false;
+			repaint();
+		});
+		registry.addEventListener(spreadsheetElement, "pointermove", event -> {
+			PointerEvent ptr = Js.uncheckedCast(event);
+			double offsetX = getEventX(ptr);
+			double offsetY = getEventY(ptr);
+			Modifiers modifiers = getModifiers(ptr);
+			DomGlobal.clearTimeout(moveTimeout);
+			handlePointerMoved(offsetX, offsetY, modifiers);
+		});
+		registry.addEventListener(DomGlobal.window, "pointerup", event -> {
+			elemental2.dom.Element target = Js.uncheckedCast(event.target);
+			if (target.closest(".spreadsheetScrollOverlay,.gwt-PopupPanel,.iconButton,"
+							+ ".colorChooser,.tabButton,.toolBPanel,.TitleBarPanelContent")
+					!= null) {
+				return;
+			}
+			spreadsheet.clearSelectionOnly();
+			if (spreadsheetIsVisible()) {
+				repaint();
+			}
+		});
+		registry.addEventListener(DomGlobal.document.fonts, "loadingdone", ignore -> {
+			repaint();
+		});
+		setupTouchAndMouseEvents(registry, scrollContent);
+
+		scrollContent.getElement().setTabIndex(-1);
+		focusableComponent = new SpreadsheetFocusableAdapter(
+				this::isVisibleForTabbing, this::hasSpreadsheetFocus, this::focusSpreadsheetForKeyboard);
+		app.getAccessibilityManager().register(focusableComponent);
+
+		scrollContent.addDomHandler(
+				evt -> {
+					KeyCodes keyCode = KeyCodeUtil.translateGWTCode(evt.getNativeKeyCode());
+					if (keyCode == KeyCodes.TAB && shouldTabLeaveSpreadsheet()) {
+						boolean handled = evt.isShiftKeyDown()
+								? app.getAccessibilityManager().focusPrevious()
+								: app.getAccessibilityManager().focusNext();
+
+						if (handled) {
+							evt.stopPropagation();
+							evt.preventDefault();
+							return;
+						}
+					}
+
+					if (spreadsheet.handleKeyPressed(
+							keyCode.getJavaKeyCode(), getKey(evt.getNativeEvent()), getKeyboardModifiers(evt))) {
+						evt.stopPropagation(); // Do not let global event handler interfere
+					}
+					evt.preventDefault(); // Do not scroll the view
+					repaint();
+				},
+				KeyDownEvent.getType());
+		updateTotalSize();
+		DomGlobal.setInterval(
+				(ignore) -> {
+					spreadsheet.scrollForDragIfNeeded();
+				},
+				20);
+		scrollOverlay.addScrollHandler(event -> {
+			updateViewport();
+			repaint();
+		});
+		SpreadsheetSettings spreadsheetSettings = app.getSettings().getSpreadsheet();
+		spreadsheetSettings.addListener(
+				settings -> setScrollingEnabled(settings.showHScrollBar(), settings.showVScrollBar()));
+		setScrollingEnabled(spreadsheetSettings.showHScrollBar(), spreadsheetSettings.showVScrollBar());
+	}
+
+	private boolean isVisibleForTabbing() {
+		return isInAppletTabOrder() && spreadsheetIsVisible();
+	}
+
+	private boolean shouldTabLeaveSpreadsheet() {
+		return isInAppletTabOrder() && !spreadsheet.isEditorActive();
+	}
+
+	private boolean isInAppletTabOrder() {
+		return app.isApplet() && !app.showMenuBar();
+	}
+
+	private boolean hasSpreadsheetFocus() {
+		return spreadsheetElement.contains(DomGlobal.document.activeElement);
+	}
+
+	private void focusSpreadsheetForKeyboard() {
+		spreadsheet.handleOnViewAppear();
+		requestFocus();
+	}
+
+	/*
+	 * Actual event handling is done using PointerEvent, mouse and touch events are only used to
+	 * turn touch-dragging on and off and to stop propagation.
+	 */
+	private void setupTouchAndMouseEvents(GlobalHandlerRegistry registry, FlowPanel scrollContent) {
+		registry.addEventListener(scrollContent.getElement(), "touchmove", event -> {
+			Touch touch = ((TouchEvent) event).touches.getAt(0);
+			LongTouchManager.getInstance().cancelIfDragged(touch.clientX, touch.clientY);
+			if (isTouchDragging) {
+				event.preventDefault();
+			}
+		});
+		registry.addEventListener(scrollContent.getElement(), "touchstart", event -> {
+			Touch touch = ((TouchEvent) event).touches.getAt(0);
+			LongTouchManager.getInstance().scheduleTimer(this, touch.clientX, touch.clientY);
+			event.stopPropagation();
+		});
+		registry.addEventListener(scrollContent.getElement(), "mousedown", Event::stopPropagation);
+		registry.addEventListener(scrollContent.getElement(), "touchend", event -> {
+			isTouchDragging = false;
+			LongTouchManager.getInstance().cancelTimer();
+		});
+	}
+
+	private void handlePointerMoved(double offsetX, double offsetY, Modifiers modifiers) {
+		DomGlobal.clearTimeout(moveTimeout);
+		setCursor(spreadsheet.getCursor(offsetX, offsetY));
+		viewportChanges = 0;
+
+		spreadsheet.handlePointerMove(offsetX, offsetY, modifiers);
+		if (isPointerDown) {
+			repaint();
+		}
+	}
+
+	private void setPointerCapture(Event event) {
+		HTMLElement target = Js.uncheckedCast(event.target);
+		PointerEvent ptr = Js.uncheckedCast(event);
+		target.setPointerCapture(ptr.pointerId);
+	}
+
+	private String getKey(NativeEvent nativeEvent) {
+		String key = Js.<KeyboardEvent>uncheckedCast(nativeEvent).key;
+		return key.length() > 1 ? "" : key;
+	}
+
+	private SpreadsheetControlsDelegateW initControlsDelegate() {
+		return new SpreadsheetControlsDelegateW(app, this, mathField);
+	}
+
+	private SpreadsheetDelegate initSpreadsheetDelegate() {
+		return this::repaint;
+	}
+
+	/**
+	 * Focuses and repaints the spreadsheet
+	 */
+	public void requestFocus() {
+		this.focusCommand = new FocusCommand(spreadsheetElement);
+		Scheduler.get().scheduleDeferred(focusCommand);
+		repaint();
+	}
+
+	private Modifiers getKeyboardModifiers(KeyEvent<?> evt) {
+		return new Modifiers(
+				evt.isAltKeyDown(),
+				NavigatorUtil.isMacOS() ? evt.isMetaKeyDown() : evt.isControlKeyDown(),
+				evt.isShiftKeyDown(),
+				false);
+	}
+
+	private double getEventX(PointerEvent ptr) {
+		return Math.min(
+				ptr.offsetX - scrollOverlay.getElement().getScrollLeft(), scrollOverlay.getOffsetWidth());
+	}
+
+	private double getEventY(PointerEvent ptr) {
+		return Math.min(
+				ptr.offsetY - scrollOverlay.getElement().getScrollTop(), scrollOverlay.getOffsetHeight());
+	}
+
+	private void setCursor(MouseCursor cursor) {
+		setStyleName("cursor_resizeEW", cursor == MouseCursor.RESIZE_X);
+		setStyleName("cursor_resizeNS", cursor == MouseCursor.RESIZE_Y);
+		setStyleName("cursor_default", cursor == MouseCursor.DRAG_DOT);
+	}
+
+	private Modifiers getModifiers(PointerEvent ptr) {
+		return new Modifiers(
+				ptr.altKey,
+				NavigatorUtil.isMacOS() ? ptr.metaKey : ptr.ctrlKey,
+				ptr.shiftKey,
+				ptr.button == 2 || (NavigatorUtil.isMacOS() && ptr.ctrlKey));
+	}
+
+	private void updateTotalSize() {
+		double width = spreadsheet.getTotalWidth();
+		double height = spreadsheet.getTotalHeight();
+		updateTotalSize(width, height);
+	}
+
+	private void updateTotalSize(double width, double height) {
+		Style style = scrollOverlay.getWidget().getElement().getStyle();
+		style.setWidth(width, Unit.PX);
+		style.setHeight(height, Unit.PX);
+		style.setProperty("maxHeight", height + "px");
+		style.setProperty("maxWidth", width + "px");
+	}
+
+	@Override
+	public void onResize() {
+		graphics.setDevicePixelRatio(app.getPixelRatio());
+		graphics.setCoordinateSpaceSize(getWidth(), getHeight());
+		updateViewport();
+		spreadsheet.scrollEditorIntoView();
+		repaint();
+	}
+
+	private void repaint() {
+		DomGlobal.requestAnimationFrame((ignore) -> {
+			double ratio = app.getPixelRatio();
+			graphics.getContext().setTransform2(ratio, 0, 0, ratio, 0, 0);
+			spreadsheet.draw(graphics);
+		});
+	}
+
+	private void updateViewport() {
+		int scrollTop = scrollOverlay.getElement().getScrollTop();
+		int scrollLeft = scrollOverlay.getElement().getScrollLeft();
+		spreadsheet.setViewport(
+				new Rectangle(scrollLeft, scrollLeft + getWidth(), scrollTop, scrollTop + getHeight()));
+	}
+
+	private int getHeight() {
+		return scrollOverlay.getOffsetHeight();
+	}
+
+	private int getWidth() {
+		return scrollOverlay.getOffsetWidth();
+	}
+
+	/**
+	 * @return The width of the scrollbar used for dragging content with the left mouse button
+	 */
+	private int getScrollBarWidth() {
+		return getWidth() - scrollOverlay.getElement().getClientWidth();
+	}
+
+	/**
+	 * @return the keyboard listener of the math field used for cell editing.
+	 */
+	public MathKeyboardListener getKeyboardListener() {
+		return mathField.getKeyboardListener();
+	}
+
+	private ViewportAdjusterDelegate createScrollable() {
+		return new ViewportAdjusterDelegate() {
+
+			@Override
+			public void setScrollPosition(double x, double y) {
+				scrollOverlay.setHorizontalScrollPosition((int) Math.round(x));
+				scrollOverlay.setVerticalScrollPosition((int) Math.round(y));
+				viewportChanges++;
+			}
+
+			@Override
+			public double getScrollBarWidth() {
+				return SpreadsheetPanel.this.getScrollBarWidth();
+			}
+
+			@Override
+			public void updateScrollableContentSize(Size size) {
+				updateTotalSize(size.getWidth(), size.getHeight());
+			}
+		};
+	}
+
+	/**
+	 * Commit editor changes and hide the editor.
+	 */
+	public void saveContentAndHideCellEditor() {
+		spreadsheet.saveContentAndHideCellEditor();
+	}
+
+	/**
+	 * Cancel pending focus request.
+	 */
+	public void cancelFocus() {
+		if (focusCommand != null) {
+			focusCommand.cancel();
+		}
+	}
+
+	/**
+	 * @return the style bar model of the spreadsheet.
+	 */
+	public SpreadsheetStyleBarModel getStyleBarModel() {
+		return spreadsheet.getStyleBarModel();
+	}
+
+	public Spreadsheet getSpreadsheet() {
+		return spreadsheet;
+	}
+
+	private boolean spreadsheetIsVisible() {
+		return !getParent().getParent().getElement().hasClassName("tab-hidden");
+	}
+
+	/**
+	 * Paint this to a canvas context.
+	 * @param context2d context
+	 */
+	public void paintToCanvas(CanvasRenderingContext2D context2d, double left, double top) {
+		GGraphics2DW graphics1 = new GGraphics2DW(context2d);
+		graphics1.translate(left, top);
+		spreadsheet.draw(graphics1);
+		graphics1.translate(-left, -top);
+	}
+
+	private void setScrollingEnabled(boolean horizontal, boolean vertical) {
+		scrollOverlay.getElement().getStyle().setProperty("overflowX", horizontal ? "auto" : "hidden");
+		scrollOverlay.getElement().getStyle().setProperty("overflowY", vertical ? "auto" : "hidden");
+	}
+
+	@Override
+	public void handleLongTouch(double unusedX, double unusedY) {
+		isTouchDragging = true;
+	}
+}

@@ -1,0 +1,46 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.jre.cas.giac.binding;
+
+import javagiac.gen;
+
+import org.geogebra.common.cas.giac.binding.Context;
+import org.geogebra.common.cas.giac.binding.Gen;
+
+class GenImpl implements Gen {
+
+	private final gen wrappedGen;
+
+	GenImpl(String string, Context context) {
+		wrappedGen = new gen(string, Util.convert(context));
+	}
+
+	private GenImpl(gen g) {
+		wrappedGen = g;
+	}
+
+	@Override
+	public Gen eval(int level, Context context) {
+		gen g = wrappedGen.eval(level, Util.convert(context));
+		return new GenImpl(g);
+	}
+
+	@Override
+	public String print(Context context) {
+		return wrappedGen.print(Util.convert(context));
+	}
+}

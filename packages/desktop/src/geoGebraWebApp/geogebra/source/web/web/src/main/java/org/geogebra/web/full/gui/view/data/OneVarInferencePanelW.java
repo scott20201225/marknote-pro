@@ -1,0 +1,383 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.web.full.gui.view.data;
+
+import java.util.ArrayList;
+
+import org.geogebra.common.gui.view.data.DataAnalysisController;
+import org.geogebra.common.gui.view.data.OneVarModel;
+import org.geogebra.common.gui.view.data.StatisticsModel;
+import org.geogebra.common.kernel.Kernel;
+import org.geogebra.common.kernel.geos.GeoList;
+import org.geogebra.web.full.gui.view.algebra.InputPanelW;
+import org.geogebra.web.html5.gui.inputfield.AutoCompleteTextFieldW;
+import org.geogebra.web.html5.gui.util.LayoutUtilW;
+import org.geogebra.web.html5.main.AppW;
+import org.geogebra.web.html5.main.LocalizationW;
+import org.gwtproject.event.dom.client.BlurEvent;
+import org.gwtproject.event.dom.client.BlurHandler;
+import org.gwtproject.event.dom.client.ClickEvent;
+import org.gwtproject.event.dom.client.ClickHandler;
+import org.gwtproject.user.client.ui.FlowPanel;
+import org.gwtproject.user.client.ui.Label;
+import org.gwtproject.user.client.ui.ListBox;
+
+/**
+ * Extended JPanel that contains interactive sub-panels for performing one
+ * variable inference with the current data set.
+ *
+ * @author G. Sturr
+ *
+ */
+public final class OneVarInferencePanelW extends FlowPanel
+		implements ClickHandler, BlurHandler, StatPanelInterfaceW {
+	// ggb fields
+	private AppW app;
+	private Kernel kernel;
+	private DataAnalysisViewW statDialog;
+	private StatTableW resultTable;
+
+	// GUI
+	private Label lblHypParameter;
+	private Label lblTailType;
+	private Label lblNull;
+	private Label lblConfLevel;
+	private Label lblSigma;
+	private Label lblResultHeader;
+	private AutoCompleteTextFieldW fldNullHyp;
+	private AutoCompleteTextFieldW fldConfLevel;
+	private AutoCompleteTextFieldW fldSigma;
+	private ListBox lbAltHyp;
+	private FlowPanel testPanel;
+	private FlowPanel intPanel;
+	private FlowPanel mainPanel;
+	private FlowPanel resultPanel;
+	private FlowPanel sigmaPanel;
+	private int fieldWidth = 6;
+
+	// statistics
+
+	// flags
+	private boolean isIniting;
+	private boolean isTest = true;
+	private boolean isZProcedure;
+
+	private final LocalizationW loc;
+	private boolean enablePooled;
+	private final OneVarModel model;
+
+	/***************************************
+	 * Construct a OneVarInference panel
+	 *
+	 * @param app
+	 *            application
+	 * @param statDialog
+	 *            stat dialog
+	 */
+	public OneVarInferencePanelW(AppW app, DataAnalysisViewW statDialog) {
+
+		isIniting = true;
+		this.app = app;
+		this.loc = app.getLocalization();
+		this.kernel = app.getKernel();
+		this.model = new OneVarModel();
+		this.statDialog = statDialog;
+		this.statDialog.getController().loadDataLists(true);
+		this.createGUIElements();
+
+		this.updateGUI();
+		this.setLabels();
+
+		isIniting = false;
+	}
+
+	// ============================================================
+	// Create GUI
+	// ============================================================
+
+	private void createGUIElements() {
+		lbAltHyp = new ListBox();
+		lbAltHyp.addChangeHandler(event -> actionPerformed(lbAltHyp));
+
+		lblNull = new Label();
+		lblNull.setStyleName("panelTitle");
+		lblHypParameter = new Label();
+		lblTailType = new Label();
+		lblTailType.setStyleName("panelTitle");
+
+		fldNullHyp = new InputPanelW(app, -1, false).getTextComponent();
+		fldNullHyp.setWidthInEm(fieldWidth);
+		fldNullHyp.setText("" + 0);
+		fldNullHyp.addEnterPressHandler(() -> actionPerformed(fldNullHyp));
+		lblConfLevel = new Label();
+		lblConfLevel.setStyleName("panelTitle");
+		fldConfLevel = new InputPanelW(app, -1, false).getTextComponent();
+		fldConfLevel.setWidthInEm(fieldWidth);
+		fldConfLevel.addEnterPressHandler(() -> actionPerformed(fldConfLevel));
+
+		lblSigma = new Label();
+		fldSigma = new InputPanelW(app, -1, false).getTextComponent();
+		fldSigma.setWidthInEm(fieldWidth);
+		fldSigma.addEnterPressHandler(() -> actionPerformed(fldSigma));
+
+		lblResultHeader = new Label();
+		lblResultHeader.setStyleName("panelTitle");
+
+		sigmaPanel = new FlowPanel();
+		sigmaPanel.add(LayoutUtilW.panelRowIndent(lblSigma, fldSigma));
+
+		testPanel = new FlowPanel();
+		testPanel.add(lblNull);
+		testPanel.add(LayoutUtilW.panelRowIndent(lblHypParameter, fldNullHyp));
+		testPanel.add(lblTailType);
+		testPanel.add(LayoutUtilW.panelRowIndent(lbAltHyp));
+
+		intPanel = new FlowPanel();
+		intPanel.add(lblConfLevel);
+		intPanel.add(fldConfLevel);
+
+		resultTable = new StatTableW();
+		resultTable.setStyleName("daStatistics");
+		setResultTable();
+
+		resultPanel = new FlowPanel();
+		resultPanel.add(lblResultHeader);
+		resultPanel.add(resultTable);
+
+		mainPanel = new FlowPanel();
+		add(mainPanel);
+		add(resultPanel);
+	}
+
+	private void updateMainPanel() {
+		mainPanel.clear();
+
+		if (isZProcedure) {
+			mainPanel.add(sigmaPanel);
+		}
+
+		if (isTest) {
+			mainPanel.add(testPanel);
+		} else {
+			mainPanel.add(intPanel);
+		}
+
+		mainPanel.add(resultPanel);
+	}
+
+	private void setResultTable() {
+		ArrayList<String> nameList = model.getNameList(loc);
+
+		String[] rowNames = new String[nameList.size()];
+		nameList.toArray(rowNames);
+		resultTable.setStatTable(rowNames.length, rowNames, 2, null);
+	}
+
+	private void updateResultTable() {
+		evaluate();
+		String cInt =
+				statDialog.format(model.getMean()) + " \u00B1 " + statDialog.format(model.getMe());
+
+		switch (model.selectedPlot) {
+			default:
+				// do nothing
+				break;
+			case StatisticsModel.INFER_Z_TEST:
+				resultTable.setValueAt(statDialog.format(model.getP()), 0, 1);
+				resultTable.setValueAt(statDialog.format(model.getTestStat()), 1, 1);
+				resultTable.setValueAt("", 2, 1);
+				resultTable.setValueAt(statDialog.format(model.getN()), 3, 1);
+				resultTable.setValueAt(statDialog.format(model.getMean()), 4, 1);
+				break;
+
+			case StatisticsModel.INFER_T_TEST:
+				resultTable.setValueAt(statDialog.format(model.getP()), 0, 1);
+				resultTable.setValueAt(statDialog.format(model.getTestStat()), 1, 1);
+				resultTable.setValueAt(statDialog.format(model.getDf()), 2, 1);
+				resultTable.setValueAt(statDialog.format(model.getSe()), 3, 1);
+				resultTable.setValueAt("", 4, 1);
+				resultTable.setValueAt(statDialog.format(model.getN()), 5, 1);
+				resultTable.setValueAt(statDialog.format(model.getMean()), 6, 1);
+				break;
+
+			case StatisticsModel.INFER_Z_INT:
+				resultTable.setValueAt(cInt, 0, 1);
+				resultTable.setValueAt(statDialog.format(model.getLower()), 1, 1);
+				resultTable.setValueAt(statDialog.format(model.getUpper()), 2, 1);
+				resultTable.setValueAt(statDialog.format(model.getMe()), 3, 1);
+				resultTable.setValueAt("", 4, 1);
+				resultTable.setValueAt(statDialog.format(model.getN()), 5, 1);
+				resultTable.setValueAt(statDialog.format(model.getMean()), 6, 1);
+				break;
+
+			case StatisticsModel.INFER_T_INT:
+				resultTable.setValueAt(cInt, 0, 1);
+				resultTable.setValueAt(statDialog.format(model.getLower()), 1, 1);
+				resultTable.setValueAt(statDialog.format(model.getUpper()), 2, 1);
+				resultTable.setValueAt(statDialog.format(model.getMe()), 3, 1);
+				resultTable.setValueAt(statDialog.format(model.getDf()), 4, 1);
+				resultTable.setValueAt(statDialog.format(model.getSe()), 5, 1);
+				resultTable.setValueAt("", 6, 1);
+				resultTable.setValueAt(statDialog.format(model.getN()), 7, 1);
+				resultTable.setValueAt(statDialog.format(model.getMean()), 8, 1);
+				break;
+		}
+	}
+
+	@Override
+	public void setLabels() {
+		lblHypParameter.setText(loc.getMenu("HypothesizedMean.short") + " = ");
+		lblNull.setText(loc.getMenu("NullHypothesis") + ": ");
+		lblTailType.setText(loc.getMenu("AlternativeHypothesis") + ": ");
+		lblConfLevel.setText(loc.getMenu("ConfidenceLevel") + ": ");
+		lblResultHeader.setText(loc.getMenu("Result") + ": ");
+		lblSigma.setText(loc.getMenu("StandardDeviation.short") + " = ");
+	}
+
+	/** Helper method for updateGUI() */
+	private void updateNumberField(AutoCompleteTextFieldW fld, double n) {
+		fld.setText(statDialog.format(n));
+	}
+
+	private void updateGUI() {
+		isTest = model.selectedPlot == StatisticsModel.INFER_Z_TEST
+				|| model.selectedPlot == StatisticsModel.INFER_T_TEST;
+
+		isZProcedure = model.selectedPlot == StatisticsModel.INFER_Z_TEST
+				|| model.selectedPlot == StatisticsModel.INFER_Z_INT;
+
+		updateNumberField(fldNullHyp, model.hypMean);
+		updateNumberField(fldConfLevel, model.confLevel);
+		updateNumberField(fldSigma, model.sigma);
+		updateCBAlternativeHyp();
+		setResultTable();
+		updateResultTable();
+		updateMainPanel();
+	}
+
+	private void updateCBAlternativeHyp() {
+		lbAltHyp.clear();
+		lbAltHyp.addItem(loc.getMenu("HypothesizedMean.short") + " "
+				+ OneVarModel.tail_right + " "
+				+ statDialog.format(model.hypMean));
+		lbAltHyp.addItem(loc.getMenu("HypothesizedMean.short") + " "
+				+ OneVarModel.tail_left + " "
+				+ statDialog.format(model.hypMean));
+		lbAltHyp.addItem(loc.getMenu("HypothesizedMean.short") + " "
+				+ OneVarModel.tail_two + " "
+				+ statDialog.format(model.hypMean));
+
+		if (OneVarModel.tail_right.equals(model.tail)) {
+			lbAltHyp.setSelectedIndex(0);
+		} else if (OneVarModel.tail_left.equals(model.tail)) {
+			lbAltHyp.setSelectedIndex(1);
+		} else {
+			lbAltHyp.setSelectedIndex(2);
+		}
+	}
+
+	/**
+	 * Handle text input
+	 *
+	 * @param source
+	 *            event source
+	 */
+	public void actionPerformed(Object source) {
+		if (isIniting) {
+			return;
+		}
+
+		if (source instanceof AutoCompleteTextFieldW) {
+			doTextFieldActionPerformed((AutoCompleteTextFieldW) source);
+		} else if (source == lbAltHyp) {
+
+			if (lbAltHyp.getSelectedIndex() == 0) {
+				model.tail = OneVarModel.tail_right;
+			} else if (lbAltHyp.getSelectedIndex() == 1) {
+				model.tail = OneVarModel.tail_left;
+			} else {
+				model.tail = OneVarModel.tail_two;
+			}
+
+			evaluate();
+			updateResultTable();
+		}
+	}
+
+	private void doTextFieldActionPerformed(AutoCompleteTextFieldW source) {
+		if (isIniting) {
+			return;
+		}
+
+		double value = model.evaluateExpression(kernel, source.getText().trim());
+
+		if (source == fldConfLevel) {
+			model.confLevel = value;
+			evaluate();
+			updateGUI();
+		} else if (source == fldNullHyp) {
+			model.hypMean = value;
+			evaluate();
+			updateGUI();
+		} else if (source == fldSigma) {
+			model.sigma = value;
+			evaluate();
+			updateGUI();
+		}
+	}
+
+	/**
+	 * @param selectedPlot
+	 *            plot type
+	 */
+	public void setSelectedPlot(int selectedPlot) {
+		model.selectedPlot = selectedPlot;
+		updateGUI();
+	}
+
+	@Override
+	public void updatePanel() {
+		evaluate();
+		updateGUI();
+		updateResultTable();
+	}
+
+	private void evaluate() {
+		GeoList dataList = statDialog.getController().getDataSelected();
+		double[] sample = DataAnalysisController.getValueArray(dataList);
+
+		model.evaluate(sample);
+	}
+
+	@Override
+	public void onClick(ClickEvent event) {
+		actionPerformed(event.getSource());
+	}
+
+	@Override
+	public void onBlur(BlurEvent event) {
+		doTextFieldActionPerformed((AutoCompleteTextFieldW) event.getSource());
+	}
+
+	public boolean isEnablePooled() {
+		return enablePooled;
+	}
+
+	public void setEnablePooled(boolean enablePooled) {
+		this.enablePooled = enablePooled;
+	}
+}

@@ -32,6 +32,7 @@ interface WindowMenuEntry {
   type: MenuTypeValue
   drawioMode?: boolean
   drawioAutoSave?: boolean
+  geogebraMode?: boolean
 }
 
 interface AddEditorMenuOptions {
@@ -244,11 +245,35 @@ class AppMenu {
   setDrawioMenuMode(windowId: number, enabled: boolean): void {
     const entry = this.windowMenus.get(windowId)
     if (!entry || entry.type !== MenuType.EDITOR) return
-    if (entry.drawioMode === enabled) return
+    if (entry.drawioMode === enabled && (!enabled || !entry.geogebraMode)) return
 
     entry.drawioMode = enabled
+    if (enabled) entry.geogebraMode = false
     if (enabled && entry.drawioAutoSave === undefined) entry.drawioAutoSave = true
-    const { menu } = this._buildEditorMenu(undefined, entry.drawioMode, entry.drawioAutoSave)
+    const { menu } = this._buildEditorMenu(
+      undefined,
+      entry.drawioMode,
+      entry.drawioAutoSave,
+      entry.geogebraMode
+    )
+    entry.menu = menu
+    if (this.activeWindowId === windowId) this._setApplicationMenu(menu)
+  }
+
+  /** Switch the native menu surface between Markdown, Draw.io and GeoGebra. */
+  setGeoGebraMenuMode(windowId: number, enabled: boolean): void {
+    const entry = this.windowMenus.get(windowId)
+    if (!entry || entry.type !== MenuType.EDITOR) return
+    if (entry.geogebraMode === enabled && (!enabled || !entry.drawioMode)) return
+
+    entry.geogebraMode = enabled
+    if (enabled) entry.drawioMode = false
+    const { menu } = this._buildEditorMenu(
+      undefined,
+      entry.drawioMode,
+      entry.drawioAutoSave,
+      entry.geogebraMode
+    )
     entry.menu = menu
     if (this.activeWindowId === windowId) this._setApplicationMenu(menu)
   }
@@ -338,7 +363,8 @@ class AppMenu {
       const { menu: newMenu } = this._buildEditorMenu(
         recentUsedDocuments,
         value.drawioMode,
-        value.drawioAutoSave
+        value.drawioAutoSave,
+        value.geogebraMode
       )
       if (!newMenu) return
 
@@ -373,7 +399,8 @@ class AppMenu {
         const { menu: rebuilt } = this._buildEditorMenu(
           recentUsedDocuments,
           value.drawioMode,
-          value.drawioAutoSave
+          value.drawioAutoSave,
+          value.geogebraMode
         )
         if (!rebuilt) return
 
@@ -477,7 +504,8 @@ class AppMenu {
   _buildEditorMenu(
     recentUsedDocuments: string[] | null = null,
     drawioMode = false,
-    drawioAutoSave = true
+    drawioAutoSave = true,
+    geogebraMode = false
   ): WindowMenuEntry {
     if (!recentUsedDocuments) {
       recentUsedDocuments = this.getRecentlyUsedDocuments()
@@ -486,11 +514,12 @@ class AppMenu {
     const menuTemplate = prepareMenuTemplate(
       configureMenu(this._keybindings, this._preferences, recentUsedDocuments, {
         drawioMode,
-        drawioAutoSave
+        drawioAutoSave,
+        geogebraMode
       })
     )
     const menu = Menu.buildFromTemplate(menuTemplate)
-    return { menu, type: MenuType.EDITOR, drawioMode, drawioAutoSave }
+    return { menu, type: MenuType.EDITOR, drawioMode, drawioAutoSave, geogebraMode }
   }
 
   _buildSettingMenu(): WindowMenuEntry {
@@ -579,6 +608,10 @@ class AppMenu {
     ipcMain.on('mt::drawio-menu-mode', (event, enabled: boolean) => {
       const win = BrowserWindow.fromWebContents(event.sender)
       if (win) this.setDrawioMenuMode(win.id, enabled === true)
+    })
+    ipcMain.on('mt::geogebra-menu-mode', (event, enabled: boolean) => {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      if (win) this.setGeoGebraMenuMode(win.id, enabled === true)
     })
     ipcMain.on('mt::drawio-autosave-changed', (event, enabled: boolean) => {
       const win = BrowserWindow.fromWebContents(event.sender)

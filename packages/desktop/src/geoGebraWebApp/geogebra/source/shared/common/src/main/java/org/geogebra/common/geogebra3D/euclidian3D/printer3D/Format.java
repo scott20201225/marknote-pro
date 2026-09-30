@@ -1,0 +1,336 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.geogebra3D.euclidian3D.printer3D;
+
+import org.geogebra.common.awt.GColor;
+import org.geogebra.common.kernel.geos.GeoElement;
+
+/**
+ *
+ * Different formats for 3D printers
+ *
+ */
+public abstract class Format {
+
+	private String newline = ExportToPrinter3D.NEWLINE;
+
+	/**
+	 * @return file extension for this format
+	 */
+	public abstract String getExtension();
+
+	/**
+	 * script start
+	 *
+	 * @param sb
+	 *            output builder
+	 */
+	public abstract void getScriptStart(StringBuilder sb);
+
+	/**
+	 * script end
+	 *
+	 * @param sb
+	 *            output builder
+	 */
+	public abstract void getScriptEnd(StringBuilder sb);
+
+	/**
+	 * @param sb
+	 *            output builder
+	 * @param type
+	 *            object type
+	 * @param geo
+	 *            geo
+	 * @param transparency
+	 *            if this object is transparent
+	 * @param color
+	 *            color
+	 * @param alpha
+	 *            object alpha
+	 */
+	public abstract void getObjectStart(
+			StringBuilder sb,
+			String type,
+			GeoElement geo,
+			boolean transparency,
+			GColor color,
+			double alpha);
+
+	/**
+	 * start for new polyhedron
+	 *
+	 * @param sb
+	 *            output builder
+	 * @param isFlat
+	 *            all geometries are in the same plane
+	 * @param isCurve
+	 *            geometry is a curve
+	 */
+	public abstract void getPolyhedronStart(StringBuilder sb, boolean isFlat, boolean isCurve);
+
+	/**
+	 * end for polyhedron
+	 *
+	 * @param sb
+	 *            output builder
+	 */
+	public abstract void getPolyhedronEnd(StringBuilder sb);
+
+	/**
+	 *
+	 * start for new vertices list
+	 *
+	 * @param count
+	 *            vertices length
+	 * @param sb
+	 *            output builder
+	 */
+	public abstract void getVerticesStart(StringBuilder sb, int count);
+
+	/**
+	 *
+	 * @param x
+	 *            x coord
+	 * @param y
+	 *            y coord
+	 * @param z
+	 *            z coord vertex description
+	 * @param sb
+	 *            output builder
+	 */
+	public abstract void getVertices(StringBuilder sb, double x, double y, double z);
+
+	/**
+	 *
+	 * @param x
+	 *            x coord
+	 * @param y
+	 *            y coord
+	 * @param z
+	 *            z coord vertex description
+	 * @param sb
+	 *            output builder
+	 * @param thickness
+	 *            thickness (for surfaces)
+	 */
+	public abstract void getVertices(
+			StringBuilder sb, double x, double y, double z, double thickness);
+
+	/**
+	 * separator for vertices list
+	 *
+	 * @param sb
+	 *            output builder
+	 */
+	public abstract void getVerticesSeparator(StringBuilder sb);
+
+	/**
+	 *
+	 * end for vertex
+	 *
+	 * @param sb
+	 *            output builder
+	 */
+	public abstract void getVerticesEnd(StringBuilder sb);
+
+	/**
+	 *
+	 * start for new normals
+	 *
+	 * @param sb
+	 *            output builder
+	 * @param count
+	 *            normals length
+	 */
+	public abstract void getNormalsStart(StringBuilder sb, int count);
+
+	/**
+	 * @param sb
+	 *            output builder
+	 * @param x
+	 *            x coord
+	 * @param y
+	 *            y coord
+	 * @param z
+	 *            z coord normal description
+	 * @param withThickness
+	 *            if uses thickness (for surfaces)
+	 */
+	public abstract void getNormal(
+			StringBuilder sb, double x, double y, double z, boolean withThickness);
+
+	/**
+	 *
+	 * separator for normals list
+	 *
+	 * @param sb
+	 *            output builder
+	 */
+	public abstract void getNormalsSeparator(StringBuilder sb);
+
+	/**
+	 *
+	 * end for normals
+	 *
+	 * @param sb
+	 *            output builder
+	 */
+	public abstract void getNormalsEnd(StringBuilder sb);
+
+	/**
+	 *
+	 * start for new face
+	 *
+	 * @param sb
+	 *            output builder
+	 * @param count
+	 *            faces length
+	 * @param hasSpecificNormals
+	 *            says if we'll pass specific normals indices
+	 */
+	public abstract void getFacesStart(StringBuilder sb, int count, boolean hasSpecificNormals);
+
+	/**
+	 * @param sb
+	 *            output builder
+	 * @param v1
+	 *            first index
+	 * @param v2
+	 *            second index
+	 * @param v3
+	 *            third index face description
+	 * @param normal
+	 *            normal index
+	 * @return true if vertices order is consistent with normal orientation
+	 */
+	public abstract boolean getFaces(StringBuilder sb, int v1, int v2, int v3, int normal);
+
+	/**
+	 *
+	 * separator for faces list
+	 *
+	 * @param sb
+	 *            output builder
+	 */
+	public abstract void getFacesSeparator(StringBuilder sb);
+
+	/**
+	 * end for face
+	 *
+	 * @param sb
+	 *            output builder
+	 */
+	public abstract void getFacesEnd(StringBuilder sb);
+
+	/**
+	 *
+	 * @return true if this format can export surfaces
+	 */
+	public abstract boolean handlesSurfacesDirectly();
+
+	/**
+	 *
+	 * @return true if needs closed objects (for stl export)
+	 */
+	public abstract boolean needsClosedObjectsForCurves();
+
+	/**
+	 *
+	 * @return true if needs closed objects (for stl export)
+	 */
+	public abstract boolean needsClosedObjectsForSurfaces();
+
+	/**
+	 *
+	 * @return true if needs scaling (for stl export)
+	 */
+	public abstract boolean needsScale();
+
+	/**
+	 *
+	 * @return true if it handles normals
+	 */
+	public abstract boolean handlesNormals();
+
+	/**
+	 *
+	 * @return true if it always uses a specific view for export
+	 */
+	public abstract boolean useSpecificViewForExport();
+
+	/**
+	 * set scale for vertices
+	 *
+	 * @param scale
+	 *            scale
+	 */
+	public abstract void setScale(double scale);
+
+	/**
+	 *
+	 * @param newline
+	 *            set string used for newline
+	 */
+	public void setNewlineString(String newline) {
+		this.newline = newline;
+	}
+
+	/**
+	 * append a newline string to string builder
+	 *
+	 * @param sb
+	 *            string builder
+	 */
+	protected void appendNewline(StringBuilder sb) {
+		sb.append(newline);
+	}
+
+	/**
+	 *
+	 * @return true if it needs both-sided surfaces
+	 */
+	abstract boolean needsBothSided();
+
+	/**
+	 * set if it wants filled solids
+	 *
+	 * @param flag
+	 *            flag
+	 */
+	public abstract void setWantsFilledSolids(boolean flag);
+
+	/**
+	 *
+	 * @return true if wants "filled solids"
+	 */
+	public abstract boolean wantsFilledSolids();
+
+	/**
+	 * set if it exports lines and points
+	 *
+	 * @param flag
+	 *            flag
+	 */
+	public abstract void setExportsPointsAndLines(boolean flag);
+
+	/**
+	 *
+	 * @return true if exports lines and points
+	 */
+	public abstract boolean exportsPointsAndLines();
+}

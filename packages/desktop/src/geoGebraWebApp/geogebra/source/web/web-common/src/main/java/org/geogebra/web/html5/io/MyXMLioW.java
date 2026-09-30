@@ -1,0 +1,95 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.web.html5.io;
+
+import java.io.IOException;
+import java.io.StringReader;
+
+import org.geogebra.common.io.MyXMLHandler;
+import org.geogebra.common.io.MyXMLio;
+import org.geogebra.common.io.QDParser;
+import org.geogebra.common.io.XMLParseException;
+import org.geogebra.common.io.file.Base64ZipFile;
+import org.geogebra.common.io.file.ZipFile;
+import org.geogebra.common.kernel.Construction;
+import org.geogebra.common.kernel.Kernel;
+import org.geogebra.web.html5.main.AppW;
+import org.geogebra.web.html5.util.ArchiveLoader;
+
+/**
+ * Web implementation of XML parser
+ *
+ */
+public class MyXMLioW extends MyXMLio {
+
+	private QDParser xmlParser;
+
+	/**
+	 * @param kernel
+	 *            kernel
+	 * @param cons
+	 *            construction
+	 */
+	public MyXMLioW(Kernel kernel, Construction cons) {
+		super(kernel, cons);
+	}
+
+	@Override
+	protected void createXMLParser() {
+		xmlParser = new QDParser();
+	}
+
+	@Override
+	protected void resetXMLParser() {
+		// nothing to do in web
+	}
+
+	@Override
+	protected void parseXML(MyXMLHandler xmlHandler, XMLStream stream)
+			throws IOException, XMLParseException {
+		xmlParser.parse(xmlHandler, new StringReader(((XMLStreamStringW) stream).getString()));
+	}
+
+	static class XMLStreamStringW implements XMLStream {
+
+		private final String str;
+
+		XMLStreamStringW(String str) {
+			this.str = str;
+		}
+
+		String getString() {
+			return str;
+		}
+	}
+
+	@Override
+	protected XMLStream createXMLStreamString(String str) {
+		return new XMLStreamStringW(str);
+	}
+
+	@Override
+	public final void readZipFromString(ZipFile zipFile) {
+		Base64ZipFile zip = (Base64ZipFile) zipFile;
+
+		String base64 = zip.getBase64();
+
+		((AppW) app).resetPerspectiveParam();
+		ArchiveLoader view = ((AppW) app).getArchiveLoader();
+		view.processBase64String(base64);
+	}
+}

@@ -1,0 +1,506 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.web.full.gui.inputbar;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.TreeSet;
+
+import org.geogebra.common.gui.SetLabels;
+import org.geogebra.common.gui.inputbar.InputBarHelpPanel;
+import org.geogebra.common.gui.util.TableSymbols;
+import org.geogebra.common.main.Localization;
+import org.geogebra.common.move.views.BooleanRenderable;
+import org.geogebra.common.ownership.GlobalScope;
+import org.geogebra.common.util.ManualPage;
+import org.geogebra.web.full.gui.GuiManagerW;
+import org.geogebra.web.full.gui.view.algebra.RadioTreeItem;
+import org.geogebra.web.html5.gui.BaseWidgetFactory;
+import org.geogebra.web.html5.gui.inputfield.AutoCompleteW;
+import org.geogebra.web.html5.gui.view.button.StandardButton;
+import org.geogebra.web.html5.main.AppW;
+import org.gwtproject.dom.style.shared.TextAlign;
+import org.gwtproject.user.client.ui.FlowPanel;
+import org.gwtproject.user.client.ui.InlineLabel;
+import org.gwtproject.user.client.ui.Label;
+import org.gwtproject.user.client.ui.ScrollPanel;
+import org.gwtproject.user.client.ui.SplitLayoutPanel;
+import org.gwtproject.user.client.ui.Tree;
+import org.gwtproject.user.client.ui.TreeItem;
+import org.gwtproject.user.client.ui.Widget;
+
+import elemental2.core.JsString;
+
+/**
+ * @author G. Sturr
+ *
+ */
+public final class InputBarHelpPanelW extends FlowPanel implements SetLabels, BooleanRenderable {
+	private final AppW app;
+	private Tree indexTree;
+	private FlowPanel syntaxPanel;
+	private StandardButton btnOnlineHelp;
+	private StandardButton btnClose;
+	private final LocaleSensitiveComparator comparator;
+	private SplitLayoutPanel sp;
+	private InlineLabel lblSyntax;
+	private InputHelpTreeItem itmFunction;
+	private AutoCompleteW inputField;
+	private final InputBarHelpPanel hp;
+
+	/**
+	 * @param app
+	 *            application
+	 */
+	public InputBarHelpPanelW(AppW app) {
+		super();
+		this.app = app;
+		comparator = new LocaleSensitiveComparator();
+		hp = new InputBarHelpPanel(app);
+		createGUI();
+		setLabels();
+	}
+
+	/**
+	 * @param field
+	 *            input field
+	 */
+	public void setInputField(AutoCompleteW field) {
+		this.inputField = field;
+	}
+
+	private void createGUI() {
+		// create syntax panel
+		syntaxPanel = new FlowPanel();
+
+		// button panel
+		FlowPanel pnlButton = new FlowPanel();
+		pnlButton.addStyleName("buttonPanel");
+
+		// create help button
+		btnOnlineHelp = BaseWidgetFactory.INSTANCE.newOutlinedButton(
+				app.getLocalization().getMenu("ShowOnlineHelp"));
+		btnOnlineHelp.addFastClickHandler(event -> openOnlineHelp());
+		render(app.getNetworkOperation().isOnline());
+		app.getNetworkOperation().getView().add(this);
+		pnlButton.add(btnOnlineHelp);
+
+		// create close button
+		btnClose = BaseWidgetFactory.INSTANCE.newTextButton(app.getLocalization().getMenu("Close"));
+		btnClose.addFastClickHandler(event -> hide());
+		pnlButton.add(btnClose);
+
+		// create detail title panel
+		lblSyntax = new InlineLabel();
+		lblSyntax.getElement().getStyle().setTextAlign(TextAlign.LEFT);
+
+		FlowPanel detailTitlePanel = new FlowPanel();
+		detailTitlePanel.add(lblSyntax);
+		detailTitlePanel.add(pnlButton);
+		detailTitlePanel.addStyleName("inputHelp-detailPanelTitle");
+
+		add(detailTitlePanel);
+		// create the detail panel
+		FlowPanel detailPanel = new FlowPanel();
+		detailPanel.add(syntaxPanel);
+		detailPanel.setWidth("100%");
+
+		// create the index tree and put it in a scroll panel
+		indexTree = new Tree() {
+			private boolean canFocus = true;
+
+			@Override
+			public void setFocus(boolean focus) {
+				if (canFocus) {
+					super.setFocus(focus);
+				}
+			}
+
+			@Override
+			public void setSelectedItem(TreeItem item, boolean fireEvents) {
+				canFocus = false;
+				super.setSelectedItem(item, fireEvents);
+				canFocus = true;
+			}
+		};
+
+		indexTree.addStyleName("inputHelp-tree");
+		indexTree.setAnimationEnabled(true);
+
+		ScrollPanel treeScroller = new ScrollPanel(indexTree);
+		treeScroller.setSize("100%", "100%");
+
+		// put the detail panel and index tree side by side in a
+		// SplitLayoutPanel
+		sp = new SplitLayoutPanel();
+		sp.addStyleName("ggbdockpanelhack");
+		sp.addEast(treeScroller, 280);
+		sp.add(new ScrollPanel(detailPanel));
+
+		// now add the split panel to our main panel
+		add(sp);
+	}
+
+	@Override
+	public void render(boolean online) {
+		btnOnlineHelp.setEnabled(online);
+	}
+
+	void showOnlineHelpButton(boolean show) {
+		btnOnlineHelp.setVisible(show);
+	}
+
+	// =================================================================
+	// Getters/Setters & Event Handlers
+	// =================================================================
+
+	/**
+	 * Opens browser with online help
+	 */
+	private void openOnlineHelp() {
+		if (getSelectedCommand() == null) {
+			app.getGuiManager().openHelp(ManualPage.INPUT_BAR, null);
+
+		} else if (getSelectedCommand()
+				.equals(app.getLocalization().getMenu("MathematicalFunctions"))) {
+			app.getGuiManager().openHelp(ManualPage.OPERATORS, null);
+
+		} else {
+			app.getGuiManager().openHelp(ManualPage.COMMAND, app.getReverseCommand(getSelectedCommand()));
+		}
+	}
+
+	/**
+	 * Hide the parent popup
+	 */
+	private void hide() {
+		((InputBarHelpPopup) this.getParent()).hide();
+	}
+
+	/**
+	 * @return local command name
+	 */
+	public String getSelectedCommand() {
+		if (indexTree == null
+				|| indexTree.getSelectedItem() == null
+				|| indexTree.getSelectedItem().getChildCount() > 0) {
+			return null;
+		}
+		return indexTree.getSelectedItem().getWidget().getElement().getInnerText();
+	}
+
+	@Override
+	public void setLabels() {
+		setCommands();
+		// show Mathematical Functions tree item initially
+		indexTree.setSelectedItem(itmFunction);
+		updateDetailPanel();
+		btnOnlineHelp.setText(app.getLocalization().getMenu("ShowOnlineHelp"));
+		btnClose.setText(app.getLocalization().getMenu("Close"));
+	}
+
+	/**
+	 * Adjusts the panel size relative to the current application panel size
+	 *
+	 * @param maxOffsetHeight
+	 *            max height
+	 */
+	public void updateGUI(int maxOffsetHeight) {
+		showOnlineHelpButton(!GlobalScope.isExamActive(app) && app.showMenuBar());
+		int height = maxOffsetHeight - 60;
+		double width = ((GuiManagerW) app.getGuiManager()).getRootComponent().getOffsetWidth() - 60;
+
+		int w = (int) Math.min(700, width);
+		sp.setPixelSize(w, height);
+	}
+
+	/**
+	 * @param scale
+	 *            scale
+	 * @return pixel width
+	 */
+	public int getPreferredWidth(double scale) {
+		double width =
+				((GuiManagerW) app.getGuiManager()).getRootComponent().getOffsetWidth() * scale - 60;
+		return (int) Math.min(700, width);
+	}
+
+	// =================================================================
+	// Index Tree
+	// =================================================================
+
+	/**
+	 * Update commands tree
+	 */
+	public void setCommands() {
+
+		indexTree.clear();
+
+		itmFunction = new InputHelpTreeItem();
+		itmFunction.setWidget(new TreeItemButton(
+				app.getLocalization().getMenu("MathematicalFunctions"), itmFunction, false));
+		indexTree.addItem(itmFunction);
+
+		InputHelpTreeItem itmAllCommands = new InputHelpTreeItem();
+		itmAllCommands.setWidget(
+				new TreeItemButton(app.getLocalization().getMenu("AllCommands"), itmAllCommands, false));
+
+		addCmdNames(itmAllCommands, getAllCommandsTreeSet());
+		indexTree.addItem(itmAllCommands);
+
+		for (int index = 0; index < hp.getCategoriesCount(); index++) {
+			TreeSet<String> cmdNames = InputBarHelpPanel.getCommandTreeMap(app, comparator, index);
+
+			if (cmdNames != null) {
+				String cmdSetName = app.getKernel().getAlgebraProcessor().getSubCommandSetName(index);
+				TreeItem itmCmdSet = new InputHelpTreeItem();
+				itmCmdSet.setWidget(new TreeItemButton(cmdSetName, itmCmdSet, false));
+				// add command set branch to tree
+				indexTree.addItem(itmCmdSet);
+				// add command names to this branch
+				addCmdNames(itmCmdSet, cmdNames);
+			}
+		}
+	}
+
+	private void addCmdNames(TreeItem item, TreeSet<String> names) {
+		for (String cmdName : names) {
+			if (cmdName != null && !cmdName.isEmpty()) {
+				InputHelpTreeItem cmd = new InputHelpTreeItem();
+				cmd.setWidget(new TreeItemButton(cmdName, cmd, true));
+				item.addItem(cmd);
+			}
+		}
+	}
+
+	private final class TreeItemButton extends InlineLabel {
+
+		private TreeItemButton(String text, final TreeItem item, final boolean isLeaf) {
+			super(text);
+			addStyleName("inputHelp-treeItem");
+
+			if (isLeaf) {
+				addStyleName("inputHelp-leaf");
+			}
+
+			this.addClickHandler(event -> {
+				item.setState(isLeaf || !item.getState());
+				updateDetailPanel();
+			});
+		}
+	}
+
+	private static class InputHelpTreeItem extends TreeItem {
+
+		protected InputHelpTreeItem() {
+			// avoid synth access warning
+		}
+
+		@Override
+		public void setWidget(Widget newWidget) {
+			super.setWidget(newWidget);
+			this.addStyleName("inputHelp-treeItem");
+		}
+	}
+
+	// =================================================================
+	// Command Name Sorting
+	// =================================================================
+
+	/**
+	 * Javascript comparator for different locales.
+	 *
+	 * TODO: handle accented characters
+	 */
+	private static class LocaleSensitiveComparator implements Comparator<String> {
+
+		protected LocaleSensitiveComparator() {
+			// avoid synth access warning
+		}
+
+		@Override
+		public int compare(String source, String target) {
+			return new JsString(source).localeCompare(target);
+		}
+	}
+
+	private TreeSet<String> getAllCommandsTreeSet() {
+		return InputBarHelpPanel.getAllCommandsTreeSet(app, comparator);
+	}
+
+	// =================================================================
+	// Syntax Description
+	// =================================================================
+
+	/**
+	 * Update syntax panel
+	 */
+	private void updateDetailPanel() {
+		syntaxPanel.clear();
+		if (getSelectedCommand() == null) {
+
+			lblSyntax.setText("");
+
+			return;
+		}
+
+		lblSyntax.setText(getSelectedCommand());
+		ArrayList<Widget> rows;
+		if (getSelectedCommand().equals(app.getLocalization().getMenu("MathematicalFunctions"))) {
+			rows = functionTableHTML();
+
+			syntaxPanel.removeStyleName("inputHelp-cmdSyntax");
+			syntaxPanel.addStyleName("inputHelp-functionTable");
+
+		} else {
+
+			rows = cmdSyntaxHTML();
+			syntaxPanel.removeStyleName("inputHelp-functionTable");
+			syntaxPanel.addStyleName("inputHelp-cmdSyntax");
+		}
+		for (Widget row : rows) {
+			syntaxPanel.add(row);
+		}
+	}
+
+	private ArrayList<Widget> cmdSyntaxHTML() {
+		ArrayList<Widget> ret = new ArrayList<>();
+
+		// internal name of selected command
+		String cmd = app.getReverseCommand(getSelectedCommand());
+
+		Localization loc = app.getLocalization();
+
+		String syntaxBasic = loc.getCommandSyntax(cmd);
+
+		if (loc.isCASCommand(cmd)) {
+
+			if (!syntaxBasic.equals(cmd + Localization.syntaxStr)) {
+				formattedHTMLString(ret, syntaxBasic, false);
+			}
+			// don't show cas specific syntax for exam graphing
+			boolean supportsCAS = app.getSettings().getCasSettings().isEnabled();
+			if (supportsCAS) {
+				Label headCAS = new Label(loc.getMenu("Type.CAS") + ":");
+				headCAS.addStyleName("inputHelp-headerCAS");
+				ret.add(headCAS);
+
+				String syntaxCAS = loc.getCommandSyntaxCAS(cmd);
+				formattedHTMLString(ret, syntaxCAS, true);
+			}
+		} else {
+			formattedHTMLString(ret, syntaxBasic, false);
+		}
+
+		return ret;
+	}
+
+	/**
+	 * Converts a java string to a SafeHTML string with newline characters
+	 * replaced by paragraph tags. This tag is required for the hanging indent
+	 * css style used to format syntax descriptions.
+	 *
+	 * @param cas
+	 *            whether to format it as CAS syntax
+	 * @param ret
+	 *            list of labels
+	 */
+	private void formattedHTMLString(ArrayList<Widget> ret, String s, boolean cas) {
+		String[] lines = s.split("\n");
+		for (String line : lines) {
+			Label syntax = syntaxLabel(line);
+			if (cas) {
+				syntax.addStyleName("inputHelp-CAScmdSyntax");
+			}
+			ret.add(syntax);
+		}
+	}
+
+	private Label syntaxLabel(String line) {
+		Label syntax = new Label(line);
+		final String fLine = line;
+		syntax.addMouseDownHandler(event -> {
+			event.preventDefault();
+			event.stopPropagation();
+			insertText(fLine);
+		});
+		return syntax;
+	}
+
+	/**
+	 * @param text
+	 *            to be inserted into input field
+	 */
+	void insertText(String text) {
+		if (this.inputField != null) {
+			ensureInputHasFocus();
+			this.inputField.autocomplete(text);
+			this.inputField.setFocus(true);
+		}
+	}
+
+	private void ensureInputHasFocus() {
+		if (inputField instanceof RadioTreeItem ri) {
+			ri.ensureEditing();
+		}
+	}
+
+	private ArrayList<Widget> functionTableHTML() {
+		String[][] f = TableSymbols.getTranslatedFunctionsGrouped(app);
+		ArrayList<Widget> ret = new ArrayList<>();
+
+		for (String[] strings : f) {
+			FlowPanel widget = new FlowPanel();
+			for (String string : strings) {
+				Label syntax = syntaxLabel(string);
+				widget.add(syntax);
+			}
+
+			ret.add(widget);
+		}
+
+		return ret;
+	}
+
+	/**
+	 * @param currentCommand
+	 *            command to be selected
+	 */
+	public void focusCommand(String currentCommand) {
+		if (indexTree == null || currentCommand == null) {
+			return;
+		}
+		for (int i = 2; i < indexTree.getItemCount(); i++) {
+			TreeItem group = indexTree.getItem(i);
+			if (group == null) {
+				continue;
+			}
+			for (int j = 0; j < group.getChildCount(); j++) {
+				if (group.getChild(j).getElement().getInnerText().equalsIgnoreCase(currentCommand)) {
+					group.setState(true);
+					indexTree.setSelectedItem(group.getChild(j), false);
+					updateDetailPanel();
+					return;
+				}
+			}
+		}
+	}
+
+	public InputBarHelpPanel getInputHelpPanel() {
+		return hp;
+	}
+}

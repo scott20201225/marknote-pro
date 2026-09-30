@@ -1,0 +1,384 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.gui.view.properties;
+
+import java.util.ArrayList;
+
+import org.geogebra.common.kernel.Construction;
+import org.geogebra.common.kernel.Kernel;
+import org.geogebra.common.kernel.View;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.kernel.geos.GeoList;
+import org.geogebra.common.main.App;
+import org.geogebra.common.main.Localization;
+import org.geogebra.common.main.OptionType;
+
+import com.google.j2objc.annotations.Weak;
+
+/**
+ * Properties view
+ *
+ */
+public abstract class PropertiesView implements View {
+
+	@Weak
+	protected Kernel kernel;
+
+	private boolean attached;
+
+	@Weak
+	protected App app;
+
+	protected final Localization loc;
+	protected OptionType selectedOptionType = OptionType.EUCLIDIAN;
+
+	protected int selectedTab = 0;
+
+	/**
+	 * @param app
+	 *            application
+	 */
+	public PropertiesView(App app) {
+		this.app = app;
+		kernel = app.getKernel();
+		loc = app.getLocalization();
+	}
+
+	/**
+	 * Update selection
+	 */
+	public abstract void updateSelection();
+
+	/**
+	 * update the properties view as if geos where selected
+	 *
+	 * @param geos
+	 *            geos
+	 */
+	public abstract void updateSelection(ArrayList<GeoElement> geos);
+
+	/**
+	 * Sets and shows the option panel for the given option type
+	 *
+	 * @param type
+	 *            type
+	 */
+	public final void setOptionPanel(OptionType type) {
+
+		ArrayList<GeoElement> geos = removeAllConstants(app.getSelectionManager().getSelectedGeos());
+
+		if (type == OptionType.OBJECTS) { // ensure that at least one geo is
+			// selected
+			if (geos.size() == 0) {
+				GeoElement geo = app.getSelectionManager().setFirstGeoSelectedForPropertiesView();
+				if (geo == null) {
+					// does nothing: stay in same panel
+					return;
+				}
+
+				// add this first geo
+				geos.add(geo);
+			}
+		}
+
+		setOptionPanel(type, geos);
+	}
+
+	protected void setOptionPanel(OptionType type, ArrayList<GeoElement> geos) {
+		if (type == null) {
+			return;
+		}
+
+		// update selection
+		if (type == OptionType.OBJECTS) {
+			if (geos != null) {
+				updateObjectPanelSelection(geos);
+			}
+			setObjectsToolTip();
+		}
+
+		setOptionPanelWithoutCheck(type);
+	}
+
+	protected abstract void setObjectsToolTip();
+
+	protected abstract void updateObjectPanelSelection(ArrayList<GeoElement> geos);
+
+	protected ArrayList<GeoElement> removeAllConstants(ArrayList<GeoElement> geosList) {
+
+		Construction.Constants firstConstant = Construction.Constants.NOT;
+
+		// check if there is constants, remove it and remember what type
+		ArrayList<GeoElement> geos = new ArrayList<>();
+
+		for (GeoElement geo : geosList) {
+			Construction.Constants constant = kernel.getConstruction().getConstantElement(geo);
+			if (!kernel.getConstruction().isConstantElement(geo)) {
+				// add if not constant
+				if (geoHasPropertiesView(geo)) {
+					geos.add(geo);
+				}
+			} else if (firstConstant == Construction.Constants.NOT) {
+				// remember type
+				firstConstant = constant;
+			}
+		}
+
+		if (firstConstant != Construction.Constants.NOT) {
+			updateSelectedTab(firstConstant);
+		}
+
+		return geos;
+	}
+
+	/**
+	 * Checks if list of points results from table of values.
+	 * @param geo geo element
+	 * @return whether geo is table values point list
+	 */
+	protected boolean tableValuesPoint(GeoElement geo) {
+		return geo instanceof GeoList geoList && geoList.isTableValuesOrPointList();
+	}
+
+	/**
+	 * Checks if geo should have properties view.
+	 * @param geo geo element
+	 * @return whether to show object properties for geo
+	 */
+	protected boolean geoHasPropertiesView(GeoElement geo) {
+		return !geo.isMeasurementTool() && !geo.isSpotlight() && !tableValuesPoint(geo);
+	}
+
+	/**
+	 * Activate an option panel.
+	 * @param type option type (objects / AV / ...)
+	 * @param subType tab index within the panel
+	 */
+	public abstract void setOptionPanel(OptionType type, int subType);
+
+	/**
+	 * Notify properties view about mouse press event in graphics.
+	 */
+	public abstract void mousePressedForPropertiesView();
+
+	/**
+	 * Update view contents.
+	 */
+	public abstract void updatePropertiesView();
+
+	/**
+	 * Detach from Kernel and clear.
+	 */
+	public abstract void detachView();
+
+	/**
+	 * Attach to Kernel.
+	 */
+	public abstract void attachView();
+
+	/**
+	 * @return type of option panel currently displayed
+	 */
+	public OptionType getSelectedOptionType() {
+		return selectedOptionType;
+	}
+
+	/**
+	 * acts when mouse has been released in euclidian controller
+	 *
+	 * @param creatorMode
+	 *            says if euclidian view is in creator mode (ie not move mode)
+	 */
+	public void mouseReleasedForPropertiesView(boolean creatorMode) {
+		GeoElement geo = getConsumedGeo();
+		if (app.getSelectionManager().selectedGeosSize() > 0) {
+			// selected geo is the most important
+			updatePropertiesViewCheckConstants(app.getSelectionManager().getSelectedGeos());
+		} else if (geo != null) { // last created geo
+			if (creatorMode) { // if euclidian view is e.g. in move mode, then
+				// geo was created by a script, so just show
+				// object properties
+				ArrayList<GeoElement> geos = new ArrayList<>();
+				geos.add(geo);
+				setOptionPanel(OptionType.OBJECTS, geos);
+			} else {
+				setOptionPanel(OptionType.OBJECTS, null);
+			}
+		} else { // focus
+			updateSelectedTab(Construction.Constants.NOT);
+			setOptionPanelRegardingFocus(true);
+			// updatePropertiesView();
+		}
+	}
+
+	protected GeoElement getConsumedGeo() {
+		return null;
+	}
+
+	/**
+	 * Updates properties view panel. If geos are not empty then the Objects
+	 * panel will be shown. If not, then an option pane for the current focused
+	 * view is shown.
+	 *
+	 * @param geosList
+	 *            geos list
+	 */
+	protected void updatePropertiesViewCheckConstants(ArrayList<GeoElement> geosList) {
+
+		// remove constant geos
+		ArrayList<GeoElement> geos = removeAllConstants(geosList);
+
+		updatePropertiesView(geos);
+	}
+
+	private void updatePropertiesView(ArrayList<GeoElement> geos) {
+
+		if (geos.size() > 0) {
+			if (!stayInCurrentPanel()) {
+				setOptionPanel(OptionType.OBJECTS, geos);
+			}
+		} else {
+
+			setOptionPanelRegardingFocus(true);
+		}
+	}
+
+	/**
+	 *
+	 * @return currently focused view type
+	 */
+	protected OptionType getFocusedViewType() {
+		int focusedViewId = app.getGuiManager().getLayout().getDockManager().getFocusedViewId();
+
+		return getTypeFromFocusedViewId(focusedViewId);
+	}
+
+	protected final void setOptionPanelRegardingFocus(boolean updateEuclidianTab) {
+
+		if (stayInCurrentPanelWithObjects()) {
+			return;
+		}
+
+		OptionType type = getFocusedViewType();
+
+		if (type != null) {
+			if (type == OptionType.EUCLIDIAN || type == OptionType.EUCLIDIAN2) {
+
+				if (app.getActiveEuclidianView()
+						.getEuclidianController()
+						.checkBoxOrTextFieldOrButtonJustHit()) {
+					// hit check box or text field : does nothing
+					return;
+				}
+
+				// ev clicked
+				setOptionPanelWithoutCheck(type);
+				if (updateEuclidianTab) {
+					setSelectedTab(type);
+				}
+
+			} else {
+				setOptionPanel(type);
+			}
+
+			// here necessary no object is selected
+			updateObjectPanelSelection(app.getSelectionManager().getSelectedGeos());
+		}
+	}
+
+	protected abstract void setSelectedTab(OptionType type);
+
+	protected void updateSelectedTab(Construction.Constants constant) {
+		switch (constant) {
+			case X_AXIS:
+				selectedTab = 1;
+				break;
+			case Y_AXIS:
+				selectedTab = 2;
+				break;
+			default:
+				selectedTab = 0;
+				break;
+		}
+	}
+
+	/**
+	 * @return selected tab index
+	 */
+	protected int getSelectedTab() {
+		return selectedTab;
+	}
+
+	protected abstract void setOptionPanelWithoutCheck(OptionType type);
+
+	protected OptionType getTypeFromFocusedViewId(int id) {
+		switch (id) {
+			case App.VIEW_CAS:
+				return OptionType.CAS;
+			case App.VIEW_SPREADSHEET:
+				return OptionType.SPREADSHEET;
+			case App.VIEW_EUCLIDIAN:
+				return OptionType.EUCLIDIAN;
+			case App.VIEW_EUCLIDIAN2:
+				return OptionType.EUCLIDIAN2;
+			case App.VIEW_EUCLIDIAN3D:
+				return OptionType.EUCLIDIAN3D;
+		}
+
+		if (id >= App.VIEW_EUCLIDIAN_FOR_PLANE_START && id <= App.VIEW_EUCLIDIAN_FOR_PLANE_END) {
+			return OptionType.EUCLIDIAN_FOR_PLANE;
+		}
+
+		return null;
+	}
+
+	protected boolean stayInCurrentPanelWithObjects() {
+
+		return stayInCurrentPanel()
+				|| (selectedOptionType == OptionType.OBJECTS
+						&& app.getSelectionManager().getSelectedGeos().size() > 0);
+	}
+
+	/**
+	 * say if it has to stay in current panel. Should disable any try to change
+	 * panel, unless from stylebar buttons.
+	 */
+	protected boolean stayInCurrentPanel() {
+
+		return selectedOptionType == OptionType.DEFAULTS
+				|| selectedOptionType == OptionType.GLOBAL
+				|| selectedOptionType == OptionType.LAYOUT;
+	}
+
+	/**
+	 * update style bar
+	 */
+	public abstract void updateStyleBar();
+
+	@Override
+	public void updatePreviewFromInputBar(GeoElement[] geos) {
+		// TODO
+	}
+
+	protected boolean isAttached() {
+		return attached;
+	}
+
+	protected void setAttached(boolean attached) {
+		this.attached = attached;
+	}
+}

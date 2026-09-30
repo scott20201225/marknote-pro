@@ -1,0 +1,120 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.spreadsheet.settings;
+
+import java.util.Objects;
+
+import org.geogebra.common.main.App;
+import org.geogebra.common.main.settings.SpreadsheetSettings;
+import org.geogebra.common.spreadsheet.core.CellSizes;
+import org.geogebra.common.spreadsheet.core.Spreadsheet;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+
+/**
+ * Synchronizes cell size and styling info between the {@code Spreadsheet} / {@code TableLayout}
+ * and the {@code SpreadsheetSettings}.
+ * @param <T> Spreadsheet content data type (actually not of interest here, but Java requires it).
+ */
+public final class SpreadsheetSettingsAdapter<T> {
+
+	private final App app;
+	private final Spreadsheet<T> spreadsheet;
+	private String previousCellFormatXml;
+
+	/**
+	 * @param spreadsheet the spreadsheet
+	 * @param app the app
+	 */
+	public SpreadsheetSettingsAdapter(@NonNull Spreadsheet<T> spreadsheet, @NonNull App app) {
+		this.spreadsheet = spreadsheet;
+		this.app = app;
+	}
+
+	/**
+	 * Register the adapter as a listener on both the SpreadsheetSettings and the Spreadsheet.
+	 */
+	public void registerListeners() {
+		// careful: the SpreadsheetSettings instance may change at runtime, don't store a reference!
+		SpreadsheetSettings spreadsheetSettings = app.getSettings().getSpreadsheet();
+		// OK: the SpreadsheetSettings listeners are carried over when a new instance is created
+		spreadsheetSettings.addListener((settings) -> {
+			applySettings(settings);
+			notifyIfSettingsCellFormatChanged();
+		});
+		app.getSettings().getFontSettings().addListener(s -> {
+			spreadsheet.invalidateAndRepaint();
+		});
+		applySettings(spreadsheetSettings);
+		spreadsheet.tabularDataDimensionsDidChange(spreadsheetSettings);
+		previousCellFormatXml = spreadsheetSettings.getCellFormatXml();
+		spreadsheet.setCellFormatXml(previousCellFormatXml);
+
+		spreadsheet.cellSizesChanged.addListener(this::spreadsheetCellSizesDidChange);
+		spreadsheet.cellFormatXmlChanged.addListener(this::spreadsheetCellFormatDidChange);
+	}
+
+	private void applySettings(SpreadsheetSettings settings) {
+		spreadsheet.setShowGrid(settings.showGrid());
+		spreadsheet.setRowHeaderWidth(settings.showRowHeader() ? -1 : 0);
+		spreadsheet.setColumnHeaderHeight(settings.showColumnHeader() ? -1 : 0);
+	}
+
+	/**
+	 * @return the current cell format XML from the {@link SpreadsheetSettings}.
+	 */
+	private @Nullable String getCellFormatXml() {
+		SpreadsheetSettings spreadsheetSettings = app.getSettings().getSpreadsheet();
+		return spreadsheetSettings.getCellFormatXml();
+	}
+
+	/**
+	 * Sync SpreadsheetSettings style changes -> Spreadsheet (SpreadsheetStyling)
+	 */
+	private void notifyIfSettingsCellFormatChanged() {
+		String newCellFormatXml = getCellFormatXml();
+		if (Objects.equals(previousCellFormatXml, newCellFormatXml)) {
+			return;
+		}
+		spreadsheet.setCellFormatXml(newCellFormatXml);
+		previousCellFormatXml = newCellFormatXml;
+	}
+
+	/**
+	 * Sync Spreadsheet/TableLayout cell size changes -> SpreadsheetSettings
+	 * @param cellSizes cell size info
+	 */
+	private void spreadsheetCellSizesDidChange(@Nullable CellSizes cellSizes) {
+		if (cellSizes == null) {
+			return;
+		}
+		SpreadsheetSettings spreadsheetSettings = app.getSettings().getSpreadsheet();
+		spreadsheetSettings.setCellSizesNoFire(
+				cellSizes.customColumnWidths, cellSizes.customRowHeights);
+	}
+
+	/**
+	 * Sync Spreadsheet/SpreadsheetStyleBarModel styling changes -> SpreadsheetSettings
+	 * @param cellFormatXml cell styling info in the XML format expected by the
+	 * {@link SpreadsheetSettings}.
+	 */
+	private void spreadsheetCellFormatDidChange(@Nullable String cellFormatXml) {
+		SpreadsheetSettings spreadsheetSettings = app.getSettings().getSpreadsheet();
+		spreadsheetSettings.setCellFormatXml(cellFormatXml);
+		previousCellFormatXml = cellFormatXml;
+	}
+}

@@ -25,6 +25,7 @@ import { WindowType } from '../windows/base'
 import EditorWindow from '../windows/editor'
 import SettingWindow from '../windows/setting'
 import { isDrawioFile, openDrawioFile } from '../drawio'
+import { isGeoGebraFile, openGeoGebraFile } from '../geogebra'
 import { zoomIn, zoomOut } from '../windows/utils'
 import { setLanguage } from '../i18n'
 import { getNativeThemeSource, isDarkApplicationTheme } from './nativeTheme'
@@ -60,6 +61,10 @@ const normalizeOpenPath = (pathname: string): PathInfo | null => {
   const markdownPath = normalizeMarkdownPath(pathname)
   if (markdownPath) return markdownPath as PathInfo
   if (isDrawioFile(pathname) && fs.existsSync(pathname)) {
+    const resolved = normalizeAndResolvePath(pathname)
+    return resolved ? { isDir: false, path: resolved } : null
+  }
+  if (isGeoGebraFile(pathname) && fs.existsSync(pathname)) {
     const resolved = normalizeAndResolvePath(pathname)
     return resolved ? { isDir: false, path: resolved } : null
   }
@@ -578,6 +583,10 @@ class App {
         fileSet.delete(pathname)
         const activeEditor = _windowManager.getActiveEditor()
         void openDrawioFile(pathname, activeEditor?.browserWindow)
+      } else if (isGeoGebraFile(pathname)) {
+        fileSet.delete(pathname)
+        const activeEditor = _windowManager.getActiveEditor()
+        void openGeoGebraFile(pathname, activeEditor?.browserWindow)
       }
     }
 

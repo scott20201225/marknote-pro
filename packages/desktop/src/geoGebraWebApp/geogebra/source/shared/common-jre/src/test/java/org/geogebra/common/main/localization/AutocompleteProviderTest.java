@@ -1,0 +1,209 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.main.localization;
+
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import org.geogebra.common.AppCommonFactory;
+import org.geogebra.common.BaseUnitTest;
+import org.geogebra.common.kernel.commands.CommandDispatcher;
+import org.geogebra.common.kernel.commands.Commands;
+import org.geogebra.common.kernel.commands.selector.CommandFilter;
+import org.geogebra.common.main.App;
+import org.geogebra.common.main.AppConfig;
+import org.geogebra.common.main.settings.config.AppConfigCas;
+import org.geogebra.common.main.settings.config.AppConfigGraphing;
+import org.geogebra.common.main.settings.config.AppConfigUnrestrictedGraphing;
+import org.geogebra.common.main.syntax.suggestionfilter.GraphingSyntaxFilter;
+import org.geogebra.common.main.syntax.suggestionfilter.SyntaxFilter;
+import org.geogebra.common.util.MatchedString;
+import org.geogebra.test.annotation.Issue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+
+class AutocompleteProviderTest extends BaseUnitTest {
+
+	private AutocompleteProvider provider;
+
+	@BeforeEach
+	void setupProvider() {
+		provider = new AutocompleteProvider(getApp(), false);
+	}
+
+	@Test
+	void functionSuggestionTest() {
+		List<AutocompleteProvider.Completion> completionList = getCompletions("sin");
+		assertEquals("sin", completionList.get(0).getCommand());
+		assertEquals(Collections.singletonList("sin( <x> )"), completionList.get(0).syntaxes);
+	}
+
+	@Test
+	void functionSuggestionShouldBeCaseSensitive() {
+		List<String> completionList = getStringCompletions("Sin");
+		assertThat(completionList, equalTo(Arrays.asList("FitSin", "IsInRegion", "IsInteger")));
+	}
+
+	@Test
+	@Issue("APPS-7764")
+	void functionSuggestionShouldHandleUnevenBrackets() {
+		List<AutocompleteProvider.Completion> completionList = getCompletions("sin(");
+		assertFalse(completionList.isEmpty());
+		MatchedString match = completionList.get(0).getMatch();
+		assertDoesNotThrow(match::getParts);
+	}
+
+	@Test
+	@Issue("APPS-7764")
+	void functionSuggestionShouldHandleSingleBracket() {
+		List<AutocompleteProvider.Completion> completionList = getCompletions("(");
+		assertTrue(completionList.isEmpty());
+	}
+
+	@Test
+	void initialMatchesShouldComeFirst() {
+		List<String> completionList = getStringCompletions("Row");
+		assertThat(
+				completionList,
+				equalTo(Arrays.asList("Row", "FillRow", "FitGrowth", "ReducedRowEchelonForm")));
+	}
+
+	@Test
+	void commandSuggestionTest() {
+		List<AutocompleteProvider.Completion> completionList = getCompletions("int");
+		assertEquals("Integral", completionList.get(0).getCommand());
+		assertEquals(
+				Arrays.asList("Integral( <Function> )", "Integral( <Function>, <Variable> )"),
+				completionList.get(0).syntaxes.subList(0, 2));
+	}
+
+	@Test
+	void testCommandWithoutSyntaxIsNotReturned() {
+		AppConfig config = Mockito.spy(new AppConfigGraphing());
+		SyntaxFilter commandSyntax = Mockito.spy(new GraphingSyntaxFilter());
+		// Filter every syntax for InverseBinomial
+		when(commandSyntax.getFilteredSyntax(eq(Commands.InverseBinomial.name()), anyString()))
+				.thenReturn("");
+		when(config.newCommandSyntaxFilter()).thenReturn(commandSyntax);
+
+		assertEquals(
+				0, getExactSyntaxMatchOf(config, Commands.InverseBinomial.name()).count());
+	}
+
+	@Test
+	void shouldShowCasSpecific() {
+		AutocompleteProvider casProvider = new AutocompleteProvider(getApp(), true);
+		assertEquals(3, casProvider.getCompletions("Groebner").count());
+		assertEquals(0, casProvider.getCompletions("ExpSimplify").count());
+	}
+
+	private Stream<AutocompleteProvider.Completion> getExactSyntaxMatchOf(
+			AppConfig config, String name) {
+		App app = AppCommonFactory.create(config);
+		AutocompleteProvider provider = new AutocompleteProvider(app, false);
+		return provider.getCompletions(name).filter(c -> Objects.equals(c.match.content, name));
+	}
+
+	@Test
+	void shouldUpdateOnAppSwitch() {
+		getApp()
+				.getKernel()
+				.getAlgebraProcessor()
+				.addCommandFilter(cmd -> !cmd.name().startsWith("Bezier"));
+		shouldUpdateOnAppSwitch("en", "Curve");
+	}
+
+	@Test
+	void shouldUpdateOnAppSwitchDE() {
+		shouldUpdateOnAppSwitch("de", "Kurve");
+	}
+
+	private void shouldUpdateOnAppSwitch(String lang, String curveCommand) {
+		getApp().setLocale(new Locale(lang));
+		AutocompleteProvider provider = new AutocompleteProvider(getApp(), false);
+		AutocompleteProvider casProvider = new AutocompleteProvider(getApp(), true);
+
+		AppConfigCas casConfig = new AppConfigCas();
+		swapConfig(casConfig);
+		assertEquals(0, provider.getCompletions(curveCommand).count());
+		assertEquals(0, casProvider.getCompletions(curveCommand).count());
+
+		swapConfig(new AppConfigGraphing());
+		assertEquals(2, provider.getCompletions(curveCommand).count());
+		assertEquals(2, casProvider.getCompletions(curveCommand).count());
+
+		swapConfig(new AppConfigCas());
+		assertEquals(0, provider.getCompletions(curveCommand).count());
+		assertEquals(0, casProvider.getCompletions(curveCommand).count());
+	}
+
+	private void swapConfig(AppConfig config) {
+		CommandDispatcher commandDispatcher = getKernel().getAlgebraProcessor().getCommandDispatcher();
+		CommandFilter commandFilter = getApp().getConfig().getCommandFilter();
+		if (commandFilter != null) {
+			commandDispatcher.removeCommandFilter(commandFilter);
+		}
+		getApp().setConfig(config);
+		commandFilter = getApp().getConfig().getCommandFilter();
+		if (commandFilter != null) {
+			commandDispatcher.addCommandFilter(commandFilter);
+		}
+		getApp().resetCommandDict();
+	}
+
+	@Test
+	void graphingSuiteShouldHaveCasCommands() {
+		AutocompleteProvider provider = new AutocompleteProvider(getApp(), false);
+		AppConfigUnrestrictedGraphing graphingSuiteConfig = new AppConfigUnrestrictedGraphing();
+
+		swapConfig(graphingSuiteConfig);
+		assertEquals(6, provider.getCompletions("Solve").count());
+
+		swapConfig(new AppConfigGraphing());
+		assertEquals(1, provider.getCompletions("Solve").count());
+
+		swapConfig(new AppConfigUnrestrictedGraphing());
+		assertEquals(6, provider.getCompletions("Solve").count());
+	}
+
+	private List<AutocompleteProvider.Completion> getCompletions(String sin) {
+		return provider.getCompletions(sin).collect(Collectors.toList());
+	}
+
+	private List<String> getStringCompletions(String sin) {
+		return provider
+				.getCompletions(sin)
+				.map(AutocompleteProvider.Completion::getCommand)
+				.collect(Collectors.toList());
+	}
+}

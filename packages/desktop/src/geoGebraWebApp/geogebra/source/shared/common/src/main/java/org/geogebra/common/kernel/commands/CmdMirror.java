@@ -1,0 +1,140 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.kernel.commands;
+
+import org.geogebra.common.kernel.Kernel;
+import org.geogebra.common.kernel.arithmetic.Command;
+import org.geogebra.common.kernel.geos.GeoCurveCartesian;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.kernel.geos.GeoFunction;
+import org.geogebra.common.kernel.geos.GeoLine;
+import org.geogebra.common.kernel.geos.GeoList;
+import org.geogebra.common.kernel.geos.GeoPoint;
+import org.geogebra.common.kernel.geos.GeoPoly;
+import org.geogebra.common.kernel.geos.Transformable;
+import org.geogebra.common.kernel.implicit.GeoImplicit;
+import org.geogebra.common.kernel.kernelND.GeoConicND;
+import org.geogebra.common.kernel.kernelND.GeoConicNDConstants;
+import org.geogebra.common.main.MyError;
+
+/**
+ * (2nd argument is the mirror)
+ *
+ * Mirror[ &lt;Object&gt;, &lt;GeoPoint&gt; ]
+ *
+ * Mirror[ &lt;Object&gt;, &lt;GeoLine&gt; ]
+ *
+ * Mirror[ &lt;Object&gt;, &lt;GeoConic&gt; ]
+ */
+public class CmdMirror extends CommandProcessor {
+
+	/**
+	 * Create new command processor
+	 *
+	 * @param kernel
+	 *            kernel
+	 */
+	public CmdMirror(Kernel kernel) {
+		super(kernel);
+	}
+
+	@Override
+	public GeoElement[] process(Command c, EvalInfo info) throws MyError {
+		String label = c.getLabel();
+		int n = c.getArgumentNumber();
+		boolean[] ok = new boolean[n];
+		GeoElement[] arg;
+
+		switch (n) {
+			case 2:
+				arg = resArgs(c, info);
+
+				GeoElement[] ret = process2(label, arg, ok);
+
+				if (ret != null) {
+					return ret;
+				}
+
+				// syntax error
+
+				if (!ok[0]) {
+					throw argErr(c, arg[0]);
+				}
+				throw argErr(c, arg[1]);
+
+			default:
+				throw argNumErr(c);
+		}
+	}
+
+	/**
+	 * process angle when 2 arguments
+	 *
+	 * @param label
+	 *            for the result
+	 * @param arg
+	 *            arguments
+	 * @param ok
+	 *            ok array
+	 * @return result (if one)
+	 */
+	protected GeoElement[] process2(String label, GeoElement[] arg, boolean[] ok) {
+
+		GeoElement[] ret;
+
+		if (arg[1].isGeoConic()) { // mirror point in circle Michael
+			// Borcherds 2008-02-10
+			GeoConicND conic1 = (GeoConicND) arg[1];
+
+			if (conic1.getType() == GeoConicNDConstants.CONIC_CIRCLE && arg[0].isGeoConic()
+					|| arg[0].isGeoPoint()
+					|| arg[0] instanceof GeoCurveCartesian
+					|| arg[0] instanceof GeoLine
+					|| arg[0] instanceof GeoPoly
+					|| arg[0] instanceof GeoFunction
+					|| arg[0] instanceof GeoList
+					|| arg[0] instanceof GeoImplicit) {
+				ret = getAlgoDispatcher().mirror(label, arg[0], conic1);
+				return ret;
+			}
+		}
+
+		// mirror object
+		if (arg[0] instanceof Transformable) {
+			ok[0] = true;
+			// GeoElement geo = p.toGeoElement();
+
+			// mirror at point
+			if (arg[1].isGeoPoint()) {
+
+				GeoPoint Q = (GeoPoint) arg[1];
+
+				ret = getAlgoDispatcher().mirror(label, arg[0], Q);
+				return ret;
+			}
+			// mirror is line
+			else if (arg[1].isGeoLine()) {
+				GeoLine line = (GeoLine) arg[1];
+
+				ret = getAlgoDispatcher().mirror(label, arg[0], line);
+				return ret;
+			}
+		}
+
+		return null;
+	}
+}

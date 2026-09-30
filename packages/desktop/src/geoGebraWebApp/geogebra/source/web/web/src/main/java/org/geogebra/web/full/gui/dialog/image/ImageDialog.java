@@ -1,0 +1,161 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.web.full.gui.dialog.image;
+
+import org.geogebra.web.full.css.MaterialDesignResources;
+import org.geogebra.web.html5.gui.util.AriaHelper;
+import org.geogebra.web.html5.gui.view.button.StandardButton;
+import org.geogebra.web.html5.main.AppW;
+import org.geogebra.web.html5.webcam.WebcamDialogInterface;
+import org.geogebra.web.shared.components.dialog.ComponentDialog;
+import org.geogebra.web.shared.components.dialog.DialogData;
+import org.geogebra.web.shared.components.infoError.ComponentInfoErrorPanel;
+import org.geogebra.web.shared.components.infoError.InfoErrorData;
+import org.geogebra.web.shared.components.tab.ComponentTab;
+import org.geogebra.web.shared.components.tab.TabData;
+import org.gwtproject.core.client.Scheduler;
+import org.gwtproject.dom.style.shared.Unit;
+import org.gwtproject.user.client.ui.FileUpload;
+import org.gwtproject.user.client.ui.FlowPanel;
+
+public final class ImageDialog extends ComponentDialog implements WebcamDialogInterface {
+	private FlowPanel cameraPanel;
+	private WebCamInputPanel webcamInputPanel;
+	private StandardButton captureBtn;
+	private ComponentTab tab;
+
+	/**
+	 * base dialog constructor
+	 * @param app - see {@link AppW}
+	 * @param dialogData - contains trans keys for title and buttons
+	 */
+	public ImageDialog(AppW app, DialogData dialogData) {
+		super(app, dialogData, false, true);
+		addStyleName("imageDialog");
+		buildGUI();
+	}
+
+	private void buildGUI() {
+		FileUpload uploadImage = UploadImagePanel.getUploadButton((AppW) app, (fileName, content) -> {
+			((AppW) app).imageDropHappened(fileName, content);
+			hide();
+		});
+
+		InfoErrorData uploadData = new InfoErrorData(
+				null,
+				"ImageDialog.UploadImageMsg",
+				"ImageDialog.Browse",
+				MaterialDesignResources.INSTANCE.upload());
+		ComponentInfoErrorPanel uploadPanel =
+				new ComponentInfoErrorPanel(app.getLocalization(), uploadData, uploadImage::click);
+		uploadPanel.disableActionButton(!((AppW) app).enableFileFeatures());
+
+		TabData uploadTab = new TabData("Upload", uploadPanel);
+
+		cameraPanel = new FlowPanel();
+		loadCameraPanel();
+		TabData cameraTab = new TabData("Camera", cameraPanel);
+
+		tab = new ComponentTab((AppW) app, "Image", uploadTab, cameraTab);
+		addDialogContent(tab);
+		webcamInputPanel.startVideo();
+	}
+
+	private FlowPanel getErrorPanel(String title, String msg) {
+		InfoErrorData cameraData =
+				new InfoErrorData(title, msg, null, MaterialDesignResources.INSTANCE.no_camera());
+		return new ComponentInfoErrorPanel(app.getLocalization(), cameraData, null);
+	}
+
+	private void loadCameraPanel() {
+		if (webcamInputPanel == null) {
+			webcamInputPanel = new WebCamInputPanel((AppW) app, this);
+		}
+
+		if (captureBtn == null) {
+			initCaptureBtn();
+		}
+
+		cameraPanel.clear();
+		cameraPanel.setStyleName("cameraPanel tabPanel");
+		cameraPanel.add(webcamInputPanel);
+		cameraPanel.add(captureBtn);
+	}
+
+	private void initCaptureBtn() {
+		captureBtn = new StandardButton(MaterialDesignResources.INSTANCE.camera_white(), null, 24);
+		captureBtn.setStyleName("mowFloatingButton");
+		AriaHelper.setTitle(captureBtn, app.getLocalization().getMenu("ImageDialog.Capture"));
+
+		captureBtn.addFastClickHandler(source -> {
+			String dataURL = webcamInputPanel.getImageDataURL();
+			String name = "webcam";
+			if (dataURL != null) {
+				((AppW) app).imageDropHappened(name, dataURL);
+			}
+			hide();
+		});
+	}
+
+	@Override
+	public void resize() {
+		onResize();
+	}
+
+	@Override
+	public void showAndResize() {
+		super.onResize();
+		super.show();
+	}
+
+	@Override
+	public void onCameraSuccess() {
+		loadCameraPanel();
+	}
+
+	@Override
+	public void onCameraError(String title, String msg) {
+		cameraPanel.addStyleName("error");
+		cameraPanel.clear();
+		cameraPanel.add(() -> getErrorPanel(title, msg));
+	}
+
+	@Override
+	public void show() {
+		super.show();
+		Scheduler.get().scheduleDeferred(() -> tab.switchToTab(0));
+	}
+
+	@Override
+	public void hide() {
+		if (this.webcamInputPanel != null) {
+			this.webcamInputPanel.stopVideo();
+		}
+		super.hide();
+	}
+
+	@Override
+	public void onResize() {
+		super.onResize();
+		if (!cameraPanel.getStyleName().contains("error")) {
+			cameraPanel
+					.getElement()
+					.getStyle()
+					.setHeight(webcamInputPanel.getOffsetHeight() + 28, Unit.PX);
+		}
+	}
+}

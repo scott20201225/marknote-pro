@@ -11,6 +11,7 @@ interface NoteNodeLike {
   isFile?: boolean
   isMarkdown?: boolean
   isDrawing?: boolean
+  isGeoGebra?: boolean
   folders?: NoteNodeLike[]
   files?: NoteNodeLike[]
 }
@@ -45,6 +46,7 @@ const isNoteAreaName = (name: string): boolean => name.startsWith(NOTE_AREA_PREF
 
 const isMarkdownFileName = (name: string): boolean => /\.md$/i.test(name)
 const isDrawingFileName = (name: string): boolean => /\.drawio$/i.test(name)
+const isGeoGebraFileName = (name: string): boolean => /\.ggb$/i.test(name)
 
 const stripNotePrefix = (name: string): string => {
   if (isNoteGroupName(name)) return name.slice(NOTE_GROUP_PREFIX.length)
@@ -60,8 +62,10 @@ const stripDrawingExtension = (name: string): string => {
   return name.replace(/\.drawio$/i, '')
 }
 
+const stripGeoGebraExtension = (name: string): string => name.replace(/\.ggb$/i, '')
+
 const normalizeNotePathPart = (part: string): string => {
-  return stripDrawingExtension(stripMarkdownExtension(stripNotePrefix(part)))
+  return stripGeoGebraExtension(stripDrawingExtension(stripMarkdownExtension(stripNotePrefix(part))))
 }
 
 const getRelativeParts = (rootPath: string, pathname: string): string[] => {
@@ -112,12 +116,13 @@ export const isValidNoteFilePath = (
   if (!pathname || !rootPath) return false
   const name = window.path.basename(pathname)
   const isDrawing = isDrawingFileName(name)
-  if (!isMarkdownFileName(name) && !isDrawing) return false
+  const isGeoGebra = isGeoGebraFileName(name)
+  if (!isMarkdownFileName(name) && !isDrawing && !isGeoGebra) return false
 
   const parentPath = window.path.dirname(pathname)
   const parentName = window.path.basename(parentPath)
   if (!isValidNoteDirectoryPath(parentPath, rootPath)) return false
-  return isDrawing || isNoteAreaName(parentName)
+  return isDrawing || isGeoGebra || isNoteAreaName(parentName)
 }
 
 export const getNoteNodeKind = (
@@ -160,7 +165,7 @@ export const getNoteDisplayName = (
     case 'area':
       return stripNotePrefix(node.name)
     case 'document':
-      return stripDrawingExtension(stripMarkdownExtension(node.name))
+      return stripGeoGebraExtension(stripDrawingExtension(stripMarkdownExtension(node.name)))
     default:
       return node.name
   }
@@ -229,7 +234,7 @@ export const getVisibleNoteFiles = (
   if (kind === 'root' || kind === 'group') {
     return node.files.filter(
       (child) =>
-        (child.isDrawing || isDrawingFileName(child.name)) &&
+        (child.isDrawing || child.isGeoGebra || isDrawingFileName(child.name) || isGeoGebraFileName(child.name)) &&
         getNoteNodeKind(child, rootPath) === 'document'
     )
   }

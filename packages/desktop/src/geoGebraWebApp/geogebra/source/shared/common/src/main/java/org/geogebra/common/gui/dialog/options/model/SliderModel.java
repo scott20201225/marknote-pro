@@ -1,0 +1,420 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.gui.dialog.options.model;
+
+import org.geogebra.common.annotation.MissingDoc;
+import org.geogebra.common.awt.GColor;
+import org.geogebra.common.kernel.Kernel;
+import org.geogebra.common.kernel.StringTemplate;
+import org.geogebra.common.kernel.arithmetic.ExpressionNodeConstants.StringType;
+import org.geogebra.common.kernel.arithmetic.NumberValue;
+import org.geogebra.common.kernel.geos.GProperty;
+import org.geogebra.common.kernel.geos.GeoAngle;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.kernel.geos.GeoNumeric;
+import org.geogebra.common.main.App;
+import org.geogebra.common.main.MyError.Errors;
+import org.geogebra.common.util.DoubleUtil;
+
+public class SliderModel extends OptionsModel {
+	public static final int TEXT_FIELD_FRACTION_DIGITS = 8;
+
+	private ISliderOptionsListener listener;
+	private Kernel kernel;
+	private boolean widthUnit;
+	private boolean includeRandom;
+	private GColor blobColor;
+	private GColor lineColor;
+
+	private static GColor opaqueColorOrNull(GColor color) {
+		return color == null ? null : color.deriveWithAlpha(255);
+	}
+
+	public interface ISliderOptionsListener extends PropertyListener {
+		@MissingDoc
+		void setMinText(String text);
+
+		@MissingDoc
+		void setMaxText(String text);
+
+		@MissingDoc
+		void setWidthText(String text);
+
+		@MissingDoc
+		void setBlobSizeText(String text);
+
+		@MissingDoc
+		void setLineThicknessSizeText(String text);
+
+		@MissingDoc
+		void setLineOpacity(int value);
+
+		@MissingDoc
+		void setBlobColor(GColor color);
+
+		@MissingDoc
+		void setLineColor(GColor color);
+
+		@MissingDoc
+		void setWidthUnitText(String text);
+
+		@MissingDoc
+		void selectFixed(boolean value);
+
+		@MissingDoc
+		void selectRandom(boolean value);
+
+		@MissingDoc
+		void setRandomVisible(boolean value);
+
+		@MissingDoc
+		void setSliderDirection(int i);
+
+		@Override
+		Object updatePanel(Object[] geos2);
+	}
+
+	public SliderModel(App app, ISliderOptionsListener listener) {
+		super(app);
+		kernel = app.getKernel();
+		this.listener = listener;
+		includeRandom = false;
+	}
+
+	@Override
+	protected boolean isValidAt(int index) {
+		GeoElement geo = getGeoAt(index);
+		return geo.isIndependent() && geo.isGeoNumeric();
+	}
+
+	protected GeoNumeric getNumericAt(int index) {
+		return (GeoNumeric) getObjectAt(index);
+	}
+
+	@Override
+	public void updateProperties() {
+		// check if properties have same values
+		GeoNumeric num0 = getNumericAt(0);
+		boolean equalMax = true;
+		boolean equalMin = true;
+		boolean equalWidth = true;
+		boolean onlyAngles = true;
+		boolean equalPinned = true;
+
+		for (int i = 0; i < getGeosLength(); i++) {
+			GeoNumeric temp = getNumericAt(i);
+
+			// we don't check isIntervalMinActive, because we want to display
+			// the interval even if it's empty
+			if (num0.getIntervalMinObject() == null
+					|| temp.getIntervalMinObject() == null
+					|| !DoubleUtil.isEqual(num0.getIntervalMin(), temp.getIntervalMin())) {
+				equalMin = false;
+			}
+			if (num0.getIntervalMaxObject() == null
+					|| temp.getIntervalMaxObject() == null
+					|| !DoubleUtil.isEqual(num0.getIntervalMax(), temp.getIntervalMax())) {
+				equalMax = false;
+			}
+			if (!DoubleUtil.isEqual(num0.getSliderWidth(), temp.getSliderWidth())) {
+				equalWidth = false;
+			}
+			if (num0.isPinned() != temp.isPinned()) {
+				equalPinned = false;
+			}
+
+			if (!(temp instanceof GeoAngle)) {
+				onlyAngles = false;
+			}
+		}
+
+		StringTemplate highPrecision =
+				StringTemplate.printDecimals(StringType.GEOGEBRA, TEXT_FIELD_FRACTION_DIGITS, false);
+		if (equalMin) {
+			GeoElement min0 = GeoElement.as(num0.getIntervalMinObject());
+			if (onlyAngles && (min0 == null || (!min0.isLabelSet() && min0.isIndependent()))) {
+				listener.setMinText(kernel
+						.formatAngle(num0.getIntervalMin(), num0.toDecimal(), highPrecision, true)
+						.toString());
+			} else {
+				listener.setMinText(num0.getIntervalMinObject().getLabel(highPrecision));
+			}
+		} else {
+			listener.setMinText("");
+		}
+
+		if (equalMax) {
+			GeoElement max0 = GeoElement.as(num0.getIntervalMaxObject());
+			if (onlyAngles && (max0 == null || (!max0.isLabelSet() && max0.isIndependent()))) {
+				listener.setMaxText(kernel
+						.formatAngle(num0.getIntervalMax(), num0.toDecimal(), highPrecision, true)
+						.toString());
+			} else {
+				listener.setMaxText(num0.getIntervalMaxObject().getLabel(highPrecision));
+			}
+		} else {
+			listener.setMaxText("");
+		}
+
+		widthUnit = false;
+		if (equalWidth && equalPinned) {
+			listener.setWidthText(kernel.format(num0.getSliderWidth(), highPrecision));
+			if (num0.isPinned()) {
+				widthUnit = true;
+			}
+		} else {
+			listener.setMaxText("");
+		}
+
+		boolean equalLineThickness = true;
+		boolean equalBlobSize = true;
+		boolean equalBlobColor = true;
+		boolean equalLineColor = true;
+		boolean equalSliderFixed = true;
+		boolean random = true;
+		boolean equalSliderHorizontal = true;
+		for (int i = 0; i < getGeosLength(); i++) {
+			GeoNumeric temp = getNumericAt(i);
+			if (!DoubleUtil.isEqual(num0.getLineThickness(), temp.getLineThickness())) {
+				equalLineThickness = false;
+			}
+			if (!DoubleUtil.isEqual(num0.getSliderBlobSize(), temp.getSliderBlobSize())) {
+				equalBlobSize = false;
+			}
+			if (num0.getObjectColor() != temp.getObjectColor()) {
+				equalBlobColor = false;
+			}
+			if (num0.getBackgroundColor() != temp.getBackgroundColor()) {
+				equalLineColor = false;
+			}
+			if (num0.isLockedPosition() != temp.isLockedPosition()) {
+				equalSliderFixed = false;
+			}
+			if (num0.isRandom() != temp.isRandom()) {
+				random = false;
+			}
+			if (num0.isSliderHorizontal() != temp.isSliderHorizontal()) {
+				equalSliderHorizontal = false;
+			}
+		}
+		if (equalBlobSize) {
+			listener.setBlobSizeText(kernel.format(num0.getSliderBlobSize(), highPrecision));
+		}
+		if (equalBlobColor) {
+			listener.setBlobColor(num0.getObjectColor());
+			blobColor = num0.getObjectColor();
+		}
+		if (equalLineColor) {
+			lineColor = opaqueColorOrNull(num0.getBackgroundColor());
+			listener.setLineColor(lineColor);
+		} else {
+			lineColor = null;
+		}
+		if (equalLineThickness) {
+			listener.setLineThicknessSizeText(
+					kernel.format(num0.getLineThickness() / 2.0, highPrecision));
+		}
+
+		listener.setLineOpacity(Math.round(num0.getLineOpacity() / 255f * 100f));
+
+		setLabelForWidthUnit();
+
+		if (equalSliderFixed) {
+			listener.selectFixed(num0.isLockedPosition());
+		}
+
+		if (random) {
+			listener.selectRandom(num0.isRandom());
+		}
+
+		listener.setRandomVisible(isIncludeRandom());
+
+		if (equalSliderHorizontal) {
+			// TODO why doesn't this work when you create a slider
+			listener.setSliderDirection(num0.isSliderHorizontal() ? 0 : 1);
+		}
+	}
+
+	public void setLabelForWidthUnit() {
+		listener.setWidthUnitText(widthUnit ? app.getLocalization().getMenu("Pixels.short") : "");
+	}
+
+	public void applyFixed(boolean value) {
+		for (int i = 0; i < getGeosLength(); i++) {
+			GeoNumeric num = getNumericAt(i);
+			num.setSliderFixed(value);
+			num.updateRepaint();
+		}
+		storeUndoInfo();
+	}
+
+	public void applyRandom(boolean value) {
+		for (int i = 0; i < getGeosLength(); i++) {
+			GeoNumeric num = getNumericAt(i);
+			num.setRandom(value);
+			num.updateRepaint();
+		}
+		storeUndoInfo();
+	}
+
+	public void applyDirection(int value) {
+		boolean isHorizontal = value == 0;
+		for (int i = 0; i < getGeosLength(); i++) {
+			GeoNumeric num = getNumericAt(i);
+			num.setSliderHorizontal(isHorizontal);
+			num.updateRepaint();
+		}
+		storeUndoInfo();
+	}
+
+	private void applyExtrema(NumberValue value, boolean isMinimum) {
+		for (int i = 0; i < getGeosLength(); i++) {
+			GeoNumeric num = getNumericAt(i);
+			boolean dependsOnListener = false;
+			GeoElement geoValue = value.toGeoElement(num.getConstruction());
+			if (num.getMinMaxListeners() != null) {
+				for (GeoNumeric numListener : num.getMinMaxListeners()) {
+					if (geoValue.isChildOrEqual(numListener)) {
+						dependsOnListener = true;
+					}
+				}
+			}
+
+			if (dependsOnListener || geoValue.isChildOrEqual(num)) {
+				app.showError(Errors.CircularDefinition);
+			} else {
+				if (isMinimum) {
+					num.setIntervalMin(value);
+				} else {
+					num.setIntervalMax(value);
+				}
+			}
+			num.updateRepaint();
+		}
+		storeUndoInfo();
+	}
+
+	public void applyMin(NumberValue value) {
+		applyExtrema(value, true);
+	}
+
+	public void applyMax(NumberValue value) {
+		applyExtrema(value, false);
+	}
+
+	public void applyWidth(double value) {
+		for (int i = 0; i < getGeosLength(); i++) {
+			GeoNumeric num = getNumericAt(i);
+			num.setSliderWidth(value, true);
+			num.updateRepaint();
+		}
+		storeUndoInfo();
+	}
+
+	public void applyTransparency(int value) {
+		for (int i = 0; i < getGeosLength(); i++) {
+			GeoNumeric num = getNumericAt(i);
+			num.setLineOpacity(Math.round(value / 100f * 255));
+			GColor backgroundColor = opaqueColorOrNull(num.getBackgroundColor());
+			if (backgroundColor != null) {
+				num.setBackgroundColor(backgroundColor);
+			}
+			num.updateVisualStyleRepaint(GProperty.LINE_STYLE);
+		}
+	}
+
+	/**
+	 * @param value
+	 *            blob size in px
+	 */
+	public void applyBlobSize(double value) {
+		for (int i = 0; i < getGeosLength(); i++) {
+			GeoNumeric num = getNumericAt(i);
+			num.setSliderBlobSize(value);
+			num.updateVisualStyleRepaint(GProperty.POINT_STYLE);
+		}
+		storeUndoInfo();
+	}
+
+	/**
+	 * @param value
+	 *            line thickness in px
+	 */
+	public void applyLineThickness(double value) {
+		for (int i = 0; i < getGeosLength(); i++) {
+			GeoNumeric num = getNumericAt(i);
+			num.setLineThickness((int) Math.round(value));
+			num.updateVisualStyleRepaint(GProperty.LINE_STYLE);
+		}
+		storeUndoInfo();
+	}
+
+	/**
+	 * @param color
+	 *            of blob
+	 */
+	public void applyBlobColor(GColor color) {
+		blobColor = color;
+		for (int i = 0; i < getGeosLength(); i++) {
+			GeoNumeric num = getNumericAt(i);
+			num.setObjColor(color);
+			num.updateVisualStyleRepaint(GProperty.COLOR);
+		}
+		storeUndoInfo();
+	}
+
+	/**
+	 * @return color of blob
+	 */
+	public GColor getBlobColor() {
+		return blobColor == null ? GColor.BLACK : blobColor;
+	}
+
+	/**
+	 * @return color of line
+	 */
+	public GColor getLineColor() {
+		return lineColor == null ? GColor.BLACK : lineColor;
+	}
+
+	/**
+	 * @param color
+	 *            of line
+	 */
+	public void applyLineColor(GColor color) {
+		lineColor = opaqueColorOrNull(color);
+		for (int i = 0; i < getGeosLength(); i++) {
+			GeoNumeric num = getNumericAt(i);
+			num.setBackgroundColor(lineColor);
+			num.updateVisualStyleRepaint(GProperty.COLOR);
+		}
+		storeUndoInfo();
+	}
+
+	public boolean isIncludeRandom() {
+		return includeRandom;
+	}
+
+	public void setIncludeRandom(boolean includeRandom) {
+		this.includeRandom = includeRandom;
+	}
+
+	@Override
+	public PropertyListener getListener() {
+		return listener;
+	}
+}

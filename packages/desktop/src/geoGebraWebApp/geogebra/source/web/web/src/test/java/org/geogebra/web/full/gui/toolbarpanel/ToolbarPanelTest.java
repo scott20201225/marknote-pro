@@ -1,0 +1,139 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.web.full.gui.toolbarpanel;
+
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
+import java.util.concurrent.CountDownLatch;
+
+import org.geogebra.common.main.App;
+import org.geogebra.common.plugin.EventDispatcher;
+import org.geogebra.common.plugin.EventType;
+import org.geogebra.common.util.debug.Log;
+import org.geogebra.web.full.main.AppWFull;
+import org.geogebra.web.full.main.activity.DefaultDockPanelDecorator;
+import org.geogebra.web.test.AppMocker;
+import org.geogebra.web.test.GgbMockitoTestRunner;
+import org.gwtproject.user.client.ui.ResizeComposite;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import com.google.gwtmockito.WithClassesToStub;
+
+@RunWith(GgbMockitoTestRunner.class)
+@WithClassesToStub({ResizeComposite.class})
+public class ToolbarPanelTest {
+
+	private ToolbarPanel toolbarPanel;
+	private AppWFull app;
+
+	@Before
+	public void setUp() {
+		toolbarPanel = spy(new ToolbarPanel(mockApp(), new DefaultDockPanelDecorator()));
+	}
+
+	private AppWFull mockApp() {
+		app = AppMocker.mockGraphing();
+		app.setShowToolBar(true);
+		return app;
+	}
+
+	@Test
+	public void testDispatchEvent() {
+		EventDispatcher eventDispatcher = mock(EventDispatcher.class);
+		toolbarPanel.setEventDispatcher(eventDispatcher);
+
+		toolbarPanel.dispatchEvent(null);
+		verify(eventDispatcher, times(1)).dispatchEvent(any());
+	}
+
+	@Test
+	public void close() {
+		assertTrue(toolbarPanel.isOpen());
+
+		toolbarPanel.close(false);
+		verifyDispatchEventCalled(EventType.SIDE_PANEL_CLOSED);
+	}
+
+	private void verifyDispatchEventCalled(EventType eventType) {
+		verify(toolbarPanel, times(1)).dispatchEvent(eventType);
+	}
+
+	@Test
+	public void open() {
+		toolbarPanel.close(false);
+		toolbarPanel.open();
+		verifyDispatchEventCalled(EventType.SIDE_PANEL_OPENED);
+	}
+
+	@Test
+	public void openAlgebra() {
+		toolbarPanel.openAlgebra(true);
+		verifyDispatchEventCalled(EventType.ALGEBRA_PANEL_SELECTED);
+	}
+
+	@Test
+	public void openTools() {
+		toolbarPanel.openTools(true);
+		verifyDispatchEventCalled(EventType.TOOLS_PANEL_SELECTED);
+	}
+
+	@Test
+	public void openTableView() {
+		toolbarPanel.openTableView(true);
+		verifyDispatchEventCalled(EventType.TABLE_PANEL_SELECTED);
+	}
+
+	@Test
+	public void testSaveToolbarState() {
+		openPanel();
+		closePanel();
+	}
+
+	private void openPanel() {
+		toolbarPanel.open();
+		assertTrue(toolbarPanel.isOpen());
+		String algebraViewVisible = "view id=\"" + App.VIEW_ALGEBRA + "\" visible=\"true\"";
+		assertTrue(app.getXML().contains(algebraViewVisible));
+	}
+
+	private void closePanel() {
+		toolbarPanel.close(false);
+		assertTrue(toolbarPanel.isClosed());
+		checkPanelNotVisibleInXml();
+	}
+
+	private void checkPanelNotVisibleInXml() {
+		final CountDownLatch latch = new CountDownLatch(1);
+		app.invokeLater(() -> {
+			String algebraViewNotVisible = "view id=\"" + App.VIEW_ALGEBRA + "\" visible=\"false\"";
+			assertTrue(app.getXML().contains(algebraViewNotVisible));
+			latch.countDown();
+		});
+		try {
+			latch.await();
+		} catch (InterruptedException e) {
+			Log.debug(e);
+		}
+	}
+}

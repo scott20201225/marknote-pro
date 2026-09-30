@@ -1,0 +1,156 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.kernel.algos;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import org.geogebra.common.BaseUnitTest;
+import org.geogebra.common.awt.GAffineTransform;
+import org.geogebra.common.kernel.StringTemplate;
+import org.geogebra.common.kernel.geos.GeoConicPart;
+import org.geogebra.common.kernel.geos.GeoElement;
+import org.geogebra.common.kernel.geos.GeoLine;
+import org.geogebra.common.kernel.geos.properties.FillType;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+class AlgoTransformationTest extends BaseUnitTest {
+
+	@BeforeEach
+	void setupArcs() {
+		assertClockwise(add("clockwise=CircumcircularArc((0,0),(0,1),(1,0))"));
+		assertCounterclockwise(add("counterclockwise=CircumcircularArc((1,0),(0,1),(0,0))"));
+	}
+
+	@Test
+	void translationShouldKeepArcOrientation() {
+		assertClockwise(add("Translate(clockwise, (2,0))"));
+		assertCounterclockwise(add("Translate(counterclockwise, (2,0))"));
+	}
+
+	@Test
+	void dilationShouldKeepArcOrientation() {
+		assertClockwise(add("Dilate(clockwise, 2, (2,0))"));
+		assertCounterclockwise(add("Dilate(counterclockwise, 2, (2,0))"));
+	}
+
+	@Test
+	void mirrorShouldFlipArcOrientation() {
+		assertCounterclockwise(add("Reflect(clockwise, x=0)"));
+		assertClockwise(add("Reflect(counterclockwise, x=0)"));
+	}
+
+	@Test
+	void dilateOfDegenerate() {
+		String[] pts = createTransformedDegenerate("Dilate(%,2,(1,1))");
+		assertArrayEquals(new String[] {"(-1, -1)", "(-1, 3)"}, pts);
+	}
+
+	@Test
+	void translateOfDegenerate() {
+		String[] pts = createTransformedDegenerate("Translate(%,(1,1))");
+		assertArrayEquals(new String[] {"(1, 1)", "(1, 3)"}, pts);
+	}
+
+	@Test
+	void reflectOfDegenerate() {
+		String[] pts = createTransformedDegenerate("Reflect(%,(1,1))");
+		assertArrayEquals(new String[] {"(2, 2)", "(2, 0)"}, pts);
+	}
+
+	@Test
+	void reflectInLineOfDegenerate() {
+		String[] pts = createTransformedDegenerate("Reflect(%,x=y)");
+		assertArrayEquals(new String[] {"(0, 0)", "(2, 0)"}, pts);
+	}
+
+	@Test
+	void circleInversionOfSegment() {
+		add("A=(2,2)");
+		// use point on path to check TRAC-3781
+		add("B=Point(Segment((2,0),(3,0)))");
+		GeoConicPart arc = add("Reflect(Segment(A,B),x^2+y^2=1)");
+		assertThat(arc, hasValue("0.39"));
+		assertFalse(getDirection(arc));
+		// segment mapped to quarter-circle
+		assertEquals(0.0, arc.getParameterStart(), 0.01);
+		assertEquals(Math.PI / 2, arc.getParameterEnd(), 0.01);
+	}
+
+	@Test
+	void circleInversionOfRay() {
+		add("A=(2,2)");
+		add("B=Point(Segment((2,0),(3,0)))");
+		// with +0 we force the algo to transform ray directly
+		GeoConicPart arc = add("Reflect(Ray(B+0,(2,2)),x^2+y^2=1)");
+		assertThat(arc, hasValue("0.79"));
+		// ray mapped to semicircle
+		assertTrue(getDirection(arc));
+		assertEquals(0, arc.getParameterStart(), 0.01);
+		assertEquals(Math.PI, arc.getParameterEnd(), 0.01);
+		// when using point names we expand the definition, but should get equal result
+		GeoConicPart arc2 = add("Reflect(Ray(B,A),x^2+y^2=1)");
+		assertEquals(
+				"CircumcircularArc(B', A', Reflect((∞, ∞), x² + y² = 1))",
+				arc2.getDefinition(StringTemplate.defaultTemplate));
+		assertTrue(getDirection(arc));
+		assertEquals(0, arc2.getParameterStart(), 0.01);
+		assertEquals(Math.PI, arc2.getParameterEnd(), 0.01);
+	}
+
+	@Test
+	void shouldCopySymbol() {
+		GeoElement circle = add("c:xx+yy=1");
+		circle.setFillSymbol("X");
+		circle.setFillType(FillType.SYMBOLS);
+		GeoElement rotated = add("Rotate(c,pi,(1,0))");
+		assertEquals(FillType.SYMBOLS, rotated.getFillType());
+		assertEquals("X", rotated.getFillSymbol());
+	}
+
+	private String[] createTransformedDegenerate(String s) {
+		add("a=CircumcircularArc((0,0),(0,1),(0,2))");
+		GeoConicPart transformed = add(s.replace("%", "a"));
+		GeoLine line = transformed.getLines()[0];
+		return new String[] {
+			line.getStartPoint().toValueString(StringTemplate.editTemplate),
+			line.getEndPoint().toValueString(StringTemplate.editTemplate)
+		};
+	}
+
+	private void assertClockwise(GeoConicPart arc) {
+		assertFalse(getDirection(arc), "Arc should be clockwise " + arc);
+		assertEquals(Math.PI * 3 / 2, arc.getParameterExtent(), 1E-4);
+	}
+
+	private boolean getDirection(GeoConicPart arc) {
+		return arc.positiveOrientation() ^ determinant(arc.getAffineTransform()) < 0;
+	}
+
+	private double determinant(GAffineTransform t) {
+		return t.getScaleX() * t.getScaleY() - t.getShearX() * t.getShearY();
+	}
+
+	private void assertCounterclockwise(GeoConicPart arc) {
+		assertTrue(getDirection(arc), "Arc should be counterclockwise " + arc);
+		assertEquals(Math.PI * 3 / 2, arc.getParameterExtent(), 1E-4);
+	}
+}

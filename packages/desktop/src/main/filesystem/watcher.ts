@@ -24,6 +24,8 @@ const EVENT_NAME = {
 const isDrawioFile = (pathname: string): boolean =>
   path.extname(pathname).toLowerCase() === '.drawio'
 
+const isGeoGebraFile = (pathname: string): boolean => path.extname(pathname).toLowerCase() === '.ggb'
+
 type WatchType = 'dir' | 'file'
 
 interface IgnoreEntry {
@@ -55,6 +57,7 @@ const add = async (
   const mtimeMs = stats.mtimeMs
   const isMarkdown = hasMarkdownExtension(pathname)
   const isDrawing = isDrawioFile(pathname)
+  const isGeoGebra = isGeoGebraFile(pathname)
   const file: {
     pathname: string
     name: string
@@ -64,6 +67,7 @@ const add = async (
     mtimeMs: number
     isMarkdown: boolean
     isDrawing: boolean
+    isGeoGebra: boolean
     data?: Awaited<ReturnType<typeof loadMarkdownFile>>
   } = {
     pathname,
@@ -73,7 +77,8 @@ const add = async (
     birthTime,
     mtimeMs,
     isMarkdown,
-    isDrawing
+    isDrawing,
+    isGeoGebra
   }
   if (isMarkdown) {
     // HACK: But this should be removed completely in #1034/#1035.
@@ -98,7 +103,7 @@ const add = async (
       }
     }
   }
-  if (isMarkdown || isDrawing) {
+  if (isMarkdown || isDrawing || isGeoGebra) {
     win.webContents.send(EVENT_NAME[type], { type: 'add', change: file })
   }
 }
@@ -136,6 +141,7 @@ const change = async (
 
   const isMarkdown = hasMarkdownExtension(pathname)
   const isDrawing = isDrawioFile(pathname)
+  const isGeoGebra = isGeoGebraFile(pathname)
   if (isMarkdown) {
     try {
       const [data, stats] = await Promise.all([
@@ -162,7 +168,7 @@ const change = async (
         })
       }
     }
-  } else if (isDrawing) {
+  } else if (isDrawing || isGeoGebra) {
     try {
       const stats = await fsPromises.stat(pathname)
       win.webContents.send('mt::update-object-tree', {
@@ -242,9 +248,13 @@ class Watcher {
         if (fileInfo.isDirectory()) {
           return false
         }
-        // 工作区除 Markdown 外还承载独立的 Draw.io 源文件；必须让它们
-        // 通过初始扫描和后续文件事件，才能在树与列表中被建立节点。
-        return !hasMarkdownExtension(pathname) && !isDrawioFile(pathname)
+        // 工作区除 Markdown 外还承载独立的 Draw.io 和 GeoGebra 源文件；
+        // 必须让它们通过初始扫描和后续文件事件，才能在树与列表中建立节点。
+        return (
+          !hasMarkdownExtension(pathname) &&
+          !isDrawioFile(pathname) &&
+          !isGeoGebraFile(pathname)
+        )
       },
       ignoreInitial: type === 'file',
       persistent: true,

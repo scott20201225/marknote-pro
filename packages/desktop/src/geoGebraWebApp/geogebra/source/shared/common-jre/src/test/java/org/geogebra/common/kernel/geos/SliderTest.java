@@ -1,0 +1,189 @@
+/*
+ * GeoGebra - Dynamic Mathematics for Everyone
+ * Copyright (c) GeoGebra GmbH, Altenbergerstr. 69, 4040 Linz, Austria
+ * https://www.geogebra.org
+ *
+ * This file is licensed by GeoGebra GmbH under the EUPL 1.2 licence and
+ * may be used under the EUPL 1.2 in compatible projects (see Article 5
+ * and the Appendix of EUPL 1.2 for details).
+ * You may obtain a copy of the licence at:
+ * https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Note: The overall GeoGebra software package is free to use for
+ * non-commercial purposes only.
+ * See https://www.geogebra.org/license for full licensing details
+ */
+
+package org.geogebra.common.kernel.geos;
+
+import static org.geogebra.test.TestStringUtil.unicode;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+
+import org.geogebra.common.BaseUnitTest;
+import org.geogebra.common.gui.view.algebra.EvalInfoFactory;
+import org.geogebra.common.gui.view.algebra.contextmenu.impl.RemoveSlider;
+import org.geogebra.common.kernel.Kernel;
+import org.geogebra.common.kernel.StringTemplate;
+import org.geogebra.common.kernel.View;
+import org.geogebra.common.kernel.commands.EvalInfo;
+import org.geogebra.common.main.App;
+import org.geogebra.common.main.settings.config.AppConfigGeometry;
+import org.geogebra.common.main.settings.config.AppConfigUnrestrictedGraphing;
+import org.geogebra.test.UndoRedoTester;
+import org.geogebra.test.annotation.Issue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+class SliderTest extends BaseUnitTest {
+
+	private EvalInfo info;
+
+	@BeforeEach
+	void setUp() {
+		info = EvalInfoFactory.getEvalInfoForAV(getApp(), true);
+		getApp().setConfig(new AppConfigUnrestrictedGraphing());
+		getConstruction().getConstructionDefaults().createDefaultGeoElements();
+	}
+
+	@Test
+	void setShowExtendedAV() {
+		GeoNumeric slider = add("a = 1", info);
+		slider.setAVSliderOrCheckboxVisible(true);
+		slider.initAlgebraSlider();
+		slider.setAVSliderOrCheckboxVisible(false);
+		assertThat(slider.showInEuclidianView(), is(true));
+	}
+
+	@Test
+	void testMarbleFunctionalityWithUndoRedo() {
+		App app = getApp();
+		UndoRedoTester undoRedo = new UndoRedoTester(app);
+		undoRedo.setupUndoRedo();
+
+		GeoNumeric slider = add("a = 1", info);
+		app.storeUndoInfo();
+		slider.setAVSliderOrCheckboxVisible(true);
+		slider.setEuclidianVisible(true);
+		app.storeUndoInfo();
+		slider.setAVSliderOrCheckboxVisible(false);
+		app.storeUndoInfo();
+		slider.setEuclidianVisible(false);
+		app.storeUndoInfo();
+		slider.setEuclidianVisible(true);
+		app.storeUndoInfo();
+
+		slider = undoRedo.getAfterUndo("a");
+		assertThat(slider.isEuclidianVisible(), is(false));
+
+		slider = undoRedo.getAfterUndo("a");
+		assertThat(slider.isEuclidianVisible(), is(true));
+
+		slider = undoRedo.getAfterUndo("a");
+		assertThat(slider.isAVSliderOrCheckboxVisible(), is(true));
+
+		slider = undoRedo.getAfterRedo("a");
+		assertThat(slider.isAVSliderOrCheckboxVisible(), is(false));
+
+		slider = undoRedo.getAfterRedo("a");
+		assertThat(slider.isEuclidianVisible(), is(false));
+
+		slider = undoRedo.getAfterRedo("a");
+		assertThat(slider.isEuclidianVisible(), is(true));
+	}
+
+	@Test
+	void removeSlider() {
+		App app = getApp();
+		UndoRedoTester undoRedo = new UndoRedoTester(app);
+		undoRedo.setupUndoRedo();
+
+		GeoNumeric slider = add("a = 1", info);
+		app.storeUndoInfo();
+		slider.createSlider();
+		app.storeUndoInfo();
+		slider.setEuclidianVisible(true);
+		app.storeUndoInfo();
+		View mockView = mock(View.class);
+		getKernel().attach(mockView);
+		new RemoveSlider(getAlgebraProcessor()).execute(slider);
+		verify(mockView).repaintView();
+		app.storeUndoInfo();
+		assertThat(slider.isSetEuclidianVisible(), is(false));
+
+		slider = undoRedo.getAfterUndo("a");
+		assertThat(slider.isEuclidianVisible(), is(true));
+	}
+
+	@Test
+	@Issue("APPS-7498")
+	void removeSliderShouldHideAnimationButton() {
+		GeoNumeric slider = add("a = 1", info);
+		slider.createSlider();
+		slider.setAnimating(true);
+		getKernel().getAnimationManager().startAnimation();
+
+		assertThat(getKernel().needToShowAnimationButton(), is(true));
+
+		new RemoveSlider(getAlgebraProcessor()).execute(slider);
+
+		assertThat(slider.isAnimating(), is(false));
+		assertThat(getKernel().needToShowAnimationButton(), is(false));
+	}
+
+	@Test
+	void autocreateSliderShouldHaveCorrectRangeGeometry() {
+		getApp().setConfig(new AppConfigGeometry());
+		getConstruction().getConstructionDefaults().createDefaultGeoElements();
+		GeoAngle slider = autocreateAngle();
+		assertThat(slider.getAngleStyle(), is(GeoAngle.AngleStyle.NOTREFLEX));
+		assertThat(slider.getIntervalMax(), is(Math.PI));
+	}
+
+	@Test
+	void autocreateSliderShouldHaveCorrectRangeGraphing() {
+		GeoAngle slider = autocreateAngle();
+		assertThat(slider.getAngleStyle(), is(GeoAngle.AngleStyle.ANTICLOCKWISE));
+		assertThat(slider.getIntervalMax(), is(Kernel.PI_2));
+	}
+
+	@Test
+	void autocreateSliderShouldWorkForSingleLetterCommands() {
+		GeoFunctionNVar f = add("f(x,y)=ax^2+bx+c(x+3)", info);
+		assertThat(((GeoNumeric) lookup("a")).isSlider(), equalTo(true));
+		assertThat(((GeoNumeric) lookup("b")).isSlider(), equalTo(true));
+		assertThat(((GeoNumeric) lookup("c")).isSlider(), equalTo(true));
+		assertThat(f, hasValue(unicode("1 x^2 + 1 x + 1 (x + 3)")));
+	}
+
+	@Test
+	@Issue("APPS-6015")
+	void autocreateSliderShouldNotCreateAnythingOnError() {
+		assertThrows(AssertionError.class, () -> add("f(x)=f(x)+1", info));
+		assertThrows(AssertionError.class, () -> add("g(x)=g(x)+a", info));
+		assertEquals(0, getConstruction().getGeoSetConstructionOrder().size());
+	}
+
+	@Test
+	void shouldResetDefinition() {
+		GeoNumeric numeric = add("a = 1");
+		numeric.createSlider();
+		numeric.setSymbolicMode(true, true);
+		numeric.setEuclidianVisible(true);
+		numeric.setValue(0.5);
+		new RemoveSlider(getAlgebraProcessor()).execute(numeric);
+		assertEquals("a = 1 / 2", numeric.toString(StringTemplate.defaultTemplate));
+	}
+
+	private GeoAngle autocreateAngle() {
+		add("A=(0,0)");
+		add("B=(1,0)");
+		add("Rotate(A,a,B)", info);
+		return (GeoAngle) lookup("a");
+	}
+}
