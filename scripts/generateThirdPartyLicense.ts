@@ -40,10 +40,41 @@ ${licenseText}
 `
   })
 
+  const bundledApps = [
+    {
+      name: 'draw.io / diagrams.net',
+      licenses: 'Apache-2.0',
+      licenseText:
+        'Copyright (c) 2005-present JGraph Ltd.\nLicensed under the Apache License, Version 2.0 (https://www.apache.org/licenses/LICENSE-2.0).'
+    },
+    {
+      name: 'GeoGebra',
+      licenses: 'GeoGebra Non-Commercial License / GPL-3.0 / CC-BY-NC-SA-3.0',
+      licenseText:
+        'Copyright (c) International GeoGebra Institute / GeoGebra GmbH (https://www.geogebra.org).\nSource code is licensed under the GNU General Public License v3.0 (GPLv3). Software, documentation, language files, and resources are subject to the GeoGebra Non-Commercial License Agreement / CC BY-NC-SA 3.0 (https://www.geogebra.org/license). Commercial use requires a commercial license agreement.'
+    },
+    {
+      name: 'GitHub Desktop',
+      licenses: 'MIT',
+      licenseText:
+        'Copyright (c) GitHub, Inc.\nLicensed under the MIT License (https://github.com/desktop/desktop).'
+    }
+  ]
+
+  bundledApps.forEach(({ name, licenses, licenseText }) => {
+    summary += `${index++}. ${name} (${licenses})\n`
+    licenseList += `# ${name} (${licenses})
+-------------------------------------------------
+
+${licenseText}
+\n\n
+`
+  })
+
   const output = `# Third Party Notices
 -------------------------------------------------
 
-This file contains all third-party packages that are bundled and shipped with MarkNotePro.
+This file contains all third-party packages and embedded applications that are bundled and shipped with MarkNotePro.
 
 -------------------------------------------------
 # Summary

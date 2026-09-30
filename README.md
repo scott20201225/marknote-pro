@@ -12,7 +12,7 @@
 
 <div align="center">
   <a href="LICENSE">
-    <img src="https://img.shields.io/github/license/scott20201225/marknote-pro.svg" alt="LICENSE">
+    <img src="https://img.shields.io/badge/license-Non--Commercial%20%7C%20Commercial%20Auth-blue.svg" alt="LICENSE">
   </a>
   <a href="https://github.com/scott20201225/marknote-pro/releases">
     <img src="https://img.shields.io/github/downloads/scott20201225/marknote-pro/total.svg" alt="total download">
@@ -269,6 +269,19 @@ pnpm --filter marknotepro dev
 pnpm --filter marknotepro build
 ```
 
-## 许可
+## 许可与商业授权
 
-[MIT](LICENSE)
+本项目采用 **[MarkNotePro 非商业使用与商业授权许可协议](LICENSE)**：
+
+- **非商业用途免费**：个人学习、教学演示、学术研究及个人非商业知识管理可免费下载和使用。
+- **商业用途需授权（严禁未授权商用）**：未经版权所有人（[ScottCheng](https://github.com/scott20201225)）事先书面授权，严禁将 MarkNotePro（含源代码、二进制安装包、衍生修改版或内嵌模块）用于任何商业目的（包括但不限于直接或间接售卖、打包进商业产品/SaaS服务、企业商业化部署或抹除署名二次分发）。如需商业使用，请联系作者获取书面商业授权。
+
+### 内置核心组件协议声明
+
+MarkNotePro 集成了以下开源与第三方核心组件，各组件遵循其对应上游协议（详见 [LICENSE](LICENSE)）：
+
+- **draw.io (diagrams.net)**：遵循 [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)（`Copyright (c) 2005-present JGraph Ltd`）。
+- **GeoGebra**：遵循 [GeoGebra License](https://www.geogebra.org/license)（源码遵循 **GPLv3**，软件、文档与语言资源遵循 **GeoGebra Non-Commercial License Agreement / CC BY-NC-SA 3.0**，仅限非商业用途免费使用，商业用途须同时遵守 GeoGebra 官方商业授权要求）。
+- **GitHub Desktop**：遵循 MIT License（`Copyright (c) GitHub, Inc.`）。
+- **MarkText & Muya**：遵循 MIT License（`Copyright (c) 2017-present Luo Ran & MarkText Contributors`）。
+

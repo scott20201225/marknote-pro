@@ -1,23 +1,84 @@
-MIT License
+MarkNotePro License Agreement (非商业使用与商业授权许可协议)
+================================================================================
 
-Copyright (c) 2017-present Luo Ran
-Copyright (c) 2018-present MarkText Contributors
-Copyright (c) 2026-present ScottCheng (scott20201225) and MarkNotePro Contributors
+Copyright (c) 2026-present ScottCheng (scott20201225) and MarkNotePro Contributors.
+All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+--------------------------------------------------------------------------------
+第一部分：MarkNotePro 软件使用与商业授权条款
+Part I: MarkNotePro Software Usage & Commercial Licensing Terms
+--------------------------------------------------------------------------------
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. 非商业用途免费许可 (Non-Commercial Use Grant)
+   在严格遵守本协议各项条款及第三部分上游开源组件协议的前提下，特此免费授予任何个人或非营利教育/科研用户在“非商业用途”（包括个人学习、教学演示、学术研究及个人知识/笔记管理）下下载、安装、运行及研究本软件（MarkNotePro）的权利。
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+   Subject to the terms and conditions of this Agreement and the third-party component licenses in Part II, permission is hereby granted, free of charge, to any individual or non-profit educational/academic user to download, install, use, and study MarkNotePro strictly for Non-Commercial Purposes (including personal study, educational demonstration, academic research, and personal note/knowledge management).
+
+2. 商业用途限制与授权要求 (Commercial Use Restrictions & Authorization Required)
+   【重要声明】未经版权所有人 ScottCheng (https://github.com/scott20201225) 事先书面商业授权，任何个人、企业、法人、组织或机构严禁将本软件（含源代码、二进制安装包、衍生修改版、内嵌模块或关联工作台能力）用于任何商业目的。禁止的未授权商业行为包括但不限于：
+   (a) 直接或间接出售、出租、出借、转授本软件或其衍生版本、安装镜像以获取任何商业利益或费用；
+   (b) 将本软件作为商业软件、付费订阅服务、云托管服务（SaaS）、付费课程/社群配套工具或软硬件捆绑商品的一部分对外分发或提供服务；
+   (c) 在营利性企业、商业机构或商业项目中进行商业化部署、批量分发或作为商业生产工具提供技术支持服务；
+   (d) 移除、隐藏、篡改本软件中的版权声明、品牌标识（MarkNotePro）、作者署名或本许可协议文本后进行二次打包或分发。
+
+   如需将本软件用于任何商业场景或获取商业发行授权，必须提前联系版权所有人（https://github.com/scott20201225）并签署正式的书面商业授权协议。
+
+   [IMPORTANT] Without prior written commercial authorization from the copyright holder ScottCheng (https://github.com/scott20201225), no individual, company, legal entity, or organization may use this Software (including source code, binary distributions, derivative works, embedded modules, or workspace integrations) for any commercial purpose. Prohibited unauthorized commercial uses include, without limitation:
+   (a) Selling, leasing, licensing, or distributing the Software or derivative works for direct or indirect commercial gain;
+   (b) Offering the Software as part of a commercial product, paid service, hosted/SaaS offering, paid training bundle, or hardware/software bundle;
+   (c) Deploying the Software across a commercial enterprise or for-profit organization for commercial operations or commercial support services;
+   (d) Removing, obscuring, or altering any copyright notices, brand identifiers (MarkNotePro), author attributions, or this License Agreement in any redistribution.
+
+   For commercial licensing inquiries and authorization, please contact the copyright holder at https://github.com/scott20201225.
+
+3. 免责声明 (Disclaimer of Warranty & Limitation of Liability)
+   本软件按“原样”（"AS IS"）提供，不附带任何明示或暗示的担保，包括但不限于对适销性、特定用途适用性及不侵权的担保。在任何情况下，作者或版权持有人均不对因使用本软件或与本软件相关的任何交易而产生的任何索赔、损害或其他责任承担责任。
+
+--------------------------------------------------------------------------------
+第二部分：内置与集成第三方核心组件协议声明
+Part II: Bundled & Integrated Third-Party Component Licenses
+--------------------------------------------------------------------------------
+
+MarkNotePro 集成了以下优秀的开源与第三方项目，各组件原始代码及资源分别遵循其各自的上游许可证：
+
+1. draw.io (diagrams.net)
+   - Copyright: Copyright (c) 2005-present JGraph Ltd (https://www.drawio.com / https://github.com/jgraph/drawio)
+   - License: Apache License, Version 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+   - Notice: MarkNotePro 内置的 `.drawio` 离线图表编辑引擎与相关静态资源基于 draw.io (JGraph Ltd) 构建，遵循 Apache License 2.0（部分内置模板与图形库同时遵循其目录下的 CC-BY-4.0 / Apache-2.0 声明）。
+
+2. GeoGebra
+   - Copyright: Copyright (c) International GeoGebra Institute / GeoGebra GmbH (https://www.geogebra.org)
+   - License: GeoGebra License (https://www.geogebra.org/license)
+     * Source Code: GNU General Public License v3.0 (GPLv3, https://www.gnu.org/licenses/gpl-3.0.html)
+     * Software, Documentation, Language Files & Symbols: GeoGebra Non-Commercial License Agreement / Creative Commons Attribution-NonCommercial-ShareAlike 3.0 (CC BY-NC-SA 3.0)
+   - Notice: MarkNotePro 内置的 `.ggb` 数学建模、绘图与 CAS 计算引擎基于 GeoGebra 构建。根据 GeoGebra 官方许可协议，GeoGebra 组件及相关资源仅限个人与教育等非商业用途免费使用；任何涉及 GeoGebra 的商业用途除须获得本项目授权外，还必须遵守 GeoGebra 官方商业许可要求（联系 office@geogebra.org）。
+
+3. GitHub Desktop
+   - Copyright: Copyright (c) GitHub, Inc. (https://github.com/desktop/desktop)
+   - License: MIT License
+   - Notice: MarkNotePro 内置的 Git 工作区组件基于 GitHub Desktop 适配构建，遵循 MIT 许可证。
+
+4. MarkText & Muya (Upstream Base)
+   - Copyright (c) 2017-present Luo Ran
+   - Copyright (c) 2018-present MarkText Contributors
+   - License: MIT License
+
+   Permission is hereby granted, free of charge, to any person obtaining a copy
+   of the upstream MarkText software and associated documentation files (the
+   "Upstream Software"), to deal in the Upstream Software without restriction,
+   including without limitation the rights to use, copy, modify, merge, publish,
+   distribute, sublicense, and/or sell copies of the Upstream Software, and to
+   permit persons to whom the Upstream Software is furnished to do so, subject
+   to the following conditions:
+
+   The above copyright notice and this permission notice shall be included in
+   all copies or substantial portions of the Upstream Software.
+
+   THE UPSTREAM SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO
+   EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES
+   OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+   ARISING FROM, OUT OF OR IN CONNECTION WITH THE UPSTREAM SOFTWARE OR THE USE
+   OR OTHER DEALINGS IN THE UPSTREAM SOFTWARE.
+
