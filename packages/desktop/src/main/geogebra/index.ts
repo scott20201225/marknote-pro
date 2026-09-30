@@ -132,7 +132,9 @@ const detectGeoGebraMode = async (filePath: string): Promise<GeoGebraMode> => {
     if (!xmlBuffer) return 'graphing'
 
     const xml = xmlBuffer.toString('utf8')
-    const appName = xml.match(/<geogebra\b[^>]*\bapp=["']([^"']+)["']/i)?.[1].toLowerCase()
+    const subApp = xml.match(/<geogebra\b[^>]*\bsubApp=["']([^"']+)["']/i)?.[1].toLowerCase()
+    const rawApp = xml.match(/<geogebra\b[^>]*\bapp=["']([^"']+)["']/i)?.[1].toLowerCase()
+    const appName = subApp || rawApp
     if (
       appName === '3d' ||
       /<euclidianView3D\b/i.test(xml) ||
@@ -142,7 +144,7 @@ const detectGeoGebraMode = async (filePath: string): Promise<GeoGebraMode> => {
     }
     if (appName === 'geometry') return 'geometry'
     if (appName === 'cas') return 'cas'
-    if (appName === 'probability') return 'probability'
+    if (appName === 'probability' || /<probabilityCalculator\b/i.test(xml)) return 'probability'
     if (appName === 'scientific') return 'scientific'
   } catch (error) {
     log.warn('读取 GeoGebra 文件模式失败，使用绘图计算模式:', error)
@@ -175,7 +177,12 @@ const getGeoGebraUrl = (mode: GeoGebraMode, language: string): string => {
     )
   }
   const htmlFile: Record<GeoGebraMode, string> = {
-    graphing: 'graphing.html',
+    // Use GeoGebra Calculator Suite's unrestricted graphing sub-app
+    // (matching https://www.geogebra.org/calculator) instead of the
+    // exam-restricted standalone graphing.html entry so all 12 tool
+    // categories (including measurement, construction, polygons, circles,
+    // conics, transformations, segments and images) remain available.
+    graphing: 'calculator.html',
     '3d': '3d.html',
     geometry: 'geometry.html',
     cas: 'cas.html',
@@ -191,7 +198,7 @@ const getGeoGebraUrl = (mode: GeoGebraMode, language: string): string => {
   url.searchParams.set('lang', normalizeGeoGebraLanguage(language))
   url.searchParams.set('showAppsPicker', 'false')
   url.searchParams.set('enableFileFeatures', 'false')
-  if (mode === 'probability') url.searchParams.set('subApp', 'probability')
+  if (mode === 'graphing' || mode === 'probability') url.searchParams.set('subApp', mode)
   return url.toString()
 }
 
@@ -835,8 +842,52 @@ const loadBase64 = async (entry: GeoGebraDocumentEntry, base64: string): Promise
           window.__marknoteGeoGebraLastXml = null
           window.__marknoteGeoGebraMonitor = window.setInterval(snapshot, 500)
         }
+        const expandToolsPanel = () => {
+          for (let step = 0; step < 2; step += 1) {
+            const panel = document.querySelector('.toolsPanel')
+            if (!panel) break
+            const categories = panel.querySelectorAll('.categoryPanel')
+            const buttons = panel.querySelectorAll(':scope > .materialTextButton')
+            if (buttons.length === 2 && buttons[1] instanceof HTMLElement) {
+              buttons[1].click()
+            } else if (
+              buttons.length === 1 &&
+              categories.length > 0 &&
+              categories.length <= 9 &&
+              buttons[0] instanceof HTMLElement
+            ) {
+              buttons[0].click()
+            } else {
+              break
+            }
+          }
+        }
+        const subApp = new URLSearchParams(window.location.search).get('subApp')
+        if (
+          subApp &&
+          window.fflate &&
+          typeof window.fflate.strFromU8 === 'function' &&
+          !window.fflate.__marknoteSubAppPatched
+        ) {
+          const rawStrFromU8 = window.fflate.strFromU8
+          window.fflate.strFromU8 = function (...args) {
+            const text = rawStrFromU8.apply(this, args)
+            if (typeof text === 'string' && text.includes('<geogebra')) {
+              return text.replace(/<geogebra\\b([^>]*)>/i, (_match, attrs) => {
+                const nextAttrs = /\\bsubApp=(['"]).*?\\1/i.test(attrs)
+                  ? attrs.replace(/\\bsubApp=(['"]).*?\\1/i, 'subApp="' + subApp + '"')
+                  : attrs + ' subApp="' + subApp + '"'
+                return '<geogebra' + nextAttrs + '>'
+              })
+            }
+            return text
+          }
+          window.fflate.__marknoteSubAppPatched = true
+        }
         const finish = () => {
+          expandToolsPanel()
           window.setTimeout(() => {
+            expandToolsPanel()
             try {
               const api = window.ggbApplet
               window.__marknoteGeoGebraLastXml =
