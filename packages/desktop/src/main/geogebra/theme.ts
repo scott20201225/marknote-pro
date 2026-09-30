@@ -2404,45 +2404,80 @@ export const syncGeoGebraGraphics = async (
           };
         }
 
+        const parseColor = (str) => {
+          if (!str || typeof str !== 'string') return null
+          const s = str.trim().toLowerCase()
+          if (s.startsWith('#')) {
+            if (s.length === 7) {
+              return {
+                r: parseInt(s.slice(1, 3), 16),
+                g: parseInt(s.slice(3, 5), 16),
+                b: parseInt(s.slice(5, 7), 16)
+              }
+            } else if (s.length === 4) {
+              return {
+                r: parseInt(s[1] + s[1], 16),
+                g: parseInt(s[2] + s[2], 16),
+                b: parseInt(s[3] + s[3], 16)
+              }
+            }
+          }
+          const m = s.match(/rgba?\\s*\\(\\s*(\\d+)\\s*,\\s*(\\d+)\\s*,\\s*(\\d+)/)
+          if (m) {
+            return {
+              r: parseInt(m[1], 10),
+              g: parseInt(m[2], 10),
+              b: parseInt(m[3], 10)
+            }
+          }
+          return null
+        }
+
+        const isNeutral = (c) => {
+          if (!c) return false
+          const max = Math.max(c.r, c.g, c.b)
+          const min = Math.min(c.r, c.g, c.b)
+          // 灰度或近似中性色：RGB 最大差值 <= 28
+          return (max - min) <= 28
+        }
+
+        const excludedTypes = new Set([
+          'axis',
+          'axis3d',
+          'image',
+          'button',
+          'textfield',
+          'audio',
+          'video',
+          'space',
+          'cas_cell',
+          'boolean'
+        ])
+
         const adaptObject = (name) => {
           const api = window.ggbApplet
-          if (!name || !api || typeof api.getObjectType !== 'function') return
+          if (!name || !api || typeof api.getColor !== 'function') return
           try {
-            const type = (api.getObjectType(name) || '').toLowerCase()
-            const targetTypes = [
-              'line',
-              'ray',
-              'segment',
-              'vector',
-              'polyline',
-              'penstroke',
-              'conic',
-              'conicpart',
-              'implicitpoly',
-              'curvecartesian',
-              'line3d',
-              'segment3d',
-              'ray3d',
-              'vector3d',
-              'text'
-            ]
-            if (targetTypes.includes(type)) {
-              const hex = (api.getColor(name) || '').toUpperCase()
+            const type = typeof api.getObjectType === 'function' ? (api.getObjectType(name) || '').toLowerCase() : ''
+            if (excludedTypes.has(type)) return
+
+            const raw = api.getColor(name)
+            const c = parseColor(raw)
+            if (!c) return
+
+            if (isNeutral(c)) {
+              const max = Math.max(c.r, c.g, c.b)
+              const min = Math.min(c.r, c.g, c.b)
               if (window.__ggbDarkTheme) {
-                if (hex.length === 7 && hex.startsWith('#')) {
-                  const r = parseInt(hex.slice(1, 3), 16)
-                  const g = parseInt(hex.slice(3, 5), 16)
-                  const b = parseInt(hex.slice(5, 7), 16)
-                  // 默认深色/黑色几何元素在深色背景下自适应为高对比度亮灰色
-                  if (r < 70 && g < 70 && b < 70 && Math.abs(r - g) < 15 && Math.abs(g - b) < 15) {
-                    window.__ggbAdaptedObjects = window.__ggbAdaptedObjects || new Set()
-                    window.__ggbAdaptedObjects.add(name)
-                    api.setColor(name, 224, 224, 224)
-                  }
+                // 深色主题下：黑色、深灰等暗色几何/手绘元素自适应为高对比度亮白/浅灰 (224, 224, 224)
+                // 覆盖范围：#000000 到 #909090 (max <= 145)
+                if (max <= 145) {
+                  api.setColor(name, 224, 224, 224)
                 }
               } else {
-                if (window.__ggbAdaptedObjects && window.__ggbAdaptedObjects.has(name)) {
-                  window.__ggbAdaptedObjects.delete(name)
+                // 浅色主题下：白色、浅灰等亮色几何/手绘线条自适应为清晰深色 (32, 33, 36)
+                // 覆盖范围：#A5A5A5 到 #FFFFFF (min >= 165)
+                if (min >= 165) {
                   api.setColor(name, 32, 33, 36)
                 }
               }
@@ -2467,7 +2502,9 @@ export const syncGeoGebraGraphics = async (
                 try { if (typeof api.setAuxiliary === 'function') api.setAuxiliary(name, false) } catch (e) {}
               }
               adaptObject(name)
-            }, 30)
+            }, 25)
+            setTimeout(() => adaptObject(name), 100)
+            setTimeout(() => adaptObject(name), 300)
           } catch (e) {}
         }
 
@@ -2478,7 +2515,7 @@ export const syncGeoGebraGraphics = async (
             const names = api.getAllObjectNames() || []
             for (let i = 0; i < names.length; i++) {
               const name = names[i]
-              const type = (api.getObjectType(name) || '').toLowerCase()
+              const type = typeof api.getObjectType === 'function' ? (api.getObjectType(name) || '').toLowerCase() : ''
               if (type === 'button') {
                 try { if (typeof api.setAuxiliary === 'function') api.setAuxiliary(name, false) } catch (e) {}
               }
@@ -2491,14 +2528,17 @@ export const syncGeoGebraGraphics = async (
           const api = window.ggbApplet
           if (!api) return
           try {
-            if (typeof api.getPenColor === 'function' && typeof api.setPenColor === 'function') {
-              const penColor = (api.getPenColor() || '').toUpperCase()
+            if (typeof api.setPenColor === 'function') {
+              const raw = typeof api.getPenColor === 'function' ? api.getPenColor() : null
+              const c = parseColor(raw)
               if (window.__ggbDarkTheme) {
-                if (penColor === '#202124' || penColor === '#000000' || penColor === '#1C1C1F') {
+                // 在深色模式下，若当前画笔颜色为中性暗色（或未设置），立即切换为亮色 224, 224, 224
+                if (!c || (isNeutral(c) && Math.max(c.r, c.g, c.b) <= 145)) {
                   api.setPenColor(224, 224, 224)
                 }
               } else {
-                if (penColor === '#E0E0E0' || penColor === '#FFFFFF') {
+                // 在浅色模式下，若当前画笔颜色为中性亮色，立即切换为深色 32, 33, 36
+                if (!c || (isNeutral(c) && Math.min(c.r, c.g, c.b) >= 165)) {
                   api.setPenColor(32, 33, 36)
                 }
               }
@@ -2549,6 +2589,14 @@ export const syncGeoGebraGraphics = async (
             api.registerAddListener(onObjectAdded)
           }
 
+          if (typeof api.registerStoreUndoListener === 'function' && !window.__ggbThemeStoreUndoHooked) {
+            window.__ggbThemeStoreUndoHooked = true
+            api.registerStoreUndoListener(() => {
+              adaptAllObjects()
+              setTimeout(adaptAllObjects, 50)
+            })
+          }
+
           if (typeof api.registerClientListener === 'function' && !window.__ggbThemeClientHooked) {
             window.__ggbThemeClientHooked = true
             api.registerClientListener((event) => {
@@ -2557,11 +2605,20 @@ export const syncGeoGebraGraphics = async (
                 type === 'undo' ||
                 type === 'redo' ||
                 type === 'clear' ||
-                type === 'perspectiveChange'
+                type === 'perspectiveChange' ||
+                type === 'storeUndo' ||
+                type === 'setMode' ||
+                type === 'batchAddComplete' ||
+                type === 'pasteElmsComplete' ||
+                type === 'updateStyle'
               ) {
-                setTimeout(applyToApp, 0)
-                setTimeout(applyToApp, 60)
-                setTimeout(applyToApp, 200)
+                syncPenColor()
+                adaptAllObjects()
+                setTimeout(() => {
+                  syncPenColor()
+                  adaptAllObjects()
+                }, 50)
+                setTimeout(adaptAllObjects, 200)
               }
             })
           }
