@@ -1,7 +1,7 @@
 # Third Party Notices
 -------------------------------------------------
 
-This file contains all third-party packages that are bundled and shipped with MarkText.
+This file contains all third-party packages and embedded applications that are bundled and shipped with MarkNotePro.
 
 -------------------------------------------------
 # Summary
@@ -12,7 +12,7 @@ This file contains all third-party packages that are bundled and shipped with Ma
 3. @electron/remote (MIT)
 4. @element-plus/icons-vue (MIT)
 5. @hfelix/electron-localshortcut (MIT)
-6. @marktext/file-icons (MIT)
+6. @marknotepro/file-icons (MIT)
 7. @octokit/rest (MIT)
 8. @popperjs/core (MIT)
 9. @vscode/ripgrep (MIT)
@@ -45,7 +45,7 @@ This file contains all third-party packages that are bundled and shipped with Ma
 36. keytar (MIT)
 37. languine (MIT)
 38. lodash (MIT)
-39. marktext (MIT*)
+39. marktext (MIT)
 40. mermaid (MIT)
 41. mitt (MIT)
 42. native-keymap (MIT)
@@ -61,6 +61,9 @@ This file contains all third-party packages that are bundled and shipped with Ma
 52. vue-i18n (MIT)
 53. vue-router (MIT)
 54. webfontloader (Apache-2.0)
+55. draw.io / diagrams.net (Apache-2.0)
+56. GeoGebra (GeoGebra Non-Commercial License / GPL-3.0 / CC-BY-NC-SA-3.0)
+57. GitHub Desktop (MIT)
 
 
 -------------------------------------------------
@@ -388,6 +391,28 @@ undefined
 # webfontloader (Apache-2.0)
 -------------------------------------------------
 undefined
+
+
+
+# draw.io / diagrams.net (Apache-2.0)
+-------------------------------------------------
+Copyright (c) 2005-present JGraph Ltd.
+Licensed under the Apache License, Version 2.0 (https://www.apache.org/licenses/LICENSE-2.0).
+
+
+
+# GeoGebra (GeoGebra Non-Commercial License / GPL-3.0 / CC-BY-NC-SA-3.0)
+-------------------------------------------------
+Copyright (c) International GeoGebra Institute / GeoGebra GmbH (https://www.geogebra.org).
+Source code is licensed under the GNU General Public License v3.0 (GPLv3). Software, documentation, language files, and resources are subject to the GeoGebra Non-Commercial License Agreement / CC BY-NC-SA 3.0 (https://www.geogebra.org/license). Commercial use requires a commercial license agreement.
+
+
+
+# GitHub Desktop (MIT)
+-------------------------------------------------
+Copyright (c) GitHub, Inc.
+Licensed under the MIT License (https://github.com/desktop/desktop).
+
 
 
 
