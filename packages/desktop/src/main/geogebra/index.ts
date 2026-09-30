@@ -232,6 +232,59 @@ const getOrCreateWindowEntry = (win: BrowserWindow): GeoGebraWindowEntry => {
 
 const GEOGEBRA_HOST_LAYOUT_SCRIPT = `
   (() => {
+    const isGeoGebraAutoSaveKey = (key) =>
+      typeof key === 'string' && (key.startsWith('autosave') || key === 'timestamp')
+
+    const clearGeoGebraAutoSave = () => {
+      try {
+        if (window.localStorage) {
+          const keysToRemove = []
+          for (let i = 0; i < window.localStorage.length; i += 1) {
+            const key = window.localStorage.key(i)
+            if (isGeoGebraAutoSaveKey(key)) keysToRemove.push(key)
+          }
+          for (const key of keysToRemove) {
+            window.localStorage.removeItem(key)
+          }
+        }
+      } catch {}
+    }
+
+    if (
+      typeof Storage !== 'undefined' &&
+      Storage.prototype &&
+      !window.__marknoteGeoGebraStoragePatched
+    ) {
+      window.__marknoteGeoGebraStoragePatched = true
+      const rawGetItem = Storage.prototype.getItem
+      Storage.prototype.getItem = function (key) {
+        if (isGeoGebraAutoSaveKey(key)) return null
+        return rawGetItem.call(this, key)
+      }
+      const rawSetItem = Storage.prototype.setItem
+      Storage.prototype.setItem = function (key, value) {
+        if (isGeoGebraAutoSaveKey(key)) return
+        return rawSetItem.call(this, key, value)
+      }
+    }
+
+    const dismissRecoverAutoSavedDialog = () => {
+      clearGeoGebraAutoSave()
+      for (const dialog of document.querySelectorAll('.RecoverAutoSavedDialog')) {
+        const cancelBtn = dialog.querySelector(
+          '.dialogBtnPanel .materialTextButton, .dialogBtnPanel > *:first-child'
+        )
+        if (cancelBtn instanceof HTMLElement) {
+          cancelBtn.click()
+        } else if (dialog instanceof HTMLElement) {
+          dialog.remove()
+        }
+      }
+    }
+
+    window.__marknoteDismissGeoGebraAutoSave = dismissRecoverAutoSavedDialog
+    dismissRecoverAutoSavedDialog()
+
     if (!window.__marknoteGeoGebraMarginTopPatched) {
       window.__marknoteGeoGebraMarginTopPatched = true
       const rawGetAttribute = Element.prototype.getAttribute
@@ -251,6 +304,7 @@ const GEOGEBRA_HOST_LAYOUT_SCRIPT = `
     }
 
     const stripHeaderReservation = () => {
+      dismissRecoverAutoSavedDialog()
       if (window.defaultParams && typeof window.defaultParams === 'object') {
         window.defaultParams.marginTop = 0
       }
@@ -418,7 +472,8 @@ const ensureViewLoaded = async (
       .GeoGebraFrame .flatButton.menu,
       .GeoGebraFrame .iconButton.menu,
       .GeoGebraFrame .landscapeMenuBtn,
-      .GeoGebraFrame .portraitMenuBtn {
+      .GeoGebraFrame .portraitMenuBtn,
+      .GeoGebraFrame .RecoverAutoSavedDialog {
         display: none !important;
       }
 
@@ -885,8 +940,10 @@ const loadBase64 = async (entry: GeoGebraDocumentEntry, base64: string): Promise
           window.fflate.__marknoteSubAppPatched = true
         }
         const finish = () => {
+          window.__marknoteDismissGeoGebraAutoSave?.()
           expandToolsPanel()
           window.setTimeout(() => {
+            window.__marknoteDismissGeoGebraAutoSave?.()
             expandToolsPanel()
             try {
               const api = window.ggbApplet
@@ -899,6 +956,7 @@ const loadBase64 = async (entry: GeoGebraDocumentEntry, base64: string): Promise
           }, 150)
           resolve()
         }
+        window.__marknoteDismissGeoGebraAutoSave?.()
         if (${JSON.stringify(base64)}) {
           let finished = false
           const complete = () => {
@@ -1055,6 +1113,9 @@ const closeDocument = (win: BrowserWindow, filePath: string): void => {
   viewOwners.delete(entry.view.webContents.id)
   windowEntry.documents.delete(normalizedPath)
   if (windowEntry.activePath === normalizedPath) windowEntry.activePath = null
+  if (!entry.view.webContents.isDestroyed()) {
+    ;(entry.view.webContents as unknown as { destroy?: () => void }).destroy?.()
+  }
 }
 
 export const openGeoGebraFile = async (

@@ -298,3 +298,29 @@ try {
 } catch (error) {
   console.error(error)
 }
+
+// GeoGebra's web bundle stores a single per-mode `autosave*` draft in the
+// shared `file://` origin's localStorage without scoping it to a specific
+// `.ggb` file path. Purge those keys before any page script runs so
+// GeoGebra never prompts to "Recover" another file's draft over the
+// currently opened `.ggb` document.
+try {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    const keysToRemove: string[] = []
+    for (let i = 0; i < window.localStorage.length; i += 1) {
+      const key = window.localStorage.key(i)
+      if (
+        typeof key === 'string' &&
+        (key.startsWith('autosave') || key === 'timestamp')
+      ) {
+        keysToRemove.push(key)
+      }
+    }
+    for (const key of keysToRemove) {
+      window.localStorage.removeItem(key)
+    }
+  }
+} catch {
+  // Ignore storage access errors in restricted contexts.
+}
+
