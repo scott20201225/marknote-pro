@@ -131,6 +131,7 @@ export const addFile = (
     existingFile.isMarkdown = file.isMarkdown
     existingFile.isDrawing = file.isDrawing
     existingFile.isGeoGebra = file.isGeoGebra
+    existingFile.isMindMap = file.isMindMap
   } else {
     // Remove file content from object.
     const fileCopy: TreeFile = {
@@ -142,6 +143,7 @@ export const addFile = (
       isMarkdown: file.isMarkdown,
       isDrawing: file.isDrawing,
       isGeoGebra: file.isGeoGebra,
+      isMindMap: file.isMindMap,
       name: file.name,
       pathname: file.pathname
     }

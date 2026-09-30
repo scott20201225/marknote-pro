@@ -108,7 +108,7 @@ const add = async (
       }
     }
   }
-  if (isMarkdown || isDrawing || isGeoGebra) {
+  if (isMarkdown || isDrawing || isGeoGebra || isMindMap) {
     win.webContents.send(EVENT_NAME[type], { type: 'add', change: file })
   }
 }
@@ -147,6 +147,7 @@ const change = async (
   const isMarkdown = hasMarkdownExtension(pathname)
   const isDrawing = isDrawioFile(pathname)
   const isGeoGebra = isGeoGebraFile(pathname)
+  const isMindMap = isMindMapFile(pathname)
   if (isMarkdown) {
     try {
       const [data, stats] = await Promise.all([
@@ -173,7 +174,7 @@ const change = async (
         })
       }
     }
-  } else if (isDrawing || isGeoGebra) {
+  } else if (isDrawing || isGeoGebra || isMindMap) {
     try {
       const stats = await fsPromises.stat(pathname)
       win.webContents.send('mt::update-object-tree', {
