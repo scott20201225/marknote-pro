@@ -5,7 +5,8 @@
     class="editor-container"
     :class="{
       'drawio-open': currentFile?.isDrawing === true,
-      'geogebra-open': currentFile?.isGeoGebra === true
+      'geogebra-open': currentFile?.isGeoGebra === true,
+      'mindmap-open': currentFile?.isMindMap === true
     }"
   >
     <side-bar v-if="init" />
@@ -16,7 +17,7 @@
         :pathname="pathname"
         :filename="filename"
         :active="windowActive"
-        :word-count="drawioFile || geogebraFile ? null : wordCount"
+        :word-count="drawioFile || geogebraFile || mindMapFile ? null : wordCount"
         :platform="platform"
         :is-saved="isSaved"
       />
@@ -52,10 +53,10 @@
         </button>
       </div>
       <recent
-        v-if="!hasCurrentFile && init && !currentFile?.isDrawing && !currentFile?.isGeoGebra"
+        v-if="!hasCurrentFile && init && !currentFile?.isDrawing && !currentFile?.isGeoGebra && !currentFile?.isMindMap"
       />
       <editor-with-tabs
-        v-if="hasCurrentFile && init && !currentFile?.isDrawing && !currentFile?.isGeoGebra"
+        v-if="hasCurrentFile && init && !currentFile?.isDrawing && !currentFile?.isGeoGebra && !currentFile?.isMindMap"
         :markdown="markdown"
         :cursor="cursor"
         :muya-index-cursor="muyaIndexCursor"
@@ -67,6 +68,7 @@
            never let its absolute surface cover the Markdown editor. -->
       <drawio v-if="init" v-show="currentFile?.isDrawing === true" />
       <geogebra v-if="init" v-show="currentFile?.isGeoGebra === true" />
+      <mind-map v-if="init" v-show="currentFile?.isMindMap === true" />
       <command-palette />
       <about-dialog />
       <export-setting-dialog />
@@ -98,6 +100,7 @@ import ImportModal from '@/components/import/index.vue'
 import GitDesktop from '@/components/gitDesktop/index.vue'
 import Drawio from '@/components/drawio/index.vue'
 import Geogebra from '@/components/geogebra/index.vue'
+import MindMap from '@/components/mindmap/index.vue'
 import bus from '@/bus'
 import { DEFAULT_STYLE } from '@/config'
 import { useLayoutStore } from '@/store/layout'
@@ -109,6 +112,7 @@ import { useProjectStore } from '@/store/project'
 import { useAutoUpdatesStore } from '@/store/autoUpdates'
 import { useNotificationStore } from '@/store/notification'
 import { getDrawioConfiguration } from '@/util/drawioConfiguration'
+import { getMindMapConfiguration } from '@/util/mindmapConfiguration'
 import type { GeoGebraMode } from '@shared/types/files'
 
 const mainStore = useMainStore()
@@ -132,6 +136,7 @@ const tabScrollState = ref({
 const workbench = ref<'note' | 'git'>('note')
 const drawioFile = ref<{ filePath: string; title: string } | null>(null)
 const geogebraFile = ref<{ filePath: string; title: string; mode: GeoGebraMode } | null>(null)
+const mindMapFile = ref<{ filePath: string; title: string } | null>(null)
 const lastGestureScale = ref(1)
 
 const { windowActive, platform, init } = storeToRefs(mainStore)
@@ -159,7 +164,8 @@ const hasCurrentFile = computed<boolean>(() => {
   return (
     currentFile.value?.markdown !== undefined &&
     !currentFile.value?.isDrawing &&
-    !currentFile.value?.isGeoGebra
+    !currentFile.value?.isGeoGebra &&
+    !currentFile.value?.isMindMap
   )
 })
 
@@ -218,8 +224,10 @@ const handleWorkbenchSwitch = (event: Event): void => {
     if (target !== 'note') {
       drawioFile.value = null
       geogebraFile.value = null
+      mindMapFile.value = null
       window.electron.ipcRenderer.send('mt::drawio::hide')
       window.electron.ipcRenderer.send('mt::geogebra::hide')
+      window.electron.ipcRenderer.send('mt::mindmap::hide')
     }
   }
 }
@@ -237,6 +245,11 @@ const openGeoGebra = (
   geogebraFile.value = payload
 }
 
+const openMindMap = (_event: unknown, payload: { filePath: string; title: string }): void => {
+  editorStore.OPEN_MINDMAP_TAB(payload)
+  mindMapFile.value = payload
+}
+
 const closeDrawio = (_event: unknown, payload?: { filePath?: string }): void => {
   if (payload?.filePath && payload.filePath !== currentFile.value?.pathname) return
   drawioFile.value = null
@@ -249,6 +262,14 @@ const closeGeoGebra = (_event: unknown, payload?: { filePath?: string }): void =
   if (payload?.filePath && payload.filePath !== currentFile.value?.pathname) return
   geogebraFile.value = null
   if (currentFile.value?.isGeoGebra) {
+    editorStore.FORCE_CLOSE_TAB(currentFile.value)
+  }
+}
+
+const closeMindMap = (_event: unknown, payload?: { filePath?: string }): void => {
+  if (payload?.filePath && payload.filePath !== currentFile.value?.pathname) return
+  mindMapFile.value = null
+  if (currentFile.value?.isMindMap) {
     editorStore.FORCE_CLOSE_TAB(currentFile.value)
   }
 }
@@ -274,6 +295,7 @@ watch(
     if (!preferenceLoaded || !value) return
     nextTick(() => {
       void window.electron.ipcRenderer.invoke('mt::geogebra::configure', getGeoGebraConfiguration())
+      void window.electron.ipcRenderer.invoke('mt::mindmap::configure', getMindMapConfiguration())
     })
   }
 )
@@ -281,11 +303,14 @@ watch(
 watch([currentFile, () => preferencesStore.preferenceLoaded], ([file, preferenceLoaded]) => {
   window.electron.ipcRenderer.send('mt::drawio-menu-mode', !!file?.isDrawing)
   window.electron.ipcRenderer.send('mt::geogebra-menu-mode', !!file?.isGeoGebra)
+  window.electron.ipcRenderer.send('mt::mindmap-menu-mode', !!file?.isMindMap)
   if (file?.isDrawing) {
     // Both editors use independent native BrowserViews. Remove GeoGebra
     // before attaching Draw.io so it can never cover the sidebar or canvas.
     geogebraFile.value = null
     window.electron.ipcRenderer.send('mt::geogebra::hide')
+    mindMapFile.value = null
+    window.electron.ipcRenderer.send('mt::mindmap::hide')
     // A restored drawing tab can become current before persisted preferences
     // finish loading. Wait for them so the first frame URL is never built from
     // the default language/theme.
@@ -305,6 +330,8 @@ watch([currentFile, () => preferencesStore.preferenceLoaded], ([file, preference
     // Vue's v-show and must be explicitly removed before the other opens.
     drawioFile.value = null
     window.electron.ipcRenderer.send('mt::drawio::hide')
+    mindMapFile.value = null
+    window.electron.ipcRenderer.send('mt::mindmap::hide')
     if (!preferenceLoaded) return
     if (geogebraFile.value?.filePath !== file.pathname) {
       const openRequest = file.geoGebraMode
@@ -325,12 +352,30 @@ watch([currentFile, () => preferencesStore.preferenceLoaded], ([file, preference
     return
   }
 
-  // Native Draw.io/GeoGebra BrowserViews are independent of v-show. Always
-  // hide both overlays when the active tab becomes Markdown or empty.
+  if (file?.isMindMap) {
+    drawioFile.value = null
+    window.electron.ipcRenderer.send('mt::drawio::hide')
+    geogebraFile.value = null
+    window.electron.ipcRenderer.send('mt::geogebra::hide')
+    if (!preferenceLoaded) return
+    if (mindMapFile.value?.filePath !== file.pathname) {
+      void window.electron.ipcRenderer.invoke(
+        'mt::mindmap::open',
+        file.pathname,
+        getMindMapConfiguration()
+      )
+    }
+    return
+  }
+
+  // Native Draw.io/GeoGebra/MindMap BrowserViews are independent of v-show. Always
+  // hide all overlays when the active tab becomes Markdown or empty.
   drawioFile.value = null
   window.electron.ipcRenderer.send('mt::drawio::hide')
   geogebraFile.value = null
   window.electron.ipcRenderer.send('mt::geogebra::hide')
+  mindMapFile.value = null
+  window.electron.ipcRenderer.send('mt::mindmap::hide')
 })
 
 // Native BrowserViews always sit above the renderer's DOM. Temporarily remove
@@ -340,6 +385,7 @@ watch(moveDialogVisible, (visible, wasVisible) => {
   if (visible) {
     window.electron.ipcRenderer.send('mt::drawio::hide')
     window.electron.ipcRenderer.send('mt::geogebra::hide')
+    window.electron.ipcRenderer.send('mt::mindmap::hide')
     return
   }
   if (wasVisible) {
@@ -406,11 +452,14 @@ onMounted(() => {
   window.electron.ipcRenderer.on('mt::drawio::closed', closeDrawio)
   window.electron.ipcRenderer.on('mt::geogebra::opened', openGeoGebra)
   window.electron.ipcRenderer.on('mt::geogebra::closed', closeGeoGebra)
+  window.electron.ipcRenderer.on('mt::mindmap::opened', openMindMap)
+  window.electron.ipcRenderer.on('mt::mindmap::closed', closeMindMap)
   window.electron.ipcRenderer.on('mt::drawio::autosave-changed', (_event, enabled) => {
     window.electron.ipcRenderer.send('mt::drawio-autosave-changed', enabled)
   })
   window.electron.ipcRenderer.send('mt::drawio-menu-mode', !!currentFile.value?.isDrawing)
   window.electron.ipcRenderer.send('mt::geogebra-menu-mode', !!currentFile.value?.isGeoGebra)
+  window.electron.ipcRenderer.send('mt::mindmap-menu-mode', !!currentFile.value?.isMindMap)
   window.addEventListener('wheel', handleWindowZoomWheel, { capture: true, passive: false })
   window.addEventListener('gesturestart', handleWindowZoomGestureStart)
   window.addEventListener('gesturechange', handleWindowZoomGestureChange)
@@ -437,6 +486,7 @@ onMounted(() => {
   editorStore.LISTEN_FOR_CLOSE()
   editorStore.LISTEN_FOR_DRAWIO_STATE()
   editorStore.LISTEN_FOR_GEOGEBRA_STATE()
+  editorStore.LISTEN_FOR_MINDMAP_STATE()
   editorStore.LISTEN_FOR_SAVE_AS()
   editorStore.LISTEN_FOR_MOVE_TO()
   editorStore.LISTEN_FOR_SAVE()
@@ -489,8 +539,12 @@ onBeforeUnmount(() => {
   window.electron.ipcRenderer.removeAllListeners('mt::drawio::closed')
   window.electron.ipcRenderer.removeAllListeners('mt::geogebra::opened')
   window.electron.ipcRenderer.removeAllListeners('mt::geogebra::closed')
+  window.electron.ipcRenderer.removeAllListeners('mt::mindmap::opened')
+  window.electron.ipcRenderer.removeAllListeners('mt::mindmap::closed')
   window.electron.ipcRenderer.removeAllListeners('mt::drawio::autosave-changed')
   window.electron.ipcRenderer.removeAllListeners('mt::drawio::state')
+  window.electron.ipcRenderer.removeAllListeners('mt::geogebra::state')
+  window.electron.ipcRenderer.removeAllListeners('mt::mindmap::state')
   window.removeEventListener('wheel', handleWindowZoomWheel, true)
   window.removeEventListener('gesturestart', handleWindowZoomGestureStart)
   window.removeEventListener('gesturechange', handleWindowZoomGestureChange)
@@ -548,7 +602,9 @@ onBeforeUnmount(() => {
 }
 
 /* BrowserView cannot paint behind the native title row. */
-.editor-container.drawio-open .editor-middle {
+.editor-container.drawio-open .editor-middle,
+.editor-container.geogebra-open .editor-middle,
+.editor-container.mindmap-open .editor-middle {
   background: var(--editorBgColor);
 }
 

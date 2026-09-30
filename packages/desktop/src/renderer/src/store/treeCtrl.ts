@@ -29,6 +29,7 @@ interface TreeFile {
   isMarkdown: boolean
   isDrawing?: boolean
   isGeoGebra?: boolean
+  isMindMap?: boolean
 }
 
 type AddFileInput = Omit<TreeFile, 'id'>

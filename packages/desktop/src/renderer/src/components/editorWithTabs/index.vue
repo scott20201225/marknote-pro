@@ -75,7 +75,11 @@ const editorStore = useEditorStore()
 const { effectiveSideBarWidth, showDocumentToc } = storeToRefs(layoutStore)
 const { currentFile } = storeToRefs(editorStore)
 const hasMarkdownFile = computed(
-  () => !!currentFile.value && !currentFile.value.isDrawing && !currentFile.value.isGeoGebra
+  () =>
+    !!currentFile.value &&
+    !currentFile.value.isDrawing &&
+    !currentFile.value.isGeoGebra &&
+    !currentFile.value.isMindMap
 )
 
 </script>

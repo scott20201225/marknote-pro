@@ -88,6 +88,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
 import { getDrawioConfiguration } from '@/util/drawioConfiguration'
+import { getMindMapConfiguration } from '@/util/mindmapConfiguration'
 import { MoreFilled } from '@element-plus/icons-vue'
 import { useEditorStore } from '@/store/editor'
 import { useProjectStore } from '@/store/project'
@@ -265,6 +266,10 @@ const handleFileClick = (file: TreeFileNode): void => {
   }
   if (file.isGeoGebra || /\.ggb$/i.test(pathname)) {
     void window.electron.ipcRenderer.invoke('mt::geogebra::open', pathname)
+    return
+  }
+  if (file.isMindMap || /\.smm$/i.test(pathname)) {
+    void window.electron.ipcRenderer.invoke('mt::mindmap::open', pathname, getMindMapConfiguration())
     return
   }
   const openedTab = tabs.value.find((tab) =>

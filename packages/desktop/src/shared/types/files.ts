@@ -93,6 +93,7 @@ export interface IFileState {
   isDrawing?: boolean
   isGeoGebra?: boolean
   geoGebraMode?: GeoGebraMode
+  isMindMap?: boolean
   // Per-tab display options. These are never written into the Markdown file.
   showHeadingNumbers: boolean
   headingNumberingIncludesTopLevel: boolean
@@ -124,6 +125,17 @@ export interface IGeoGebraState {
   lastSavedHash?: string
 }
 
+export interface IMindMapState {
+  id: string
+  pathname: string
+  filename: string
+  modified: boolean
+  isSaved: boolean
+  isSaving: boolean
+  saveError?: string
+  lastSavedHash?: string
+}
+
 export interface UnsavedDrawioFile {
   id: string
   filename: string
@@ -131,6 +143,12 @@ export interface UnsavedDrawioFile {
 }
 
 export interface UnsavedGeoGebraFile {
+  id: string
+  filename: string
+  pathname: string
+}
+
+export interface UnsavedMindMapFile {
   id: string
   filename: string
   pathname: string

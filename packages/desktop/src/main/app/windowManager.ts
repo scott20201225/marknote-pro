@@ -15,6 +15,7 @@ import type EditorWindow from '../windows/editor'
 import { isChildOfDirectory } from '../../common/filesystem/paths'
 import { hideDrawioView, isDrawioFile, openDrawioFile } from '../drawio'
 import { hideGeoGebraView, isGeoGebraFile, openGeoGebraFile } from '../geogebra'
+import { hideMindMapView, isMindMapFile, openMindMapFile } from '../mindmap'
 
 class WindowActivityList {
   // Oldest             Newest
@@ -414,8 +415,18 @@ class WindowManager extends TypedEmitter<WindowManagerEvents> {
         }
         return
       }
+      if (isMindMapFile(filePath)) {
+        const workspaceRoot = editor.openedRootDirectory
+        if (workspaceRoot && isChildOfDirectory(workspaceRoot, filePath)) {
+          void openMindMapFile(filePath, win)
+        } else {
+          void shell.openPath(filePath)
+        }
+        return
+      }
       hideDrawioView(win)
       hideGeoGebraView(win)
+      hideMindMapView(win)
       editor.openTab(filePath, options, true)
     })
 

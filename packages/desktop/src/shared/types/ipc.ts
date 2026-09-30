@@ -29,7 +29,8 @@ import type {
   LineEnding,
   FileChangeDetail,
   UnsavedFile,
-  UnsavedDrawioFile
+  UnsavedDrawioFile,
+  UnsavedMindMapFile
 } from './files'
 import type { GeoGebraMode } from './files'
 import type { BufferedState as BufferedStateType } from './bufferedState'
@@ -91,6 +92,12 @@ export interface GeoGebraConfiguration {
   colors: Record<string, string>
 }
 
+export interface MindMapConfiguration {
+  language: string
+  dark: boolean
+  theme: string
+}
+
 export interface DrawioExportPayload {
   format: string
   filename?: string
@@ -130,6 +137,19 @@ export interface IpcInvokeChannels {
   'mt::geogebra::save-request': { args: [filePath: string]; ret: void }
   'mt::geogebra::close-file': { args: [filePath: string]; ret: void }
   'mt::geogebra::show': { args: [bounds: DrawioBounds]; ret: void }
+  'mt::mindmap::open': {
+    args: [pathname: string, configuration?: MindMapConfiguration]
+    ret: void
+  }
+  'mt::mindmap::configure': { args: [configuration: MindMapConfiguration]; ret: void }
+  'mt::mindmap::save': { args: [data: unknown]; ret: void }
+  'mt::mindmap::save-request': { args: [filePath: string]; ret: void }
+  'mt::mindmap::close-file': { args: [filePath: string]; ret: void }
+  'mt::mindmap::show': { args: [bounds: DrawioBounds]; ret: void }
+  'mt::mindmap::ready': {
+    args: []
+    ret: { filePath: string; isDark: boolean; language: string } | null
+  }
   'mt::fonts::list': { args: []; ret: string[] }
   'mt::github-desktop::show': {
     args: [options: GitHubDesktopShowOptions]
@@ -227,7 +247,8 @@ export interface IpcSendChannels {
   'mt::close-window': []
   'mt::close-window-confirm': [
     unsavedFiles: UnsavedFile[],
-    unsavedDrawioFiles?: UnsavedDrawioFile[]
+    unsavedDrawioFiles?: UnsavedDrawioFile[],
+    unsavedMindMapFiles?: UnsavedMindMapFile[]
   ]
   'mt::cmd-close-window': []
   'mt::cmd-import-file': []
@@ -321,6 +342,10 @@ export interface IpcSendChannels {
   'mt::geogebra::state': [payload: { modified?: boolean }]
   'mt::drawio-menu-mode': [enabled: boolean]
   'mt::geogebra-menu-mode': [enabled: boolean]
+  'mt::mindmap-menu-mode': [enabled: boolean]
+  'mt::mindmap::hide': []
+  'mt::mindmap::set-bounds': [bounds: DrawioBounds]
+  'mt::mindmap::state': [payload: { modified?: boolean; data?: unknown }]
   'mt::drawio::set-bounds': [bounds: DrawioBounds]
   'mt::drawio-autosave-changed': [enabled: boolean]
   'mt::window::drop': [payload: unknown]
@@ -396,10 +421,26 @@ export interface IpcMainEventChannels {
       lastSavedHash?: string
     }
   ]
+  'mt::mindmap::opened': [payload: { filePath: string; title: string }]
+  'mt::mindmap::closed': [payload?: { filePath?: string }]
+  'mt::mindmap::state': [
+    payload: {
+      filePath: string
+      modified: boolean
+      isSaved: boolean
+      isSaving: boolean
+      saveError?: string
+      lastSavedHash?: string
+    }
+  ]
+  'mt::mindmap::init': [payload: { data?: unknown; language?: string; isDark?: boolean }]
+  'mt::mindmap::set-theme': [payload: { isDark: boolean }]
+  'mt::mindmap::request-save': []
   'mt::cm-copy-as-html': []
   'mt::cm-copy-as-rich': []
   'mt::cm-insert-paragraph': [direction: 'before' | 'after']
   'mt::cm-paste-as-plain-text': []
+  'mt::cm-table-batch-edit': []
   'mt::current-language': [language: string]
   'mt::editor-ask-file-save': []
   'mt::editor-ask-file-save-as': []

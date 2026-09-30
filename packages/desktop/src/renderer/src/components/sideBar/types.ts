@@ -21,6 +21,7 @@ export interface TreeFileNode {
   isMarkdown: boolean
   isDrawing?: boolean
   isGeoGebra?: boolean
+  isMindMap?: boolean
 }
 
 export interface TreeFolderNode {

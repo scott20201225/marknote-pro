@@ -93,6 +93,12 @@ extraResources:
       - '!notes-murokdev.html'
       - '!showcase.html'
       - '!web3d/js/properties_keys_!(en*|zh*|de*|es*|fr*|ja*|ko*|nl*|pt*|tr*).js'
+  - from: src/mindMapWebApp/mind-map
+    to: mindmap
+    filter:
+      - 'index.html'
+      - 'dist/**'
+      - '!dist/**/*.map'
 npmRebuild: false
 electronLanguages: # Keep Chromium/AppKit locales for the UI languages MarkText supports
   # Values must cover both spellings: "xx-YY" .pak files on Windows/Linux and
