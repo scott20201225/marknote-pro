@@ -12,7 +12,7 @@
     "check-prettier": "prettier --check \"./**/*.{ts,tsx,js,json,jsx,scss,html,yaml,yml}\""
   },
   "devDependencies": {
-    "node-gyp": "^10.1.0",
+    "node-gyp": "^12.4.0",
     "prettier": "^2.0.5",
     "typescript": "^5.4.5"
   },
