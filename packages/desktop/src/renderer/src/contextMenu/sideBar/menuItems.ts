@@ -46,6 +46,14 @@ export const getNewGeoGebraMenu = () => ({
   submenu: getNewGeoGebraModes()
 })
 
+export const getNewMindMap = () => ({
+  label: t('contextMenu.sideBar.newMindMap'),
+  id: 'newMindMapMenuItem',
+  click(_menuItem: unknown, _browserWindow: unknown) {
+    contextMenu.newMindMap()
+  }
+})
+
 export const getNewDirectory = () => ({
   label: t('contextMenu.sideBar.newDirectory'),
   id: 'newDirectoryMenuItem',
@@ -173,6 +181,7 @@ export const NEW_GROUP = getNewGroup()
 export const NEW_AREA = getNewArea()
 export const NEW_DOCUMENT = getNewDocument()
 export const NEW_GEOGEBRA = getNewGeoGebraMenu()
+export const NEW_MINDMAP = getNewMindMap()
 export const COPY = getCOPY()
 export const COPY_PATH = getCopyPath()
 export const CUT = getCUT()

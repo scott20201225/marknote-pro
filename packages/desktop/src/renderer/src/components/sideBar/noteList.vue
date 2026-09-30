@@ -139,13 +139,14 @@ const showCreateInput = computed<boolean>(() => {
     selectedKind.value === 'area' ||
     selectedKind.value === 'document' ||
     ((selectedKind.value === 'root' || selectedKind.value === 'group') &&
-      (cache.type === 'drawing' || cache.type === 'geogebra'))
+      (cache.type === 'drawing' || cache.type === 'geogebra' || cache.type === 'mindmap'))
   if (!canCreateInList) return false
   if (
     cache.type !== 'document' &&
     cache.type !== 'file' &&
     cache.type !== 'drawing' &&
-    cache.type !== 'geogebra'
+    cache.type !== 'geogebra' &&
+    cache.type !== 'mindmap'
   )
     return false
   return cache.dirname === listTarget.value.pathname

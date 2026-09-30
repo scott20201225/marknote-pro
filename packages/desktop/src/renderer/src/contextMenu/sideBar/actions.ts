@@ -19,6 +19,10 @@ export const newGeoGebra = (
   bus.emit('SIDEBAR::new', { type: 'geogebra', geoGebraMode: mode })
 }
 
+export const newMindMap = (_menuItem?: MenuItemArg, _browserWindow?: BrowserWindowArg): void => {
+  bus.emit('SIDEBAR::new', 'mindmap')
+}
+
 export const newDirectory = (_menuItem?: MenuItemArg, _browserWindow?: BrowserWindowArg): void => {
   bus.emit('SIDEBAR::new', 'directory')
 }
