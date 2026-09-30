@@ -493,11 +493,11 @@ export const buildGeoGebraThemeCss = (configuration: GeoGebraConfiguration): str
       --ggb-theme-switch-thumb-off: ${palette.switchThumbOff};
 
       /* GeoGebra built-in CSS vars mapped to tokens */
-      --ggb-primary-color: var(--ggb-theme-accent) !important;
-      --ggb-primary-variant-color: var(--ggb-theme-accent-light) !important;
-      --ggb-dark-color: var(--ggb-theme-accent-hover) !important;
-      --ggb-light-color: var(--ggb-theme-accent-light) !important;
-      --ggb-selection-color: var(--ggb-theme-selection) !important;
+      --ggb-primary-color: ${palette.accent} !important;
+      --ggb-primary-variant-color: ${palette.accentLight} !important;
+      --ggb-dark-color: ${palette.accentHover} !important;
+      --ggb-light-color: ${palette.accentLight} !important;
+      --ggb-selection-color: ${palette.selection} !important;
     }
 
     /* Global Selection Highlight */
@@ -636,7 +636,9 @@ export const buildGeoGebraThemeCss = (configuration: GeoGebraConfiguration): str
     .GeoGebraFrame .tvTable canvas,
     .GeoGebraFrame .mathTextField canvas,
     .GeoGebraFrame .evInputEditor canvas,
-    .GeoGebraFrame .CAS_outputPanel canvas {
+    .GeoGebraFrame .CAS_outputPanel canvas,
+    .GeoGebraFrame .textDialog .previewPanel canvas,
+    .GeoGebraFrame .insertPopup canvas {
       background: transparent !important;
       background-color: transparent !important;
     }
@@ -1880,6 +1882,108 @@ export const buildGeoGebraThemeCss = (configuration: GeoGebraConfiguration): str
       color: var(--ggb-theme-text) !important;
     }
 
+    /* 文本工具对话框与富文本编辑区 (Text Tool Dialog: .textDialog, .textTopBar, .textEditor, .previewPanel, .insertPopup) */
+    .GeoGebraFrame .textDialog .dialogMainPanel .dialogContent {
+      border: 1px solid var(--ggb-theme-border) !important;
+      background-color: var(--ggb-theme-surface) !important;
+      border-radius: 8px !important;
+      overflow: hidden !important;
+    }
+    .GeoGebraFrame .textDialog .dialogMainPanel .dialogContent .textTopBar {
+      background-color: var(--ggb-theme-panel) !important;
+      border-bottom: 1px solid var(--ggb-theme-border-subtle) !important;
+    }
+    .GeoGebraFrame .textDialog .textTopBar .iconButton img,
+    .GeoGebraFrame .textDialog .textTopBar .iconButton .gwt-Image,
+    .GeoGebraFrame .dialogComponent .iconButton img,
+    .GeoGebraFrame .dialogComponent .iconButton .gwt-Image {
+      opacity: 0.85 !important;
+    }
+    .GeoGebraFrame .textDialog .textTopBar .iconButton:hover img,
+    .GeoGebraFrame .textDialog .textTopBar .iconButton:hover .gwt-Image,
+    .GeoGebraFrame .textDialog .textTopBar .iconButton.active img,
+    .GeoGebraFrame .textDialog .textTopBar .iconButton.active .gwt-Image {
+      opacity: 1 !important;
+    }
+    .GeoGebraFrame .iconButton .textIcon,
+    .GeoGebraFrame .quickStylebar .iconButton.fontButton .textIcon {
+      color: var(--ggb-theme-text) !important;
+    }
+    .GeoGebraFrame .iconButton.active .textIcon,
+    .GeoGebraFrame .quickStylebar .iconButton.fontButton.active .textIcon {
+      color: var(--ggb-theme-accent) !important;
+    }
+    .GeoGebraFrame .iconButton.disabled:hover {
+      background-color: transparent !important;
+    }
+    .GeoGebraFrame .quickStyleBarPopup .lineThicknessItem .linePreview {
+      background-color: var(--ggb-theme-text) !important;
+    }
+    .GeoGebraFrame .textEditor,
+    .GeoGebraFrame .textDialog .dialogMainPanel .dialogContent .textEditor {
+      background-color: var(--ggb-theme-input) !important;
+      color: var(--ggb-theme-text) !important;
+      caret-color: var(--ggb-theme-accent) !important;
+      border-color: var(--ggb-theme-border-subtle) !important;
+    }
+    .GeoGebraFrame .textDialog .dialogMainPanel .dialogContent .textEditor {
+      border: none !important;
+      border-bottom: 1px solid var(--ggb-theme-border-subtle) !important;
+    }
+    .GeoGebraFrame .MaterialDialogBox .textEditor:focus:not([readonly]),
+    .GeoGebraFrame .dialogComponent .textEditor:focus:not([readonly]),
+    .GeoGebraFrame .textDialog .dialogMainPanel .dialogContent .textEditor:focus {
+      background-color: var(--ggb-theme-input-active) !important;
+      border-color: var(--ggb-theme-accent) !important;
+      box-shadow: inset 0 0 0 1px var(--ggb-theme-accent) !important;
+      outline: none !important;
+    }
+    .GeoGebraFrame .textDialog .dialogMainPanel .dialogContent .header {
+      background-color: var(--ggb-theme-panel) !important;
+      border-bottom: 1px solid var(--ggb-theme-border-subtle) !important;
+      color: var(--ggb-theme-text) !important;
+    }
+    .GeoGebraFrame .textDialog .dialogMainPanel .dialogContent .header.closed {
+      border-bottom: none !important;
+    }
+    .GeoGebraFrame .textDialog .dialogMainPanel .dialogContent .header .button,
+    .GeoGebraFrame .textDialog .dialogMainPanel .dialogContent .header .button:hover {
+      background: transparent !important;
+    }
+    .GeoGebraFrame .textDialog .dialogMainPanel .dialogContent .header .button .gwt-Label {
+      color: var(--ggb-theme-text) !important;
+    }
+    .GeoGebraFrame .textDialog .dialogMainPanel .dialogContent .previewPanel,
+    .GeoGebraFrame .textDialog .dialogMainPanel .dialogContent .previewPanel > div {
+      background-color: var(--ggb-theme-surface) !important;
+      color: var(--ggb-theme-text) !important;
+    }
+    .GeoGebraFrame .dynamicText {
+      background-color: var(--ggb-theme-panel) !important;
+      border: 1px solid var(--ggb-theme-border) !important;
+      color: var(--ggb-theme-text) !important;
+    }
+    .GeoGebraFrame .dynamicText:hover {
+      border-color: var(--ggb-theme-accent) !important;
+      background-color: var(--ggb-theme-hover) !important;
+    }
+    .GeoGebraFrame .textEditPopup {
+      background-color: var(--ggb-theme-elevated) !important;
+      border: 1px solid var(--ggb-theme-accent) !important;
+      box-shadow: var(--ggb-theme-shadow) !important;
+    }
+    .GeoGebraFrame .insertPopup,
+    .GeoGebraFrame .insertPopup .panelContainer,
+    .GeoGebraFrame .insertPopup .tabPanel {
+      background-color: var(--ggb-theme-elevated) !important;
+      color: var(--ggb-theme-text) !important;
+    }
+    .GeoGebraFrame .insertPopup .group .gwt-Label:hover,
+    .GeoGebraFrame .insertPopup .group canvas:hover {
+      background-color: var(--ggb-theme-hover) !important;
+      border-radius: 4px !important;
+    }
+
     .GeoGebraFrame .toast,
     .GeoGebraFrame .snackbarComponent,
     .GeoGebraFrame .dataImporter {
@@ -1916,16 +2020,28 @@ export const buildGeoGebraThemeCss = (configuration: GeoGebraConfiguration): str
     .GeoGebraFrame .tabButton:not(.selected) .gwt-Image,
     .GeoGebraFrame .header .tabButton:not(.selected) img,
     .GeoGebraFrame .header .tabButton:not(.selected) .gwt-Image,
-    /* 工具栏未选中的工具图标 (分类按钮与常规工具按钮) */
-    .GeoGebraFrame .toolsPanel .toolButton:not([selected=true]) img,
-    .GeoGebraFrame .toolsPanel .toolButton:not([selected=true]) .gwt-Image,
-    .GeoGebraFrame .toolsPanel .button:not([selected=true]) img,
-    .GeoGebraFrame .toolsPanel .button:not([selected=true]) .gwt-Image,
-    .GeoGebraFrame .toolsPanel img:not([selected=true]),
-    .GeoGebraFrame .toolButton:not([selected=true]) img,
-    .GeoGebraFrame .toolButton:not([selected=true]) .gwt-Image,
+    /* 工具栏所有工具图标 (分类按钮与常规工具按钮，选中时内部SVG仍为黑色线条，必须统一反色) */
+    .GeoGebraFrame .toolsPanel .toolButton img,
+    .GeoGebraFrame .toolsPanel .toolButton .gwt-Image,
+    .GeoGebraFrame .toolsPanel .button img,
+    .GeoGebraFrame .toolsPanel .button .gwt-Image,
+    .GeoGebraFrame .toolsPanel img,
+    .GeoGebraFrame .toolButton img,
+    .GeoGebraFrame .toolButton .gwt-Image,
     .GeoGebraFrame .toolPanel .gwt-Image,
     .GeoGebraFrame .toolPanelHeading .gwt-Image,
+    /* 通用未激活态图标按钮、文本弹窗格式栏与快速样式弹窗图标 */
+    .GeoGebraFrame .iconButton:not(.active) img,
+    .GeoGebraFrame .iconButton:not(.active) .gwt-Image,
+    .GeoGebraFrame .textTopBar .iconButton:not(.active) img,
+    .GeoGebraFrame .textTopBar .iconButton:not(.active) .gwt-Image,
+    .GeoGebraFrame .textDialog .header .button img,
+    .GeoGebraFrame .textDialog .header .button .gwt-Image,
+    .GeoGebraFrame .dialogComponent .iconButton:not(.active) img,
+    .GeoGebraFrame .dialogComponent .iconButton:not(.active) .gwt-Image,
+    .GeoGebraFrame .quickStyleBarPopup .iconButton:not(.active) img,
+    .GeoGebraFrame .quickStyleBarPopup .iconButton:not(.active) .gwt-Image,
+    .GeoGebraFrame .quickStyleBarPopup .checkMarkMenuItem img,
     /* 数值表格操作按钮图标 */
     .GeoGebraFrame .tvTable th .button img,
     .GeoGebraFrame .tvTable .content .button img,
@@ -1984,7 +2100,7 @@ export const buildGeoGebraThemeCss = (configuration: GeoGebraConfiguration): str
       filter: invert(0.88) hue-rotate(180deg) brightness(0.95) contrast(0.95) !important;
     }
 
-    /* 代数区数学公式、单元格就地编辑器、数学输入框与 CAS 公式输出 Canvas 浅色自适应反色 */
+    /* 代数区数学公式、单元格就地编辑器、数学输入框、文本预览与 CAS 公式输出 Canvas 浅色自适应反色 */
     .GeoGebraFrame .algebraView canvas,
     .GeoGebraFrame .algebraPanel canvas,
     .GeoGebraFrame .avItem canvas,
@@ -2002,7 +2118,9 @@ export const buildGeoGebraThemeCss = (configuration: GeoGebraConfiguration): str
     .GeoGebraFrame .tvTable .tableEditor canvas,
     .GeoGebraFrame .mathTextField canvas,
     .GeoGebraFrame .evInputEditor canvas,
-    .GeoGebraFrame .CAS_outputPanel canvas {
+    .GeoGebraFrame .CAS_outputPanel canvas,
+    .GeoGebraFrame .textDialog .previewPanel canvas,
+    .GeoGebraFrame .insertPopup canvas {
       filter: invert(1) hue-rotate(180deg) !important;
       background: transparent !important;
       background-color: transparent !important;
@@ -2013,10 +2131,6 @@ export const buildGeoGebraThemeCss = (configuration: GeoGebraConfiguration): str
     .GeoGebraFrame .tabButton.selected .gwt-Image,
     .GeoGebraFrame .header .tabButton.selected img,
     .GeoGebraFrame .header .tabButton.selected .gwt-Image,
-    .GeoGebraFrame .toolsPanel .toolButton[selected=true] img,
-    .GeoGebraFrame .toolsPanel .toolButton[selected=true] .gwt-Image,
-    .GeoGebraFrame .toolsPanel .button[selected=true] img,
-    .GeoGebraFrame .toolButton[selected=true] img,
     .GeoGebraFrame .headerLogo,
     .GeoGebraFrame .profileImage {
       filter: none !important;
@@ -2049,7 +2163,7 @@ export const syncGeoGebraGraphics = async (
               try {
                 const el = this.canvas;
                 const inEditor = el.closest && el.closest(
-                  '.algebraView, .algebraPanel, .scrollableTextBox, .latexItem, .newRadioButtonTreeItemParent, .avItem, .avInputItem, .tableEditor, .tableEditorWrap, .tvTable, .mathTextField, .evInputEditor'
+                  '.algebraView, .algebraPanel, .scrollableTextBox, .latexItem, .newRadioButtonTreeItemParent, .avItem, .avInputItem, .tableEditor, .tableEditorWrap, .tvTable, .mathTextField, .evInputEditor, .previewPanel, .insertPopup, .textDialog'
                 );
                 if (inEditor) {
                   const fs = String(this.fillStyle || '').toLowerCase().replace(/\\s+/g, '');
@@ -2090,7 +2204,8 @@ export const syncGeoGebraGraphics = async (
               'line3d',
               'segment3d',
               'ray3d',
-              'vector3d'
+              'vector3d',
+              'text'
             ]
             if (targetTypes.includes(type)) {
               const hex = (api.getColor(name) || '').toUpperCase()
