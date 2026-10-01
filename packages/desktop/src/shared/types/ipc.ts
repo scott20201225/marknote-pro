@@ -96,6 +96,8 @@ export interface MindMapConfiguration {
   language: string
   dark: boolean
   theme: string
+  mindMapTheme?: string
+  backgroundColor?: string
 }
 
 export interface DrawioExportPayload {
@@ -148,7 +150,15 @@ export interface IpcInvokeChannels {
   'mt::mindmap::show': { args: [bounds: DrawioBounds]; ret: void }
   'mt::mindmap::ready': {
     args: []
-    ret: { filePath: string; isDark: boolean; language: string } | null
+    ret: {
+      filePath: string
+      data?: unknown
+      isDark: boolean
+      language: string
+      theme?: string
+      mindMapTheme?: string
+      backgroundColor?: string
+    } | null
   }
   'mt::fonts::list': { args: []; ret: string[] }
   'mt::github-desktop::show': {
@@ -433,8 +443,25 @@ export interface IpcMainEventChannels {
       lastSavedHash?: string
     }
   ]
-  'mt::mindmap::init': [payload: { data?: unknown; language?: string; isDark?: boolean }]
-  'mt::mindmap::set-theme': [payload: { isDark: boolean }]
+  'mt::mindmap::init': [
+    payload: {
+      filePath?: string
+      data?: unknown
+      language?: string
+      isDark?: boolean
+      theme?: string
+      mindMapTheme?: string
+      backgroundColor?: string
+    }
+  ]
+  'mt::mindmap::set-theme': [
+    payload: {
+      isDark: boolean
+      theme?: string
+      mindMapTheme?: string
+      backgroundColor?: string
+    }
+  ]
   'mt::mindmap::request-save': []
   'mt::cm-copy-as-html': []
   'mt::cm-copy-as-rich': []

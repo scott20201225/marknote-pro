@@ -21,6 +21,7 @@
       margin: 0;
       padding: 0;
       overflow: hidden;
+      background-color: transparent;
     }
     /* 隐藏与桌面宿主文件/目录管理冲突的纯前端独立按钮 */
     .toolbarBlock:nth-child(2) > .toolbarBtn:nth-child(1), /* 目录 */
@@ -39,6 +40,8 @@
     let currentConfig = {}
     let currentLang = 'zh'
     let currentLocalConfig = { isDark: false }
+    let currentMindMapTheme = ''
+    let currentBackgroundColor = ''
     let hasInitedApp = false
 
     const DEFAULT_DATA = {
@@ -55,6 +58,53 @@
       layout: 'logicalStructure',
       config: {},
       view: null
+    }
+
+    const applyLocalConfig = (config) => {
+      if (!config) return
+      currentLocalConfig = { ...currentLocalConfig, ...config }
+      if (window.__vueApp && window.__vueApp.$store) {
+        window.__vueApp.$store.commit('setLocalConfig', config)
+      } else {
+        const appEl = document.getElementById('app') || document.querySelector('.container')
+        if (appEl && appEl.__vue__ && appEl.__vue__.$store) {
+          appEl.__vue__.$store.commit('setLocalConfig', config)
+        }
+      }
+      if (typeof config?.isDark === 'boolean') {
+        document.body.classList.toggle('isDark', config.isDark)
+      }
+    }
+
+    const applyMindMapTheme = (mindMapTheme, backgroundColor) => {
+      if (mindMapTheme) currentMindMapTheme = mindMapTheme
+      if (backgroundColor) currentBackgroundColor = backgroundColor
+
+      if (currentBackgroundColor) {
+        document.documentElement.style.backgroundColor = currentBackgroundColor
+        document.body.style.backgroundColor = currentBackgroundColor
+      }
+
+      if (window.__mindMap) {
+        const hasTheme = !!currentMindMapTheme && typeof window.__mindMap.setTheme === 'function'
+        const hasBg = !!currentBackgroundColor && typeof window.__mindMap.setThemeConfig === 'function'
+
+        if (hasTheme && window.__mindMap.getTheme() !== currentMindMapTheme) {
+          window.__mindMap.setTheme(currentMindMapTheme, hasBg)
+        }
+
+        if (hasBg) {
+          const currentCustom = typeof window.__mindMap.getCustomThemeConfig === 'function'
+            ? (window.__mindMap.getCustomThemeConfig() || {})
+            : {}
+          window.__mindMap.setThemeConfig({
+            ...currentCustom,
+            backgroundColor: currentBackgroundColor
+          })
+        } else if (hasTheme && typeof window.__mindMap.render === 'function') {
+          window.__mindMap.render()
+        }
+      }
     }
 
     window.takeOverAppMethods = {
@@ -87,18 +137,42 @@
       if (payload.language) currentLang = payload.language
       if (typeof payload.isDark === 'boolean') {
         currentLocalConfig.isDark = payload.isDark
+        applyLocalConfig({ isDark: payload.isDark })
       }
+      if (payload.mindMapTheme) currentMindMapTheme = payload.mindMapTheme
+      if (payload.backgroundColor) currentBackgroundColor = payload.backgroundColor
+
+      if (currentMindMapData) {
+        if (!currentMindMapData.theme) {
+          currentMindMapData.theme = { template: currentMindMapTheme || 'classic4', config: {} }
+        }
+        if (currentMindMapTheme) {
+          currentMindMapData.theme.template = currentMindMapTheme
+        }
+        if (currentBackgroundColor) {
+          currentMindMapData.theme.config = {
+            ...(currentMindMapData.theme.config || {}),
+            backgroundColor: currentBackgroundColor
+          }
+        }
+      }
+
+      if (currentBackgroundColor) {
+        document.documentElement.style.backgroundColor = currentBackgroundColor
+        document.body.style.backgroundColor = currentBackgroundColor
+      }
+
       if (!hasInitedApp) {
         hasInitedApp = true
         if (typeof window.initApp === 'function') {
-          window.initApp()
+          const app = window.initApp()
+          if (app) window.__vueApp = app
         }
       } else if (window.$bus && currentMindMapData) {
         window.$bus.$emit('setData', currentMindMapData)
-        if (typeof payload.isDark === 'boolean') {
-          window.$bus.$emit('setLocalConfig', { isDark: payload.isDark })
-        }
       }
+
+      applyMindMapTheme(currentMindMapTheme, currentBackgroundColor)
     }
 
     if (window.electron && window.electron.ipcRenderer) {
@@ -107,10 +181,27 @@
       })
 
       window.electron.ipcRenderer.on('mt::mindmap::set-theme', (_event, payload) => {
-        if (typeof payload?.isDark === 'boolean') {
+        if (!payload) return
+        if (typeof payload.isDark === 'boolean') {
           currentLocalConfig.isDark = payload.isDark
+          applyLocalConfig({ isDark: payload.isDark })
           if (window.$bus) {
             window.$bus.$emit('setLocalConfig', { isDark: payload.isDark })
+          }
+        }
+        applyMindMapTheme(payload.mindMapTheme, payload.backgroundColor)
+        if (currentMindMapData) {
+          if (!currentMindMapData.theme) {
+            currentMindMapData.theme = { template: payload.mindMapTheme || 'classic4', config: {} }
+          }
+          if (payload.mindMapTheme) {
+            currentMindMapData.theme.template = payload.mindMapTheme
+          }
+          if (payload.backgroundColor) {
+            currentMindMapData.theme.config = {
+              ...(currentMindMapData.theme.config || {}),
+              backgroundColor: payload.backgroundColor
+            }
           }
         }
       })
@@ -128,6 +219,12 @@
       if (window.$bus) {
         window.$bus.$on('app_inited', (mindMap) => {
           window.__mindMap = mindMap
+          if (currentMindMapTheme || currentBackgroundColor) {
+            applyMindMapTheme(currentMindMapTheme, currentBackgroundColor)
+          }
+        })
+        window.$bus.$on('setLocalConfig', (config) => {
+          applyLocalConfig(config)
         })
       }
       if (window.electron && window.electron.ipcRenderer) {
@@ -138,12 +235,23 @@
         // Standalone fallback
         if (!hasInitedApp && typeof window.initApp === 'function') {
           hasInitedApp = true
-          window.initApp()
+          const app = window.initApp()
+          if (app) window.__vueApp = app
         }
       }
     }
   </script>
   <script src="dist/js/chunk-vendors.js?720fe4d863ea0fdcc0fb"></script>
   <script src="dist/js/app.js?720fe4d863ea0fdcc0fb"></script>
+  <script>
+    if (typeof window.initApp === 'function') {
+      const rawInitApp = window.initApp
+      window.initApp = function() {
+        const app = rawInitApp.apply(this, arguments)
+        if (app) window.__vueApp = app
+        return app
+      }
+    }
+  </script>
 </body>
 </html>

@@ -7,6 +7,7 @@ import type { Rectangle } from 'electron'
 import log from 'electron-log'
 import { writeFile } from '../filesystem'
 import type { MindMapConfiguration } from '../../shared/types/ipc'
+import { getMindMapThemeInfo } from '../../common/mindmapTheme'
 
 const MINDMAP_EXTENSION = '.smm'
 const DEFAULT_MINDMAP_DATA = {
@@ -23,6 +24,21 @@ const DEFAULT_MINDMAP_DATA = {
   layout: 'logicalStructure',
   config: {},
   view: null
+}
+
+const getInitialMindMapData = (configuration?: MindMapConfiguration) => {
+  const themeInfo = getMindMapThemeInfo(configuration?.theme)
+  const template = configuration?.mindMapTheme || themeInfo.mindMapTheme
+  const backgroundColor = configuration?.backgroundColor || themeInfo.backgroundColor
+  return {
+    ...DEFAULT_MINDMAP_DATA,
+    theme: {
+      template,
+      config: {
+        backgroundColor
+      }
+    }
+  }
 }
 
 interface MindMapDocumentEntry {
@@ -71,11 +87,18 @@ const normalizeBounds = (bounds: Rectangle): Rectangle => ({
 const getOrCreateWindowEntry = (win: BrowserWindow): MindMapWindowEntry => {
   const existing = views.get(win.id)
   if (existing) return existing
+  const defaultThemeInfo = getMindMapThemeInfo('light')
   const entry: MindMapWindowEntry = {
     documents: new Map(),
     activePath: null,
     visible: false,
-    configuration: { language: 'zh', dark: false, theme: 'light' }
+    configuration: {
+      language: 'zh',
+      dark: false,
+      theme: 'light',
+      mindMapTheme: defaultThemeInfo.mindMapTheme,
+      backgroundColor: defaultThemeInfo.backgroundColor
+    }
   }
   views.set(win.id, entry)
   win.on('closed', () => {
@@ -116,8 +139,12 @@ const createDocumentEntry = (win: BrowserWindow, filePath: string): MindMapDocum
   return entry
 }
 
-const readMindMapData = async (filePath: string): Promise<unknown> => {
-  if (!(await fs.pathExists(filePath))) return DEFAULT_MINDMAP_DATA
+const readMindMapData = async (
+  filePath: string,
+  configuration?: MindMapConfiguration
+): Promise<unknown> => {
+  const fallbackData = getInitialMindMapData(configuration)
+  if (!(await fs.pathExists(filePath))) return fallbackData
   try {
     const content = await fsPromises.readFile(filePath, 'utf8')
     if (content.trim()) {
@@ -126,8 +153,8 @@ const readMindMapData = async (filePath: string): Promise<unknown> => {
   } catch (error) {
     log.warn('解析思维导图数据失败，使用默认结构:', error)
   }
-  await writeFile(filePath, JSON.stringify(DEFAULT_MINDMAP_DATA, null, 2), undefined, 'utf8')
-  return DEFAULT_MINDMAP_DATA
+  await writeFile(filePath, JSON.stringify(fallbackData, null, 2), undefined, 'utf8')
+  return fallbackData
 }
 
 const ensureViewLoaded = async (
@@ -137,6 +164,9 @@ const ensureViewLoaded = async (
     data: unknown
     isDark: boolean
     language: string
+    theme?: string
+    mindMapTheme?: string
+    backgroundColor?: string
   }
 ): Promise<void> => {
   if (entry.loaded) {
@@ -243,6 +273,13 @@ export const openMindMapFile = async (
   if (configuration) {
     windowEntry.configuration = { ...windowEntry.configuration, ...configuration }
   }
+  const themeInfo = getMindMapThemeInfo(windowEntry.configuration.theme)
+  const isDark =
+    typeof windowEntry.configuration.dark === 'boolean'
+      ? windowEntry.configuration.dark
+      : themeInfo.isDark
+  const mindMapTheme = windowEntry.configuration.mindMapTheme || themeInfo.mindMapTheme
+  const backgroundColor = windowEntry.configuration.backgroundColor || themeInfo.backgroundColor
 
   let entry = windowEntry.documents.get(filePath)
   if (!entry) {
@@ -252,12 +289,15 @@ export const openMindMapFile = async (
   windowEntry.activePath = filePath
 
   try {
-    const data = await readMindMapData(filePath)
+    const data = await readMindMapData(filePath, windowEntry.configuration)
     await ensureViewLoaded(entry, {
       filePath,
       data,
-      isDark: windowEntry.configuration.dark,
-      language: windowEntry.configuration.language
+      isDark,
+      language: windowEntry.configuration.language,
+      theme: windowEntry.configuration.theme,
+      mindMapTheme,
+      backgroundColor
     })
 
     win.webContents.send('mt::mindmap::opened', { filePath, title: path.basename(filePath) })
@@ -272,8 +312,11 @@ export const openMindMapFile = async (
 }
 
 export const createMindMapFile = async (owner?: BrowserWindow | null): Promise<void> => {
-  const result = owner
-    ? await dialog.showSaveDialog(owner, {
+  const win = owner ?? BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
+  const windowEntry = win ? views.get(win.id) : undefined
+  const initialData = getInitialMindMapData(windowEntry?.configuration)
+  const result = win
+    ? await dialog.showSaveDialog(win, {
         title: '新建思维导图',
         defaultPath: path.join(app.getPath('documents'), '未命名.smm'),
         filters: [{ name: '思维导图', extensions: ['smm'] }]
@@ -287,8 +330,8 @@ export const createMindMapFile = async (owner?: BrowserWindow | null): Promise<v
   const filePath = isMindMapFile(result.filePath)
     ? result.filePath
     : `${result.filePath}${MINDMAP_EXTENSION}`
-  await writeFile(filePath, JSON.stringify(DEFAULT_MINDMAP_DATA, null, 2), undefined, 'utf8')
-  await openMindMapFile(filePath, owner)
+  await writeFile(filePath, JSON.stringify(initialData, null, 2), undefined, 'utf8')
+  await openMindMapFile(filePath, win)
 }
 
 export const requestMindMapSave = async (win: BrowserWindow, filePath: string): Promise<void> => {
@@ -361,11 +404,22 @@ export const closeMindMapDocument = (win: BrowserWindow, filePath: string): void
 export const configureMindMap = (win: BrowserWindow, configuration: MindMapConfiguration): void => {
   const windowEntry = views.get(win.id)
   if (!windowEntry) return
-  windowEntry.configuration = configuration
+  windowEntry.configuration = { ...windowEntry.configuration, ...configuration }
+  const themeInfo = getMindMapThemeInfo(windowEntry.configuration.theme)
+  const mindMapTheme = windowEntry.configuration.mindMapTheme || themeInfo.mindMapTheme
+  const backgroundColor = windowEntry.configuration.backgroundColor || themeInfo.backgroundColor
+  const isDark =
+    typeof windowEntry.configuration.dark === 'boolean'
+      ? windowEntry.configuration.dark
+      : themeInfo.isDark
+
   for (const doc of windowEntry.documents.values()) {
     if (!doc.view.webContents.isDestroyed()) {
       doc.view.webContents.send('mt::mindmap::set-theme', {
-        isDark: configuration.dark
+        isDark,
+        theme: windowEntry.configuration.theme,
+        mindMapTheme,
+        backgroundColor
       })
     }
   }
@@ -430,16 +484,28 @@ export const registerMindMapHandlers = (): void => {
     const win = BrowserWindow.fromWebContents(event.sender)
     if (win && typeof filePath === 'string') closeMindMapDocument(win, filePath)
   })
-  ipcMain.handle('mt::mindmap::ready', (event) => {
+  ipcMain.handle('mt::mindmap::ready', async (event) => {
     const owner = viewOwners.get(event.sender.id)
     if (!owner) return null
     const windowEntry = views.get(owner.windowId)
     const entry = windowEntry?.documents.get(owner.filePath)
     if (!entry || !windowEntry) return null
+    const themeInfo = getMindMapThemeInfo(windowEntry.configuration.theme)
+    const isDark =
+      typeof windowEntry.configuration.dark === 'boolean'
+        ? windowEntry.configuration.dark
+        : themeInfo.isDark
+    const mindMapTheme = windowEntry.configuration.mindMapTheme || themeInfo.mindMapTheme
+    const backgroundColor = windowEntry.configuration.backgroundColor || themeInfo.backgroundColor
+    const data = await readMindMapData(entry.filePath, windowEntry.configuration)
     return {
       filePath: entry.filePath,
-      isDark: windowEntry.configuration.dark,
-      language: windowEntry.configuration.language
+      data,
+      isDark,
+      language: windowEntry.configuration.language,
+      theme: windowEntry.configuration.theme,
+      mindMapTheme,
+      backgroundColor
     }
   })
 }
