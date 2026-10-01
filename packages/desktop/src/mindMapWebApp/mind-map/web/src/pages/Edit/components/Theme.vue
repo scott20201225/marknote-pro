@@ -72,13 +72,22 @@ export default {
     }),
 
     groupList() {
-      return [...this.defaultGroupList, ...this.extendThemeGroupList]
+      let list = []
+      if (this.isDark) {
+        list = this.defaultGroupList.filter(item => item.name === this.$t('theme.dark'))
+      } else {
+        list = this.defaultGroupList.filter(
+          item => item.name === this.$t('theme.classics') || item.name === this.$t('theme.simple')
+        )
+      }
+      return [...list, ...this.extendThemeGroupList]
     },
 
     currentList() {
-      return this.groupList.find(item => {
+      const target = this.groupList.find(item => {
         return item.name === this.activeName
-      }).list
+      })
+      return target ? target.list : (this.groupList[0] ? this.groupList[0].list : [])
     }
   },
   watch: {
@@ -89,6 +98,13 @@ export default {
       } else {
         this.$refs.sidebar.show = false
       }
+    },
+    isDark() {
+      this.$nextTick(() => {
+        if (!this.groupList.some(item => item.name === this.activeName)) {
+          this.activeName = this.groupList[0]?.name || ''
+        }
+      })
     }
   },
   created() {
@@ -166,8 +182,6 @@ export default {
           distinguishCancelAndClose: true,
           callback: action => {
             if (action === 'confirm') {
-              this.mindMap.setThemeConfig({}, true)
-              this.data.theme.config = {}
               this.changeTheme(theme, {})
             } else if (action === 'cancel') {
               this.changeTheme(theme, customThemeConfig)
@@ -181,11 +195,34 @@ export default {
 
     changeTheme(theme, config) {
       this.$bus.$emit('showLoading')
-      this.mindMap.setTheme(theme.value)
+      const currentBg = window.__currentBackgroundColor || ''
+      const customConfig = {
+        ...(config || {}),
+        backgroundColor: currentBg,
+        _isCustomTheme: true,
+        _customThemeIsDark: this.isDark
+      }
+      this.mindMap.setTheme(theme.value, true)
+      if (typeof this.mindMap.setThemeConfig === 'function') {
+        this.mindMap.setThemeConfig(customConfig)
+      }
+      if (this.mindMap.el && currentBg) {
+        this.mindMap.el.style.backgroundColor = currentBg
+        this.mindMap.el.style.backgroundImage = 'none'
+      }
+      if (this.$bus) {
+        this.$bus.$emit('marknotepro::custom_theme_chosen', {
+          template: theme.value,
+          isDark: this.isDark,
+          config: customConfig
+        })
+      }
       storeData({
         theme: {
           template: theme.value,
-          config
+          config: customConfig,
+          _isCustomTheme: true,
+          _customThemeIsDark: this.isDark
         }
       })
     },
@@ -259,9 +296,17 @@ export default {
 
       .imgBox {
         width: 100%;
+        border-radius: 8px;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
 
         img {
           width: 100%;
+          height: auto;
+          display: block;
+          border-radius: 8px;
         }
       }
       .name {

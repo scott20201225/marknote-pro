@@ -288,6 +288,7 @@ export const marknoteThemeDefinitions: Readonly<Record<string, MindMapThemeDefin
     template: 'classic',
     themeConfig: (bg) => ({
       backgroundColor: bg,
+      backgroundImage: 'none',
       lineColor: '#ffffff',
       root: { fillColor: '#78a9ff', color: '#161616' }
     })
@@ -423,6 +424,7 @@ export const getMindMapThemeInfo = (theme: string | undefined): MindMapThemeInfo
     isDark,
     themeConfig: {
       backgroundColor,
+      backgroundImage: 'none',
       ...customConfig
     }
   }
