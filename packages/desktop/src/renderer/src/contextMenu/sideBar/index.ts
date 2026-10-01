@@ -3,6 +3,7 @@ import {
   getNewFile,
   getNewDrawing,
   getNewGeoGebraMenu,
+  getNewMindMap,
   getNewDirectory,
   getNewGroup,
   getNewArea,
@@ -61,6 +62,7 @@ export const showContextMenu = (
     contextItems = [
       getNewDrawing(),
       getNewGeoGebraMenu(),
+      getNewMindMap(),
       getNewGroup(),
       getRENAME(),
       SEPARATOR,
@@ -94,6 +96,7 @@ export const showContextMenu = (
     contextItems = [
       getNewDrawing(),
       getNewGeoGebraMenu(),
+      getNewMindMap(),
       getNewDocument(),
       SEPARATOR,
       getExpandAll(),
@@ -113,6 +116,7 @@ export const showContextMenu = (
       getNewDocument(),
       getNewDrawing(),
       getNewGeoGebraMenu(),
+      getNewMindMap(),
       SEPARATOR,
       getCOPY(),
       getMOVE_TO(),
@@ -129,6 +133,7 @@ export const showContextMenu = (
       getNewFile(),
       getNewDrawing(),
       getNewGeoGebraMenu(),
+      getNewMindMap(),
       getNewDirectory(),
       SEPARATOR,
       getCOPY(),
@@ -168,6 +173,7 @@ export const showNoteListContextMenu = (
     contextItems = [
       getNewDrawing(),
       getNewGeoGebraMenu(),
+      getNewMindMap(),
       getNewGroup(),
       SEPARATOR,
       getRENAME(),
@@ -193,6 +199,7 @@ export const showNoteListContextMenu = (
     contextItems = [
       getNewDrawing(),
       getNewGeoGebraMenu(),
+      getNewMindMap(),
       getNewDocument(),
       SEPARATOR,
       getMOVE_TO(),
@@ -209,6 +216,7 @@ export const showNoteListContextMenu = (
       getNewDocument(),
       getNewDrawing(),
       getNewGeoGebraMenu(),
+      getNewMindMap(),
       SEPARATOR,
       getMOVE_TO(),
       SEPARATOR,
@@ -220,7 +228,7 @@ export const showNoteListContextMenu = (
       getShowInFolder()
     ]
   } else {
-    contextItems = [getNewDocument(), SEPARATOR, getPASTE(), getCopyPath()]
+    contextItems = [getNewDocument(), getNewMindMap(), SEPARATOR, getPASTE(), getCopyPath()]
   }
 
   const items = normalizeContextItems(contextItems, hasPathCache)

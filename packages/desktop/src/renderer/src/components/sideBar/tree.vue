@@ -203,7 +203,9 @@ const isCreatingNoteInListMode = computed<boolean>(() => {
     noteNavigationMode.value === 'tree-list' &&
     (createCacheType.value === 'document' ||
       createCacheType.value === 'file' ||
-      createCacheType.value === 'geogebra')
+      createCacheType.value === 'drawing' ||
+      createCacheType.value === 'geogebra' ||
+      createCacheType.value === 'mindmap')
   )
 })
 

@@ -184,7 +184,8 @@ const isCreatingNoteInListMode = computed<boolean>(() => {
     (createCacheType.value === 'document' ||
       createCacheType.value === 'file' ||
       createCacheType.value === 'drawing' ||
-      createCacheType.value === 'geogebra')
+      createCacheType.value === 'geogebra' ||
+      createCacheType.value === 'mindmap')
   )
 })
 const showTreeCreateInput = computed<boolean>(() => {
