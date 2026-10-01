@@ -42,6 +42,7 @@
     let currentLocalConfig = { isDark: false }
     let currentMindMapTheme = ''
     let currentBackgroundColor = ''
+    let currentThemeConfig = null
     let hasInitedApp = false
 
     const DEFAULT_DATA = {
@@ -76,9 +77,10 @@
       }
     }
 
-    const applyMindMapTheme = (mindMapTheme, backgroundColor) => {
+    const applyMindMapTheme = (mindMapTheme, backgroundColor, themeConfig) => {
       if (mindMapTheme) currentMindMapTheme = mindMapTheme
       if (backgroundColor) currentBackgroundColor = backgroundColor
+      if (themeConfig !== undefined) currentThemeConfig = themeConfig
 
       if (currentBackgroundColor) {
         document.documentElement.style.backgroundColor = currentBackgroundColor
@@ -87,21 +89,25 @@
 
       if (window.__mindMap) {
         const hasTheme = !!currentMindMapTheme && typeof window.__mindMap.setTheme === 'function'
-        const hasBg = !!currentBackgroundColor && typeof window.__mindMap.setThemeConfig === 'function'
+        const hasCustomConfig =
+          (!!currentBackgroundColor || !!currentThemeConfig) &&
+          typeof window.__mindMap.setThemeConfig === 'function'
 
-        if (hasTheme && window.__mindMap.getTheme() !== currentMindMapTheme) {
-          window.__mindMap.setTheme(currentMindMapTheme, hasBg)
+        const themeChanged = hasTheme && window.__mindMap.getTheme() !== currentMindMapTheme
+
+        if (themeChanged) {
+          window.__mindMap.setTheme(currentMindMapTheme, hasCustomConfig)
         }
 
-        if (hasBg) {
-          const currentCustom = typeof window.__mindMap.getCustomThemeConfig === 'function'
-            ? (window.__mindMap.getCustomThemeConfig() || {})
-            : {}
-          window.__mindMap.setThemeConfig({
-            ...currentCustom,
-            backgroundColor: currentBackgroundColor
-          })
-        } else if (hasTheme && typeof window.__mindMap.render === 'function') {
+        if (hasCustomConfig) {
+          const mergedConfig = {
+            ...(currentThemeConfig || {})
+          }
+          if (currentBackgroundColor) {
+            mergedConfig.backgroundColor = currentBackgroundColor
+          }
+          window.__mindMap.setThemeConfig(mergedConfig)
+        } else if (themeChanged && typeof window.__mindMap.render === 'function') {
           window.__mindMap.render()
         }
       }
@@ -141,6 +147,7 @@
       }
       if (payload.mindMapTheme) currentMindMapTheme = payload.mindMapTheme
       if (payload.backgroundColor) currentBackgroundColor = payload.backgroundColor
+      if (payload.themeConfig) currentThemeConfig = payload.themeConfig
 
       if (currentMindMapData) {
         if (!currentMindMapData.theme) {
@@ -149,10 +156,13 @@
         if (currentMindMapTheme) {
           currentMindMapData.theme.template = currentMindMapTheme
         }
-        if (currentBackgroundColor) {
+        if (currentBackgroundColor || currentThemeConfig) {
           currentMindMapData.theme.config = {
             ...(currentMindMapData.theme.config || {}),
-            backgroundColor: currentBackgroundColor
+            ...(currentThemeConfig || {})
+          }
+          if (currentBackgroundColor) {
+            currentMindMapData.theme.config.backgroundColor = currentBackgroundColor
           }
         }
       }
@@ -172,7 +182,7 @@
         window.$bus.$emit('setData', currentMindMapData)
       }
 
-      applyMindMapTheme(currentMindMapTheme, currentBackgroundColor)
+      applyMindMapTheme(currentMindMapTheme, currentBackgroundColor, currentThemeConfig)
     }
 
     if (window.electron && window.electron.ipcRenderer) {
@@ -189,7 +199,10 @@
             window.$bus.$emit('setLocalConfig', { isDark: payload.isDark })
           }
         }
-        applyMindMapTheme(payload.mindMapTheme, payload.backgroundColor)
+        if (payload.themeConfig) {
+          currentThemeConfig = payload.themeConfig
+        }
+        applyMindMapTheme(payload.mindMapTheme, payload.backgroundColor, payload.themeConfig)
         if (currentMindMapData) {
           if (!currentMindMapData.theme) {
             currentMindMapData.theme = { template: payload.mindMapTheme || 'classic4', config: {} }
@@ -197,10 +210,13 @@
           if (payload.mindMapTheme) {
             currentMindMapData.theme.template = payload.mindMapTheme
           }
-          if (payload.backgroundColor) {
+          if (payload.backgroundColor || payload.themeConfig) {
             currentMindMapData.theme.config = {
               ...(currentMindMapData.theme.config || {}),
-              backgroundColor: payload.backgroundColor
+              ...(payload.themeConfig || {})
+            }
+            if (payload.backgroundColor) {
+              currentMindMapData.theme.config.backgroundColor = payload.backgroundColor
             }
           }
         }
@@ -219,8 +235,8 @@
       if (window.$bus) {
         window.$bus.$on('app_inited', (mindMap) => {
           window.__mindMap = mindMap
-          if (currentMindMapTheme || currentBackgroundColor) {
-            applyMindMapTheme(currentMindMapTheme, currentBackgroundColor)
+          if (currentMindMapTheme || currentBackgroundColor || currentThemeConfig) {
+            applyMindMapTheme(currentMindMapTheme, currentBackgroundColor, currentThemeConfig)
           }
         })
         window.$bus.$on('setLocalConfig', (config) => {

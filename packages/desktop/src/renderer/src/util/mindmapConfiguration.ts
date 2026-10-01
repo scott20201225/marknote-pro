@@ -11,7 +11,8 @@ export const getMindMapConfiguration = (): MindMapConfiguration => {
     dark: document.body.classList.contains('dark'),
     theme,
     mindMapTheme: themeInfo.mindMapTheme,
-    backgroundColor: themeInfo.backgroundColor
+    backgroundColor: themeInfo.backgroundColor,
+    themeConfig: themeInfo.themeConfig
   }
 }
 

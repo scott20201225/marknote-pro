@@ -30,13 +30,16 @@ const getInitialMindMapData = (configuration?: MindMapConfiguration) => {
   const themeInfo = getMindMapThemeInfo(configuration?.theme)
   const template = configuration?.mindMapTheme || themeInfo.mindMapTheme
   const backgroundColor = configuration?.backgroundColor || themeInfo.backgroundColor
+  const themeConfig = {
+    ...themeInfo.themeConfig,
+    ...(configuration?.themeConfig || {}),
+    backgroundColor
+  }
   return {
     ...DEFAULT_MINDMAP_DATA,
     theme: {
       template,
-      config: {
-        backgroundColor
-      }
+      config: themeConfig
     }
   }
 }
@@ -97,7 +100,8 @@ const getOrCreateWindowEntry = (win: BrowserWindow): MindMapWindowEntry => {
       dark: false,
       theme: 'light',
       mindMapTheme: defaultThemeInfo.mindMapTheme,
-      backgroundColor: defaultThemeInfo.backgroundColor
+      backgroundColor: defaultThemeInfo.backgroundColor,
+      themeConfig: defaultThemeInfo.themeConfig
     }
   }
   views.set(win.id, entry)
@@ -167,6 +171,7 @@ const ensureViewLoaded = async (
     theme?: string
     mindMapTheme?: string
     backgroundColor?: string
+    themeConfig?: Record<string, unknown>
   }
 ): Promise<void> => {
   if (entry.loaded) {
@@ -280,6 +285,7 @@ export const openMindMapFile = async (
       : themeInfo.isDark
   const mindMapTheme = windowEntry.configuration.mindMapTheme || themeInfo.mindMapTheme
   const backgroundColor = windowEntry.configuration.backgroundColor || themeInfo.backgroundColor
+  const themeConfig = windowEntry.configuration.themeConfig || themeInfo.themeConfig
 
   let entry = windowEntry.documents.get(filePath)
   if (!entry) {
@@ -297,7 +303,8 @@ export const openMindMapFile = async (
       language: windowEntry.configuration.language,
       theme: windowEntry.configuration.theme,
       mindMapTheme,
-      backgroundColor
+      backgroundColor,
+      themeConfig
     })
 
     win.webContents.send('mt::mindmap::opened', { filePath, title: path.basename(filePath) })
@@ -408,6 +415,7 @@ export const configureMindMap = (win: BrowserWindow, configuration: MindMapConfi
   const themeInfo = getMindMapThemeInfo(windowEntry.configuration.theme)
   const mindMapTheme = windowEntry.configuration.mindMapTheme || themeInfo.mindMapTheme
   const backgroundColor = windowEntry.configuration.backgroundColor || themeInfo.backgroundColor
+  const themeConfig = windowEntry.configuration.themeConfig || themeInfo.themeConfig
   const isDark =
     typeof windowEntry.configuration.dark === 'boolean'
       ? windowEntry.configuration.dark
@@ -419,7 +427,8 @@ export const configureMindMap = (win: BrowserWindow, configuration: MindMapConfi
         isDark,
         theme: windowEntry.configuration.theme,
         mindMapTheme,
-        backgroundColor
+        backgroundColor,
+        themeConfig
       })
     }
   }
@@ -497,6 +506,7 @@ export const registerMindMapHandlers = (): void => {
         : themeInfo.isDark
     const mindMapTheme = windowEntry.configuration.mindMapTheme || themeInfo.mindMapTheme
     const backgroundColor = windowEntry.configuration.backgroundColor || themeInfo.backgroundColor
+    const themeConfig = windowEntry.configuration.themeConfig || themeInfo.themeConfig
     const data = await readMindMapData(entry.filePath, windowEntry.configuration)
     return {
       filePath: entry.filePath,
@@ -505,7 +515,8 @@ export const registerMindMapHandlers = (): void => {
       language: windowEntry.configuration.language,
       theme: windowEntry.configuration.theme,
       mindMapTheme,
-      backgroundColor
+      backgroundColor,
+      themeConfig
     }
   })
 }
