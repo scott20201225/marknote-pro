@@ -5,7 +5,7 @@
     class="side-bar-file"
     :style="{
       'padding-left': `${depth * 6 + 10}px`,
-      opacity: file.isMarkdown || file.isDrawing || file.isGeoGebra ? 1 : 0.75
+      opacity: file.isMarkdown || file.isDrawing || file.isGeoGebra || file.isMindMap ? 1 : 0.75
     }"
     :class="[
       {
@@ -53,6 +53,7 @@ import bus from '../../bus'
 import { getNoteDisplayName } from '../../util/noteWorkspace'
 import type { TreeFileNode } from './types'
 import { getDrawioConfiguration } from '@/util/drawioConfiguration'
+import { getMindMapConfiguration } from '@/util/mindmapConfiguration'
 
 const props = defineProps<{
   file: TreeFileNode
@@ -93,6 +94,14 @@ const handleFileClick = (): void => {
   }
   if (props.file.isGeoGebra || /\.ggb$/i.test(pathname)) {
     void window.electron.ipcRenderer.invoke('mt::geogebra::open', pathname)
+    return
+  }
+  if (props.file.isMindMap || /\.smm$/i.test(pathname)) {
+    void window.electron.ipcRenderer.invoke(
+      'mt::mindmap::open',
+      pathname,
+      getMindMapConfiguration()
+    )
     return
   }
   if (!isMarkdownFile) return

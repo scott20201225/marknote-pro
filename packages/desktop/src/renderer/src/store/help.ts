@@ -88,10 +88,10 @@ const documentStateKeys = [
   'notifications',
   'isDrawing',
   'isGeoGebra',
+  'isMindMap',
   'geoGebraMode',
   'showHeadingNumbers',
-  'headingNumberingIncludesTopLevel',
-  'isDrawing'
+  'headingNumberingIncludesTopLevel'
 ] as const satisfies ReadonlyArray<keyof IFileState>
 
 export const getBlankFileState = (

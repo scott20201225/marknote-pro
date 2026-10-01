@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1,maximum-scale=1,minimum-scale=1">
+  <link rel="icon" href="dist/logo.ico">
+  <title>思维导图 - MarkNotePro</title>
+  <script>
+    // 自定义静态资源的路径
+    window.externalPublicPath = './dist/'
+    // 接管应用
+    window.takeOverApp = true
+  </script>
+  <link href="dist/css/chunk-vendors.css?720fe4d863ea0fdcc0fb" rel="stylesheet">
+  <link href="dist/css/app.css?720fe4d863ea0fdcc0fb" rel="stylesheet">
+  <style>
+    html, body, #app {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+    /* 隐藏与桌面宿主文件/目录管理冲突的纯前端独立按钮 */
+    .toolbarBlock:nth-child(2) > .toolbarBtn:nth-child(1), /* 目录 */
+    .toolbarBlock:nth-child(2) > .el-tooltip:nth-child(2), /* 新建文件 */
+    .toolbarBlock:nth-child(2) > .el-tooltip:nth-child(3)  /* 打开文件 */
+    {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <noscript><strong>We're sorry but thoughts doesn't work properly without JavaScript enabled. Please enable it to continue.</strong></noscript>
+  <div id="app"></div>
+  <script>
+    let currentMindMapData = null
+    let currentConfig = {}
+    let currentLang = 'zh'
+    let currentLocalConfig = { isDark: false }
+    let hasInitedApp = false
+
+    const DEFAULT_DATA = {
+      root: {
+        data: {
+          text: '中心主题'
+        },
+        children: []
+      },
+      theme: {
+        template: 'classic4',
+        config: {}
+      },
+      layout: 'logicalStructure',
+      config: {},
+      view: null
+    }
+
+    window.takeOverAppMethods = {
+      getMindMapData: () => {
+        return currentMindMapData || DEFAULT_DATA
+      },
+      saveMindMapData: (data) => {
+        currentMindMapData = data
+        if (window.electron && window.electron.ipcRenderer) {
+          window.electron.ipcRenderer.send('mt::mindmap::state', { modified: true, data })
+        }
+      },
+      getMindMapConfig: () => currentConfig,
+      saveMindMapConfig: (config) => {
+        currentConfig = config
+      },
+      getLanguage: () => currentLang,
+      saveLanguage: (lang) => {
+        currentLang = lang
+      },
+      getLocalConfig: () => currentLocalConfig,
+      saveLocalConfig: (config) => {
+        currentLocalConfig = { ...currentLocalConfig, ...config }
+      }
+    }
+
+    const initOrUpdate = (payload) => {
+      if (!payload) return
+      if (payload.data) currentMindMapData = payload.data
+      if (payload.language) currentLang = payload.language
+      if (typeof payload.isDark === 'boolean') {
+        currentLocalConfig.isDark = payload.isDark
+      }
+      if (!hasInitedApp) {
+        hasInitedApp = true
+        if (typeof window.initApp === 'function') {
+          window.initApp()
+        }
+      } else if (window.$bus && currentMindMapData) {
+        window.$bus.$emit('setData', currentMindMapData)
+        if (typeof payload.isDark === 'boolean') {
+          window.$bus.$emit('setLocalConfig', { isDark: payload.isDark })
+        }
+      }
+    }
+
+    if (window.electron && window.electron.ipcRenderer) {
+      window.electron.ipcRenderer.on('mt::mindmap::init', (_event, payload) => {
+        initOrUpdate(payload)
+      })
+
+      window.electron.ipcRenderer.on('mt::mindmap::set-theme', (_event, payload) => {
+        if (typeof payload?.isDark === 'boolean') {
+          currentLocalConfig.isDark = payload.isDark
+          if (window.$bus) {
+            window.$bus.$emit('setLocalConfig', { isDark: payload.isDark })
+          }
+        }
+      })
+
+      window.electron.ipcRenderer.on('mt::mindmap::request-save', () => {
+        let fullData = currentMindMapData
+        if (window.__mindMap && typeof window.__mindMap.getData === 'function') {
+          fullData = window.__mindMap.getData(true)
+        }
+        window.electron.ipcRenderer.invoke('mt::mindmap::save', fullData)
+      })
+    }
+
+    window.onload = () => {
+      if (window.$bus) {
+        window.$bus.$on('app_inited', (mindMap) => {
+          window.__mindMap = mindMap
+        })
+      }
+      if (window.electron && window.electron.ipcRenderer) {
+        window.electron.ipcRenderer.invoke('mt::mindmap::ready').then((payload) => {
+          if (payload) initOrUpdate(payload)
+        }).catch(() => {})
+      } else {
+        // Standalone fallback
+        if (!hasInitedApp && typeof window.initApp === 'function') {
+          hasInitedApp = true
+          window.initApp()
+        }
+      }
+    }
+  </script>
+  <script src="dist/js/chunk-vendors.js?720fe4d863ea0fdcc0fb"></script>
+  <script src="dist/js/app.js?720fe4d863ea0fdcc0fb"></script>
+</body>
+</html>

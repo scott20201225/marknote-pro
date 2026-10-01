@@ -30,6 +30,7 @@ import type { TreeFileNode, TreeNode } from '../components/sideBar/types'
 import type { FileChangeDetail } from '@shared/types/files'
 import type { GeoGebraMode } from '@shared/types/files'
 import { getDrawioConfiguration } from '../util/drawioConfiguration'
+import { getMindMapConfiguration } from '../util/mindmapConfiguration'
 
 type ProjectTree = TreeNode
 type TreeChange = FileChangeDetail
@@ -96,6 +97,7 @@ const getBasename = (pathname: string): string => {
 
 const isDrawingPath = (pathname: string): boolean => /\.drawio$/i.test(pathname)
 const isGeoGebraPath = (pathname: string): boolean => /\.ggb$/i.test(pathname)
+const isMindMapPath = (pathname: string): boolean => /\.smm$/i.test(pathname)
 
 const isProjectPathMatch = (a: string, b: string): boolean => {
   if (window.fileUtils.isSamePathSync(a, b)) return true
@@ -509,9 +511,10 @@ export const useProjectStore = defineStore('project', () => {
         mtimeMs: stat.mtimeMs ?? Date.now(),
         isDirectory: false,
         isFile: true,
-        isMarkdown: !isDrawingPath(dest) && !isGeoGebraPath(dest),
+        isMarkdown: !isDrawingPath(dest) && !isGeoGebraPath(dest) && !isMindMapPath(dest),
         isDrawing: isDrawingPath(dest),
-        isGeoGebra: isGeoGebraPath(dest)
+        isGeoGebra: isGeoGebraPath(dest),
+        isMindMap: isMindMapPath(dest)
       },
       String(preferencesStore.fileSortBy),
       String(preferencesStore.fileSortOrder)
@@ -1074,6 +1077,12 @@ export const useProjectStore = defineStore('project', () => {
       if (!storedName.toLowerCase().endsWith('.ggb')) {
         storedName += '.ggb'
       }
+    } else if (type === 'mindmap') {
+      fileType = 'file'
+      storedName = name.trim()
+      if (!storedName.toLowerCase().endsWith('.smm')) {
+        storedName += '.smm'
+      }
     } else {
       fileType = 'directory'
     }
@@ -1108,7 +1117,7 @@ export const useProjectStore = defineStore('project', () => {
     create(fullName, fileType)
       .then(() => {
         createCache.value = {}
-        if (fileType === 'file' && type !== 'drawing' && type !== 'geogebra') {
+        if (fileType === 'file' && type !== 'drawing' && type !== 'geogebra' && type !== 'mindmap') {
           newFileNameCache.value = fullName
         }
         if (type === 'drawing') {
@@ -1120,6 +1129,13 @@ export const useProjectStore = defineStore('project', () => {
         }
         if (type === 'geogebra') {
           return window.electron.ipcRenderer.invoke('mt::geogebra::open', fullName, geoGebraMode)
+        }
+        if (type === 'mindmap') {
+          return window.electron.ipcRenderer.invoke(
+            'mt::mindmap::open',
+            fullName,
+            getMindMapConfiguration()
+          )
         }
       })
       .catch((err) => {
@@ -1153,7 +1169,9 @@ export const useProjectStore = defineStore('project', () => {
         ? `${name.trim().replace(/\.drawio$/i, '')}.drawio`
         : isGeoGebraPath(src)
           ? `${name.trim().replace(/\.ggb$/i, '')}.ggb`
-          : toStoredNoteName(name, kind)
+          : isMindMapPath(src)
+            ? `${name.trim().replace(/\.smm$/i, '')}.smm`
+            : toStoredNoteName(name, kind)
     }
     if (!storedName) return
     const dest = dirname + PATH_SEPARATOR + storedName

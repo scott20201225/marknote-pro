@@ -26,6 +26,8 @@ const isDrawioFile = (pathname: string): boolean =>
 
 const isGeoGebraFile = (pathname: string): boolean => path.extname(pathname).toLowerCase() === '.ggb'
 
+const isMindMapFile = (pathname: string): boolean => path.extname(pathname).toLowerCase() === '.smm'
+
 type WatchType = 'dir' | 'file'
 
 interface IgnoreEntry {
@@ -58,6 +60,7 @@ const add = async (
   const isMarkdown = hasMarkdownExtension(pathname)
   const isDrawing = isDrawioFile(pathname)
   const isGeoGebra = isGeoGebraFile(pathname)
+  const isMindMap = isMindMapFile(pathname)
   const file: {
     pathname: string
     name: string
@@ -68,6 +71,7 @@ const add = async (
     isMarkdown: boolean
     isDrawing: boolean
     isGeoGebra: boolean
+    isMindMap: boolean
     data?: Awaited<ReturnType<typeof loadMarkdownFile>>
   } = {
     pathname,
@@ -78,7 +82,8 @@ const add = async (
     mtimeMs,
     isMarkdown,
     isDrawing,
-    isGeoGebra
+    isGeoGebra,
+    isMindMap
   }
   if (isMarkdown) {
     // HACK: But this should be removed completely in #1034/#1035.
@@ -248,12 +253,13 @@ class Watcher {
         if (fileInfo.isDirectory()) {
           return false
         }
-        // 工作区除 Markdown 外还承载独立的 Draw.io 和 GeoGebra 源文件；
+        // 工作区除 Markdown 外还承载独立的 Draw.io、GeoGebra 与思维导图源文件；
         // 必须让它们通过初始扫描和后续文件事件，才能在树与列表中建立节点。
         return (
           !hasMarkdownExtension(pathname) &&
           !isDrawioFile(pathname) &&
-          !isGeoGebraFile(pathname)
+          !isGeoGebraFile(pathname) &&
+          !isMindMapFile(pathname)
         )
       },
       ignoreInitial: type === 'file',

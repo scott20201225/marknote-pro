@@ -12,6 +12,7 @@ interface NoteNodeLike {
   isMarkdown?: boolean
   isDrawing?: boolean
   isGeoGebra?: boolean
+  isMindMap?: boolean
   folders?: NoteNodeLike[]
   files?: NoteNodeLike[]
 }
@@ -47,6 +48,7 @@ const isNoteAreaName = (name: string): boolean => name.startsWith(NOTE_AREA_PREF
 const isMarkdownFileName = (name: string): boolean => /\.md$/i.test(name)
 const isDrawingFileName = (name: string): boolean => /\.drawio$/i.test(name)
 const isGeoGebraFileName = (name: string): boolean => /\.ggb$/i.test(name)
+const isMindMapFileName = (name: string): boolean => /\.smm$/i.test(name)
 
 const stripNotePrefix = (name: string): string => {
   if (isNoteGroupName(name)) return name.slice(NOTE_GROUP_PREFIX.length)
@@ -63,9 +65,10 @@ const stripDrawingExtension = (name: string): string => {
 }
 
 const stripGeoGebraExtension = (name: string): string => name.replace(/\.ggb$/i, '')
+const stripMindMapExtension = (name: string): string => name.replace(/\.smm$/i, '')
 
 const normalizeNotePathPart = (part: string): string => {
-  return stripGeoGebraExtension(stripDrawingExtension(stripMarkdownExtension(stripNotePrefix(part))))
+  return stripMindMapExtension(stripGeoGebraExtension(stripDrawingExtension(stripMarkdownExtension(stripNotePrefix(part)))))
 }
 
 const getRelativeParts = (rootPath: string, pathname: string): string[] => {
@@ -117,12 +120,13 @@ export const isValidNoteFilePath = (
   const name = window.path.basename(pathname)
   const isDrawing = isDrawingFileName(name)
   const isGeoGebra = isGeoGebraFileName(name)
-  if (!isMarkdownFileName(name) && !isDrawing && !isGeoGebra) return false
+  const isMindMap = isMindMapFileName(name)
+  if (!isMarkdownFileName(name) && !isDrawing && !isGeoGebra && !isMindMap) return false
 
   const parentPath = window.path.dirname(pathname)
   const parentName = window.path.basename(parentPath)
   if (!isValidNoteDirectoryPath(parentPath, rootPath)) return false
-  return isDrawing || isGeoGebra || isNoteAreaName(parentName)
+  return isDrawing || isGeoGebra || isMindMap || isNoteAreaName(parentName)
 }
 
 export const getNoteNodeKind = (
@@ -165,7 +169,7 @@ export const getNoteDisplayName = (
     case 'area':
       return stripNotePrefix(node.name)
     case 'document':
-      return stripGeoGebraExtension(stripDrawingExtension(stripMarkdownExtension(node.name)))
+      return stripMindMapExtension(stripGeoGebraExtension(stripDrawingExtension(stripMarkdownExtension(node.name))))
     default:
       return node.name
   }
@@ -234,7 +238,7 @@ export const getVisibleNoteFiles = (
   if (kind === 'root' || kind === 'group') {
     return node.files.filter(
       (child) =>
-        (child.isDrawing || child.isGeoGebra || isDrawingFileName(child.name) || isGeoGebraFileName(child.name)) &&
+        (child.isDrawing || child.isGeoGebra || child.isMindMap || isDrawingFileName(child.name) || isGeoGebraFileName(child.name) || isMindMapFileName(child.name)) &&
         getNoteNodeKind(child, rootPath) === 'document'
     )
   }

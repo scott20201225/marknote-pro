@@ -1,4 +1,4 @@
-import { app, type MenuItemConstructorOptions } from 'electron'
+import { app, type BrowserWindow, type MenuItemConstructorOptions } from 'electron'
 import * as actions from '../actions/file'
 import { userSetting } from '../actions/marknotepro'
 import { isOsx } from '../../config'

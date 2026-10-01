@@ -85,7 +85,7 @@ let autoScroller: AutoScroller | null = null
 let drake: dragula.Drake | null = null
 let tabResizeObserver: ResizeObserver | null = null
 
-const getDisplayFilename = (filename: string) => filename.replace(/\.(?:md|drawio|ggb)$/i, '')
+const getDisplayFilename = (filename: string) => filename.replace(/\.(?:md|drawio|ggb|smm)$/i, '')
 
 const selectFile = (file: IFileState) => {
   if (file.id !== currentFile.value?.id) {

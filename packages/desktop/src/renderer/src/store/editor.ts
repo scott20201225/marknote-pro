@@ -28,9 +28,11 @@ import type {
   IFileState,
   IDrawioState,
   IGeoGebraState,
+  IMindMapState,
   GeoGebraMode,
   UnsavedDrawioFile,
   UnsavedGeoGebraFile,
+  UnsavedMindMapFile,
   FileNotification,
   LineEnding,
   MarkdownDocument,
@@ -167,6 +169,7 @@ export interface EditorState {
   tabIdToIndex: Record<string, number>
   drawioStates: Record<string, IDrawioState>
   geogebraStates: Record<string, IGeoGebraState>
+  mindMapStates: Record<string, IMindMapState>
   listToc: TocItem[]
   toc: TocTreeNode[]
 }
@@ -187,6 +190,7 @@ export const useEditorStore = defineStore('editor', {
     tabIdToIndex: {},
     drawioStates: {},
     geogebraStates: {},
+    mindMapStates: {},
     listToc: [], // Used for equal check and for searching for the correct github-slug to jump to
     toc: []
   }),
@@ -262,6 +266,21 @@ export const useEditorStore = defineStore('editor', {
                 isSaving: false,
                 mode: tab.geoGebraMode ?? 'graphing'
               } satisfies IGeoGebraState
+            ])
+        )
+        s.mindMapStates = Object.fromEntries(
+          tabs
+            .filter((tab) => tab.isMindMap)
+            .map((tab) => [
+              tab.id,
+              {
+                id: tab.id,
+                pathname: tab.pathname,
+                filename: tab.filename,
+                modified: false,
+                isSaved: tab.isSaved,
+                isSaving: false
+              } satisfies IMindMapState
             ])
         )
         s.listToc = []
@@ -600,6 +619,15 @@ export const useEditorStore = defineStore('editor', {
         }
         return
       }
+      if (this.currentFile.isMindMap) {
+        if (this.currentFile.pathname) {
+          void window.electron.ipcRenderer.invoke(
+            'mt::mindmap::save-request',
+            this.currentFile.pathname
+          )
+        }
+        return
+      }
       this.flushActiveEditor()
       const projectStore = useProjectStore()
       const { id, filename, pathname, markdown } = this.currentFile
@@ -741,7 +769,7 @@ export const useEditorStore = defineStore('editor', {
           })
           .then(() => {
             const unsavedFiles = this.tabs
-              .filter((file) => !file.isDrawing && !file.isGeoGebra && !file.isSaved)
+              .filter((file) => !file.isDrawing && !file.isGeoGebra && !file.isMindMap && !file.isSaved)
               .map((file) => {
                 const { id, filename, pathname, markdown } = file
                 const options = getOptionsFromState(file)
@@ -767,15 +795,28 @@ export const useEditorStore = defineStore('editor', {
                 pathname: file.pathname
               }))
 
+            const unsavedMindMapFiles: UnsavedMindMapFile[] = this.tabs
+              .filter((file) => {
+                if (!file.isMindMap) return false
+                const state = this.mindMapStates[file.id]
+                return state ? state.modified || !state.isSaved : !file.isSaved
+              })
+              .map((file) => ({
+                id: file.id,
+                filename: file.filename,
+                pathname: file.pathname
+              }))
+
             if (
-              (unsavedFiles.length || unsavedDrawioFiles.length) &&
+              (unsavedFiles.length || unsavedDrawioFiles.length || unsavedMindMapFiles.length) &&
               preferencesStore.startUpAction !== 'restoreAll'
             ) {
               // Ignore unsaved files when user has chosen to restore all on startup, as they will be restored anyway.
               window.electron.ipcRenderer.send(
                 'mt::close-window-confirm',
                 deepClone(unsavedFiles),
-                deepClone(unsavedDrawioFiles)
+                deepClone(unsavedDrawioFiles),
+                deepClone(unsavedMindMapFiles)
               )
             } else {
               window.electron.ipcRenderer.send('mt::close-window')
@@ -868,6 +909,49 @@ export const useEditorStore = defineStore('editor', {
       })
     },
 
+    LISTEN_FOR_MINDMAP_STATE(): void {
+      window.electron.ipcRenderer.on('mt::mindmap::state', (_, payload) => {
+        if (!payload || typeof payload.filePath !== 'string') return
+        const tab = this.tabs.find(
+          (file) =>
+            file.isMindMap && window.fileUtils.isSamePathSync(file.pathname, payload.filePath)
+        )
+        if (!tab) return
+
+        const state: IMindMapState = {
+          id: tab.id,
+          pathname: tab.pathname,
+          filename: tab.filename,
+          modified: payload.modified === true,
+          isSaved: payload.isSaved === true,
+          isSaving: payload.isSaving === true,
+          ...(payload.saveError ? { saveError: payload.saveError } : {}),
+          ...(payload.lastSavedHash ? { lastSavedHash: payload.lastSavedHash } : {})
+        }
+        this.mindMapStates[tab.id] = state
+        tab.isSaved = state.isSaved && !state.modified
+
+        if (payload.saveError) {
+          notice.notify({
+            title: t('dialog.saveFailure'),
+            message: payload.saveError,
+            type: 'error',
+            time: 20000,
+            showConfirm: false
+          })
+        }
+
+        if (state.isSaved) {
+          const timer = autoSaveTimers.get(tab.id)
+          if (timer) clearTimeout(timer)
+          autoSaveTimers.delete(tab.id)
+        } else if (state.modified && !state.isSaving) {
+          this.HANDLE_MINDMAP_AUTO_SAVE({ id: tab.id, pathname: tab.pathname })
+        }
+        debouncedSendBufferedState()
+      })
+    },
+
     LISTEN_FOR_SAVE_CLOSE(): void {
       window.electron.ipcRenderer.on('mt::force-close-tabs-by-id', (_, tabIdList) => {
         if (Array.isArray(tabIdList) && tabIdList.length) {
@@ -882,7 +966,10 @@ export const useEditorStore = defineStore('editor', {
       const unsavedFiles = tabs
         .filter(
           (file) =>
-            !file.isDrawing && !file.isGeoGebra && !(file.isSaved && /[^\n]/.test(file.markdown))
+            !file.isDrawing &&
+            !file.isGeoGebra &&
+            !file.isMindMap &&
+            !(file.isSaved && /[^\n]/.test(file.markdown))
         )
         .map((file) => {
           const { id, filename, pathname, markdown } = file
@@ -903,9 +990,20 @@ export const useEditorStore = defineStore('editor', {
         return state ? state.modified || !state.isSaved : !file.isSaved
       })
 
+      const unsavedMindMapFiles = tabs.filter((file) => {
+        if (!file.isMindMap) return false
+        const state = this.mindMapStates[file.id]
+        return state ? state.modified || !state.isSaved : !file.isSaved
+      })
+
       if (closeTabs) {
         const savedTabIds = tabs
-          .filter((file) => file.isSaved && !unsavedDrawioFiles.some((item) => item.id === file.id))
+          .filter(
+            (file) =>
+              file.isSaved &&
+              !unsavedDrawioFiles.some((item) => item.id === file.id) &&
+              !unsavedMindMapFiles.some((item) => item.id === file.id)
+          )
           .map((file) => file.id)
         this.CLOSE_TABS(savedTabIds)
         if (unsavedFiles.length) {
@@ -918,6 +1016,13 @@ export const useEditorStore = defineStore('editor', {
             )
           ).then(() => this.CLOSE_TABS(unsavedDrawioFiles.map((file) => file.id)))
         }
+        if (unsavedMindMapFiles.length) {
+          void Promise.all(
+            unsavedMindMapFiles.map((file) =>
+              window.electron.ipcRenderer.invoke('mt::mindmap::save-request', file.pathname)
+            )
+          ).then(() => this.CLOSE_TABS(unsavedMindMapFiles.map((file) => file.id)))
+        }
       } else {
         if (unsavedFiles.length) {
           window.electron.ipcRenderer.send('mt::save-tabs', deepClone(unsavedFiles))
@@ -925,6 +1030,11 @@ export const useEditorStore = defineStore('editor', {
         void Promise.all(
           unsavedDrawioFiles.map((file) =>
             window.electron.ipcRenderer.invoke('mt::drawio::save-request', file.pathname)
+          )
+        )
+        void Promise.all(
+          unsavedMindMapFiles.map((file) =>
+            window.electron.ipcRenderer.invoke('mt::mindmap::save-request', file.pathname)
           )
         )
       }
@@ -1048,7 +1158,12 @@ export const useEditorStore = defineStore('editor', {
           currentFile
         // Must run while `currentFile` still points at the outgoing tab, so its
         // flushed edit is attributed to that tab and not lost on switch (#2938).
-        if (oldCurrentFile && !oldCurrentFile.isDrawing && !oldCurrentFile.isGeoGebra) {
+        if (
+          oldCurrentFile &&
+          !oldCurrentFile.isDrawing &&
+          !oldCurrentFile.isGeoGebra &&
+          !oldCurrentFile.isMindMap
+        ) {
           this.flushActiveEditor()
         }
         window.DIRNAME = pathname ? window.path.dirname(pathname) : ''
@@ -1060,7 +1175,7 @@ export const useEditorStore = defineStore('editor', {
           this.updateTabIdToIndex()
         }
 
-        if (!currentFile.isDrawing && !currentFile.isGeoGebra) {
+        if (!currentFile.isDrawing && !currentFile.isGeoGebra && !currentFile.isMindMap) {
           bus.emit('file-changed', {
             id,
             markdown,
@@ -1176,6 +1291,44 @@ export const useEditorStore = defineStore('editor', {
         mode
       }
       this.UPDATE_CURRENT_FILE(tab)
+    },
+
+    OPEN_MINDMAP_TAB({ filePath, title }: { filePath: string; title?: string }): void {
+      const existingTab = this.tabs.find((tab) =>
+        window.fileUtils.isSamePathSync(tab.pathname, filePath)
+      )
+      if (existingTab) {
+        existingTab.isMindMap = true
+        if (!this.mindMapStates[existingTab.id]) {
+          this.mindMapStates[existingTab.id] = {
+            id: existingTab.id,
+            pathname: existingTab.pathname,
+            filename: existingTab.filename,
+            modified: false,
+            isSaved: existingTab.isSaved,
+            isSaving: false
+          }
+        }
+        this.UPDATE_CURRENT_FILE(existingTab)
+        return
+      }
+
+      const mindMapTab = createDocumentState({
+        pathname: filePath,
+        filename: title || window.path.basename(filePath),
+        markdown: '',
+        isSaved: true,
+        isMindMap: true
+      })
+      this.mindMapStates[mindMapTab.id] = {
+        id: mindMapTab.id,
+        pathname: filePath,
+        filename: title || window.path.basename(filePath),
+        modified: false,
+        isSaved: true,
+        isSaving: false
+      }
+      this.UPDATE_CURRENT_FILE(mindMapTab)
     },
 
     // This events are only used during window creation.
@@ -1308,6 +1461,14 @@ export const useEditorStore = defineStore('editor', {
         return
       }
 
+      if (target.isMindMap && !target.isSaved) {
+        void window.electron.ipcRenderer
+          .invoke('mt::mindmap::save-request', target.pathname)
+          .then(() => this.FORCE_CLOSE_TAB(target))
+          .catch((error) => console.error('Failed to save MindMap tab before closing', error))
+        return
+      }
+
       if (target.isSaved) {
         this.FORCE_CLOSE_TAB(target)
       } else {
@@ -1376,6 +1537,13 @@ export const useEditorStore = defineStore('editor', {
         }
       }
 
+      if (file.isMindMap) {
+        delete this.mindMapStates[file.id]
+        if (file.pathname) {
+          void window.electron.ipcRenderer.invoke('mt::mindmap::close-file', file.pathname)
+        }
+      }
+
       this.updateTabIdToIndex() // Update before sending it out to prevent stale mappings.
 
       if (currentFile && file.id === currentFile.id) {
@@ -1386,6 +1554,7 @@ export const useEditorStore = defineStore('editor', {
           fileState &&
           !fileState.isDrawing &&
           !fileState.isGeoGebra &&
+          !fileState.isMindMap &&
           typeof fileState.markdown === 'string'
         ) {
           const { id, markdown, cursor, history, pathname, scrollTop, blocks, muyaIndexCursor } =
@@ -1431,6 +1600,13 @@ export const useEditorStore = defineStore('editor', {
           .invoke('mt::geogebra::save-request', file.pathname)
           .then(() => this.FORCE_CLOSE_TAB(file))
           .catch((error) => console.error('Failed to save GeoGebra tab before closing', error))
+        return
+      }
+      if (file.isMindMap) {
+        void window.electron.ipcRenderer
+          .invoke('mt::mindmap::save-request', file.pathname)
+          .then(() => this.FORCE_CLOSE_TAB(file))
+          .catch((error) => console.error('Failed to save MindMap tab before closing', error))
         return
       }
       const { id, pathname, filename, markdown } = file
@@ -1487,6 +1663,13 @@ export const useEditorStore = defineStore('editor', {
           }
         }
 
+        if (closed?.isMindMap) {
+          delete this.mindMapStates[closed.id]
+          if (pathname) {
+            void window.electron.ipcRenderer.invoke('mt::mindmap::close-file', pathname)
+          }
+        }
+
         if (pathname) {
           window.electron.ipcRenderer.send('mt::window-tab-closed', pathname)
         }
@@ -1509,6 +1692,7 @@ export const useEditorStore = defineStore('editor', {
           this.currentFile &&
           !this.currentFile.isDrawing &&
           !this.currentFile.isGeoGebra &&
+          !this.currentFile.isMindMap &&
           typeof this.currentFile.markdown === 'string'
         ) {
           const { id, markdown, cursor, history, pathname, scrollTop, blocks, muyaIndexCursor } =
@@ -1803,7 +1987,7 @@ export const useEditorStore = defineStore('editor', {
 
     TOGGLE_HEADING_NUMBERING(): void {
       const file = this.currentFile
-      if (!file || file.isDrawing || file.isGeoGebra) return
+      if (!file || file.isDrawing || file.isGeoGebra || file.isMindMap) return
       file.showHeadingNumbers = !file.showHeadingNumbers
       bus.emit('heading-numbering-display-changed')
       debouncedSendBufferedState()
@@ -1811,7 +1995,7 @@ export const useEditorStore = defineStore('editor', {
 
     TOGGLE_HEADING_NUMBERING_TOP_LEVEL(): void {
       const file = this.currentFile
-      if (!file || file.isDrawing || file.isGeoGebra || !file.showHeadingNumbers) return
+      if (!file || file.isDrawing || file.isGeoGebra || file.isMindMap || !file.showHeadingNumbers) return
       file.headingNumberingIncludesTopLevel = !file.headingNumberingIncludesTopLevel
       bus.emit('heading-numbering-display-changed')
       debouncedSendBufferedState()
@@ -1945,6 +2129,27 @@ export const useEditorStore = defineStore('editor', {
           void window.electron.ipcRenderer
             .invoke('mt::geogebra::save-request', pathname)
             .catch((error) => console.error('GeoGebra 自动保存失败', error))
+        }
+      }, preferencesStore.autoSaveDelay)
+      autoSaveTimers.set(id, timer)
+    },
+
+    HANDLE_MINDMAP_AUTO_SAVE({ id, pathname }: { id: string; pathname: string }): void {
+      const preferencesStore = usePreferencesStore()
+      if (!preferencesStore.autoSave || !id || !pathname) return
+      if (autoSaveTimers.has(id)) {
+        const timer = autoSaveTimers.get(id)
+        if (timer) clearTimeout(timer)
+        autoSaveTimers.delete(id)
+      }
+      const timer = setTimeout(() => {
+        autoSaveTimers.delete(id)
+        const tab = this.tabs.find((item) => item.id === id)
+        const state = this.mindMapStates[id]
+        if (tab?.isMindMap && state?.modified && !state.isSaving) {
+          void window.electron.ipcRenderer
+            .invoke('mt::mindmap::save-request', pathname)
+            .catch((error) => console.error('思维导图自动保存失败', error))
         }
       }, preferencesStore.autoSaveDelay)
       autoSaveTimers.set(id, timer)
@@ -2523,6 +2728,7 @@ interface BufferedTabState {
   headingNumberingIncludesTopLevel: boolean
   isDrawing: boolean
   isGeoGebra: boolean
+  isMindMap: boolean
   geoGebraMode?: GeoGebraMode
 }
 
@@ -2548,6 +2754,7 @@ const createBufferedTabState = (tab: Partial<IFileState> & { id: string }): Buff
     headingNumberingIncludesTopLevel: tab.headingNumberingIncludesTopLevel === true,
     isDrawing: tab.isDrawing === true,
     isGeoGebra: tab.isGeoGebra === true,
+    isMindMap: tab.isMindMap === true,
     geoGebraMode: tab.geoGebraMode
   }
 }
