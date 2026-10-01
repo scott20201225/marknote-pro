@@ -166,19 +166,46 @@ const getActiveDocument = (win: BrowserWindow): MindMapDocumentEntry | undefined
 }
 
 export const showMindMapView = (win: BrowserWindow, bounds: Rectangle): void => {
+  const windowEntry = views.get(win.id)
+  if (!windowEntry) return
   const entry = getActiveDocument(win)
   if (!entry) return
+  windowEntry.visible = true
   if (!win.getBrowserViews().includes(entry.view)) win.addBrowserView(entry.view)
-  entry.view.setBounds(normalizeBounds(bounds))
+  const normalizedBounds = normalizeBounds(bounds)
+  const [contentWidth, contentHeight] = win.getContentSize()
+  const x = Math.min(normalizedBounds.x, Math.max(0, contentWidth - 1))
+  const y = Math.min(normalizedBounds.y, Math.max(0, contentHeight - 1))
+  const maxWidth = Math.max(1, contentWidth - x)
+  const maxHeight = Math.max(1, contentHeight - y)
+  const boundedBounds: Rectangle = {
+    x,
+    y,
+    width: Math.max(1, Math.min(normalizedBounds.width, maxWidth)),
+    height: Math.max(1, Math.min(normalizedBounds.height, maxHeight))
+  }
+  entry.view.setBounds(boundedBounds)
   win.setTopBrowserView(entry.view)
-  const windowEntry = views.get(win.id)
-  if (windowEntry) windowEntry.visible = true
 }
 
 export const syncMindMapViewBounds = (win: BrowserWindow, bounds: Rectangle): void => {
+  const windowEntry = views.get(win.id)
+  if (!windowEntry?.visible) return
   const entry = getActiveDocument(win)
   if (!entry) return
-  entry.view.setBounds(normalizeBounds(bounds))
+  const normalizedBounds = normalizeBounds(bounds)
+  const [contentWidth, contentHeight] = win.getContentSize()
+  const x = Math.min(normalizedBounds.x, Math.max(0, contentWidth - 1))
+  const y = Math.min(normalizedBounds.y, Math.max(0, contentHeight - 1))
+  const maxWidth = Math.max(1, contentWidth - x)
+  const maxHeight = Math.max(1, contentHeight - y)
+  const boundedBounds: Rectangle = {
+    x,
+    y,
+    width: Math.max(1, Math.min(normalizedBounds.width, maxWidth)),
+    height: Math.max(1, Math.min(normalizedBounds.height, maxHeight))
+  }
+  entry.view.setBounds(boundedBounds)
 }
 
 export const hideMindMapView = (win: BrowserWindow): void => {

@@ -52,6 +52,10 @@ const showMindMap = async (): Promise<void> => {
   await window.electron.ipcRenderer.invoke('mt::mindmap::show', bounds)
 }
 
+const resumeAfterHostOverlay = (): void => {
+  if (currentFile.value?.isMindMap) void showMindMap()
+}
+
 const syncBounds = (): void => {
   const bounds = getBounds()
   if (!bounds) return
@@ -59,6 +63,24 @@ const syncBounds = (): void => {
   if (nextKey === lastSentBoundsKey) return
   lastSentBoundsKey = nextKey
   window.electron.ipcRenderer.send('mt::mindmap::set-bounds', bounds)
+}
+
+const syncBoundsAfterLayout = (): void => {
+  window.requestAnimationFrame(() => syncBoundsDuringResize())
+}
+
+const syncBoundsDuringZoom = (duration = 220): void => {
+  if (boundsSyncAnimationFrame) window.cancelAnimationFrame(boundsSyncAnimationFrame)
+  const startedAt = window.performance.now()
+  const step = (): void => {
+    syncBounds()
+    if (window.performance.now() - startedAt < duration) {
+      boundsSyncAnimationFrame = window.requestAnimationFrame(step)
+    } else {
+      boundsSyncAnimationFrame = 0
+    }
+  }
+  boundsSyncAnimationFrame = window.requestAnimationFrame(step)
 }
 
 const syncBoundsDuringResize = (duration = 600): void => {
@@ -75,56 +97,47 @@ const syncBoundsDuringResize = (duration = 600): void => {
   boundsSyncAnimationFrame = window.requestAnimationFrame(step)
 }
 
-watch(
-  () => currentFile.value?.isMindMap,
-  (isMindMap) => {
-    if (isMindMap) void showMindMap()
-  }
-)
-
-watch(
-  [sideBarWidth, noteNavigationMode, noteListWidth, rightColumn],
-  () => {
-    if (currentFile.value?.isMindMap) syncBoundsDuringResize()
-  }
-)
-
-watch(zoom, () => {
-  if (currentFile.value?.isMindMap) syncBoundsDuringResize(220)
-})
+const handleWindowResize = (): void => syncBoundsDuringResize()
 
 onMounted(() => {
+  void showMindMap()
   removeOpenedListener = window.electron.ipcRenderer.on('mt::mindmap::opened', () => {
     void showMindMap()
   })
-
-  if (window.ResizeObserver && surfaceRef.value) {
-    resizeObserver = new ResizeObserver(() => {
-      if (currentFile.value?.isMindMap) syncBounds()
-    })
+  window.addEventListener('resize', handleWindowResize)
+  window.addEventListener('marknotepro:resume-native-editor', resumeAfterHostOverlay)
+  if (surfaceRef.value) {
+    resizeObserver = new ResizeObserver(syncBoundsAfterLayout)
     resizeObserver.observe(surfaceRef.value)
   }
+})
 
-  if (currentFile.value?.isMindMap) void showMindMap()
+watch(zoom, () => syncBoundsDuringZoom())
+watch([rightColumn, sideBarWidth, noteNavigationMode, noteListWidth], () => {
+  nextTick(syncBoundsAfterLayout)
 })
 
 onBeforeUnmount(() => {
-  if (removeOpenedListener) removeOpenedListener()
-  if (resizeObserver) resizeObserver.disconnect()
   if (boundsSyncAnimationFrame) window.cancelAnimationFrame(boundsSyncAnimationFrame)
+  window.removeEventListener('resize', handleWindowResize)
+  window.removeEventListener('marknotepro:resume-native-editor', resumeAfterHostOverlay)
+  resizeObserver?.disconnect()
+  resizeObserver = null
+  removeOpenedListener?.()
+  removeOpenedListener = null
+  window.electron.ipcRenderer.send('mt::mindmap::hide')
 })
 </script>
 
 <style scoped>
 .mindmap-surface {
   position: absolute;
-  top: 0;
+  top: calc(var(--titleBarHeight) + 28px);
   right: 0;
   bottom: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  background: transparent;
+  min-width: 0;
+  min-height: 0;
+  background: var(--editorBgColor);
 }
 </style>
