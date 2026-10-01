@@ -30,6 +30,26 @@
     {
       display: none !important;
     }
+    /* 主题侧边栏预览卡片背景及边框美化 */
+    .themeGroupList .themeListTheme .themeItem .imgBox {
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .themeGroupList .themeListTheme .themeItem .imgBox img {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 8px;
+    }
+    .themeGroupList.isDark .themeItem {
+      border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+    }
+    .themeGroupList.isDark .name {
+      color: #e0e0e0 !important;
+    }
   </style>
 </head>
 <body>
@@ -43,7 +63,22 @@
     let currentMindMapTheme = ''
     let currentBackgroundColor = ''
     let currentThemeConfig = null
+    let isCustomTheme = false
+    let customThemeIsDark = null
+    let lastIsDark = null
     let hasInitedApp = false
+    let isInitialLoading = true
+    let notifyModifiedTimer = null
+
+    const notifyModified = () => {
+      if (isInitialLoading) return
+      if (notifyModifiedTimer) clearTimeout(notifyModifiedTimer)
+      notifyModifiedTimer = setTimeout(() => {
+        if (window.electron && window.electron.ipcRenderer) {
+          window.electron.ipcRenderer.send('mt::mindmap::state', { modified: true })
+        }
+      }, 100)
+    }
 
     const DEFAULT_DATA = {
       root: {
@@ -59,6 +94,52 @@
       layout: 'logicalStructure',
       config: {},
       view: null
+    }
+
+    const patchMindMap = (mindMap) => {
+      if (!mindMap) return
+      if (mindMap.constructor && mindMap.constructor.prototype && !mindMap.constructor.__marknotepro_proto_patched) {
+        mindMap.constructor.__marknotepro_proto_patched = true
+        const protoInitTheme = mindMap.constructor.prototype.initTheme
+        mindMap.constructor.prototype.initTheme = function() {
+          if (typeof protoInitTheme === 'function') {
+            protoInitTheme.apply(this, arguments)
+          }
+          const bg = currentBackgroundColor || window.__currentBackgroundColor
+          if (bg) {
+            if (this.themeConfig) this.themeConfig.backgroundColor = bg
+            if (this.el) this.el.style.backgroundColor = bg
+          }
+          if (this.themeConfig) {
+            this.themeConfig.backgroundImage = 'none'
+            this.themeConfig.backgroundRepeat = 'no-repeat'
+          }
+          if (this.el) {
+            this.el.style.backgroundImage = 'none'
+          }
+        }
+      }
+      if (!mindMap.__marknotepro_patched) {
+        mindMap.__marknotepro_patched = true
+        const origInitTheme = mindMap.initTheme
+        mindMap.initTheme = function() {
+          if (typeof origInitTheme === 'function') {
+            origInitTheme.apply(this, arguments)
+          }
+          const bg = currentBackgroundColor || window.__currentBackgroundColor
+          if (bg) {
+            if (this.themeConfig) this.themeConfig.backgroundColor = bg
+            if (this.el) this.el.style.backgroundColor = bg
+          }
+          if (this.themeConfig) {
+            this.themeConfig.backgroundImage = 'none'
+            this.themeConfig.backgroundRepeat = 'no-repeat'
+          }
+          if (this.el) {
+            this.el.style.backgroundImage = 'none'
+          }
+        }
+      }
     }
 
     const applyLocalConfig = (config) => {
@@ -79,7 +160,10 @@
 
     const applyMindMapTheme = (mindMapTheme, backgroundColor, themeConfig) => {
       if (mindMapTheme) currentMindMapTheme = mindMapTheme
-      if (backgroundColor) currentBackgroundColor = backgroundColor
+      if (backgroundColor) {
+        currentBackgroundColor = backgroundColor
+        window.__currentBackgroundColor = backgroundColor
+      }
       if (themeConfig !== undefined) currentThemeConfig = themeConfig
 
       if (currentBackgroundColor) {
@@ -88,6 +172,7 @@
       }
 
       if (window.__mindMap) {
+        patchMindMap(window.__mindMap)
         const hasTheme = !!currentMindMapTheme && typeof window.__mindMap.setTheme === 'function'
         const hasCustomConfig =
           (!!currentBackgroundColor || !!currentThemeConfig) &&
@@ -101,7 +186,9 @@
 
         if (hasCustomConfig) {
           const mergedConfig = {
-            ...(currentThemeConfig || {})
+            ...(currentThemeConfig || {}),
+            backgroundImage: 'none',
+            backgroundRepeat: 'no-repeat'
           }
           if (currentBackgroundColor) {
             mergedConfig.backgroundColor = currentBackgroundColor
@@ -109,6 +196,20 @@
           window.__mindMap.setThemeConfig(mergedConfig)
         } else if (themeChanged && typeof window.__mindMap.render === 'function') {
           window.__mindMap.render()
+        }
+
+        if (window.__mindMap.el) {
+          if (currentBackgroundColor) {
+            window.__mindMap.el.style.backgroundColor = currentBackgroundColor
+          }
+          window.__mindMap.el.style.backgroundImage = 'none'
+        }
+        if (window.__mindMap.themeConfig) {
+          if (currentBackgroundColor) {
+            window.__mindMap.themeConfig.backgroundColor = currentBackgroundColor
+          }
+          window.__mindMap.themeConfig.backgroundImage = 'none'
+          window.__mindMap.themeConfig.backgroundRepeat = 'no-repeat'
         }
       }
     }
@@ -118,9 +219,30 @@
         return currentMindMapData || DEFAULT_DATA
       },
       saveMindMapData: (data) => {
-        currentMindMapData = data
-        if (window.electron && window.electron.ipcRenderer) {
-          window.electron.ipcRenderer.send('mt::mindmap::state', { modified: true, data })
+        try {
+          currentMindMapData = data
+          if (isCustomTheme && currentMindMapData) {
+            if (!currentMindMapData.theme) currentMindMapData.theme = {}
+            currentMindMapData.theme._isCustomTheme = true
+            currentMindMapData.theme._customThemeIsDark = customThemeIsDark
+            if (!currentMindMapData.theme.config) currentMindMapData.theme.config = {}
+            currentMindMapData.theme.config._isCustomTheme = true
+            currentMindMapData.theme.config._customThemeIsDark = customThemeIsDark
+            if (currentBackgroundColor) {
+              currentMindMapData.theme.config.backgroundColor = currentBackgroundColor
+              currentMindMapData.theme.config.backgroundImage = 'none'
+            }
+          } else if (!isCustomTheme && currentMindMapData?.theme) {
+            delete currentMindMapData.theme._isCustomTheme
+            delete currentMindMapData.theme._customThemeIsDark
+            if (currentMindMapData.theme.config) {
+              delete currentMindMapData.theme.config._isCustomTheme
+              delete currentMindMapData.theme.config._customThemeIsDark
+            }
+          }
+          notifyModified()
+        } catch (e) {
+          console.warn('[MarkNotePro] saveMindMapData error:', e)
         }
       },
       getMindMapConfig: () => currentConfig,
@@ -141,29 +263,80 @@
       if (!payload) return
       if (payload.data) currentMindMapData = payload.data
       if (payload.language) currentLang = payload.language
-      if (typeof payload.isDark === 'boolean') {
-        currentLocalConfig.isDark = payload.isDark
-        applyLocalConfig({ isDark: payload.isDark })
+
+      const isDarkBool = typeof payload.isDark === 'boolean' ? payload.isDark : false
+      lastIsDark = isDarkBool
+      currentLocalConfig.isDark = isDarkBool
+      applyLocalConfig({ isDark: isDarkBool })
+
+      if (payload.backgroundColor) {
+        currentBackgroundColor = payload.backgroundColor
+        window.__currentBackgroundColor = payload.backgroundColor
+        if (typeof window.__updateThemeImages === 'function') {
+          window.__updateThemeImages()
+        }
       }
-      if (payload.mindMapTheme) currentMindMapTheme = payload.mindMapTheme
-      if (payload.backgroundColor) currentBackgroundColor = payload.backgroundColor
-      if (payload.themeConfig) currentThemeConfig = payload.themeConfig
+
+      // 检查文件内部是否保存了定制主题信息
+      const savedTheme = currentMindMapData?.theme
+      const savedIsCustom = !!(savedTheme?._isCustomTheme || savedTheme?.config?._isCustomTheme)
+      const savedCustomIsDark = savedTheme?._customThemeIsDark ?? savedTheme?.config?._customThemeIsDark
+
+      if (savedIsCustom && savedCustomIsDark === isDarkBool) {
+        // 定制主题存在，且深浅主模式一致 -> 定制主题生效！
+        isCustomTheme = true
+        customThemeIsDark = savedCustomIsDark
+        currentMindMapTheme = savedTheme.template || payload.mindMapTheme || 'classic4'
+        currentThemeConfig = {
+          ...(savedTheme.config || {}),
+          backgroundColor: currentBackgroundColor,
+          backgroundImage: 'none',
+          _isCustomTheme: true,
+          _customThemeIsDark: customThemeIsDark
+        }
+      } else if (savedIsCustom && savedCustomIsDark !== isDarkBool) {
+        // 深浅模式变动了 -> 定制主题失效，恢复主题默认
+        isCustomTheme = false
+        customThemeIsDark = null
+        if (savedTheme) {
+          delete savedTheme._isCustomTheme
+          delete savedTheme._customThemeIsDark
+          if (savedTheme.config) {
+            delete savedTheme.config._isCustomTheme
+            delete savedTheme.config._customThemeIsDark
+          }
+        }
+        currentMindMapTheme = payload.mindMapTheme || 'classic4'
+        currentThemeConfig = payload.themeConfig || null
+      } else {
+        // 未定制主题 -> 正常走默认联动
+        isCustomTheme = false
+        customThemeIsDark = null
+        currentMindMapTheme = payload.mindMapTheme || 'classic4'
+        currentThemeConfig = payload.themeConfig || null
+      }
+
+      window.__isCustomTheme = isCustomTheme
+      window.__customThemeIsDark = customThemeIsDark
 
       if (currentMindMapData) {
         if (!currentMindMapData.theme) {
-          currentMindMapData.theme = { template: currentMindMapTheme || 'classic4', config: {} }
+          currentMindMapData.theme = { template: currentMindMapTheme, config: {} }
         }
-        if (currentMindMapTheme) {
-          currentMindMapData.theme.template = currentMindMapTheme
+        currentMindMapData.theme.template = currentMindMapTheme
+        currentMindMapData.theme.config = {
+          ...(currentMindMapData.theme.config || {}),
+          ...(currentThemeConfig || {})
         }
-        if (currentBackgroundColor || currentThemeConfig) {
-          currentMindMapData.theme.config = {
-            ...(currentMindMapData.theme.config || {}),
-            ...(currentThemeConfig || {})
-          }
-          if (currentBackgroundColor) {
-            currentMindMapData.theme.config.backgroundColor = currentBackgroundColor
-          }
+        if (currentBackgroundColor) {
+          currentMindMapData.theme.config.backgroundColor = currentBackgroundColor
+          currentMindMapData.theme.config.backgroundImage = 'none'
+        }
+        if (isCustomTheme) {
+          currentMindMapData.theme._isCustomTheme = true
+          currentMindMapData.theme._customThemeIsDark = customThemeIsDark
+          currentMindMapData.theme.config._isCustomTheme = true
+          currentMindMapData.theme.config._customThemeIsDark = customThemeIsDark
         }
       }
 
@@ -192,31 +365,87 @@
 
       window.electron.ipcRenderer.on('mt::mindmap::set-theme', (_event, payload) => {
         if (!payload) return
-        if (typeof payload.isDark === 'boolean') {
-          currentLocalConfig.isDark = payload.isDark
-          applyLocalConfig({ isDark: payload.isDark })
-          if (window.$bus) {
-            window.$bus.$emit('setLocalConfig', { isDark: payload.isDark })
+        const isDarkBool = typeof payload.isDark === 'boolean' ? payload.isDark : false
+        const darkChanged = lastIsDark !== null && lastIsDark !== isDarkBool
+        lastIsDark = isDarkBool
+
+        if (payload.backgroundColor) {
+          currentBackgroundColor = payload.backgroundColor
+          window.__currentBackgroundColor = payload.backgroundColor
+          if (typeof window.__updateThemeImages === 'function') {
+            window.__updateThemeImages()
           }
         }
-        if (payload.themeConfig) {
-          currentThemeConfig = payload.themeConfig
+
+        if (isDarkBool !== currentLocalConfig.isDark) {
+          currentLocalConfig.isDark = isDarkBool
+          applyLocalConfig({ isDark: isDarkBool })
+          if (window.$bus) {
+            window.$bus.$emit('setLocalConfig', { isDark: isDarkBool })
+          }
         }
-        applyMindMapTheme(payload.mindMapTheme, payload.backgroundColor, payload.themeConfig)
+
+        if (darkChanged) {
+          // 深浅模式发生跨界变动！
+          // 用户规则：“如果变动深、浅模式，则定制主题恢复主题默认”
+          isCustomTheme = false
+          customThemeIsDark = null
+
+          if (currentMindMapData?.theme) {
+            delete currentMindMapData.theme._isCustomTheme
+            delete currentMindMapData.theme._customThemeIsDark
+            if (currentMindMapData.theme.config) {
+              delete currentMindMapData.theme.config._isCustomTheme
+              delete currentMindMapData.theme.config._customThemeIsDark
+            }
+          }
+
+          currentMindMapTheme = payload.mindMapTheme || ''
+          currentThemeConfig = payload.themeConfig || null
+          applyMindMapTheme(currentMindMapTheme, currentBackgroundColor, currentThemeConfig)
+        } else if (isCustomTheme) {
+          // 深浅模式未变动，且处于定制主题生效状态！
+          // 用户规则：“当定制主题生效的时候，后续marknote主题变动，但不变动深、浅两种主逻辑，定制主题样式不变，只变背景。”
+          currentThemeConfig = {
+            ...(currentThemeConfig || {}),
+            backgroundColor: currentBackgroundColor,
+            backgroundImage: 'none',
+            _isCustomTheme: true,
+            _customThemeIsDark: customThemeIsDark
+          }
+          applyMindMapTheme(currentMindMapTheme, currentBackgroundColor, currentThemeConfig)
+        } else {
+          // 未定制，且深浅未变（同色系默认联动切换）
+          currentMindMapTheme = payload.mindMapTheme || ''
+          currentThemeConfig = payload.themeConfig || null
+          applyMindMapTheme(currentMindMapTheme, currentBackgroundColor, currentThemeConfig)
+        }
+
+        window.__isCustomTheme = isCustomTheme
+        window.__customThemeIsDark = customThemeIsDark
+
+        // 同步更新 currentMindMapData
         if (currentMindMapData) {
           if (!currentMindMapData.theme) {
-            currentMindMapData.theme = { template: payload.mindMapTheme || 'classic4', config: {} }
+            currentMindMapData.theme = { template: currentMindMapTheme || 'classic4', config: {} }
           }
-          if (payload.mindMapTheme) {
-            currentMindMapData.theme.template = payload.mindMapTheme
+          currentMindMapData.theme.template = currentMindMapTheme
+          currentMindMapData.theme.config = {
+            ...(currentMindMapData.theme.config || {}),
+            backgroundColor: currentBackgroundColor,
+            backgroundImage: 'none'
           }
-          if (payload.backgroundColor || payload.themeConfig) {
-            currentMindMapData.theme.config = {
-              ...(currentMindMapData.theme.config || {}),
-              ...(payload.themeConfig || {})
-            }
-            if (payload.backgroundColor) {
-              currentMindMapData.theme.config.backgroundColor = payload.backgroundColor
+          if (isCustomTheme) {
+            currentMindMapData.theme._isCustomTheme = true
+            currentMindMapData.theme._customThemeIsDark = customThemeIsDark
+            currentMindMapData.theme.config._isCustomTheme = true
+            currentMindMapData.theme.config._customThemeIsDark = customThemeIsDark
+          } else {
+            delete currentMindMapData.theme._isCustomTheme
+            delete currentMindMapData.theme._customThemeIsDark
+            if (currentMindMapData.theme.config) {
+              delete currentMindMapData.theme.config._isCustomTheme
+              delete currentMindMapData.theme.config._customThemeIsDark
             }
           }
         }
@@ -227,22 +456,109 @@
         if (window.__mindMap && typeof window.__mindMap.getData === 'function') {
           fullData = window.__mindMap.getData(true)
         }
+        if (isCustomTheme && fullData) {
+          if (!fullData.theme) fullData.theme = {}
+          fullData.theme._isCustomTheme = true
+          fullData.theme._customThemeIsDark = customThemeIsDark
+          if (!fullData.theme.config) fullData.theme.config = {}
+          fullData.theme.config._isCustomTheme = true
+          fullData.theme.config._customThemeIsDark = customThemeIsDark
+          if (currentBackgroundColor) {
+            fullData.theme.config.backgroundColor = currentBackgroundColor
+            fullData.theme.config.backgroundImage = 'none'
+          }
+        } else if (!isCustomTheme && fullData?.theme) {
+          delete fullData.theme._isCustomTheme
+          delete fullData.theme._customThemeIsDark
+          if (fullData.theme.config) {
+            delete fullData.theme.config._isCustomTheme
+            delete fullData.theme.config._customThemeIsDark
+          }
+        }
         window.electron.ipcRenderer.invoke('mt::mindmap::save', fullData)
       })
     }
 
     window.onload = () => {
       if (window.$bus) {
+        const origBusEmit = window.$bus.$emit
+        window.$bus.$emit = function(event, ...args) {
+          if (event === 'localStorageExceeded') {
+            console.warn('[MarkNotePro] Silenced localStorageExceeded on $bus')
+            return
+          }
+          return origBusEmit.apply(this, arguments)
+        }
+
         window.$bus.$on('app_inited', (mindMap) => {
           window.__mindMap = mindMap
+          patchMindMap(mindMap)
           if (currentMindMapTheme || currentBackgroundColor || currentThemeConfig) {
             applyMindMapTheme(currentMindMapTheme, currentBackgroundColor, currentThemeConfig)
           }
+          mindMap.on('data_change', () => {
+            notifyModified()
+          })
+          mindMap.on('view_theme_change', () => {
+            notifyModified()
+          })
+          setTimeout(() => {
+            isInitialLoading = false
+          }, 800)
         })
+
+        window.$bus.$on('data_change', () => {
+          notifyModified()
+        })
+
+        window.$bus.$on('marknotepro::custom_theme_chosen', ({ template, isDark, config }) => {
+          isCustomTheme = true
+          customThemeIsDark = isDark
+          window.__isCustomTheme = true
+          window.__customThemeIsDark = isDark
+          currentMindMapTheme = template
+          currentThemeConfig = config
+          if (currentMindMapData) {
+            if (!currentMindMapData.theme) currentMindMapData.theme = {}
+            currentMindMapData.theme.template = template
+            currentMindMapData.theme.config = config
+            currentMindMapData.theme._isCustomTheme = true
+            currentMindMapData.theme._customThemeIsDark = isDark
+          }
+          notifyModified()
+        })
+
         window.$bus.$on('setLocalConfig', (config) => {
           applyLocalConfig(config)
         })
       }
+
+      window.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+          e.preventDefault()
+          e.stopPropagation()
+          if (window.electron && window.electron.ipcRenderer) {
+            let fullData = currentMindMapData
+            if (window.__mindMap && typeof window.__mindMap.getData === 'function') {
+              fullData = window.__mindMap.getData(true)
+            }
+            if (isCustomTheme && fullData) {
+              if (!fullData.theme) fullData.theme = {}
+              fullData.theme._isCustomTheme = true
+              fullData.theme._customThemeIsDark = customThemeIsDark
+              if (!fullData.theme.config) fullData.theme.config = {}
+              fullData.theme.config._isCustomTheme = true
+              fullData.theme.config._customThemeIsDark = customThemeIsDark
+              if (currentBackgroundColor) {
+                fullData.theme.config.backgroundColor = currentBackgroundColor
+                fullData.theme.config.backgroundImage = 'none'
+              }
+            }
+            window.electron.ipcRenderer.invoke('mt::mindmap::save', fullData)
+          }
+        }
+      }, true)
+
       if (window.electron && window.electron.ipcRenderer) {
         window.electron.ipcRenderer.invoke('mt::mindmap::ready').then((payload) => {
           if (payload) initOrUpdate(payload)
@@ -260,6 +576,310 @@
   <script src="dist/js/chunk-vendors.js?720fe4d863ea0fdcc0fb"></script>
   <script src="dist/js/app.js?720fe4d863ea0fdcc0fb"></script>
   <script>
+    (function() {
+      const Vue = window.$bus ? window.$bus.constructor : null
+      if (Vue && !window.__marknotepro_theme_mixin_applied) {
+        window.__marknotepro_theme_mixin_applied = true
+        if (Vue.prototype && Vue.prototype.$bus) {
+          const protoBusEmit = Vue.prototype.$bus.$emit
+          Vue.prototype.$bus.$emit = function(event, ...args) {
+            if (event === 'localStorageExceeded') {
+              console.warn('[MarkNotePro] Silenced localStorageExceeded on Vue.prototype.$bus')
+              return
+            }
+            return protoBusEmit.apply(this, arguments)
+          }
+        }
+    const MINDMAP_THEME_STYLES = {
+      // 原主题名: 默认主题 (default)
+      "default": {"name":"默认主题","lineColor":"#549688","lineWidth":1,"rootFill":"#549688","rootColor":"#ffffff","rootBorder":"","rootBorderWidth":0,"rootRadius":5,"secondFill":"#ffffff","secondColor":"#555555","secondBorder":"#549688","secondBorderWidth":1,"secondRadius":3,"nodeColor":"#555555"},
+      // 原主题名: 脑图经典 (classic)
+      "classic": {"name":"脑图经典","lineColor":"#fff","lineWidth":3,"rootFill":"rgb(233, 223, 152)","rootColor":"#333","rootBorder":"","rootBorderWidth":0,"rootRadius":21,"secondFill":"rgb(164, 197, 192)","secondColor":"#333","secondBorder":"transparent","secondBorderWidth":1,"secondRadius":10,"nodeColor":"#fff"},
+      // 原主题名: 黑色幽默 (blackHumour)
+      "blackHumour": {"name":"黑色幽默","lineColor":"rgb(75, 81, 78)","lineWidth":3,"rootFill":"rgb(36, 179, 96)","rootColor":"#fff","rootBorder":"","rootBorderWidth":0,"rootRadius":8,"secondFill":"rgb(254, 199, 13)","secondColor":"rgb(0, 0, 0)","secondBorder":"","secondBorderWidth":0,"secondRadius":6,"nodeColor":"rgb(204, 204, 204)"},
+      // 原主题名: 深夜办公室 (lateNightOffice)
+      "lateNightOffice": {"name":"深夜办公室","lineColor":"rgb(137, 167, 196)","lineWidth":3,"rootFill":"rgb(23, 153, 243)","rootColor":"rgb(255, 255, 255)","rootBorder":"","rootBorderWidth":0,"rootRadius":8,"secondFill":"rgb(70, 78, 94)","secondColor":"rgb(209, 210, 210)","secondBorder":"","secondBorderWidth":0,"secondRadius":6,"nodeColor":"rgb(204, 204, 204)"},
+      // 原主题名: 黑金 (blackGold)
+      "blackGold": {"name":"黑金","lineColor":"rgb(205, 186, 156)","lineWidth":3,"rootFill":"rgb(255, 208, 124)","rootColor":"rgb(111, 61, 6)","rootBorder":"","rootBorderWidth":0,"rootRadius":8,"secondFill":"rgb(66, 57, 46)","secondColor":"rgb(225, 201, 158)","secondBorder":"rgb(245, 224, 191)","secondBorderWidth":2,"secondRadius":6,"nodeColor":"rgb(231, 203, 155)"},
+      // 原主题名: 橙汁 (orangeJuice)
+      "orangeJuice": {"name":"橙汁","lineColor":"#fff","lineWidth":3,"rootFill":"#ff6811","rootColor":"#110501","rootBorder":"#ff6811","rootBorderWidth":0,"rootRadius":8,"secondFill":"#070616","secondColor":"#a9a4a9","secondBorder":"#ff6811","secondBorderWidth":2,"secondRadius":6,"nodeColor":"#a9a4a9"},
+      // 原主题名: 霓虹灯 (neonLamp)
+      "neonLamp": {"name":"霓虹灯","lineColor":"rgb(255, 0, 214)","lineWidth":3,"rootFill":"rgb(251, 233, 248)","rootColor":"rgb(208, 5, 176)","rootBorder":"rgb(255, 0, 214)","rootBorderWidth":3,"rootRadius":8,"secondFill":"transparent","secondColor":"rgb(248, 177, 237)","secondBorder":"","secondBorderWidth":3,"secondRadius":6,"nodeColor":"#fff"},
+      // 原主题名: 暗夜冰刃 (darkNightLceBlade)
+      "darkNightLceBlade": {"name":"暗夜冰刃","lineColor":"rgb(0, 139, 146)","lineWidth":3,"rootFill":"rgb(0, 243, 255)","rootColor":"rgb(0, 21, 21)","rootBorder":"#fff","rootBorderWidth":3,"rootRadius":8,"secondFill":"rgb(0, 21, 21)","secondColor":"#fff","secondBorder":"#fff","secondBorderWidth":3,"secondRadius":6,"nodeColor":"#fff"},
+      // 原主题名: 暗色 (dark)
+      "dark": {"name":"暗色","lineColor":"rgb(17, 68, 23)","lineWidth":2,"rootFill":"rgb(28, 178, 43)","rootColor":"#fff","rootBorder":"","rootBorderWidth":0,"rootRadius":10,"secondFill":"rgb(55, 56, 58)","secondColor":"rgb(147,148,149)","secondBorder":"","secondBorderWidth":0,"secondRadius":10,"nodeColor":"rgb(147, 148, 149)"},
+      // 原主题名: 暗色2 (dark2)
+      "dark2": {"name":"暗色2","lineColor":"rgb(75, 81, 78)","lineWidth":3,"rootFill":"rgb(36, 179, 96)","rootColor":"#fff","rootBorder":"","rootBorderWidth":0,"rootRadius":8,"secondFill":"rgb(254, 199, 13)","secondColor":"rgb(0, 0, 0)","secondBorder":"","secondBorderWidth":0,"secondRadius":6,"nodeColor":"rgb(204, 204, 204)"},
+      // 原主题名: 暗色3 (dark3)
+      "dark3": {"name":"暗色3","lineColor":"rgb(172, 172, 172)","lineWidth":2,"rootFill":"#fff","rootColor":"rgb(241, 79, 81)","rootBorder":"","rootBorderWidth":0,"rootRadius":8,"secondFill":"rgb(241, 79, 81)","secondColor":"#fff","secondBorder":"","secondBorderWidth":0,"secondRadius":6,"nodeColor":"#fff"},
+      // 原主题名: 暗色4 (dark4)
+      "dark4": {"name":"暗色4","lineColor":"rgb(90, 136, 116)","lineWidth":2,"rootFill":"rgb(1, 192, 116)","rootColor":"#fff","rootBorder":"","rootBorderWidth":0,"rootRadius":8,"secondFill":"rgb(48, 51, 63)","secondColor":"#fff","secondBorder":"","secondBorderWidth":0,"secondRadius":6,"nodeColor":"#fff"},
+      // 原主题名: 暗色5 (dark5)
+      "dark5": {"name":"暗色5","lineColor":"#7da578","lineWidth":2,"rootFill":"#9ce81d","rootColor":"#15521b","rootBorder":"","rootBorderWidth":0,"rootRadius":8,"secondFill":"#24272f","secondColor":"#97b65e","secondBorder":"#80a97a","secondBorderWidth":2,"secondRadius":6,"nodeColor":"#789e73"},
+      // 原主题名: 暗色6 (dark6)
+      "dark6": {"name":"暗色6","lineColor":"#55dff3","lineWidth":2,"rootFill":"#55dff3","rootColor":"#0f4956","rootBorder":"","rootBorderWidth":0,"rootRadius":8,"secondFill":"#0b1632","secondColor":"#fff","secondBorder":"#78b3ff","secondBorderWidth":2,"secondRadius":6,"nodeColor":"#78b3ff"},
+      // 原主题名: 暗色7 (dark7)
+      "dark7": {"name":"暗色7","lineColor":"#4986bc","lineWidth":2,"rootFill":"#3462b0","rootColor":"#fff","rootBorder":"","rootBorderWidth":0,"rootRadius":8,"secondFill":"#679fba","secondColor":"#fff","secondBorder":"","secondBorderWidth":0,"secondRadius":6,"nodeColor":"#679fba"},
+      // 原主题名: 天清绿 (skyGreen)
+      "skyGreen": {"name":"天清绿","lineColor":"#fff","lineWidth":3,"rootFill":"#fff","rootColor":"rgb(65, 89, 158)","rootBorder":"","rootBorderWidth":0,"rootRadius":8,"secondFill":"rgb(251, 227, 188)","secondColor":"rgb(65, 89, 158)","secondBorder":"","secondBorderWidth":0,"secondRadius":6,"nodeColor":"rgb(65, 89, 158)"},
+      // 原主题名: 经典绿 (classicGreen)
+      "classicGreen": {"name":"经典绿","lineColor":"rgb(123, 199, 120)","lineWidth":2,"rootFill":"rgb(253, 244, 217)","rootColor":"#222","rootBorder":"","rootBorderWidth":0,"rootRadius":8,"secondFill":"rgb(253, 244, 217)","secondColor":"#222","secondBorder":"rgb(242, 200, 104)","secondBorderWidth":1,"secondRadius":6,"nodeColor":"#333"},
+      // 原主题名: 经典蓝 (classicBlue)
+      "classicBlue": {"name":"经典蓝","lineColor":"rgb(51, 51, 51)","lineWidth":2,"rootFill":"rgb(255, 255, 255)","rootColor":"#222","rootBorder":"","rootBorderWidth":0,"rootRadius":8,"secondFill":"rgb(255, 255, 255)","secondColor":"#222","secondBorder":"rgb(255, 255, 255)","secondBorderWidth":1,"secondRadius":6,"nodeColor":"#333"},
+      // 原主题名: 天空蓝 (blueSky)
+      "blueSky": {"name":"天空蓝","lineColor":"rgb(115, 161, 191)","lineWidth":2,"rootFill":"rgb(115, 161, 191)","rootColor":"#ffffff","rootBorder":"","rootBorderWidth":0,"rootRadius":8,"secondFill":"rgb(238, 243, 246)","secondColor":"#333","secondBorder":"rgb(115, 161, 191)","secondBorderWidth":1,"secondRadius":6,"nodeColor":"#333"},
+      // 原主题名: 脑残粉 (brainImpairedPink)
+      "brainImpairedPink": {"name":"脑残粉","lineColor":"rgb(191, 115, 148)","lineWidth":2,"rootFill":"rgb(191, 115, 148)","rootColor":"#ffffff","rootBorder":"","rootBorderWidth":0,"rootRadius":8,"secondFill":"rgb(246, 238, 242)","secondColor":"#333","secondBorder":"rgb(191, 115, 148)","secondBorderWidth":1,"secondRadius":6,"nodeColor":"#333"},
+      // 原主题名: 泥土黄 (earthYellow)
+      "earthYellow": {"name":"泥土黄","lineColor":"rgb(191, 147, 115)","lineWidth":2,"rootFill":"rgb(191, 147, 115)","rootColor":"#ffffff","rootBorder":"","rootBorderWidth":0,"rootRadius":8,"secondFill":"rgb(246, 242, 238)","secondColor":"#333","secondBorder":"rgb(191, 147, 115)","secondBorderWidth":1,"secondRadius":6,"nodeColor":"#333"},
+      // 原主题名: 清新绿 (freshGreen)
+      "freshGreen": {"name":"清新绿","lineColor":"#333","lineWidth":2,"rootFill":"#1fb27d","rootColor":"#ffffff","rootBorder":"","rootBorderWidth":0,"rootRadius":8,"secondFill":"#fff","secondColor":"#565656","secondBorder":"transparent","secondBorderWidth":0,"secondRadius":6,"nodeColor":"#555555"},
+      // 原主题名: 清新红 (freshRed)
+      "freshRed": {"name":"清新红","lineColor":"rgb(191, 115, 115)","lineWidth":2,"rootFill":"rgb(191, 115, 115)","rootColor":"#ffffff","rootBorder":"","rootBorderWidth":0,"rootRadius":8,"secondFill":"rgb(246, 238, 238)","secondColor":"#333","secondBorder":"rgb(191, 115, 115)","secondBorderWidth":1,"secondRadius":6,"nodeColor":"#333"},
+      // 原主题名: 浪漫紫 (romanticPurple)
+      "romanticPurple": {"name":"浪漫紫","lineColor":"rgb(123, 115, 191)","lineWidth":2,"rootFill":"rgb(123, 115, 191)","rootColor":"#ffffff","rootBorder":"","rootBorderWidth":0,"rootRadius":8,"secondFill":"rgb(239, 238, 246)","secondColor":"#333","secondBorder":"rgb(123, 115, 191)","secondBorderWidth":1,"secondRadius":6,"nodeColor":"#333"},
+      // 原主题名: 粉红葡萄 (pinkGrape)
+      "pinkGrape": {"name":"粉红葡萄","lineColor":"rgb(166, 101, 106)","lineWidth":3,"rootFill":"rgb(139, 109, 225)","rootColor":"#ffffff","rootBorder":"","rootBorderWidth":0,"rootRadius":8,"secondFill":"rgb(243, 104, 138)","secondColor":"#fff","secondBorder":"","secondBorderWidth":0,"secondRadius":6,"nodeColor":"#222"},
+      // 原主题名: 薄荷 (mint)
+      "mint": {"name":"薄荷","lineColor":"rgb(104, 204, 202)","lineWidth":3,"rootFill":"rgb(0, 192, 184)","rootColor":"#ffffff","rootBorder":"","rootBorderWidth":0,"rootRadius":8,"secondFill":"#fff","secondColor":"#222","secondBorder":"rgb(184, 235, 233)","secondBorderWidth":2,"secondRadius":6,"nodeColor":"#222"},
+      // 原主题名: 金色vip (gold)
+      "gold": {"name":"金色vip","lineColor":"rgb(51, 56, 62)","lineWidth":3,"rootFill":"rgb(51, 56, 62)","rootColor":"rgb(247, 208, 160)","rootBorder":"","rootBorderWidth":0,"rootRadius":8,"secondFill":"rgb(239, 209, 176)","secondColor":"rgb(81, 58, 42)","secondBorder":"","secondBorderWidth":0,"secondRadius":6,"nodeColor":"#222"},
+      // 原主题名: 活力橙 (vitalityOrange)
+      "vitalityOrange": {"name":"活力橙","lineColor":"rgb(254, 146, 0)","lineWidth":3,"rootFill":"rgb(255, 112, 52)","rootColor":"#fff","rootBorder":"","rootBorderWidth":0,"rootRadius":8,"secondFill":"#fff","secondColor":"rgb(51, 51, 51)","secondBorder":"","secondBorderWidth":0,"secondRadius":6,"nodeColor":"#222"},
+      // 原主题名: 绿叶 (greenLeaf)
+      "greenLeaf": {"name":"绿叶","lineColor":"rgb(40, 193, 84)","lineWidth":3,"rootFill":"rgb(25, 193, 73)","rootColor":"#fff","rootBorder":"","rootBorderWidth":0,"rootRadius":8,"secondFill":"#fff","secondColor":"rgb(69, 149, 96)","secondBorder":"","secondBorderWidth":0,"secondRadius":6,"nodeColor":"#222"},
+      // 原主题名: 小黄人 (minions)
+      "minions": {"name":"小黄人","lineColor":"rgb(51, 51, 51)","lineWidth":3,"rootFill":"rgb(55, 165, 255)","rootColor":"#ffffff","rootBorder":"rgb(51, 51, 51)","rootBorderWidth":3,"rootRadius":8,"secondFill":"rgb(255, 160, 36)","secondColor":"#222","secondBorder":"rgb(51, 51, 51)","secondBorderWidth":3,"secondRadius":6,"nodeColor":"#222"},
+      // 原主题名: 简约黑 (simpleBlack)
+      "simpleBlack": {"name":"简约黑","lineColor":"rgb(34, 34, 34)","lineWidth":4,"rootFill":"#fff","rootColor":"rgb(34, 34, 34)","rootBorder":"rgb(34, 34, 34)","rootBorderWidth":3,"rootRadius":8,"secondFill":"rgb(241, 246, 248)","secondColor":"rgb(34, 34, 34)","secondBorder":"rgb(34, 34, 34)","secondBorderWidth":3,"secondRadius":6,"nodeColor":"rgb(34, 34, 34)"},
+      // 原主题名: 课程绿 (courseGreen)
+      "courseGreen": {"name":"课程绿","lineColor":"rgb(113, 195, 169)","lineWidth":3,"rootFill":"rgb(16, 160, 121)","rootColor":"#fff","rootBorder":"","rootBorderWidth":0,"rootRadius":8,"secondFill":"rgb(240, 252, 249)","secondColor":"rgb(50, 113, 96)","secondBorder":"rgb(113, 195, 169)","secondBorderWidth":2,"secondRadius":6,"nodeColor":"rgb(10, 59, 43)"},
+      // 原主题名: 咖啡 (coffee)
+      "coffee": {"name":"咖啡","lineColor":"rgb(173, 123, 91)","lineWidth":4,"rootFill":"rgb(202, 117, 79)","rootColor":"#fff","rootBorder":"","rootBorderWidth":0,"rootRadius":8,"secondFill":"rgb(245, 231, 216)","secondColor":"rgb(125, 86, 42)","secondBorder":"","secondBorderWidth":0,"secondRadius":6,"nodeColor":"rgb(96, 71, 47)"},
+      // 原主题名: 红色精神 (redSpirit)
+      "redSpirit": {"name":"红色精神","lineColor":"rgb(230, 138, 131)","lineWidth":3,"rootFill":"rgb(207, 44, 44)","rootColor":"rgb(255, 233, 157)","rootBorder":"","rootBorderWidth":0,"rootRadius":8,"secondFill":"rgb(255, 255, 255)","secondColor":"rgb(211, 58, 21)","secondBorder":"rgb(222, 101, 85)","secondBorderWidth":2,"secondRadius":6,"nodeColor":"rgb(144, 71, 43)"},
+      // 原主题名: 牛油果 (avocado)
+      "avocado": {"name":"牛油果","lineColor":"#f5ffad","lineWidth":4,"rootFill":"#94c143","rootColor":"#fff","rootBorder":"#94c143","rootBorderWidth":0,"rootRadius":8,"secondFill":"#cee498","secondColor":"#749336","secondBorder":"#aec668","secondBorderWidth":2,"secondRadius":6,"nodeColor":"#749336"},
+      // 原主题名: 秋天 (autumn)
+      "autumn": {"name":"秋天","lineColor":"#b0bc47","lineWidth":3,"rootFill":"#e68112","rootColor":"#fff","rootBorder":"#e68112","rootBorderWidth":0,"rootRadius":8,"secondFill":"#ffd683","secondColor":"#8c5416","secondBorder":"#b0bc47","secondBorderWidth":2,"secondRadius":6,"nodeColor":"#8c5416"},
+      // 原主题名: 奥利奥 (oreo)
+      "oreo": {"name":"奥利奥","lineColor":"rgb(51, 51, 51)","lineWidth":3,"rootFill":"rgb(22, 22, 22)","rootColor":"#fff","rootBorder":"rgb(22, 22, 22)","rootBorderWidth":3,"rootRadius":8,"secondFill":"rgb(244, 246, 253)","secondColor":"rgb(0, 0, 0)","secondBorder":"","secondBorderWidth":3,"secondRadius":6,"nodeColor":"rgb(0, 0, 0)"},
+      // 原主题名: 浅海 (shallowSea)
+      "shallowSea": {"name":"浅海","lineColor":"rgb(74, 139, 170)","lineWidth":3,"rootFill":"rgb(51, 149, 255)","rootColor":"#fff","rootBorder":"rgb(51, 149, 255)","rootBorderWidth":3,"rootRadius":8,"secondFill":"rgb(74, 139, 170)","secondColor":"#fff","secondBorder":"","secondBorderWidth":3,"secondRadius":6,"nodeColor":"rgb(0, 0, 0)"},
+      // 原主题名: 柠檬气泡 (lemonBubbles)
+      "lemonBubbles": {"name":"柠檬气泡","lineColor":"rgb(51, 51, 51)","lineWidth":3,"rootFill":"rgb(39, 222, 232)","rootColor":"rgb(26, 26, 26)","rootBorder":"rgb(26, 26, 26)","rootBorderWidth":3,"rootRadius":8,"secondFill":"rgb(235, 255, 187)","secondColor":"rgb(0, 0, 0)","secondBorder":"rgb(51, 51, 51)","secondBorderWidth":3,"secondRadius":6,"nodeColor":"rgb(0, 0, 0)"},
+      // 原主题名: 玫瑰 (rose)
+      "rose": {"name":"玫瑰","lineColor":"rgb(110, 165, 79)","lineWidth":3,"rootFill":"rgb(254, 92, 92)","rootColor":"#fff","rootBorder":"rgb(18, 187, 55)","rootBorderWidth":3,"rootRadius":8,"secondFill":"rgb(209, 237, 176)","secondColor":"rgb(85, 136, 55)","secondBorder":"","secondBorderWidth":3,"secondRadius":6,"nodeColor":"rgb(26, 26, 26)"},
+      // 原主题名: 海蓝线 (seaBlueLine)
+      "seaBlueLine": {"name":"海蓝线","lineColor":"rgb(96, 189, 255)","lineWidth":3,"rootFill":"rgb(96, 189, 255)","rootColor":"#fff","rootBorder":"#fff","rootBorderWidth":3,"rootRadius":8,"secondFill":"#fff","secondColor":"rgb(0, 149, 255)","secondBorder":"","secondBorderWidth":3,"secondRadius":6,"nodeColor":"rgb(0, 66, 157)"},
+      // 原主题名: 莫兰迪 (morandi)
+      "morandi": {"name":"莫兰迪","lineColor":"rgb(144, 114, 110)","lineWidth":3,"rootFill":"rgb(207, 121, 105)","rootColor":"#fff","rootBorder":"rgb(207, 121, 105)","rootBorderWidth":3,"rootRadius":8,"secondFill":"rgb(239, 210, 207)","secondColor":"rgb(144, 79, 68)","secondBorder":"rgb(222, 186, 183)","secondBorderWidth":3,"secondRadius":6,"nodeColor":"rgb(131, 90, 64)"},
+      // 原主题名: 仙人掌 (cactus)
+      "cactus": {"name":"仙人掌","lineColor":"rgb(51, 51, 51)","lineWidth":3,"rootFill":"rgb(15, 198, 113)","rootColor":"#fff","rootBorder":"","rootBorderWidth":0,"rootRadius":8,"secondFill":"#fff","secondColor":"rgb(26, 26, 26)","secondBorder":"","secondBorderWidth":0,"secondRadius":6,"nodeColor":"rgb(0, 0, 0)"},
+      // 原主题名: 脑图经典2 (classic2)
+      "classic2": {"name":"脑图经典2","lineColor":"rgb(51, 51, 51)","lineWidth":2,"rootFill":"rgb(18, 187, 55)","rootColor":"#fff","rootBorder":"","rootBorderWidth":0,"rootRadius":10,"secondFill":"rgb(241, 242, 241)","secondColor":"#1a1a1a","secondBorder":"transparent","secondBorderWidth":1,"secondRadius":10,"nodeColor":"#1a1a1a"},
+      // 原主题名: 脑图经典3 (classic3)
+      "classic3": {"name":"脑图经典3","lineColor":"rgb(94, 202, 110)","lineWidth":2,"rootFill":"rgb(255, 245, 214)","rootColor":"#1a1a1a","rootBorder":"rgb(249, 199, 84)","rootBorderWidth":1,"rootRadius":10,"secondFill":"rgb(255, 245, 214)","secondColor":"#1a1a1a","secondBorder":"rgb(249, 199, 84)","secondBorderWidth":1,"secondRadius":10,"nodeColor":"#1a1a1a"},
+      // 原主题名: 脑图经典4 (classic4)
+      "classic4": {"name":"脑图经典4","lineColor":"rgb(30, 53, 86)","lineWidth":2,"rootFill":"rgb(30, 53, 86)","rootColor":"#fff","rootBorder":"rgb(189, 197, 201)","rootBorderWidth":2,"rootRadius":10,"secondFill":"rgb(169, 218, 218)","secondColor":"#fff","secondBorder":"rgb(30, 53, 86)","secondBorderWidth":2,"secondRadius":10,"nodeColor":"rgb(30, 53, 86)"},
+      // 原主题名: 脑图经典5 (classic5)
+      "classic5": {"name":"脑图经典5","lineColor":"rgb(34, 34, 34)","lineWidth":2,"rootFill":"rgb(56, 44, 116)","rootColor":"#fff","rootBorder":"rgb(56, 44, 116)","rootBorderWidth":0,"rootRadius":8,"secondFill":"rgb(161, 213, 188)","secondColor":"rgb(0, 0, 0)","secondBorder":"","secondBorderWidth":0,"secondRadius":6,"nodeColor":"rgb(0, 0, 0)"},
+      // 原主题名: 脑图经典6 (classic6)
+      "classic6": {"name":"脑图经典6","lineColor":"rgb(0, 0, 0)","lineWidth":2,"rootFill":"rgb(237, 182, 72)","rootColor":"rgb(0, 0, 0)","rootBorder":"rgb(0, 0, 0)","rootBorderWidth":2,"rootRadius":8,"secondFill":"rgb(114, 158, 28)","secondColor":"#fff","secondBorder":"rgb(0, 0, 0)","secondBorderWidth":2,"secondRadius":6,"nodeColor":"rgb(10, 2, 2)"},
+      // 原主题名: 脑图经典7 (classic7)
+      "classic7": {"name":"脑图经典7","lineColor":"rgb(237, 185, 81)","lineWidth":2,"rootFill":"rgb(226, 90, 64)","rootColor":"#fff","rootBorder":"","rootBorderWidth":0,"rootRadius":8,"secondFill":"rgb(43, 118, 239)","secondColor":"#fff","secondBorder":"","secondBorderWidth":0,"secondRadius":6,"nodeColor":"rgb(43, 118, 239)"},
+      // 原主题名: 脑图经典8 (classic8)
+      "classic8": {"name":"脑图经典8","lineColor":"#36aaa9","lineWidth":2,"rootFill":"#3e58ea","rootColor":"#fff","rootBorder":"","rootBorderWidth":0,"rootRadius":8,"secondFill":"#e3fbff","secondColor":"#58aabc","secondBorder":"#50a4b4","secondBorderWidth":2,"secondRadius":6,"nodeColor":"#50a4b4"},
+      // 原主题名: 脑图经典9 (classic9)
+      "classic9": {"name":"脑图经典9","lineColor":"#333333","lineWidth":2,"rootFill":"#ffda60","rootColor":"#3b3a37","rootBorder":"#343334","rootBorderWidth":2,"rootRadius":8,"secondFill":"#fff","secondColor":"#131312","secondBorder":"","secondBorderWidth":0,"secondRadius":6,"nodeColor":"#131312"},
+      // 原主题名: 脑图经典10 (classic10)
+      "classic10": {"name":"脑图经典10","lineColor":"#273d62","lineWidth":2,"rootFill":"#273d62","rootColor":"#fff","rootBorder":"","rootBorderWidth":0,"rootRadius":8,"secondFill":"#9edeee","secondColor":"#406080","secondBorder":"#395c85","secondBorderWidth":2,"secondRadius":6,"nodeColor":"#395c85"},
+      // 原主题名: 脑图经典11 (classic11)
+      "classic11": {"name":"脑图经典11","lineColor":"#333333","lineWidth":2,"rootFill":"#2176ef","rootColor":"#fff","rootBorder":"","rootBorderWidth":0,"rootRadius":8,"secondFill":"#fff9e4","secondColor":"#4c4b46","secondBorder":"#343433","secondBorderWidth":2,"secondRadius":6,"nodeColor":"#343433"},
+      // 原主题名: 脑图经典12 (classic12)
+      "classic12": {"name":"脑图经典12","lineColor":"#35b398","lineWidth":2,"rootFill":"#21c384","rootColor":"#fff","rootBorder":"","rootBorderWidth":0,"rootRadius":8,"secondFill":"#f5ffe6","secondColor":"#386437","secondBorder":"#35b398","secondBorderWidth":2,"secondRadius":6,"nodeColor":"#326032"},
+      // 原主题名: 脑图经典13 (classic13)
+      "classic13": {"name":"脑图经典13","lineColor":"#333333","lineWidth":2,"rootFill":"#ffd613","rootColor":"#2d2b23","rootBorder":"#1f2021","rootBorderWidth":2,"rootRadius":8,"secondFill":"#d1ebf8","secondColor":"#717b80","secondBorder":"#333333","secondBorderWidth":2,"secondRadius":5,"nodeColor":"#333333"},
+      // 原主题名: 脑图经典14 (classic14)
+      "classic14": {"name":"脑图经典14","lineColor":"#976a43","lineWidth":2,"rootFill":"#19807e","rootColor":"#f3f0b8","rootBorder":"","rootBorderWidth":0,"rootRadius":8,"secondFill":"#eacdb3","secondColor":"#7f4d1f","secondBorder":"#764014","secondBorderWidth":2,"secondRadius":6,"nodeColor":"#764014"},
+      // 原主题名: 脑图经典15 (classic15)
+      "classic15": {"name":"脑图经典15","lineColor":"#3e416c","lineWidth":2,"rootFill":"#383b70","rootColor":"#fff","rootBorder":"","rootBorderWidth":0,"rootRadius":8,"secondFill":"#ffdb9c","secondColor":"#5e5c76","secondBorder":"#3e416c","secondBorderWidth":2,"secondRadius":6,"nodeColor":"#3e416c"},
+    }
+
+    const generateThemePreviewSvg = (themeValue, currentBg, isDark) => {
+      const t = MINDMAP_THEME_STYLES[themeValue] || (window.__simpleMindMapThemes && window.__simpleMindMapThemes[themeValue]) || {}
+      const bg = currentBg || (isDark ? '#1e1e1e' : '#ffffff')
+
+      const root = t.root || {}
+      const second = t.second || {}
+      const node = t.node || {}
+
+      const rootFill = t.rootFill || root.fillColor || (isDark ? '#333333' : '#409eff')
+      const rootColor = t.rootColor || root.color || '#ffffff'
+      const rootBorder = t.rootBorder || root.borderColor || (t.rootBorderWidth > 0 ? rootFill : '')
+      const rootBorderWidth = t.rootBorderWidth !== undefined ? t.rootBorderWidth : (root.borderWidth !== undefined ? root.borderWidth : 0)
+      const rootRadius = Math.min(12, t.rootRadius !== undefined ? t.rootRadius : (root.borderRadius !== undefined ? root.borderRadius : 8))
+
+      const secondFill = t.secondFill || second.fillColor || (isDark ? '#222222' : '#ffffff')
+      const secondColor = t.secondColor || second.color || (isDark ? '#e0e0e0' : '#333333')
+      const secondBorder = t.secondBorder || second.borderColor || (isDark ? '#444444' : '#dcdfe6')
+      const secondBorderWidth = t.secondBorderWidth !== undefined ? t.secondBorderWidth : (second.borderWidth !== undefined ? second.borderWidth : 1)
+      const secondRadius = Math.min(8, t.secondRadius !== undefined ? t.secondRadius : (second.borderRadius !== undefined ? second.borderRadius : 6))
+
+      const lineColor = t.lineColor || (isDark ? '#888888' : '#409eff')
+      const lineWidth = Math.min(3, Math.max(1.5, t.lineWidth || 2))
+      const subLineWidth = Math.max(1.2, lineWidth * 0.75)
+      const nodeColor = t.nodeColor || node.color || (isDark ? '#aaaaaa' : '#555555')
+
+      const normalize = (c) => (c || '').replace(/\s+/g, '').toLowerCase()
+      const bgNorm = normalize(bg)
+      const isWhiteBg = bgNorm === '#fff' || bgNorm === '#ffffff' || bgNorm === 'rgb(255,255,255)' || bgNorm === 'rgba(255,255,255,1)'
+      const isWhiteRoot = normalize(rootFill) === '#fff' || normalize(rootFill) === '#ffffff' || normalize(rootFill) === 'rgb(255,255,255)'
+      const isWhiteSecond = normalize(secondFill) === '#fff' || normalize(secondFill) === '#ffffff' || normalize(secondFill) === 'rgb(255,255,255)'
+
+      let finalRootStroke = rootBorder || 'none'
+      let finalRootStrokeWidth = rootBorderWidth
+      if ((isWhiteBg && isWhiteRoot && rootBorderWidth === 0) || normalize(rootFill) === bgNorm) {
+        finalRootStroke = isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.15)'
+        finalRootStrokeWidth = 1
+      }
+
+      let finalSecondStroke = secondBorder || (secondBorderWidth > 0 ? (isDark ? '#444444' : '#dcdfe6') : 'none')
+      let finalSecondStrokeWidth = secondBorderWidth
+      if ((isWhiteBg && isWhiteSecond && secondBorderWidth === 0) || normalize(secondFill) === bgNorm) {
+        finalSecondStroke = isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.12)'
+        finalSecondStrokeWidth = 1
+      }
+
+      const cardBorder = isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)'
+
+      const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 492 196" width="100%" height="100%">' +
+        '<rect x="1" y="1" width="490" height="194" rx="8" fill="' + bg + '" stroke="' + cardBorder + '" stroke-width="1.5"/>' +
+        '<path d="M 152 98 L 232 98" stroke="' + lineColor + '" stroke-width="' + lineWidth + '" stroke-linecap="round"/>' +
+        '<rect x="42" y="66" width="110" height="64" rx="' + rootRadius + '" fill="' + rootFill + '" stroke="' + finalRootStroke + '" stroke-width="' + finalRootStrokeWidth + '"/>' +
+        '<text x="97" y="105" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="20" font-weight="bold" fill="' + rootColor + '">根节点</text>' +
+        '<rect x="232" y="74" width="105" height="48" rx="' + secondRadius + '" fill="' + secondFill + '" stroke="' + finalSecondStroke + '" stroke-width="' + finalSecondStrokeWidth + '"/>' +
+        '<text x="284.5" y="104" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="16" fill="' + secondColor + '">二级节点</text>' +
+        '<circle cx="352" cy="98" r="8" fill="' + secondFill + '" stroke="' + lineColor + '" stroke-width="1.5"/>' +
+        '<line x1="348" y1="98" x2="356" y2="98" stroke="' + lineColor + '" stroke-width="1.5" stroke-linecap="round"/>' +
+        '<path d="M 360 98 C 382 98, 386 56, 408 56" fill="none" stroke="' + lineColor + '" stroke-width="' + subLineWidth + '" stroke-linecap="round"/>' +
+        '<path d="M 360 98 C 382 98, 386 140, 408 140" fill="none" stroke="' + lineColor + '" stroke-width="' + subLineWidth + '" stroke-linecap="round"/>' +
+        '<text x="418" y="62" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="15" fill="' + nodeColor + '">子节点</text>' +
+        '<text x="418" y="146" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="15" fill="' + nodeColor + '">子节点</text>' +
+      '</svg>'
+
+      return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg)
+    }
+
+        Vue.mixin({
+          created() {
+            if (typeof this.onLocalStorageExceeded === 'function') {
+              this.onLocalStorageExceeded = function() {
+                console.warn('[MarkNotePro] Blocked onLocalStorageExceeded notification')
+              }
+            }
+            if (this.defaultGroupList !== undefined) {
+              const vm = this
+              window.__themeComponent = vm
+
+              const updateAllThemePreviews = () => {
+                const currentBg = window.__currentBackgroundColor || (vm.isDark ? '#1e1e1e' : '#ffffff')
+                const allGroups = vm.allDefaultGroupList || vm.defaultGroupList || []
+                allGroups.forEach(group => {
+                  if (Array.isArray(group.list)) {
+                    group.list.forEach(item => {
+                      item.img = generateThemePreviewSvg(item.value, currentBg, vm.isDark)
+                    })
+                  }
+                })
+              }
+              window.__updateThemeImages = () => {
+                updateAllThemePreviews()
+                vm.$forceUpdate()
+              }
+
+              const origInitGroup = vm.initGroup
+              vm.initGroup = function() {
+                if (typeof origInitGroup === 'function') origInitGroup.apply(this, arguments)
+                vm.syncFilteredGroups()
+              }
+              vm.syncFilteredGroups = function() {
+                if (!vm.allDefaultGroupList && Array.isArray(vm.defaultGroupList)) {
+                  vm.allDefaultGroupList = [...vm.defaultGroupList]
+                }
+                const all = vm.allDefaultGroupList || vm.defaultGroupList || []
+                const darkName = vm.$t ? vm.$t('theme.dark') : '暗黑'
+                const classicsName = vm.$t ? vm.$t('theme.classics') : '经典'
+                const simpleName = vm.$t ? vm.$t('theme.simple') : '朴素'
+                if (vm.isDark) {
+                  vm.defaultGroupList = all.filter(item => item.name === darkName)
+                } else {
+                  vm.defaultGroupList = all.filter(item => item.name === classicsName || item.name === simpleName)
+                }
+                updateAllThemePreviews()
+                const available = vm.groupList || vm.defaultGroupList || []
+                if (!available.some(item => item.name === vm.activeName)) {
+                  vm.activeName = available[0]?.name || ''
+                }
+              }
+              const origChangeTheme = vm.changeTheme
+              vm.changeTheme = function(theme, config) {
+                const currentBg = window.__currentBackgroundColor || ''
+                const customConfig = {
+                  ...(config || {}),
+                  backgroundColor: currentBg,
+                  backgroundImage: 'none',
+                  _isCustomTheme: true,
+                  _customThemeIsDark: vm.isDark
+                }
+                if (vm.mindMap && typeof vm.mindMap.setThemeConfig === 'function') {
+                  vm.mindMap.setThemeConfig(customConfig)
+                }
+                if (vm.mindMap && vm.mindMap.el && currentBg) {
+                  vm.mindMap.el.style.backgroundColor = currentBg
+                  vm.mindMap.el.style.backgroundImage = 'none'
+                }
+                if (window.$bus) {
+                  window.$bus.$emit('marknotepro::custom_theme_chosen', {
+                    template: theme.value,
+                    isDark: vm.isDark,
+                    config: customConfig
+                  })
+                }
+                let res
+                if (typeof origChangeTheme === 'function') {
+                  res = origChangeTheme.call(this, theme, customConfig)
+                }
+                if (vm.mindMap && typeof vm.mindMap.setThemeConfig === 'function') {
+                  vm.mindMap.setThemeConfig(customConfig)
+                }
+                if (vm.mindMap && vm.mindMap.el && currentBg) {
+                  vm.mindMap.el.style.backgroundColor = currentBg
+                  vm.mindMap.el.style.backgroundImage = 'none'
+                }
+                return res
+              }
+            }
+          },
+          mounted() {
+            if (this.defaultGroupList !== undefined && typeof this.syncFilteredGroups === 'function') {
+              this.syncFilteredGroups()
+            }
+          },
+          watch: {
+            isDark() {
+              if (this.defaultGroupList !== undefined && typeof this.syncFilteredGroups === 'function') {
+                this.$nextTick(() => {
+                  this.syncFilteredGroups()
+                })
+              }
+            }
+          }
+        })
+      }
+    })()
+
     if (typeof window.initApp === 'function') {
       const rawInitApp = window.initApp
       window.initApp = function() {

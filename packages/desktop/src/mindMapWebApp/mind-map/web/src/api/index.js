@@ -51,7 +51,9 @@ export const storeData = data => {
     }
     if (window.takeOverApp) {
       mindMapData = originData
-      window.takeOverAppMethods.saveMindMapData(originData)
+      if (window.takeOverAppMethods && typeof window.takeOverAppMethods.saveMindMapData === 'function') {
+        window.takeOverAppMethods.saveMindMapData(originData)
+      }
       return
     }
     Vue.prototype.$bus.$emit('write_local_file', originData)
@@ -60,8 +62,8 @@ export const storeData = data => {
     }
     localStorage.setItem(SIMPLE_MIND_MAP_DATA, JSON.stringify(originData))
   } catch (error) {
-    console.log(error)
-    if ('exceeded') {
+    console.warn('存储思维导图数据异常:', error)
+    if (!window.takeOverApp) {
       Vue.prototype.$bus.$emit('localStorageExceeded')
     }
   }

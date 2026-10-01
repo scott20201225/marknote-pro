@@ -350,13 +350,25 @@ export const requestMindMapSave = async (win: BrowserWindow, filePath: string): 
   try {
     const data = await entry.view.webContents.executeJavaScript(`
       new Promise((resolve) => {
+        let fullData = null
         if (window.__mindMap && typeof window.__mindMap.getData === 'function') {
-          return resolve(window.__mindMap.getData(true))
+          fullData = window.__mindMap.getData(true)
+        } else if (window.takeOverAppMethods && typeof window.takeOverAppMethods.getMindMapData === 'function') {
+          fullData = window.takeOverAppMethods.getMindMapData()
         }
-        if (window.takeOverAppMethods && typeof window.takeOverAppMethods.getMindMapData === 'function') {
-          return resolve(window.takeOverAppMethods.getMindMapData())
+        if (window.__isCustomTheme && fullData) {
+          if (!fullData.theme) fullData.theme = {}
+          fullData.theme._isCustomTheme = true
+          fullData.theme._customThemeIsDark = window.__customThemeIsDark
+          if (!fullData.theme.config) fullData.theme.config = {}
+          fullData.theme.config._isCustomTheme = true
+          fullData.theme.config._customThemeIsDark = window.__customThemeIsDark
+          if (window.__currentBackgroundColor) {
+            fullData.theme.config.backgroundColor = window.__currentBackgroundColor
+            fullData.theme.config.backgroundImage = 'none'
+          }
         }
-        resolve(null)
+        resolve(fullData)
       })
     `)
     if (data && typeof data === 'object') {
@@ -457,20 +469,16 @@ export const registerMindMapHandlers = (): void => {
     const win = BrowserWindow.fromWebContents(event.sender)
     if (win) hideMindMapView(win)
   })
-  ipcMain.on('mt::mindmap::state', async (event, state: { modified?: boolean; data?: unknown }) => {
+  ipcMain.on('mt::mindmap::state', (event, state: { modified?: boolean; isSaved?: boolean }) => {
     const owner = viewOwners.get(event.sender.id)
     const win = owner ? BrowserWindow.fromId(owner.windowId) : null
     const entry =
       owner && win ? views.get(owner.windowId)?.documents.get(owner.filePath) : undefined
-    if (win && entry && state.modified) {
-      emitState(win, entry, { modified: true, isSaved: false, isSaving: false })
-      if (state.data && typeof state.data === 'object') {
-        try {
-          await writeFile(entry.filePath, JSON.stringify(state.data, null, 2), undefined, 'utf8')
-          emitState(win, entry, { modified: false, isSaved: true, isSaving: false })
-        } catch (error) {
-          log.error('自动保存思维导图文件失败:', error)
-        }
+    if (win && entry) {
+      if (state.modified) {
+        emitState(win, entry, { modified: true, isSaved: false, isSaving: false })
+      } else if (state.isSaved) {
+        emitState(win, entry, { modified: false, isSaved: true, isSaving: false })
       }
     }
   })
