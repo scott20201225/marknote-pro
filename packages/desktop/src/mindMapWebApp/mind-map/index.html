@@ -1161,6 +1161,12 @@
       if (window.$bus) {
         window.$bus.$emit('lang_change', mappedLang);
       }
+      if (window.__sidebarTriggerComponent) {
+        if (window.__sidebarTriggerComponent._computedWatchers && window.__sidebarTriggerComponent._computedWatchers.triggerList) {
+          window.__sidebarTriggerComponent._computedWatchers.triggerList.dirty = true;
+        }
+        window.__sidebarTriggerComponent.$forceUpdate();
+      }
       if (window.__themeComponent && typeof window.__themeComponent.syncFilteredGroups === 'function') {
         window.__themeComponent.syncFilteredGroups();
         window.__themeComponent.$forceUpdate();
@@ -2459,6 +2465,29 @@
             if (this.$root && !window.__vueApp) {
               window.__vueApp = this.$root;
             }
+            if (this.$options && this.$options.computed && this.$options.computed.triggerList) {
+              const origComputed = this.$options.computed.triggerList;
+              const rawGetter = typeof origComputed === 'function' ? origComputed : origComputed.get;
+              if (rawGetter && !rawGetter.__marknotepro_wrapped) {
+                const wrappedGetter = function() {
+                  const list = rawGetter.call(this) || [];
+                  const loc = normalizeLang(this.$i18n ? this.$i18n.locale : currentLang);
+                  const names = SIDEBAR_TRIGGER_NAMES[loc] || SIDEBAR_TRIGGER_NAMES.zh;
+                  return list
+                    .filter(item => item && item.value !== 'ai')
+                    .map(item => ({
+                      ...item,
+                      name: (names && names[item.value]) || item.name
+                    }));
+                };
+                wrappedGetter.__marknotepro_wrapped = true;
+                if (typeof origComputed === 'function') {
+                  this.$options.computed.triggerList = wrappedGetter;
+                } else {
+                  this.$options.computed.triggerList = { ...origComputed, get: wrappedGetter };
+                }
+              }
+            }
           },
           created() {
             if (typeof this.onLocalStorageExceeded === 'function') {
@@ -2466,27 +2495,18 @@
                 console.warn('[MarkNotePro] Blocked onLocalStorageExceeded notification')
               }
             }
-            if (this.triggerList !== undefined && typeof this.setActiveSidebar === 'function') {
-              const vm = this
-              const origWatcher = this._computedWatchers?.triggerList
-              if (origWatcher && !vm.__sidebar_trigger_localized) {
-                vm.__sidebar_trigger_localized = true
-                const origGetter = origWatcher.getter
-                origWatcher.getter = function() {
-                  const list = origGetter.call(vm) || []
-                  const loc = normalizeLang(vm.$i18n ? vm.$i18n.locale : currentLang)
-                  const names = SIDEBAR_TRIGGER_NAMES[loc] || SIDEBAR_TRIGGER_NAMES.zh
-                  return list
-                    .filter(item => item.value !== 'ai')
-                    .map(item => ({
-                      ...item,
-                      name: names[item.value] || item.name
-                    }))
-                }
+            if (this.$options && this.$options.computed && this.$options.computed.triggerList && typeof this.setActiveSidebar === 'function') {
+              const vm = this;
+              window.__sidebarTriggerComponent = vm;
+              if (vm._computedWatchers && vm._computedWatchers.triggerList) {
+                vm._computedWatchers.triggerList.dirty = true;
               }
               if (window.$bus && !vm.__sidebar_trigger_lang_listener) {
                 vm.__sidebar_trigger_lang_listener = true;
                 window.$bus.$on('lang_change', () => {
+                  if (vm._computedWatchers && vm._computedWatchers.triggerList) {
+                    vm._computedWatchers.triggerList.dirty = true;
+                  }
                   vm.$forceUpdate();
                 });
               }
@@ -2643,6 +2663,14 @@
             }
           },
           mounted() {
+            if (this.$options && this.$options.computed && this.$options.computed.triggerList && typeof this.setActiveSidebar === 'function') {
+              const vm = this;
+              window.__sidebarTriggerComponent = vm;
+              if (vm._computedWatchers && vm._computedWatchers.triggerList) {
+                vm._computedWatchers.triggerList.dirty = true;
+              }
+              vm.$forceUpdate();
+            }
             if (this.defaultGroupList !== undefined && typeof this.syncFilteredGroups === 'function') {
               this.syncFilteredGroups()
             }
