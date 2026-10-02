@@ -181,20 +181,21 @@ class Search {
     this.notResetSearchText = true
     const uid = this.isNodeInstance(currentNode)
       ? currentNode.getData('uid')
-      : currentNode.data.uid
+      : (currentNode.data?.uid || currentNode.uid)
     if (!uid) {
-      callback()
+      if (typeof callback === 'function') callback()
+      this.emitEvent()
       return
     }
     const targetNode = this.mindMap.renderer.findNodeByUid(uid)
     this.mindMap.execCommand('GO_TARGET_NODE', uid, node => {
-      if (!this.isNodeInstance(currentNode)) {
+      if (!this.isNodeInstance(currentNode) && node) {
         this.matchNodeList[this.currentIndex] = node
         this.updateMatchNodeList(this.matchNodeList)
       }
-      callback()
+      if (typeof callback === 'function') callback()
       // 只读模式下节点无法激活，所以通过高亮的方式
-      if (readonly) {
+      if (readonly && node) {
         node.highlight()
       }
       // 如果当前节点实例已经存在，则不会触发data_change事件，那么需要手动把标志复位
@@ -202,6 +203,7 @@ class Search {
         this.notResetSearchText = false
       }
     })
+    this.emitEvent()
   }
 
   // 只读模式下清除现有匹配节点的高亮
@@ -234,12 +236,35 @@ class Search {
     this.isJumpNext = jumpNext
     replaceText = String(replaceText)
     let currentNode = this.matchNodeList[this.currentIndex]
-    if (!currentNode) return
+    if (!currentNode) {
+      if (this.matchNodeList.length > 0) {
+        this.currentIndex = 0
+        currentNode = this.matchNodeList[0]
+      } else {
+        return
+      }
+    }
     // 如果当前搜索文本是替换文本的子串，那么该节点还是符合搜索结果的
     const keep = replaceText.includes(this.searchText)
     const text = this.getReplacedText(currentNode, this.searchText, replaceText)
     this.notResetSearchText = true
-    currentNode.setText(text, currentNode.getData('richText'))
+
+    const uid = this.isNodeInstance(currentNode)
+      ? currentNode.getData('uid')
+      : (currentNode.data?.uid || currentNode.uid)
+    const nodeInstance = this.isNodeInstance(currentNode)
+      ? currentNode
+      : (uid ? this.mindMap.renderer.findNodeByUid(uid) : null)
+
+    if (nodeInstance) {
+      nodeInstance.setText(text, nodeInstance.getData('richText'))
+    } else if (currentNode.data) {
+      currentNode.data.text = text
+      this.mindMap.render()
+    }
+    this.mindMap.command.addHistory()
+    this.mindMap.emit('data_change', this.mindMap.getData())
+
     if (keep) {
       this.updateMatchNodeList(this.matchNodeList)
       return
@@ -276,12 +301,13 @@ class Search {
           text
         }
         this.mindMap.renderer.setNodeDataRender(node, data, true)
-      } else {
+      } else if (node.data) {
         node.data.text = text
       }
     })
     this.mindMap.render()
     this.mindMap.command.addHistory()
+    this.mindMap.emit('data_change', this.mindMap.getData())
     if (keep) {
       this.updateMatchNodeList(this.matchNodeList)
     } else {
@@ -293,11 +319,13 @@ class Search {
   getReplacedText(node, searchText, replaceText) {
     let { richText, text } = this.isNodeInstance(node)
       ? node.getData()
-      : node.data
+      : (node.data || {})
+    if (!text) return ''
     if (richText) {
       return replaceHtmlText(text, searchText, replaceText)
     } else {
-      return text.replace(new RegExp(searchText, 'g'), replaceText)
+      const escaped = String(searchText).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      return String(text).replace(new RegExp(escaped, 'g'), replaceText)
     }
   }
 

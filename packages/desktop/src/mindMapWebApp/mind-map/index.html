@@ -7,6 +7,9 @@
   <link rel="icon" href="dist/logo.ico">
   <title>思维导图 - MarkNotePro</title>
   <script>
+    try {
+      localStorage.setItem('webUseTip', '1')
+    } catch (_) {}
     // 自定义静态资源的路径
     window.externalPublicPath = './dist/'
     // 接管应用
@@ -73,6 +76,11 @@
     li[command="aiChat"],
     .el-checkbox:has(input[aria-label*="AI"]),
     .iconAIshengcheng {
+      display: none !important;
+    }
+    /* 隐藏网页版试用/客户端下载弹窗与遮罩 */
+    .el-message-box__wrapper:has([href*="sxmind"]),
+    .v-modal:has(+ .el-message-box__wrapper:has([href*="sxmind"])) {
       display: none !important;
     }
     /* ========================================================
@@ -297,10 +305,141 @@
       z-index: 5 !important;
       box-shadow: -4px 0 16px var(--mm-panel-shadow) !important;
     }
+    /* 区域 5：搜索与替换面板全主题适配 */
+    .searchContainer,
+    .searchContainer.isDark {
+      background-color: var(--mm-panel-bg) !important;
+      border: 1px solid var(--mm-panel-border) !important;
+      box-shadow: 0 4px 16px var(--mm-panel-shadow) !important;
+      color: var(--mm-panel-text) !important;
+      border-radius: 12px !important;
+      z-index: 100 !important;
+    }
     .searchContainer:not(.show) {
       box-shadow: none !important;
       right: -360px !important;
       pointer-events: none !important;
+    }
+    .searchContainer.show {
+      right: 20px !important;
+    }
+    .searchContainer .closeBtnBox,
+    .searchContainer.isDark .closeBtnBox {
+      background-color: var(--mm-btn-icon-bg, var(--mm-panel-bg)) !important;
+      border: 1px solid var(--mm-panel-border) !important;
+      color: var(--mm-panel-text-secondary) !important;
+      box-shadow: 0 2px 8px var(--mm-panel-shadow) !important;
+      cursor: pointer !important;
+      transition: all 0.2s ease !important;
+      width: 24px !important;
+      height: 24px !important;
+      top: -10px !important;
+      right: -10px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      z-index: 10 !important;
+      border-radius: 50% !important;
+    }
+    .searchContainer .closeBtnBox:hover,
+    .searchContainer.isDark .closeBtnBox:hover {
+      color: var(--mm-theme-color) !important;
+      border-color: var(--mm-theme-color) !important;
+      transform: scale(1.08);
+    }
+    .searchContainer .closeBtnBox .closeBtn {
+      font-size: 14px !important;
+      color: inherit !important;
+    }
+    .searchContainer .searchInputBox .searchInfo {
+      color: var(--mm-panel-text-secondary) !important;
+      right: 70px !important;
+      font-size: 13px !important;
+    }
+    .searchContainer .el-input .el-input__inner,
+    .searchContainer.isDark .el-input .el-input__inner {
+      background-color: var(--mm-input-bg) !important;
+      border: 1px solid var(--mm-panel-border) !important;
+      color: var(--mm-panel-text) !important;
+      border-radius: 6px !important;
+    }
+    .searchContainer .el-input .el-input__inner:focus,
+    .searchContainer.isDark .el-input .el-input__inner:focus {
+      border-color: var(--mm-theme-color) !important;
+    }
+    .searchContainer .el-input-group__append,
+    .searchContainer.isDark .el-input-group__append {
+      background-color: var(--mm-item-hover-bg) !important;
+      border: 1px solid var(--mm-panel-border) !important;
+      border-left: none !important;
+      color: var(--mm-panel-text) !important;
+    }
+    .searchContainer .el-input-group__append .el-button,
+    .searchContainer.isDark .el-input-group__append .el-button {
+      color: var(--mm-panel-text) !important;
+      background: transparent !important;
+      border: none !important;
+    }
+    .searchContainer .el-input-group__append .el-button:hover,
+    .searchContainer.isDark .el-input-group__append .el-button:hover {
+      color: var(--mm-theme-color) !important;
+    }
+    .searchContainer .btnList .el-button,
+    .searchContainer.isDark .btnList .el-button {
+      background-color: var(--mm-input-bg) !important;
+      border: 1px solid var(--mm-panel-border) !important;
+      color: var(--mm-panel-text) !important;
+    }
+    .searchContainer .btnList .el-button:hover,
+    .searchContainer.isDark .btnList .el-button:hover {
+      border-color: var(--mm-theme-color) !important;
+      color: var(--mm-theme-color) !important;
+      background-color: var(--mm-item-hover-bg) !important;
+    }
+    .searchContainer .searchResultList,
+    .searchContainer.isDark .searchResultList {
+      background-color: var(--mm-panel-bg) !important;
+      border: 1px solid var(--mm-panel-border) !important;
+      box-shadow: 0 4px 16px var(--mm-panel-shadow) !important;
+      color: var(--mm-panel-text) !important;
+      border-radius: 12px !important;
+    }
+    .searchContainer .searchResultList .searchResultItem,
+    .searchContainer.isDark .searchResultList .searchResultItem {
+      color: var(--mm-panel-text) !important;
+      transition: background-color 0.15s ease, color 0.15s ease !important;
+    }
+    .searchContainer .searchResultList .searchResultItem::before,
+    .searchContainer.isDark .searchResultList .searchResultItem::before {
+      background-color: var(--mm-panel-text-secondary) !important;
+    }
+    .searchContainer .searchResultList .searchResultItem:hover,
+    .searchContainer.isDark .searchResultList .searchResultItem:hover {
+      background-color: var(--mm-item-hover-bg) !important;
+      color: var(--mm-theme-color) !important;
+    }
+    .searchContainer .searchResultList .searchResultItem.active,
+    .searchContainer.isDark .searchResultList .searchResultItem.active {
+      background-color: var(--mm-item-active-bg) !important;
+      color: var(--mm-theme-color) !important;
+      font-weight: 600 !important;
+    }
+    .searchContainer .searchResultList .searchResultItem .match,
+    .searchContainer.isDark .searchResultList .searchResultItem .match {
+      color: var(--mm-theme-color) !important;
+      font-weight: bold !important;
+    }
+    .searchContainer .searchResultList .empty,
+    .searchContainer.isDark .searchResultList .empty {
+      color: var(--mm-panel-text-secondary) !important;
+    }
+    .searchContainer .searchResultList .empty .iconfont,
+    .searchContainer.isDark .searchResultList .empty .iconfont {
+      color: var(--mm-panel-text-secondary) !important;
+    }
+    .searchContainer .searchResultList .empty .text,
+    .searchContainer.isDark .searchResultList .empty .text {
+      color: var(--mm-panel-text-secondary) !important;
     }
     .sidebarContainer .sidebarHeader,
     .sidebarContainer.isDark .sidebarHeader {
@@ -1812,12 +1951,58 @@
       document.documentElement.classList.toggle('isDark', isDarkBool)
     }
 
+    let lastSavedContentSignature = ''
+
+    const getRootNodeData = (data) => {
+      if (!data) return null
+      if (data.root) return data.root
+      if (data.data) return data
+      return null
+    }
+
+    const computeContentSignature = (data) => {
+      if (!data) return ''
+      try {
+        const root = getRootNodeData(data)
+        let layout = data.layout || ''
+        let theme = data.theme || null
+        let config = data.config || null
+        if (!layout && window.__mindMap && typeof window.__mindMap.getLayout === 'function') {
+          layout = window.__mindMap.getLayout()
+        }
+        if (!theme && window.__mindMap && typeof window.__mindMap.getTheme === 'function') {
+          theme = {
+            template: window.__mindMap.getTheme(),
+            config: typeof window.__mindMap.getCustomThemeConfig === 'function' ? window.__mindMap.getCustomThemeConfig() : {}
+          }
+        }
+        return JSON.stringify({ root, layout, theme, config })
+      } catch (e) {
+        return ''
+      }
+    }
+
+    window.__markMindMapAsSaved = (savedData) => {
+      lastSavedContentSignature = computeContentSignature(savedData || (window.__mindMap ? window.__mindMap.getData(false) : currentMindMapData))
+      if (window.electron && window.electron.ipcRenderer) {
+        window.electron.ipcRenderer.send('mt::mindmap::state', { modified: false, isSaved: true })
+      }
+    }
+
     const notifyModified = () => {
       if (isInitialLoading) return
       if (notifyModifiedTimer) clearTimeout(notifyModifiedTimer)
       notifyModifiedTimer = setTimeout(() => {
+        let currentData = currentMindMapData
+        if (window.__mindMap && typeof window.__mindMap.getData === 'function') {
+          currentData = window.__mindMap.getData(false)
+        }
+        const currentSignature = computeContentSignature(currentData)
+        if (currentSignature && lastSavedContentSignature && currentSignature === lastSavedContentSignature) {
+          return
+        }
         if (window.electron && window.electron.ipcRenderer) {
-          window.electron.ipcRenderer.send('mt::mindmap::state', { modified: true })
+          window.electron.ipcRenderer.send('mt::mindmap::state', { modified: true, isSaved: false })
         }
       }, 100)
     }
@@ -1879,6 +2064,56 @@
           }
           if (this.el) {
             this.el.style.backgroundImage = 'none'
+          }
+        }
+      }
+      if (mindMap.search && !mindMap.search.__marknotepro_patched) {
+        mindMap.search.__marknotepro_patched = true
+        const searchPlugin = mindMap.search
+        const origSearchNext = searchPlugin.searchNext
+        searchPlugin.searchNext = function(callback, index) {
+          if (!this.isSearching || !Array.isArray(this.matchNodeList) || this.matchNodeList.length <= 0) return
+          if (typeof origSearchNext === 'function') {
+            origSearchNext.call(this, callback, index)
+          }
+          if (typeof this.emitEvent === 'function') {
+            this.emitEvent()
+          }
+        }
+        const origReplace = searchPlugin.replace
+        searchPlugin.replace = function(replaceText, jumpNext = false) {
+          if (replaceText === null || replaceText === undefined || !this.isSearching || !this.matchNodeList || this.matchNodeList.length <= 0) return
+          let currentNode = this.matchNodeList[this.currentIndex]
+          if (!currentNode && this.matchNodeList.length > 0) {
+            this.currentIndex = 0
+            currentNode = this.matchNodeList[0]
+          }
+          if (!currentNode) return
+
+          const uid = (typeof currentNode.getData === 'function' ? currentNode.getData('uid') : null) || currentNode.data?.uid || currentNode.uid
+          let nodeInstance = (typeof currentNode.getData === 'function') ? currentNode : (uid ? this.mindMap.renderer.findNodeByUid(uid) : null)
+
+          if (nodeInstance && typeof origReplace === 'function') {
+            origReplace.call(this, replaceText, jumpNext)
+          } else {
+            const text = this.getReplacedText(currentNode, this.searchText, String(replaceText))
+            if (currentNode.data) {
+              currentNode.data.text = text
+            }
+            if (nodeInstance) {
+              nodeInstance.setText(text, nodeInstance.getData('richText'))
+            } else {
+              this.mindMap.render()
+            }
+            this.mindMap.command.addHistory()
+            this.mindMap.emit('data_change', this.mindMap.getData())
+            this.updateMatchNodeList(this.matchNodeList.filter(n => n !== currentNode))
+            if (this.currentIndex > this.matchNodeList.length - 1) {
+              this.currentIndex = -1
+            } else {
+              this.currentIndex--
+            }
+            this.emitEvent()
           }
         }
       }
@@ -2005,7 +2240,10 @@
 
     const initOrUpdate = (payload) => {
       if (!payload) return
-      if (payload.data) currentMindMapData = payload.data
+      if (payload.data) {
+        currentMindMapData = payload.data
+        lastSavedContentSignature = computeContentSignature(payload.data)
+      }
       if (payload.language) {
         switchMindMapLanguage(payload.language);
       }
@@ -2239,6 +2477,7 @@
             delete fullData.theme.config._customThemeIsDark
           }
         }
+        lastSavedContentSignature = computeContentSignature(fullData)
         window.electron.ipcRenderer.invoke('mt::mindmap::save', fullData)
       })
     }
@@ -2260,10 +2499,8 @@
           if (currentMindMapTheme || currentBackgroundColor || currentThemeConfig) {
             applyMindMapTheme(currentMindMapTheme, currentBackgroundColor, currentThemeConfig)
           }
+          lastSavedContentSignature = computeContentSignature(mindMap.getData(false) || currentMindMapData)
           mindMap.on('data_change', () => {
-            notifyModified()
-          })
-          mindMap.on('view_theme_change', () => {
             notifyModified()
           })
           setTimeout(() => {
@@ -2318,7 +2555,14 @@
                 fullData.theme.config.backgroundImage = 'none'
               }
             }
+            lastSavedContentSignature = computeContentSignature(fullData)
             window.electron.ipcRenderer.invoke('mt::mindmap::save', fullData)
+          }
+        } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+          e.preventDefault()
+          e.stopPropagation()
+          if (window.$bus) {
+            window.$bus.$emit('show_search')
           }
         }
       }, true)
@@ -2749,8 +2993,90 @@
                 return res
               }
             }
+            if (this.$options && (this.$options.name === 'Search' || (this.$options.methods && this.$options.methods.onSearchNext && this.$options.methods.showSearch))) {
+              const vm = this
+              const origShowSearch = vm.showSearch
+              vm.showSearch = () => {
+                if (typeof origShowSearch === 'function') origShowSearch.call(vm)
+                vm.show = true
+                vm.$nextTick(() => {
+                  if (vm.$refs.searchInputRef && vm.$refs.searchInputRef.focus) {
+                    vm.$refs.searchInputRef.focus()
+                    if (vm.$refs.searchInputRef.select) {
+                      vm.$refs.searchInputRef.select()
+                    }
+                  }
+                })
+              }
+
+              const origClose = vm.close
+              vm.close = () => {
+                vm.show = false
+                vm.showSearchResultList = false
+                vm.showSearchInfo = false
+                vm.total = 0
+                vm.currentIndex = 0
+                vm.searchText = ''
+                vm.hideReplaceInput()
+                if (vm.mindMap && vm.mindMap.search) {
+                  vm.mindMap.search.endSearch()
+                }
+              }
+
+              vm.onSearchResultItemClick = (index) => {
+                vm.currentIndex = index + 1
+                if (vm.mindMap && vm.mindMap.search) {
+                  vm.mindMap.search.jump(index)
+                }
+              }
+
+              vm.onSearchMatchNodeListChange = (list) => {
+                if (!Array.isArray(list)) {
+                  vm.searchResultList = []
+                  return
+                }
+                const escapeRegExp = s => (s || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+                const trimmed = (vm.searchText || '').trim()
+                const escaped = escapeRegExp(trimmed)
+                const reg = escaped ? new RegExp(escaped, 'g') : null
+
+                vm.searchResultList = list.map((item, idx) => {
+                  const nodeData = (typeof item.getData === 'function' ? item.getData() : null) || item.data || (item.nodeData && item.nodeData.data) || item || {}
+                  let name = nodeData.text || ''
+                  const id = nodeData.uid || item.uid || idx
+                  if (nodeData.richText) {
+                    try {
+                      name = (window.__mindMapUtils && window.__mindMapUtils.getTextFromHtml) ? window.__mindMapUtils.getTextFromHtml(name) : name.replace(/<[^>]+>/g, '')
+                    } catch (_) {}
+                  }
+                  const text = reg ? String(name).replace(reg, a => `<span class="match">${a}</span>`) : String(name)
+                  return {
+                    data: item,
+                    id,
+                    text,
+                    name
+                  }
+                })
+              }
+            }
           },
           mounted() {
+            if (this.onSearchNext && typeof this.close === 'function') {
+              const vm = this
+              const handleGlobalKeydown = (e) => {
+                if (e.key === 'Escape' || e.keyCode === 27) {
+                  if (vm.show) {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    vm.close()
+                  }
+                }
+              }
+              window.addEventListener('keydown', handleGlobalKeydown, true)
+              this.$once('hook:beforeDestroy', () => {
+                window.removeEventListener('keydown', handleGlobalKeydown, true)
+              })
+            }
             if (this.$options && this.$options.computed && this.$options.computed.triggerList && typeof this.setActiveSidebar === 'function') {
               const vm = this;
               window.__sidebarTriggerComponent = vm;
@@ -2799,6 +3125,18 @@
         const app = rawRes || document.getElementById('app')?.__vue__ || window.__vueApp;
         if (app) {
           window.__vueApp = app;
+          if (app.$msgbox) {
+            const rawMsgbox = app.$msgbox;
+            app.$msgbox = function(opts) {
+              if (opts && (
+                (typeof opts.title === 'string' && (opts.title.includes('重要提示') || opts.title.includes('试用'))) ||
+                (typeof opts.message === 'string' && (opts.message.includes('试用') || opts.message.includes('sxmind')))
+              )) {
+                return Promise.resolve();
+              }
+              return rawMsgbox.apply(this, arguments);
+            };
+          }
         }
         const i18n = getAppI18n();
         if (i18n) {

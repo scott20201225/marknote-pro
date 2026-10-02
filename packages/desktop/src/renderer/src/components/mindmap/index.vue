@@ -32,13 +32,11 @@ const getBounds = (): DrawioBounds | null => {
       : rect.left
   const top = Math.max(0, rect.top)
   const zoomFactor = window.electron.webFrame.getZoomFactor()
-  const right = Math.max(rect.right, window.innerWidth)
-  const bottom = Math.max(rect.bottom, window.innerHeight)
   return {
     x: left * zoomFactor,
     y: top * zoomFactor,
-    width: Math.max(1, (right - left) * zoomFactor),
-    height: Math.max(1, (bottom - top) * zoomFactor)
+    width: Math.max(1, rect.right - left) * zoomFactor,
+    height: Math.max(1, rect.height) * zoomFactor
   }
 }
 

@@ -16,8 +16,10 @@ import {
 } from './utils'
 import { TITLE_BAR_HEIGHT, editorWinOptions, isLinux, isOsx, isWindows } from '../config'
 import { showEditorContextMenu } from '../contextMenu/editor'
-import { loadMarkdownFile } from '../filesystem/markdown'
 import { switchLanguage } from '../spellchecker'
+import { isDrawioFile, openDrawioFile } from '../drawio'
+import { isGeoGebraFile, openGeoGebraFile } from '../geogebra'
+import { isMindMapFile, openMindMapFile } from '../mindmap'
 import fs from 'fs'
 
 type RawMarkdownDocument = Awaited<ReturnType<typeof loadMarkdownFile>>
@@ -364,6 +366,24 @@ class EditorWindow extends BaseWindow {
       if (this._openedFiles!.includes(filePath)) {
         // File is already opened - avoid opening it again so we dont have duplicate watchers
         browserWindow!.webContents.send('mt::switch-tab-by-file_path', filePath)
+        continue
+      }
+      if (isDrawioFile(filePath)) {
+        this.addToOpenedFiles(filePath)
+        this._accessor.menu.addRecentlyUsedDocument(filePath)
+        void openDrawioFile(filePath, browserWindow)
+        continue
+      }
+      if (isGeoGebraFile(filePath)) {
+        this.addToOpenedFiles(filePath)
+        this._accessor.menu.addRecentlyUsedDocument(filePath)
+        void openGeoGebraFile(filePath, browserWindow)
+        continue
+      }
+      if (isMindMapFile(filePath)) {
+        this.addToOpenedFiles(filePath)
+        this._accessor.menu.addRecentlyUsedDocument(filePath)
+        void openMindMapFile(filePath, browserWindow)
         continue
       }
       loadMarkdownFile(
