@@ -53,12 +53,17 @@ MarkNotePro 集成了以下优秀的开源与第三方项目，各组件原始�
      * Software, Documentation, Language Files & Symbols: GeoGebra Non-Commercial License Agreement / Creative Commons Attribution-NonCommercial-ShareAlike 3.0 (CC BY-NC-SA 3.0)
    - Notice: MarkNotePro 内置的 `.ggb` 数学建模、绘图与 CAS 计算引擎基于 GeoGebra 构建。根据 GeoGebra 官方许可协议，GeoGebra 组件及相关资源仅限个人与教育等非商业用途免费使用；任何涉及 GeoGebra 的商业用途除须获得本项目授权外，还必须遵守 GeoGebra 官方商业许可要求（联系 office@geogebra.org）。
 
-3. GitHub Desktop
+3. simple-mind-map (思绪思维导图)
+   - Copyright: Copyright (c) 2021-2023 The MindMap Team / wanglin2 (https://github.com/wanglin2/mind-map)
+   - License: MIT License (https://github.com/wanglin2/mind-map/blob/main/LICENSE)
+   - Notice: MarkNotePro 内置的 `.smm` 思维导图编辑引擎与相关组件基于 simple-mind-map 开源项目构建，遵循 MIT 许可证。
+
+4. GitHub Desktop
    - Copyright: Copyright (c) GitHub, Inc. (https://github.com/desktop/desktop)
    - License: MIT License
    - Notice: MarkNotePro 内置的 Git 工作区组件基于 GitHub Desktop 适配构建，遵循 MIT 许可证。
 
-4. MarkText & Muya (Upstream Base)
+5. MarkText & Muya (Upstream Base)
    - Copyright (c) 2017-present Luo Ran
    - Copyright (c) 2018-present MarkText Contributors
    - License: MIT License
