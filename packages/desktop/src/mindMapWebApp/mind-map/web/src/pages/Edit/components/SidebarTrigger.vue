@@ -142,7 +142,7 @@ export default {
     transform: translateY(-50%);
     cursor: pointer;
     transition: left 0.1s linear;
-    z-index: 10;
+    z-index: 0;
     border-top-left-radius: 10px;
     border-bottom-left-radius: 10px;
     display: flex;
@@ -151,6 +151,7 @@ export default {
     pointer-events: auto;
 
     &.hide {
+      z-index: 1;
       left: -26px;
 
       span {
@@ -174,6 +175,7 @@ export default {
 
   .trigger {
     position: relative;
+    z-index: 1;
     width: 60px;
     border-color: #eee;
     background-color: #fff;
