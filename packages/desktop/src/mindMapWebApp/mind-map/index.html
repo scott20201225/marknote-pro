@@ -181,7 +181,8 @@
 
     /* 区域 2：右侧边栏切换栏 */
     .sidebarTriggerContainer {
-      right: -100px !important;
+      right: -78px !important;
+      transition: all 0.3s ease !important;
     }
     .sidebarTriggerContainer.show {
       right: 0 !important;
@@ -203,6 +204,7 @@
     }
     .sidebarTriggerContainer:not(.show) .trigger {
       box-shadow: none !important;
+      pointer-events: none !important;
     }
     .sidebarTriggerContainer .trigger .triggerItem,
     .sidebarTriggerContainer.isDark .trigger .triggerItem {
@@ -249,6 +251,17 @@
     .sidebarTriggerContainer .toggleShowBtn {
       background: var(--mm-theme-color) !important;
       color: #ffffff !important;
+      pointer-events: auto !important;
+      cursor: pointer !important;
+      z-index: 10 !important;
+    }
+    .sidebarTriggerContainer:not(.show) .toggleShowBtn,
+    .sidebarTriggerContainer .toggleShowBtn.hide {
+      left: -26px !important;
+    }
+    .sidebarTriggerContainer:not(.show) .toggleShowBtn:hover,
+    .sidebarTriggerContainer .toggleShowBtn.hide:hover {
+      left: -30px !important;
     }
 
     /* 区域 3：右侧边栏抽屉面板 */
