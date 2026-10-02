@@ -2470,15 +2470,24 @@
               const rawGetter = typeof origComputed === 'function' ? origComputed : origComputed.get;
               if (rawGetter && !rawGetter.__marknotepro_wrapped) {
                 const wrappedGetter = function() {
-                  const list = rawGetter.call(this) || [];
-                  const loc = normalizeLang(this.$i18n ? this.$i18n.locale : currentLang);
-                  const names = SIDEBAR_TRIGGER_NAMES[loc] || SIDEBAR_TRIGGER_NAMES.zh;
-                  return list
-                    .filter(item => item && item.value !== 'ai')
-                    .map(item => ({
-                      ...item,
-                      name: (names && names[item.value]) || item.name
-                    }));
+                  try {
+                    const list = rawGetter.call(this) || [];
+                    const loc = normalizeLang(this.$i18n ? this.$i18n.locale : currentLang);
+                    const names = SIDEBAR_TRIGGER_NAMES[loc] || SIDEBAR_TRIGGER_NAMES.zh;
+                    return list
+                      .filter(item => item && item.value !== 'ai')
+                      .map(item => ({
+                        ...item,
+                        name: (names && names[item.value]) || item.name
+                      }));
+                  } catch (e) {
+                    console.error('[MarkNotePro] Error in wrapped triggerList getter:', e);
+                    try {
+                      return rawGetter.call(this) || [];
+                    } catch (_) {
+                      return [];
+                    }
+                  }
                 };
                 wrappedGetter.__marknotepro_wrapped = true;
                 if (typeof origComputed === 'function') {
@@ -2666,10 +2675,12 @@
             if (this.$options && this.$options.computed && this.$options.computed.triggerList && typeof this.setActiveSidebar === 'function') {
               const vm = this;
               window.__sidebarTriggerComponent = vm;
-              if (vm._computedWatchers && vm._computedWatchers.triggerList) {
-                vm._computedWatchers.triggerList.dirty = true;
-              }
-              vm.$forceUpdate();
+              this.$nextTick(() => {
+                if (vm._computedWatchers && vm._computedWatchers.triggerList) {
+                  vm._computedWatchers.triggerList.dirty = true;
+                }
+                vm.$forceUpdate();
+              });
             }
             if (this.defaultGroupList !== undefined && typeof this.syncFilteredGroups === 'function') {
               this.syncFilteredGroups()
