@@ -35,6 +35,11 @@
     .navigatorContainer .item:has(.el-select) {
       display: none !important;
     }
+    /* 隐藏底部导航栏深浅色切换按钮（由 MarkNotePro 统一控制联动） */
+    .navigatorContainer .item:has(.iconmoon_line),
+    .navigatorContainer .item:has(.iconlieri) {
+      display: none !important;
+    }
     /* 隐藏所有 AI 相关按钮、图标、更多下拉菜单项和设置项 */
     .toolbarBtn:has(.iconAIshengcheng),
     .triggerItem:has(.iconAIshengcheng),

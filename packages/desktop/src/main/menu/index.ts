@@ -33,6 +33,7 @@ interface WindowMenuEntry {
   drawioMode?: boolean
   drawioAutoSave?: boolean
   geogebraMode?: boolean
+  mindmapMode?: boolean
 }
 
 interface AddEditorMenuOptions {
@@ -245,16 +246,20 @@ class AppMenu {
   setDrawioMenuMode(windowId: number, enabled: boolean): void {
     const entry = this.windowMenus.get(windowId)
     if (!entry || entry.type !== MenuType.EDITOR) return
-    if (entry.drawioMode === enabled && (!enabled || !entry.geogebraMode)) return
+    if (entry.drawioMode === enabled && (!enabled || (!entry.geogebraMode && !entry.mindmapMode))) return
 
     entry.drawioMode = enabled
-    if (enabled) entry.geogebraMode = false
+    if (enabled) {
+      entry.geogebraMode = false
+      entry.mindmapMode = false
+    }
     if (enabled && entry.drawioAutoSave === undefined) entry.drawioAutoSave = true
     const { menu } = this._buildEditorMenu(
       undefined,
       entry.drawioMode,
       entry.drawioAutoSave,
-      entry.geogebraMode
+      entry.geogebraMode,
+      entry.mindmapMode
     )
     entry.menu = menu
     if (this.activeWindowId === windowId) this._setApplicationMenu(menu)
@@ -264,15 +269,41 @@ class AppMenu {
   setGeoGebraMenuMode(windowId: number, enabled: boolean): void {
     const entry = this.windowMenus.get(windowId)
     if (!entry || entry.type !== MenuType.EDITOR) return
-    if (entry.geogebraMode === enabled && (!enabled || !entry.drawioMode)) return
+    if (entry.geogebraMode === enabled && (!enabled || (!entry.drawioMode && !entry.mindmapMode))) return
 
     entry.geogebraMode = enabled
-    if (enabled) entry.drawioMode = false
+    if (enabled) {
+      entry.drawioMode = false
+      entry.mindmapMode = false
+    }
     const { menu } = this._buildEditorMenu(
       undefined,
       entry.drawioMode,
       entry.drawioAutoSave,
-      entry.geogebraMode
+      entry.geogebraMode,
+      entry.mindmapMode
+    )
+    entry.menu = menu
+    if (this.activeWindowId === windowId) this._setApplicationMenu(menu)
+  }
+
+  /** Switch the native menu surface between Markdown, Draw.io, GeoGebra and MindMap. */
+  setMindMapMenuMode(windowId: number, enabled: boolean): void {
+    const entry = this.windowMenus.get(windowId)
+    if (!entry || entry.type !== MenuType.EDITOR) return
+    if (entry.mindmapMode === enabled && (!enabled || (!entry.drawioMode && !entry.geogebraMode))) return
+
+    entry.mindmapMode = enabled
+    if (enabled) {
+      entry.drawioMode = false
+      entry.geogebraMode = false
+    }
+    const { menu } = this._buildEditorMenu(
+      undefined,
+      entry.drawioMode,
+      entry.drawioAutoSave,
+      entry.geogebraMode,
+      entry.mindmapMode
     )
     entry.menu = menu
     if (this.activeWindowId === windowId) this._setApplicationMenu(menu)
@@ -364,7 +395,8 @@ class AppMenu {
         recentUsedDocuments,
         value.drawioMode,
         value.drawioAutoSave,
-        value.geogebraMode
+        value.geogebraMode,
+        value.mindmapMode
       )
       if (!newMenu) return
 
@@ -400,7 +432,8 @@ class AppMenu {
           recentUsedDocuments,
           value.drawioMode,
           value.drawioAutoSave,
-          value.geogebraMode
+          value.geogebraMode,
+          value.mindmapMode
         )
         if (!rebuilt) return
 
@@ -505,7 +538,8 @@ class AppMenu {
     recentUsedDocuments: string[] | null = null,
     drawioMode = false,
     drawioAutoSave = true,
-    geogebraMode = false
+    geogebraMode = false,
+    mindmapMode = false
   ): WindowMenuEntry {
     if (!recentUsedDocuments) {
       recentUsedDocuments = this.getRecentlyUsedDocuments()
@@ -515,11 +549,12 @@ class AppMenu {
       configureMenu(this._keybindings, this._preferences, recentUsedDocuments, {
         drawioMode,
         drawioAutoSave,
-        geogebraMode
+        geogebraMode,
+        mindmapMode
       })
     )
     const menu = Menu.buildFromTemplate(menuTemplate)
-    return { menu, type: MenuType.EDITOR, drawioMode, drawioAutoSave, geogebraMode }
+    return { menu, type: MenuType.EDITOR, drawioMode, drawioAutoSave, geogebraMode, mindmapMode }
   }
 
   _buildSettingMenu(): WindowMenuEntry {
@@ -612,6 +647,10 @@ class AppMenu {
     ipcMain.on('mt::geogebra-menu-mode', (event, enabled: boolean) => {
       const win = BrowserWindow.fromWebContents(event.sender)
       if (win) this.setGeoGebraMenuMode(win.id, enabled === true)
+    })
+    ipcMain.on('mt::mindmap-menu-mode', (event, enabled: boolean) => {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      if (win) this.setMindMapMenuMode(win.id, enabled === true)
     })
     ipcMain.on('mt::drawio-autosave-changed', (event, enabled: boolean) => {
       const win = BrowserWindow.fromWebContents(event.sender)

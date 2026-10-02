@@ -298,8 +298,10 @@ import Range from '@/prefComponents/common/range/index.vue'
 import TextBox from '@/prefComponents/common/textBox/index.vue'
 import { getPageSizeList, getHeaderFooterTypes, getExportThemeList } from './exportOptions'
 import { useI18n } from 'vue-i18n'
+import { useEditorStore } from '@/store/editor'
 
 const { t } = useI18n()
+const editorStore = useEditorStore()
 
 const exportType = ref('')
 const themesLoaded = ref(false)
@@ -407,6 +409,17 @@ const updateTranslations = () => {
 
 const showDialog = (type: unknown) => {
   const exportTypeValue = String(type ?? '')
+
+  if (editorStore.currentFile?.isMindMap) {
+    bus.emit('editor-blur')
+    if (exportTypeValue === 'print') {
+      window.electron.ipcRenderer.send('mt::mindmap::menu-action', 'print')
+    } else {
+      window.electron.ipcRenderer.send('mt::mindmap::menu-action', 'export')
+    }
+    return
+  }
+
   if (exportTypeValue === 'md') {
     bus.emit('editor-blur')
     bus.emit('export', { type: 'md' })

@@ -73,13 +73,13 @@
     <div class="item">
       <Scale :isDark="isDark" :mindMap="mindMap"></Scale>
     </div>
-    <div class="item">
+    <!-- <div class="item">
       <div
         class="btn iconfont"
         :class="[isDark ? 'iconmoon_line' : 'iconlieri']"
         @click="toggleDark"
       ></div>
-    </div>
+    </div> -->
     <!-- <div class="item">
       <el-tooltip
         effect="dark"
@@ -93,36 +93,16 @@
       <Demonstrate :isDark="isDark" :mindMap="mindMap"></Demonstrate>
     </div>
     <div class="item">
-      <el-dropdown @command="handleCommand">
-        <div class="btn el-icon-more"></div>
-        <el-dropdown-menu slot="dropdown">
-          <el-dropdown-item command="shortcutKey">
-            <span class="iconfont iconjianpan"></span>
-            {{ $t('navigatorToolbar.shortcutKeys') }}
-          </el-dropdown-item>
-          <el-dropdown-item command="aiChat">
-            <span class="iconfont iconAIshengcheng"></span>
-            {{ $t('navigatorToolbar.ai') }}
-          </el-dropdown-item>
-          <el-dropdown-item command="client">
-            <span class="iconfont iconxiazai"></span>
-            {{ $t('navigatorToolbar.downloadClient') }}
-          </el-dropdown-item>
-          <el-dropdown-item command="github">
-            <span class="iconfont icongithub"></span>
-            Github
-          </el-dropdown-item>
-          <el-dropdown-item command="site">
-            <span class="iconfont iconwangzhan"></span>
-            {{ $t('navigatorToolbar.site') }}
-          </el-dropdown-item>
-          <el-dropdown-item disabled
-            >{{ $t('navigatorToolbar.current') }}v{{
-              version
-            }}</el-dropdown-item
-          >
-        </el-dropdown-menu>
-      </el-dropdown>
+      <el-tooltip
+        effect="dark"
+        :content="$t('navigatorToolbar.shortcutKeys')"
+        placement="top"
+      >
+        <div
+          class="btn iconfont iconjianpan"
+          @click="handleCommand('shortcutKey')"
+        ></div>
+      </el-tooltip>
     </div>
   </div>
 </template>
