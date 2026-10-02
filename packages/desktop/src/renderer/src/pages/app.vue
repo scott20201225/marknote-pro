@@ -111,6 +111,7 @@ import { useCommandCenterStore } from '@/store/commandCenter'
 import { useProjectStore } from '@/store/project'
 import { useAutoUpdatesStore } from '@/store/autoUpdates'
 import { useNotificationStore } from '@/store/notification'
+import { useHostOverlayStore } from '@/store/overlay'
 import { getDrawioConfiguration } from '@/util/drawioConfiguration'
 import { getMindMapConfiguration } from '@/util/mindmapConfiguration'
 import { isNoteAreaName, findNoteFolderByPath, getNoteNodeKind } from '@/util/noteWorkspace'
@@ -125,6 +126,7 @@ const listenForMainStore = useListenForMainStore()
 const autoUpdateStore = useAutoUpdatesStore()
 const commandCenterStore = useCommandCenterStore()
 const notificationStore = useNotificationStore()
+const hostOverlayStore = useHostOverlayStore()
 
 const timer = ref<ReturnType<typeof setTimeout> | null>(null)
 const workspacePrompted = ref(false)
@@ -144,6 +146,7 @@ const { windowActive, platform, init } = storeToRefs(mainStore)
 const { sourceCode, theme, customCss, textDirection, language } = storeToRefs(preferencesStore)
 const { projectTree, moveDialogVisible } = storeToRefs(projectStore)
 const { currentFile } = storeToRefs(editorStore)
+const { hasOverlay } = storeToRefs(hostOverlayStore)
 
 const pathname = computed(() => currentFile.value?.pathname)
 const filename = computed(() => currentFile.value?.filename)
@@ -383,17 +386,73 @@ watch([currentFile, () => preferencesStore.preferenceLoaded], ([file, preference
 })
 
 // Native BrowserViews always sit above the renderer's DOM. Temporarily remove
-// them while the workspace move dialog is open, then let the active editor
-// restore itself with its own measured bounds after the dialog closes.
-watch(moveDialogVisible, (visible, wasVisible) => {
+// them while any host overlay (dialog, modal, notification popup) is open,
+// then let the active editor restore itself with its own measured bounds
+// after all overlays are dismissed.
+watch(
+  moveDialogVisible,
+  (visible) => {
+    if (visible) hostOverlayStore.showOverlay('move-node-dialog')
+    else hostOverlayStore.hideOverlay('move-node-dialog')
+  },
+  { immediate: true }
+)
+
+let overlaySnapshotToken = 0
+
+watch(hasOverlay, async (visible, wasVisible) => {
+  const currentToken = ++overlaySnapshotToken
   if (visible) {
+    let snapshot: string | null = null
+    let surfaceSelector = ''
+    if (currentFile.value?.isMindMap) {
+      surfaceSelector = '.mindmap-surface'
+      snapshot = await window.electron.ipcRenderer
+        .invoke('mt::mindmap::capture-snapshot')
+        .catch(() => null)
+    } else if (currentFile.value?.isGeoGebra) {
+      surfaceSelector = '.geogebra-surface'
+      snapshot = await window.electron.ipcRenderer
+        .invoke('mt::geogebra::capture-snapshot')
+        .catch(() => null)
+    } else if (currentFile.value?.isDrawing) {
+      surfaceSelector = '.drawio-surface'
+      snapshot = await window.electron.ipcRenderer
+        .invoke('mt::drawio::capture-snapshot')
+        .catch(() => null)
+    }
+
+    if (currentToken !== overlaySnapshotToken || !hostOverlayStore.hasOverlay) {
+      return
+    }
+
+    if (snapshot && surfaceSelector) {
+      const surface = document.querySelector<HTMLElement>(surfaceSelector)
+      if (surface) {
+        surface.style.backgroundImage = `url(${snapshot})`
+        surface.style.backgroundPosition = 'top left'
+        surface.style.backgroundSize = '100% 100%'
+        surface.style.backgroundRepeat = 'no-repeat'
+      }
+    }
+
     window.electron.ipcRenderer.send('mt::drawio::hide')
     window.electron.ipcRenderer.send('mt::geogebra::hide')
     window.electron.ipcRenderer.send('mt::mindmap::hide')
     return
   }
   if (wasVisible) {
-    nextTick(() => window.dispatchEvent(new Event('marknotepro:resume-native-editor')))
+    nextTick(() => {
+      window.dispatchEvent(new Event('marknotepro:resume-native-editor'))
+      window.requestAnimationFrame(() => {
+        const surfaces = document.querySelectorAll<HTMLElement>(
+          '.mindmap-surface, .geogebra-surface, .drawio-surface'
+        )
+        surfaces.forEach((el) => {
+          el.style.backgroundImage = ''
+        })
+      })
+    })
   }
 })
 
@@ -592,9 +651,45 @@ onMounted(() => {
     }
     addStyles(style)
   })
+
+  const checkDomOverlays = (): void => {
+    const hasVisibleElOverlay = Array.from(document.querySelectorAll<HTMLElement>('.el-overlay')).some((el) => {
+      return el.style.display !== 'none' && !el.classList.contains('is-hidden')
+    })
+    if (hasVisibleElOverlay) {
+      hostOverlayStore.showOverlay('dom-safety-overlay')
+    } else {
+      hostOverlayStore.hideOverlay('dom-safety-overlay')
+    }
+  }
+
+  let domOverlayRaf = 0
+  const scheduleCheckDomOverlays = (): void => {
+    if (domOverlayRaf) return
+    domOverlayRaf = window.requestAnimationFrame(() => {
+      domOverlayRaf = 0
+      checkDomOverlays()
+    })
+  }
+
+  const domOverlayObserver = new MutationObserver(scheduleCheckDomOverlays)
+  domOverlayObserver.observe(document.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['style', 'class']
+  })
+
+  cleanups.push(() => {
+    if (domOverlayRaf) window.cancelAnimationFrame(domOverlayRaf)
+    domOverlayObserver.disconnect()
+  })
 })
 
+const cleanups: Array<() => void> = []
+
 onBeforeUnmount(() => {
+  cleanups.forEach((fn) => fn())
   window.removeEventListener('marknotepro:switch-workbench', handleWorkbenchSwitch)
   window.electron.ipcRenderer.removeAllListeners('mt::drawio::opened')
   window.electron.ipcRenderer.removeAllListeners('mt::drawio::closed')

@@ -33,7 +33,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import bus from '../../bus'
 import { useEditorStore } from '@/store/editor'
 import { Check } from '@element-plus/icons-vue'
@@ -57,6 +57,14 @@ const handleRename = () => {
   })
 }
 
+watch(showRename, (visible) => {
+  if (visible) {
+    bus.emit('host-overlay:show', 'rename-dialog')
+  } else {
+    bus.emit('host-overlay:hide', 'rename-dialog')
+  }
+})
+
 const confirm = () => {
   if (!showRename.value) return
   editorStore.RENAME(tempName.value)
@@ -79,6 +87,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   bus.off('rename', handleRename)
+  bus.emit('host-overlay:hide', 'rename-dialog')
 })
 </script>
 

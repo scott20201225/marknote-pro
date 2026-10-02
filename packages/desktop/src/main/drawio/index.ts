@@ -309,6 +309,19 @@ export const hideDrawioView = (win: BrowserWindow, closeTab = false): void => {
   if (closeTab) win.webContents.send('mt::drawio::closed', { filePath: entry.filePath })
 }
 
+export const captureDrawioSnapshot = async (win: BrowserWindow): Promise<string | null> => {
+  const entry = getActiveDocument(win)
+  if (!entry || entry.view.webContents.isDestroyed()) return null
+  try {
+    const image = await entry.view.webContents.capturePage()
+    if (image.isEmpty()) return null
+    return image.toDataURL()
+  } catch (err) {
+    log.error('captureDrawioSnapshot error:', err)
+    return null
+  }
+}
+
 /** Invoke a built-in Draw.io action through the embed protocol. */
 export const invokeDrawioAction = (win: BrowserWindow, actionName: string): void => {
   const entry = getActiveDocument(win)
@@ -489,6 +502,11 @@ export const registerDrawioHandlers = (): void => {
   ipcMain.on('mt::drawio::hide', (event) => {
     const win = BrowserWindow.fromWebContents(event.sender)
     if (win) hideDrawioView(win)
+  })
+  ipcMain.handle('mt::drawio::capture-snapshot', async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win) return null
+    return captureDrawioSnapshot(win)
   })
   ipcMain.on('mt::drawio::state', (event, state: { modified: boolean }) => {
     const owner = viewOwners.get(event.sender.id)

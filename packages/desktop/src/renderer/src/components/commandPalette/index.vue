@@ -64,7 +64,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, nextTick, onBeforeUpdate, computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount, nextTick, onBeforeUpdate, computed, watch } from 'vue'
 import { useCommandCenterStore } from '@/store/commandCenter'
 import log from 'electron-log'
 import bus from '../../bus'
@@ -113,6 +113,14 @@ const availableCommands = ref<CommandItem[]>([])
 const searcherBusy = ref(false)
 
 const commandCenterStore = useCommandCenterStore()
+
+watch(showCommandPalette, (visible) => {
+  if (visible) {
+    bus.emit('host-overlay:show', 'command-palette')
+  } else {
+    bus.emit('host-overlay:hide', 'command-palette')
+  }
+})
 
 onBeforeUpdate(() => {
   commandItems = []
@@ -344,6 +352,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   bus.off('show-command-palette', handleShow)
   bus.off('language-changed', handleLanguageChanged)
+  bus.emit('host-overlay:hide', 'command-palette')
 })
 </script>
 

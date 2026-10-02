@@ -390,6 +390,14 @@ watch(Object.values(persistableSettings), () => {
   )
 })
 
+watch(showExportSettingsDialog, (visible) => {
+  if (visible) {
+    bus.emit('host-overlay:show', 'export-setting-dialog')
+  } else {
+    bus.emit('host-overlay:hide', 'export-setting-dialog')
+  }
+})
+
 onMounted(() => {
   restoreExportSettings()
   bus.on('showExportDialog', showDialog)
@@ -399,6 +407,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   bus.off('showExportDialog', showDialog)
   bus.off('language-changed', updateTranslations)
+  bus.emit('host-overlay:hide', 'export-setting-dialog')
 })
 
 const updateTranslations = () => {

@@ -38,7 +38,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import bus from '@/bus'
 import importIconUrl from '@/assets/icons/import_file.svg?url'
 import { useI18n } from 'vue-i18n'
@@ -47,6 +47,14 @@ const { t } = useI18n()
 const importIcon = ref({ url: importIconUrl })
 const showImport = ref(false)
 const isOver = ref(false)
+
+watch(showImport, (visible) => {
+  if (visible) {
+    bus.emit('host-overlay:show', 'import-modal')
+  } else {
+    bus.emit('host-overlay:hide', 'import-modal')
+  }
+})
 
 const showDialog = (value: unknown) => {
   const boolean = Boolean(value)
@@ -90,6 +98,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   bus.off('importDialog', showDialog)
+  bus.emit('host-overlay:hide', 'import-modal')
 })
 </script>
 

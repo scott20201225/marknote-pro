@@ -568,6 +568,19 @@ export const hideGeoGebraView = (win: BrowserWindow): void => {
   }
 }
 
+export const captureGeoGebraSnapshot = async (win: BrowserWindow): Promise<string | null> => {
+  const entry = getActiveDocument(win)
+  if (!entry || entry.view.webContents.isDestroyed()) return null
+  try {
+    const image = await entry.view.webContents.capturePage()
+    if (image.isEmpty()) return null
+    return image.toDataURL()
+  } catch (err) {
+    log.error('captureGeoGebraSnapshot error:', err)
+    return null
+  }
+}
+
 type GeoGebraMenuAction = 'ggb' | 'png' | 'svg' | 'pdf' | 'stl' | 'print'
 
 const GEOGEBRA_EXPORT_LABELS: Record<Exclude<GeoGebraMenuAction, 'print'>, string[]> = {
@@ -1217,6 +1230,11 @@ export const registerGeoGebraHandlers = (): void => {
   ipcMain.on('mt::geogebra::hide', (event) => {
     const win = BrowserWindow.fromWebContents(event.sender)
     if (win) hideGeoGebraView(win)
+  })
+  ipcMain.handle('mt::geogebra::capture-snapshot', async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win) return null
+    return captureGeoGebraSnapshot(win)
   })
   ipcMain.on('mt::geogebra::state', (event, state: { modified?: boolean }) => {
     const owner = viewOwners.get(event.sender.id)

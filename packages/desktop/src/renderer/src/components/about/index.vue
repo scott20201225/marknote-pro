@@ -41,7 +41,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useMainStore } from '@/store'
 import bus from '../../bus'
 import MarkNoteProLogo from '../../assets/images/logo.png'
@@ -61,12 +61,21 @@ const showDialog = () => {
   bus.emit('editor-blur')
 }
 
+watch(showAboutDialog, (visible) => {
+  if (visible) {
+    bus.emit('host-overlay:show', 'about-dialog')
+  } else {
+    bus.emit('host-overlay:hide', 'about-dialog')
+  }
+})
+
 onMounted(() => {
   bus.on('aboutDialog', showDialog)
 })
 
 onBeforeUnmount(() => {
   bus.off('aboutDialog', showDialog)
+  bus.emit('host-overlay:hide', 'about-dialog')
 })
 </script>
 
