@@ -193,6 +193,8 @@
     .sidebarTriggerContainer .trigger,
     .sidebarTriggerContainer.isDark .trigger {
       width: 78px !important;
+      position: relative !important;
+      z-index: 1 !important;
       padding: 4px 2px !important;
       background-color: var(--mm-panel-bg) !important;
       border: 1px solid var(--mm-panel-border) !important;
@@ -253,10 +255,18 @@
       color: #ffffff !important;
       pointer-events: auto !important;
       cursor: pointer !important;
-      z-index: 10 !important;
+      z-index: 0 !important;
+    }
+    .sidebarTriggerContainer.show .toggleShowBtn {
+      z-index: 0 !important;
+      left: -6px !important;
+    }
+    .sidebarTriggerContainer.show .toggleShowBtn:hover {
+      left: -18px !important;
     }
     .sidebarTriggerContainer:not(.show) .toggleShowBtn,
     .sidebarTriggerContainer .toggleShowBtn.hide {
+      z-index: 1 !important;
       left: -26px !important;
     }
     .sidebarTriggerContainer:not(.show) .toggleShowBtn:hover,
