@@ -298,7 +298,7 @@ export default {
     tag: 'Thẻ'
   },
   theme: {
-    title: 'Chủ đề',
+    title: 'Kiểu tổng hợp',
     classics: 'Cổ điển',
     dark: 'Tối',
     simple: 'Đơn giản',
@@ -321,7 +321,7 @@ export default {
     summary: 'Tóm tắt',
     displayOutline: 'Hiển thị dàn bài',
     baseStyle: 'Kiểu cơ bản',
-    theme: 'Chủ đề',
+    theme: 'Kiểu tổng hợp',
     strusture: 'Cấu trúc',
     newFile: 'Tệp mới',
     openFile: 'Mở tệp',

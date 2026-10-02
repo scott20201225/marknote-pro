@@ -6,6 +6,7 @@
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { usePreferencesStore } from '@/store/preferences'
+import { getMindMapConfiguration } from '@/util/mindmapConfiguration'
 import { useLayoutStore } from '@/store/layout'
 import { useEditorStore } from '@/store/editor'
 import type { DrawioBounds } from '@shared/types/ipc'
@@ -116,6 +117,12 @@ watch(zoom, () => syncBoundsDuringZoom())
 watch([rightColumn, sideBarWidth, noteNavigationMode, noteListWidth], () => {
   nextTick(syncBoundsAfterLayout)
 })
+watch(
+  () => [preferencesStore.language, preferencesStore.theme],
+  () => {
+    void window.electron.ipcRenderer.invoke('mt::mindmap::configure', getMindMapConfiguration())
+  }
+)
 
 onBeforeUnmount(() => {
   if (boundsSyncAnimationFrame) window.cancelAnimationFrame(boundsSyncAnimationFrame)

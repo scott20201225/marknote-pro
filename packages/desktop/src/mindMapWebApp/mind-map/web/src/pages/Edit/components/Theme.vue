@@ -254,6 +254,11 @@ export default {
     .name {
       color: #fff;
     }
+    .themeItem {
+      .imgBox {
+        border-color: var(--mm-card-border, rgba(255, 255, 255, 0.15));
+      }
+    }
   }
 
   .tabBox {
@@ -273,17 +278,13 @@ export default {
     .themeItem {
       width: 100%;
       cursor: pointer;
-      border-bottom: 1px solid #e9e9e9;
-      margin-bottom: 20px;
-      padding-bottom: 20px;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
       transition: all 0.2s;
       border: 3px solid transparent;
-      border-radius: 5px;
+      border-radius: 8px;
       overflow: hidden;
-
-      &:last-of-type {
-        border: none;
-      }
+      box-sizing: border-box;
 
       &:hover {
         box-shadow: 0 1px 2px -2px rgba(0, 0, 0, 0.16),
@@ -291,7 +292,8 @@ export default {
       }
 
       &.active {
-        border: 3px solid rgb(154, 198, 250);
+        border: 3px solid var(--mm-theme-color, rgb(154, 198, 250));
+        border-radius: 8px;
       }
 
       .imgBox {
@@ -301,17 +303,20 @@ export default {
         display: flex;
         align-items: center;
         justify-content: center;
+        border: 1px solid var(--mm-card-border, rgba(0, 0, 0, 0.08));
+        box-sizing: border-box;
 
         img {
           width: 100%;
           height: auto;
           display: block;
-          border-radius: 8px;
+          border-radius: 7px;
         }
       }
       .name {
         text-align: center;
         font-size: 14px;
+        margin-top: 6px;
       }
     }
   }

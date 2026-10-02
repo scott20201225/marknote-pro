@@ -449,7 +449,7 @@ export const sidebarTriggerList = [
     icon: 'iconyangshi'
   },
   {
-    name: 'Chủ đề',
+    name: 'Kiểu tổng hợp',
     value: 'theme',
     icon: 'iconjingzi'
   },

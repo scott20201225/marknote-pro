@@ -172,6 +172,7 @@ const ensureViewLoaded = async (
     mindMapTheme?: string
     backgroundColor?: string
     themeConfig?: Record<string, unknown>
+    colors?: Record<string, string>
   }
 ): Promise<void> => {
   if (entry.loaded) {
@@ -304,7 +305,8 @@ export const openMindMapFile = async (
       theme: windowEntry.configuration.theme,
       mindMapTheme,
       backgroundColor,
-      themeConfig
+      themeConfig,
+      colors: windowEntry.configuration.colors
     })
 
     win.webContents.send('mt::mindmap::opened', { filePath, title: path.basename(filePath) })
@@ -437,10 +439,15 @@ export const configureMindMap = (win: BrowserWindow, configuration: MindMapConfi
     if (!doc.view.webContents.isDestroyed()) {
       doc.view.webContents.send('mt::mindmap::set-theme', {
         isDark,
+        language: windowEntry.configuration.language,
         theme: windowEntry.configuration.theme,
         mindMapTheme,
         backgroundColor,
-        themeConfig
+        themeConfig,
+        colors: windowEntry.configuration.colors
+      })
+      doc.view.webContents.send('mt::mindmap::set-language', {
+        language: windowEntry.configuration.language
       })
     }
   }
@@ -524,7 +531,8 @@ export const registerMindMapHandlers = (): void => {
       theme: windowEntry.configuration.theme,
       mindMapTheme,
       backgroundColor,
-      themeConfig
+      themeConfig,
+      colors: windowEntry.configuration.colors
     }
   })
 }

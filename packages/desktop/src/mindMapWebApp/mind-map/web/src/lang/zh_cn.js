@@ -293,7 +293,7 @@ export default {
     tag: '标签'
   },
   theme: {
-    title: '主题',
+    title: '综合样式',
     classics: '经典',
     dark: '深色',
     simple: '朴素',
@@ -316,7 +316,7 @@ export default {
     summary: '概要',
     displayOutline: '显示大纲',
     baseStyle: '基础样式',
-    theme: '主题',
+    theme: '综合样式',
     strusture: '结构',
     newFile: '新建',
     openFile: '打开',
