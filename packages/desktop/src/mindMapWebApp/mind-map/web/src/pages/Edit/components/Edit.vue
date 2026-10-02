@@ -627,56 +627,10 @@ export default {
       this.$bus.$emit('importFile', file)
     },
 
-    // 网页版试用提示
-    webTip() {
-      const storageKey = 'webUseTip'
-      const data = localStorage.getItem(storageKey)
-      if (data) {
-        return
-      }
-      this.showDownloadTip(
-        '重要提示',
-        '网页版仅供试用，请下载客户端获得完整体验~'
-      )
-      localStorage.setItem(storageKey, 1)
-    },
+    // 网页版试用提示（已在客户端集成中完全禁用）
+    webTip() {},
 
-    showDownloadTip(title, desc) {
-      const h = this.$createElement
-      this.$msgbox({
-        title,
-        message: h('div', null, [
-          h(
-            'p',
-            {
-              style: {
-                marginBottom: '12px'
-              }
-            },
-            desc
-          ),
-          h('div', null, [
-            h(
-              'a',
-              {
-                attrs: {
-                  href:
-                    'https://sxmind.cn/',
-                  target: '_blank'
-                },
-                style: {
-                  color: '#409eff',
-                  marginRight: '12px'
-                }
-              },
-              '详细了解：https://sxmind.cn/'
-            )
-          ])
-        ]),
-        showCancelButton: false,
-        showConfirmButton: false
-      })
-    }
+    showDownloadTip() {}
   }
 }
 </script>

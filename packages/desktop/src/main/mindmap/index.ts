@@ -216,7 +216,8 @@ export const showMindMapView = (win: BrowserWindow, bounds: Rectangle): void => 
   const entry = getActiveDocument(win)
   if (!entry) return
   windowEntry.visible = true
-  if (!win.getBrowserViews().includes(entry.view)) win.addBrowserView(entry.view)
+  const wasAttached = win.getBrowserViews().includes(entry.view)
+  if (!wasAttached) win.addBrowserView(entry.view)
   const normalizedBounds = normalizeBounds(bounds)
   const [contentWidth, contentHeight] = win.getContentSize()
   const x = Math.min(normalizedBounds.x, Math.max(0, contentWidth - 1))
@@ -226,52 +227,28 @@ export const showMindMapView = (win: BrowserWindow, bounds: Rectangle): void => 
   const boundedBounds: Rectangle = {
     x,
     y,
-    width: Math.max(
-      1,
-      maxWidth - normalizedBounds.width <= 2
-        ? maxWidth
-        : Math.min(normalizedBounds.width, maxWidth)
-    ),
-    height: Math.max(
-      1,
-      maxHeight - normalizedBounds.height <= 2
-        ? maxHeight
-        : Math.min(normalizedBounds.height, maxHeight)
-    )
+    width: Math.max(1, Math.min(normalizedBounds.width, maxWidth)),
+    height: Math.max(1, Math.min(normalizedBounds.height, maxHeight))
   }
-  entry.view.setBounds(boundedBounds)
+  const prev = entry.lastBounds
+  const boundsChanged =
+    !prev ||
+    prev.x !== boundedBounds.x ||
+    prev.y !== boundedBounds.y ||
+    prev.width !== boundedBounds.width ||
+    prev.height !== boundedBounds.height
+
+  if (!wasAttached || boundsChanged) {
+    entry.lastBounds = boundedBounds
+    entry.view.setBounds(boundedBounds)
+  }
   win.setTopBrowserView(entry.view)
 }
 
 export const syncMindMapViewBounds = (win: BrowserWindow, bounds: Rectangle): void => {
   const windowEntry = views.get(win.id)
   if (!windowEntry?.visible) return
-  windowEntry.lastBounds = bounds
-  const entry = getActiveDocument(win)
-  if (!entry) return
-  const normalizedBounds = normalizeBounds(bounds)
-  const [contentWidth, contentHeight] = win.getContentSize()
-  const x = Math.min(normalizedBounds.x, Math.max(0, contentWidth - 1))
-  const y = Math.min(normalizedBounds.y, Math.max(0, contentHeight - 1))
-  const maxWidth = Math.max(1, contentWidth - x)
-  const maxHeight = Math.max(1, contentHeight - y)
-  const boundedBounds: Rectangle = {
-    x,
-    y,
-    width: Math.max(
-      1,
-      maxWidth - normalizedBounds.width <= 2
-        ? maxWidth
-        : Math.min(normalizedBounds.width, maxWidth)
-    ),
-    height: Math.max(
-      1,
-      maxHeight - normalizedBounds.height <= 2
-        ? maxHeight
-        : Math.min(normalizedBounds.height, maxHeight)
-    )
-  }
-  entry.view.setBounds(boundedBounds)
+  showMindMapView(win, bounds)
 }
 
 export const hideMindMapView = (win: BrowserWindow): void => {
@@ -335,37 +312,32 @@ export const openMindMapFile = async (
   let entry = windowEntry.documents.get(filePath)
   if (!entry) {
     entry = createDocumentEntry(win, filePath)
+    try {
+      const data = await readMindMapData(filePath, windowEntry.configuration, structure)
+      await ensureViewLoaded(entry, {
+        filePath,
+        data,
+        isDark,
+        language: windowEntry.configuration.language,
+        theme: windowEntry.configuration.theme,
+        mindMapTheme,
+        backgroundColor,
+        themeConfig,
+        colors: windowEntry.configuration.colors
+      })
+    } catch (error) {
+      log.error('打开思维导图文件失败:', error)
+      await dialog.showErrorBox(
+        '无法打开思维导图文件',
+        error instanceof Error ? error.message : String(error)
+      )
+      return
+    }
   }
 
   windowEntry.activePath = filePath
-
-  try {
-    const data = await readMindMapData(filePath, windowEntry.configuration, structure)
-    await ensureViewLoaded(entry, {
-      filePath,
-      data,
-      isDark,
-      language: windowEntry.configuration.language,
-      theme: windowEntry.configuration.theme,
-      mindMapTheme,
-      backgroundColor,
-      themeConfig,
-      colors: windowEntry.configuration.colors
-    })
-
-    if (windowEntry.visible && windowEntry.lastBounds) {
-      showMindMapView(win, windowEntry.lastBounds)
-    }
-
-    win.webContents.send('mt::mindmap::opened', { filePath, title: path.basename(filePath) })
-    emitState(win, entry, { modified: false, isSaved: true, isSaving: false })
-  } catch (error) {
-    log.error('打开思维导图文件失败:', error)
-    await dialog.showErrorBox(
-      '无法打开思维导图文件',
-      error instanceof Error ? error.message : String(error)
-    )
-  }
+  win.webContents.send('mt::mindmap::opened', { filePath, title: path.basename(filePath) })
+  emitState(win, entry, { modified: false, isSaved: true, isSaving: false })
 }
 
 export const createMindMapFile = async (owner?: BrowserWindow | null): Promise<void> => {
@@ -423,6 +395,13 @@ export const requestMindMapSave = async (win: BrowserWindow, filePath: string): 
     `)
     if (data && typeof data === 'object') {
       await writeFile(entry.filePath, JSON.stringify(data, null, 2), undefined, 'utf8')
+      await entry.view.webContents
+        .executeJavaScript(`
+          if (typeof window.__markMindMapAsSaved === 'function') {
+            window.__markMindMapAsSaved(${JSON.stringify(data)});
+          }
+        `)
+        .catch(() => undefined)
       emitState(win, entry, { modified: false, isSaved: true, isSaving: false })
     }
   } catch (error) {
