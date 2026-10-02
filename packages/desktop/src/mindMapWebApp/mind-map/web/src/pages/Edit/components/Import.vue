@@ -101,6 +101,10 @@ export default {
     ...mapMutations(['setActiveSidebar']),
 
     handleShowImport() {
+      if (window.electron && window.electron.ipcRenderer) {
+        window.electron.ipcRenderer.send('mt::mindmap::menu-action', 'import')
+        return
+      }
       this.dialogVisible = true
     },
 

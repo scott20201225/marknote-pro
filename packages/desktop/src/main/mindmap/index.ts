@@ -527,6 +527,61 @@ export const printMindMapDocument = async (win: BrowserWindow): Promise<void> =>
   }
 }
 
+export const importMindMapDocument = async (win: BrowserWindow): Promise<void> => {
+  const entry = getActiveDocument(win)
+  if (!entry || entry.view.webContents.isDestroyed()) return
+
+  const result = await dialog.showOpenDialog(win, {
+    title: '导入思维导图文件',
+    properties: ['openFile'],
+    filters: [
+      {
+        name: '思维导图 / 数据文件 (*.smm, *.json, *.xmind, *.md)',
+        extensions: ['smm', 'json', 'xmind', 'md']
+      },
+      { name: 'Simple Mind Map (*.smm)', extensions: ['smm'] },
+      { name: 'JSON (*.json)', extensions: ['json'] },
+      { name: 'XMind (*.xmind)', extensions: ['xmind'] },
+      { name: 'Markdown (*.md)', extensions: ['md'] }
+    ]
+  })
+
+  if (result.canceled || !result.filePaths || !result.filePaths.length) return
+  const selectedPath = result.filePaths[0]
+  const ext = path.extname(selectedPath).toLowerCase()
+  const baseNameWithoutExt = path.basename(selectedPath, path.extname(selectedPath))
+  const fileName = `${baseNameWithoutExt}${ext}`
+
+  try {
+    const fileBuffer = await fsPromises.readFile(selectedPath)
+    const base64Data = fileBuffer.toString('base64')
+
+    await entry.view.webContents.executeJavaScript(`
+      (async () => {
+        try {
+          const base64 = ${JSON.stringify(base64Data)};
+          const fileName = ${JSON.stringify(fileName)};
+          const binaryString = window.atob(base64);
+          const len = binaryString.length;
+          const bytes = new Uint8Array(len);
+          for (let i = 0; i < len; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          const file = new File([bytes], fileName);
+          const bus = window.$bus || (window.__vueApp && (window.__vueApp.$bus || (window.__vueApp.__proto__ && window.__vueApp.__proto__.$bus)));
+          if (bus) {
+            bus.$emit('importFile', file);
+          }
+        } catch (err) {
+          console.error('导入思维导图数据失败:', err);
+        }
+      })()
+    `)
+  } catch (error) {
+    log.error('读取导入文件失败:', error)
+  }
+}
+
 export const invokeMindMapMenuAction = (win: BrowserWindow, action: MindMapMenuAction): void => {
   const entry = getActiveDocument(win)
   if (!entry || entry.view.webContents.isDestroyed()) return
@@ -537,14 +592,7 @@ export const invokeMindMapMenuAction = (win: BrowserWindow, action: MindMapMenuA
   }
 
   if (action === 'import') {
-    void entry.view.webContents.executeJavaScript(`
-      (() => {
-        const bus = window.$bus || (window.__vueApp && (window.__vueApp.$bus || (window.__vueApp.__proto__ && window.__vueApp.__proto__.$bus)));
-        if (bus) {
-          bus.$emit('showImport');
-        }
-      })()
-    `)
+    void importMindMapDocument(win)
     return
   }
 
