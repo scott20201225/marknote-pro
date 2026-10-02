@@ -277,7 +277,14 @@
       "closeAll": "Alle schließen",
       "emptyProject": "Leeres Projekt",
       "createFile": "Datei erstellen",
-      "openFolder": "Ordner öffnen"
+      "openFolder": "Ordner öffnen",
+      "mindMapStructure": "Mindmap-Struktur",
+      "mindMapLogicalStructure": "Logische Struktur",
+      "mindMapMindMap": "Mindmap",
+      "mindMapOrganizationStructure": "Organisationsstruktur",
+      "mindMapCatalogOrganization": "Katalogorganisation",
+      "mindMapTimeline": "Zeitleiste",
+      "mindMapFishbone": "Fischgräten-Diagramm"
     },
     "toc": {
       "title": "Inhaltsverzeichnis"

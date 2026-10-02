@@ -277,7 +277,14 @@
       "closeAll": "Tümünü Kapat",
       "emptyProject": "Boş proje",
       "createFile": "Dosya Oluştur",
-      "openFolder": "Klasör Aç"
+      "openFolder": "Klasör Aç",
+      "mindMapStructure": "Zihin haritası yapısı",
+      "mindMapLogicalStructure": "Mantıksal yapı",
+      "mindMapMindMap": "Zihin haritası",
+      "mindMapOrganizationStructure": "Organizasyon yapısı",
+      "mindMapCatalogOrganization": "Katalog organizasyonu",
+      "mindMapTimeline": "Zaman çizelgesi",
+      "mindMapFishbone": "Balık kılçığı"
     },
     "toc": {
       "title": "İçindekiler"

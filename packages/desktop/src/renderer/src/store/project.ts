@@ -28,7 +28,7 @@ import {
 } from '../util/noteWorkspace'
 import type { TreeFileNode, TreeNode } from '../components/sideBar/types'
 import type { FileChangeDetail } from '@shared/types/files'
-import type { GeoGebraMode } from '@shared/types/files'
+import type { GeoGebraMode, MindMapStructure } from '@shared/types/files'
 import { getDrawioConfiguration } from '../util/drawioConfiguration'
 import { getMindMapConfiguration } from '../util/mindmapConfiguration'
 
@@ -133,6 +133,7 @@ interface CreateCacheEntry {
   dirname: string
   type: 'file' | 'directory' | string
   geoGebraMode?: GeoGebraMode
+  mindMapStructure?: MindMapStructure
 }
 
 interface ClipboardEntry {
@@ -918,7 +919,7 @@ export const useProjectStore = defineStore('project', () => {
     bus.on('SIDEBAR::new', (payload: unknown) => {
       const request =
         typeof payload === 'object' && payload !== null
-          ? (payload as { type?: unknown; geoGebraMode?: unknown })
+          ? (payload as { type?: unknown; geoGebraMode?: unknown; mindMapStructure?: unknown })
           : { type: payload }
       const type = String(request.type ?? '')
       const { pathname, isDirectory } = activeItem.value
@@ -928,6 +929,9 @@ export const useProjectStore = defineStore('project', () => {
         type,
         ...(type === 'geogebra'
           ? { geoGebraMode: (request.geoGebraMode ?? 'graphing') as GeoGebraMode }
+          : {}),
+        ...(type === 'mindmap'
+          ? { mindMapStructure: (request.mindMapStructure ?? 'logicalStructure') as MindMapStructure }
           : {})
       }
       bus.emit('SIDEBAR::show-new-input')
@@ -1042,6 +1046,7 @@ export const useProjectStore = defineStore('project', () => {
     const cache = createCache.value as CreateCacheEntry
     const { dirname, type } = cache
     const geoGebraMode = cache.geoGebraMode ?? 'graphing'
+    const mindMapStructure = cache.mindMapStructure ?? 'logicalStructure'
     const inputName = name.trim()
     if (!inputName) {
       createCache.value = {}
@@ -1134,7 +1139,8 @@ export const useProjectStore = defineStore('project', () => {
           return window.electron.ipcRenderer.invoke(
             'mt::mindmap::open',
             fullName,
-            getMindMapConfiguration()
+            getMindMapConfiguration(),
+            mindMapStructure
           )
         }
       })

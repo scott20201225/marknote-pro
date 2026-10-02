@@ -277,7 +277,14 @@
       "closeAll": "Close All",
       "emptyProject": "Empty project",
       "createFile": "Create File",
-      "openFolder": "Open Folder"
+      "openFolder": "Open Folder",
+      "mindMapStructure": "Struttura della mappa mentale",
+      "mindMapLogicalStructure": "Struttura logica",
+      "mindMapMindMap": "Mappa mentale",
+      "mindMapOrganizationStructure": "Struttura organizzativa",
+      "mindMapCatalogOrganization": "Organizzazione catalogo",
+      "mindMapTimeline": "Cronologia",
+      "mindMapFishbone": "Diagramma a lisca di pesce"
     },
     "toc": {
       "title": "Table Of Contents"

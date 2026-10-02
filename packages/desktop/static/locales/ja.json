@@ -277,7 +277,14 @@
       "closeAll": "すべて閉じる",
       "emptyProject": "空のプロジェクト",
       "createFile": "ファイルを作成",
-      "openFolder": "フォルダを開く"
+      "openFolder": "フォルダを開く",
+      "mindMapStructure": "マインドマップ構造",
+      "mindMapLogicalStructure": "論理構造図",
+      "mindMapMindMap": "マインドマップ",
+      "mindMapOrganizationStructure": "組織構造図",
+      "mindMapCatalogOrganization": "カタログ組織図",
+      "mindMapTimeline": "タイムライン",
+      "mindMapFishbone": "魚骨図"
     },
     "toc": {
       "title": "目次"

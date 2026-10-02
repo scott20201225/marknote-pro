@@ -3,7 +3,7 @@ import {
   getNewFile,
   getNewDrawing,
   getNewGeoGebraMenu,
-  getNewMindMap,
+  getNewMindMapMenu,
   getNewDirectory,
   getNewGroup,
   getNewArea,
@@ -62,7 +62,7 @@ export const showContextMenu = (
     contextItems = [
       getNewDrawing(),
       getNewGeoGebraMenu(),
-      getNewMindMap(),
+      getNewMindMapMenu(),
       getNewGroup(),
       getRENAME(),
       SEPARATOR,
@@ -96,7 +96,7 @@ export const showContextMenu = (
     contextItems = [
       getNewDrawing(),
       getNewGeoGebraMenu(),
-      getNewMindMap(),
+      getNewMindMapMenu(),
       getNewDocument(),
       SEPARATOR,
       getExpandAll(),
@@ -116,7 +116,7 @@ export const showContextMenu = (
       getNewDocument(),
       getNewDrawing(),
       getNewGeoGebraMenu(),
-      getNewMindMap(),
+      getNewMindMapMenu(),
       SEPARATOR,
       getCOPY(),
       getMOVE_TO(),
@@ -133,7 +133,7 @@ export const showContextMenu = (
       getNewFile(),
       getNewDrawing(),
       getNewGeoGebraMenu(),
-      getNewMindMap(),
+      getNewMindMapMenu(),
       getNewDirectory(),
       SEPARATOR,
       getCOPY(),
@@ -173,7 +173,7 @@ export const showNoteListContextMenu = (
     contextItems = [
       getNewDrawing(),
       getNewGeoGebraMenu(),
-      getNewMindMap(),
+      getNewMindMapMenu(),
       getNewGroup(),
       SEPARATOR,
       getRENAME(),
@@ -199,7 +199,7 @@ export const showNoteListContextMenu = (
     contextItems = [
       getNewDrawing(),
       getNewGeoGebraMenu(),
-      getNewMindMap(),
+      getNewMindMapMenu(),
       getNewDocument(),
       SEPARATOR,
       getMOVE_TO(),
@@ -216,7 +216,7 @@ export const showNoteListContextMenu = (
       getNewDocument(),
       getNewDrawing(),
       getNewGeoGebraMenu(),
-      getNewMindMap(),
+      getNewMindMapMenu(),
       SEPARATOR,
       getMOVE_TO(),
       SEPARATOR,
@@ -228,7 +228,7 @@ export const showNoteListContextMenu = (
       getShowInFolder()
     ]
   } else {
-    contextItems = [getNewDocument(), getNewMindMap(), SEPARATOR, getPASTE(), getCopyPath()]
+    contextItems = [getNewDocument(), getNewMindMapMenu(), SEPARATOR, getPASTE(), getCopyPath()]
   }
 
   const items = normalizeContextItems(contextItems, hasPathCache)

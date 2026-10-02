@@ -277,7 +277,14 @@
       "closeAll": "모두 닫기",
       "emptyProject": "빈 프로젝트",
       "createFile": "파일 만들기",
-      "openFolder": "폴더 열기"
+      "openFolder": "폴더 열기",
+      "mindMapStructure": "마인드맵 구조",
+      "mindMapLogicalStructure": "논리 구조도",
+      "mindMapMindMap": "마인드맵",
+      "mindMapOrganizationStructure": "조직 구조도",
+      "mindMapCatalogOrganization": "카탈로그 조직도",
+      "mindMapTimeline": "타임라인",
+      "mindMapFishbone": "어골도"
     },
     "toc": {
       "title": "목차"

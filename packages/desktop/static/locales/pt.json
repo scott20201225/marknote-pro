@@ -277,7 +277,14 @@
       "closeAll": "Fechar Todos",
       "emptyProject": "Projeto vazio",
       "createFile": "Criar Arquivo",
-      "openFolder": "Abrir Pasta"
+      "openFolder": "Abrir Pasta",
+      "mindMapStructure": "Estrutura do mapa mental",
+      "mindMapLogicalStructure": "Estrutura lógica",
+      "mindMapMindMap": "Mapa mental",
+      "mindMapOrganizationStructure": "Estrutura organizacional",
+      "mindMapCatalogOrganization": "Organização do catálogo",
+      "mindMapTimeline": "Linha do tempo",
+      "mindMapFishbone": "Diagrama de espinha de peixe"
     },
     "toc": {
       "title": "Índice"

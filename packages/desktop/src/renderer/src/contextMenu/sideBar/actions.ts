@@ -1,5 +1,5 @@
 import bus from '../../bus'
-import type { GeoGebraMode } from '@shared/types/files'
+import type { GeoGebraMode, MindMapStructure } from '@shared/types/files'
 
 type MenuItemArg = unknown
 type BrowserWindowArg = unknown
@@ -19,8 +19,11 @@ export const newGeoGebra = (
   bus.emit('SIDEBAR::new', { type: 'geogebra', geoGebraMode: mode })
 }
 
-export const newMindMap = (_menuItem?: MenuItemArg, _browserWindow?: BrowserWindowArg): void => {
-  bus.emit('SIDEBAR::new', 'mindmap')
+export const newMindMap = (
+  structure: MindMapStructure = 'logicalStructure',
+  _browserWindow?: BrowserWindowArg
+): void => {
+  bus.emit('SIDEBAR::new', { type: 'mindmap', mindMapStructure: structure })
 }
 
 export const newDirectory = (_menuItem?: MenuItemArg, _browserWindow?: BrowserWindowArg): void => {
