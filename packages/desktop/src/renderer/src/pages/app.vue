@@ -113,6 +113,7 @@ import { useAutoUpdatesStore } from '@/store/autoUpdates'
 import { useNotificationStore } from '@/store/notification'
 import { getDrawioConfiguration } from '@/util/drawioConfiguration'
 import { getMindMapConfiguration } from '@/util/mindmapConfiguration'
+import { isNoteAreaName, findNoteFolderByPath, getNoteNodeKind } from '@/util/noteWorkspace'
 import type { GeoGebraMode } from '@shared/types/files'
 
 const mainStore = useMainStore()
@@ -246,8 +247,11 @@ const openGeoGebra = (
 }
 
 const openMindMap = (_event: unknown, payload: { filePath: string; title: string }): void => {
-  editorStore.OPEN_MINDMAP_TAB(payload)
   mindMapFile.value = payload
+  editorStore.OPEN_MINDMAP_TAB(payload)
+  if (payload?.filePath) {
+    projectStore.SELECT_NOTE_PATH(window.path.dirname(payload.filePath))
+  }
 }
 
 const closeDrawio = (_event: unknown, payload?: { filePath?: string }): void => {
@@ -468,6 +472,63 @@ onMounted(() => {
     preferencesStore.SET_USER_PREFERENCE(window.marknotepro.initialState)
   }
 
+  ;(window as unknown as { getTargetPartitionDir?: () => string | null }).getTargetPartitionDir = () => {
+    const rootPath = projectStore.projectTree?.pathname
+      ? window.path.normalize(projectStore.projectTree.pathname)
+      : null
+    if (!rootPath) return null
+
+    const isAreaPath = (targetPath: string | null | undefined): boolean => {
+      if (!targetPath) return false
+      const normalized = window.path.normalize(targetPath)
+      if (normalized === rootPath) return false
+      const isChild =
+        typeof window.fileUtils?.isChildOfDirectory === 'function'
+          ? window.fileUtils.isChildOfDirectory(rootPath, normalized)
+          : normalized.startsWith(rootPath) && normalized !== rootPath
+      if (!isChild) return false
+
+      const folder = findNoteFolderByPath(projectStore.projectTree, normalized)
+      if (folder) {
+        return getNoteNodeKind(folder, rootPath) === 'area'
+      }
+      return isNoteAreaName(window.path.basename(normalized))
+    }
+
+    // 1. 优先检查侧边栏当前激活项（用户点击的目录或文件）
+    const activeItem = projectStore.activeItem
+    if (activeItem?.pathname) {
+      const activePath = window.path.normalize(activeItem.pathname)
+      if (activeItem.isDirectory) {
+        if (isAreaPath(activePath)) return activePath
+        // 用户明确点击了非分区目录（如根目录、分区组、附件等），视为未选定分区
+        return null
+      } else {
+        const parentDir = window.path.dirname(activePath)
+        if (isAreaPath(parentDir)) return parentDir
+        return null
+      }
+    }
+
+    // 2. 检查当前选中的笔记/分区路径
+    const selectedPath = projectStore.selectedNotePath
+    if (selectedPath) {
+      const normalizedSelected = window.path.normalize(selectedPath)
+      if (isAreaPath(normalizedSelected)) return normalizedSelected
+      const parentDir = window.path.dirname(normalizedSelected)
+      if (isAreaPath(parentDir)) return parentDir
+      return null
+    }
+
+    // 3. 回退检查当前打开的思维导图/文档所在目录是否属于分区
+    if (currentFile.value?.pathname) {
+      const parentDir = window.path.dirname(window.path.normalize(currentFile.value.pathname))
+      if (isAreaPath(parentDir)) return parentDir
+    }
+
+    return null
+  }
+
   // Register critical window/editor IPC listeners first so the renderer can't
   // miss bootstrap/close events while slower async init work is still pending.
   mainStore.LISTEN_WIN_STATUS()
@@ -548,6 +609,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('wheel', handleWindowZoomWheel, true)
   window.removeEventListener('gesturestart', handleWindowZoomGestureStart)
   window.removeEventListener('gesturechange', handleWindowZoomGestureChange)
+  ;(window as unknown as { getTargetPartitionDir?: () => string | null }).getTargetPartitionDir = undefined
 })
 </script>
 

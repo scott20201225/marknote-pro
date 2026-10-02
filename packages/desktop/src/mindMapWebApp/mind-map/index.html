@@ -2745,6 +2745,39 @@
       };
     }
 
+    window.__parseMindMapImportData = async function(base64, fileName) {
+      try {
+        const binaryString = window.atob(base64);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        const file = new File([bytes], fileName);
+
+        if (/\.(smm|json|mind)$/i.test(fileName)) {
+          const text = new TextDecoder('utf-8').decode(bytes);
+          return JSON.parse(text);
+        }
+
+        if (/\.xmind$/i.test(fileName)) {
+          if (window.__mindMapParsers && window.__mindMapParsers.xmind) {
+            return await window.__mindMapParsers.xmind.parseXmindFile(file);
+          }
+        }
+
+        if (/\.md$/i.test(fileName)) {
+          const text = new TextDecoder('utf-8').decode(bytes);
+          if (window.__mindMapParsers && window.__mindMapParsers.markdown) {
+            return window.__mindMapParsers.markdown.transformMarkdownTo(text);
+          }
+        }
+      } catch (err) {
+        console.error('__parseMindMapImportData error:', err);
+      }
+      return null;
+    };
+
     try {
       applyHostUITheme('', false, '', null)
     } catch (_) {}

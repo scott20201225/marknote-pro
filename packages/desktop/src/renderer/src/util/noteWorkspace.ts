@@ -43,7 +43,7 @@ const isHiddenNoteFolder = (node: NoteNodeLike | null | undefined): boolean => {
 
 const isNoteGroupName = (name: string): boolean => name.startsWith(NOTE_GROUP_PREFIX)
 
-const isNoteAreaName = (name: string): boolean => name.startsWith(NOTE_AREA_PREFIX)
+export const isNoteAreaName = (name: string): boolean => name.startsWith(NOTE_AREA_PREFIX)
 
 const isMarkdownFileName = (name: string): boolean => /\.md$/i.test(name)
 const isDrawingFileName = (name: string): boolean => /\.drawio$/i.test(name)
@@ -88,7 +88,11 @@ export const isValidNoteDirectoryPath = (
   const normalizedPath = window.path.normalize(pathname)
 
   if (normalizedPath === normalizedRoot) return true
-  if (!window.fileUtils.isChildOfDirectory(normalizedRoot, normalizedPath)) return false
+  const isChild =
+    typeof window.fileUtils?.isChildOfDirectory === 'function'
+      ? window.fileUtils.isChildOfDirectory(normalizedRoot, normalizedPath)
+      : normalizedPath.startsWith(normalizedRoot + (window.path?.sep ?? '/'))
+  if (!isChild) return false
 
   const parts = getRelativeParts(normalizedRoot, normalizedPath)
   let hasArea = false

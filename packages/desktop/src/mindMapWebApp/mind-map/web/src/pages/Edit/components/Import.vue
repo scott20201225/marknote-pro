@@ -62,6 +62,10 @@ import markdown from 'simple-mind-map/src/parse/markdown.js'
 import { mapMutations } from 'vuex'
 import Vue from 'vue'
 
+try {
+  window.__mindMapParsers = { xmind, markdown }
+} catch (_) {}
+
 // 导入
 export default {
   data() {
@@ -255,6 +259,10 @@ export default {
 
     // 导入指定文件
     handleImportFile(file) {
+      if (window.electron && window.electron.ipcRenderer) {
+        window.electron.ipcRenderer.send('mt::mindmap::menu-action', 'import')
+        return
+      }
       this.onChange({
         raw: file,
         name: file.name

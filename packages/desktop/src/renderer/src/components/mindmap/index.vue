@@ -123,6 +123,14 @@ watch(
     void window.electron.ipcRenderer.invoke('mt::mindmap::configure', getMindMapConfiguration())
   }
 )
+watch(
+  () => currentFile.value?.pathname,
+  (newPath, oldPath) => {
+    if (newPath && newPath !== oldPath && currentFile.value?.isMindMap) {
+      void showMindMap()
+    }
+  }
+)
 
 onBeforeUnmount(() => {
   if (boundsSyncAnimationFrame) window.cancelAnimationFrame(boundsSyncAnimationFrame)
