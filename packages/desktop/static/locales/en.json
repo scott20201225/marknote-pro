@@ -300,6 +300,8 @@
       "notesListTitle": "Notes",
       "moveDialogEmpty": "There are no eligible destination nodes.",
       "selectAreaToViewNotes": "Select an area to view notes",
+      "selectPartitionFirst": "Please select a partition first",
+      "selectPartitionFirstDetail": "Please select a partition in the sidebar before importing.",
       "noNotesInArea": "No notes in this area",
       "groupNamePlaceholder": "Group name",
       "areaNamePlaceholder": "Area name",

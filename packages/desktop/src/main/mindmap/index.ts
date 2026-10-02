@@ -9,6 +9,7 @@ import { writeFile } from '../filesystem'
 import type { MindMapConfiguration } from '../../shared/types/ipc'
 import type { MindMapStructure } from '../../shared/types/files'
 import { getMindMapThemeInfo } from '../../common/mindmapTheme'
+import { t } from '../i18n'
 
 const MINDMAP_EXTENSION = '.smm'
 const DEFAULT_MINDMAP_DATA = {
@@ -61,6 +62,7 @@ interface MindMapWindowEntry {
   activePath: string | null
   visible: boolean
   configuration: MindMapConfiguration
+  lastBounds?: Rectangle
 }
 
 const views = new Map<number, MindMapWindowEntry>()
@@ -210,6 +212,7 @@ const getActiveDocument = (win: BrowserWindow): MindMapDocumentEntry | undefined
 export const showMindMapView = (win: BrowserWindow, bounds: Rectangle): void => {
   const windowEntry = views.get(win.id)
   if (!windowEntry) return
+  windowEntry.lastBounds = bounds
   const entry = getActiveDocument(win)
   if (!entry) return
   windowEntry.visible = true
@@ -233,6 +236,7 @@ export const showMindMapView = (win: BrowserWindow, bounds: Rectangle): void => 
 export const syncMindMapViewBounds = (win: BrowserWindow, bounds: Rectangle): void => {
   const windowEntry = views.get(win.id)
   if (!windowEntry?.visible) return
+  windowEntry.lastBounds = bounds
   const entry = getActiveDocument(win)
   if (!entry) return
   const normalizedBounds = normalizeBounds(bounds)
@@ -315,6 +319,10 @@ export const openMindMapFile = async (
       themeConfig,
       colors: windowEntry.configuration.colors
     })
+
+    if (windowEntry.visible && windowEntry.lastBounds) {
+      showMindMapView(win, windowEntry.lastBounds)
+    }
 
     win.webContents.send('mt::mindmap::opened', { filePath, title: path.basename(filePath) })
     emitState(win, entry, { modified: false, isSaved: true, isSaving: false })
@@ -527,20 +535,152 @@ export const printMindMapDocument = async (win: BrowserWindow): Promise<void> =>
   }
 }
 
-export const importMindMapDocument = async (win: BrowserWindow): Promise<void> => {
-  const entry = getActiveDocument(win)
-  if (!entry || entry.view.webContents.isDestroyed()) return
+export const getAvailableImportFilePath = async (
+  targetDir: string,
+  sourceFilePath: string
+): Promise<string> => {
+  const ext = path.extname(sourceFilePath)
+  const baseName = path.basename(sourceFilePath, ext)
 
+  const initialName = `${baseName}-import.smm`
+  const initialPath = path.join(targetDir, initialName)
+  if (!(await fs.pathExists(initialPath))) {
+    return initialPath
+  }
+
+  let index = 1
+  while (true) {
+    const candidateName = `${baseName}-import${index}.smm`
+    const candidatePath = path.join(targetDir, candidateName)
+    if (!(await fs.pathExists(candidatePath))) {
+      return candidatePath
+    }
+    index++
+  }
+}
+
+export const transformMarkdownFallback = (
+  content: string,
+  defaultTitle: string
+): Record<string, unknown> => {
+  const lines = content.split(/\r?\n/)
+  const root = {
+    data: { text: defaultTitle },
+    children: [] as Array<Record<string, unknown>>
+  }
+  const stack: Array<{
+    depth: number
+    node: { data: { text: string }; children: Array<Record<string, unknown>> }
+  }> = [{ depth: 0, node: root }]
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim()
+    if (!line) continue
+    let depth = 0
+    let text = ''
+    const headingMatch = line.match(/^(#{1,6})\s+(.*)$/)
+    if (headingMatch) {
+      depth = headingMatch[1].length
+      text = headingMatch[2].trim()
+    } else {
+      const listMatch = line.match(/^([*\-+]\s+|\d+\.\s+)(.*)$/)
+      if (listMatch) {
+        const indent = rawLine.match(/^\s*/)?.[0].length || 0
+        depth = Math.floor(indent / 2) + 2
+        text = listMatch[2].trim()
+      } else {
+        continue
+      }
+    }
+    if (!text) continue
+    const node = { data: { text }, children: [] as Array<Record<string, unknown>> }
+    while (stack.length > 1 && stack[stack.length - 1].depth >= depth) {
+      stack.pop()
+    }
+    stack[stack.length - 1].node.children.push(node)
+    stack.push({ depth, node })
+  }
+
+  if (
+    root.children.length === 1 &&
+    root.children[0].children &&
+    (root.children[0].children as unknown[]).length > 0
+  ) {
+    return root.children[0]
+  }
+  return root
+}
+
+export const isPartitionDirectory = (dir: string | null | undefined): boolean => {
+  if (!dir) return false
+  return path.basename(dir).startsWith('AREA_')
+}
+
+export const importMindMapDocument = async (win: BrowserWindow): Promise<void> => {
+  // 1. 先判断当前是否选定了有效的分区，未选定时提示用户并直接返回
+  let targetDir: string | null = null
+  try {
+    targetDir = await win.webContents.executeJavaScript(
+      'window.getTargetPartitionDir ? window.getTargetPartitionDir() : null'
+    )
+  } catch (err) {
+    log.warn('未能从渲染进程获取当前分区目录:', err)
+  }
+
+  const isTargetDirValid =
+    isPartitionDirectory(targetDir) &&
+    (await fs.pathExists(targetDir!))
+
+  if (!isTargetDirValid) {
+    const notifyTitle = t('notifications.defaultTitle') || '提示'
+    const notifyMessage = t('sideBar.tree.selectPartitionFirst') || '请先选择分区'
+    const notifyDetail =
+      t('sideBar.tree.selectPartitionFirstDetail') || '请在左侧目录树中先选择一个分区，然后再执行导入操作。'
+
+    win.webContents.send('mt::show-notification', {
+      title: notifyTitle,
+      type: 'warning',
+      message: notifyMessage
+    })
+
+    const entry = getActiveDocument(win)
+    if (entry && !entry.view.webContents.isDestroyed()) {
+      entry.view.webContents
+        .executeJavaScript(`
+          (() => {
+            try {
+              if (window.ELEMENT && window.ELEMENT.Message) {
+                window.ELEMENT.Message.warning(${JSON.stringify(notifyMessage)});
+              } else if (window.$message) {
+                window.$message.warning(${JSON.stringify(notifyMessage)});
+              }
+            } catch (e) {}
+          })()
+        `)
+        .catch(() => {})
+    }
+
+    await dialog.showMessageBox(win, {
+      type: 'warning',
+      title: notifyTitle,
+      message: notifyMessage,
+      detail: notifyDetail,
+      buttons: [t('common.ok') || '确定']
+    })
+    return
+  }
+
+  // 2. 选定了分区后，再弹出系统文件选择框
   const result = await dialog.showOpenDialog(win, {
     title: '导入思维导图文件',
     properties: ['openFile'],
     filters: [
       {
-        name: '思维导图 / 数据文件 (*.smm, *.json, *.xmind, *.md)',
-        extensions: ['smm', 'json', 'xmind', 'md']
+        name: '思维导图 / 数据文件 (*.smm, *.json, *.xmind, *.md, *.mind)',
+        extensions: ['smm', 'json', 'xmind', 'md', 'mind']
       },
       { name: 'Simple Mind Map (*.smm)', extensions: ['smm'] },
-      { name: 'JSON (*.json)', extensions: ['json'] },
+      { name: 'JSON (*.json, *.mind)', extensions: ['json', 'mind'] },
       { name: 'XMind (*.xmind)', extensions: ['xmind'] },
       { name: 'Markdown (*.md)', extensions: ['md'] }
     ]
@@ -550,35 +690,135 @@ export const importMindMapDocument = async (win: BrowserWindow): Promise<void> =
   const selectedPath = result.filePaths[0]
   const ext = path.extname(selectedPath).toLowerCase()
   const baseNameWithoutExt = path.basename(selectedPath, path.extname(selectedPath))
-  const fileName = `${baseNameWithoutExt}${ext}`
 
+  const entry = getActiveDocument(win)
+
+  // 3. 根据规则获取不冲突的新文件名：
+  //    原始文件名 + "-import.smm"，若有同名文件则递增数字后缀（-import1.smm, -import2.smm...）
+  const newFilePath = await getAvailableImportFilePath(targetDir!, selectedPath)
+
+  // 4. 解析导入文件数据
+  let importedData: unknown = null
+
+  if (ext === '.smm' || ext === '.json' || ext === '.mind') {
+    try {
+      const fileText = await fsPromises.readFile(selectedPath, 'utf8')
+      importedData = JSON.parse(fileText)
+    } catch (parseErr) {
+      log.warn('直接解析 JSON/SMM 文本失败，尝试使用思维导图引擎解析:', parseErr)
+    }
+  }
+
+  if (!importedData && entry && !entry.view.webContents.isDestroyed()) {
+    try {
+      const fileBuffer = await fsPromises.readFile(selectedPath)
+      const base64Data = fileBuffer.toString('base64')
+      const fileName = `${baseNameWithoutExt}${ext}`
+
+      importedData = await entry.view.webContents.executeJavaScript(`
+        (async () => {
+          try {
+            const base64 = ${JSON.stringify(base64Data)};
+            const fileName = ${JSON.stringify(fileName)};
+            if (typeof window.__parseMindMapImportData === 'function') {
+              return await window.__parseMindMapImportData(base64, fileName);
+            }
+            const binaryString = window.atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+            const file = new File([bytes], fileName);
+            if (window.__mindMapParsers) {
+              if (/\\.xmind$/i.test(fileName) && window.__mindMapParsers.xmind) {
+                return await window.__mindMapParsers.xmind.parseXmindFile(file);
+              }
+              if (/\\.md$/i.test(fileName) && window.__mindMapParsers.markdown) {
+                const text = new TextDecoder('utf-8').decode(bytes);
+                return window.__mindMapParsers.markdown.transformMarkdownTo(text);
+              }
+            }
+            if (/\\.(smm|json|mind)$/i.test(fileName)) {
+              const text = new TextDecoder('utf-8').decode(bytes);
+              return JSON.parse(text);
+            }
+            return null;
+          } catch (err) {
+            console.error('思维导图文件解析执行失败:', err);
+            return null;
+          }
+        })()
+      `)
+    } catch (engineErr) {
+      log.error('思维导图引擎解析失败:', engineErr)
+    }
+  }
+
+  if (!importedData && ext === '.md') {
+    try {
+      const mdContent = await fsPromises.readFile(selectedPath, 'utf8')
+      importedData = transformMarkdownFallback(mdContent, baseNameWithoutExt)
+    } catch (mdErr) {
+      log.error('Markdown 容灾解析失败:', mdErr)
+    }
+  }
+
+  if (!importedData || typeof importedData !== 'object') {
+    win.webContents.send('mt::show-notification', {
+      title: '导入失败',
+      type: 'error',
+      message: '无法解析所选文件，未识别到有效的思维导图结构。'
+    })
+    return
+  }
+
+  // 4. 标准化思维导图完整数据结构并注入默认样式/结构
+  const dataObj = importedData as Record<string, unknown>
+  let finalData: Record<string, unknown>
+  if (dataObj.root && typeof dataObj.root === 'object') {
+    finalData = {
+      ...DEFAULT_MINDMAP_DATA,
+      ...dataObj
+    }
+  } else if (dataObj.data && typeof dataObj.data === 'object') {
+    finalData = {
+      ...DEFAULT_MINDMAP_DATA,
+      root: dataObj
+    }
+  } else {
+    finalData = {
+      ...DEFAULT_MINDMAP_DATA,
+      root: {
+        data: { text: baseNameWithoutExt },
+        children: Array.isArray(importedData) ? (importedData as unknown[]) : []
+      }
+    }
+  }
+
+  // 5. 写入目标新建文件
   try {
-    const fileBuffer = await fsPromises.readFile(selectedPath)
-    const base64Data = fileBuffer.toString('base64')
+    await writeFile(newFilePath, JSON.stringify(finalData, null, 2), undefined, 'utf8')
+  } catch (writeErr) {
+    log.error('写入新建思维导图文件失败:', writeErr)
+    win.webContents.send('mt::show-notification', {
+      title: '导入失败',
+      type: 'error',
+      message: `无法创建文件: ${writeErr instanceof Error ? writeErr.message : String(writeErr)}`
+    })
+    return
+  }
 
-    await entry.view.webContents.executeJavaScript(`
-      (async () => {
-        try {
-          const base64 = ${JSON.stringify(base64Data)};
-          const fileName = ${JSON.stringify(fileName)};
-          const binaryString = window.atob(base64);
-          const len = binaryString.length;
-          const bytes = new Uint8Array(len);
-          for (let i = 0; i < len; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-          }
-          const file = new File([bytes], fileName);
-          const bus = window.$bus || (window.__vueApp && (window.__vueApp.$bus || (window.__vueApp.__proto__ && window.__vueApp.__proto__.$bus)));
-          if (bus) {
-            bus.$emit('importFile', file);
-          }
-        } catch (err) {
-          console.error('导入思维导图数据失败:', err);
-        }
-      })()
-    `)
-  } catch (error) {
-    log.error('读取导入文件失败:', error)
+  // 6. 在 MarkNotePro 中打开新文件为新标签页
+  try {
+    await openMindMapFile(newFilePath, win)
+    win.webContents.send('mt::show-notification', {
+      title: '导入成功',
+      type: 'success',
+      message: `已导入并在分区新建文件: ${path.basename(newFilePath)}`
+    })
+  } catch (openErr) {
+    log.error('打开新建思维导图文件失败:', openErr)
   }
 }
 
