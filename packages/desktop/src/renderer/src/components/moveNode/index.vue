@@ -48,11 +48,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, type Component } from 'vue'
+import { computed, ref, watch, onBeforeUnmount, type Component } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
 import { ElTree } from 'element-plus'
 import { CollectionTag, Folder } from '@element-plus/icons-vue'
+import bus from '@/bus'
 import { useProjectStore } from '@/store/project'
 import {
   NOTE_ATTACHMENTS_DIRECTORY,
@@ -92,6 +93,14 @@ const showDialog = computed({
     }
   }
 })
+
+watch(showDialog, (visible) => {
+  if (visible) {
+    bus.emit('host-overlay:show', 'move-node-dialog')
+  } else {
+    bus.emit('host-overlay:hide', 'move-node-dialog')
+  }
+}, { immediate: true })
 
 const rootPath = computed<string | null>(() => projectTree.value?.pathname ?? null)
 
@@ -205,6 +214,10 @@ watch(showDialog, (visible) => {
     selectedTargetPath.value = null
     treeRef.value?.setCurrentKey(undefined)
   }
+})
+
+onBeforeUnmount(() => {
+  bus.emit('host-overlay:hide', 'move-node-dialog')
 })
 </script>
 

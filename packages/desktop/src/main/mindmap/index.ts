@@ -284,6 +284,19 @@ export const hideMindMapView = (win: BrowserWindow): void => {
   }
 }
 
+export const captureMindMapSnapshot = async (win: BrowserWindow): Promise<string | null> => {
+  const entry = getActiveDocument(win)
+  if (!entry || entry.view.webContents.isDestroyed()) return null
+  try {
+    const image = await entry.view.webContents.capturePage()
+    if (image.isEmpty()) return null
+    return image.toDataURL()
+  } catch (err) {
+    log.error('captureMindMapSnapshot error:', err)
+    return null
+  }
+}
+
 const emitState = (
   win: BrowserWindow,
   entry: MindMapDocumentEntry,
@@ -910,6 +923,11 @@ export const registerMindMapHandlers = (): void => {
   ipcMain.on('mt::mindmap::hide', (event) => {
     const win = BrowserWindow.fromWebContents(event.sender)
     if (win) hideMindMapView(win)
+  })
+  ipcMain.handle('mt::mindmap::capture-snapshot', async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win) return null
+    return captureMindMapSnapshot(win)
   })
   ipcMain.on('mt::mindmap::state', (event, state: { modified?: boolean; isSaved?: boolean }) => {
     const owner = viewOwners.get(event.sender.id)

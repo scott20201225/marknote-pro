@@ -60,7 +60,11 @@ const showDrawio = async (): Promise<void> => {
 }
 
 const resumeAfterHostOverlay = (): void => {
-  if (currentFile.value?.isDrawing) void showDrawio()
+  if (currentFile.value?.isDrawing) {
+    void showDrawio().then(() => {
+      if (surfaceRef.value) surfaceRef.value.style.backgroundImage = ''
+    })
+  }
 }
 
 const syncBounds = (): void => {
@@ -125,6 +129,7 @@ watch(
 )
 
 onBeforeUnmount(() => {
+  if (surfaceRef.value) surfaceRef.value.style.backgroundImage = ''
   if (boundsSyncAnimationFrame) window.cancelAnimationFrame(boundsSyncAnimationFrame)
   themeObserver?.disconnect()
   themeObserver = null

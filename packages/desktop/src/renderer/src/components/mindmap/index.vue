@@ -56,7 +56,11 @@ const showMindMap = async (): Promise<void> => {
 }
 
 const resumeAfterHostOverlay = (): void => {
-  if (currentFile.value?.isMindMap) void showMindMap()
+  if (currentFile.value?.isMindMap) {
+    void showMindMap().then(() => {
+      if (surfaceRef.value) surfaceRef.value.style.backgroundImage = ''
+    })
+  }
 }
 
 const syncBounds = (): void => {
@@ -135,6 +139,7 @@ watch(
 )
 
 onBeforeUnmount(() => {
+  if (surfaceRef.value) surfaceRef.value.style.backgroundImage = ''
   if (boundsSyncAnimationFrame) window.cancelAnimationFrame(boundsSyncAnimationFrame)
   window.removeEventListener('resize', handleWindowResize)
   window.removeEventListener('marknotepro:resume-native-editor', resumeAfterHostOverlay)

@@ -133,6 +133,7 @@ export interface IpcInvokeChannels {
   'mt::drawio::save-request': { args: [filePath: string]; ret: void }
   'mt::drawio::close-file': { args: [filePath: string]; ret: void }
   'mt::drawio::show': { args: [bounds: DrawioBounds]; ret: void }
+  'mt::drawio::capture-snapshot': { args: []; ret: string | null }
   'mt::geogebra::open': {
     args: [pathname: string, mode?: GeoGebraMode, configuration?: GeoGebraConfiguration]
     ret: void
@@ -141,6 +142,7 @@ export interface IpcInvokeChannels {
   'mt::geogebra::save-request': { args: [filePath: string]; ret: void }
   'mt::geogebra::close-file': { args: [filePath: string]; ret: void }
   'mt::geogebra::show': { args: [bounds: DrawioBounds]; ret: void }
+  'mt::geogebra::capture-snapshot': { args: []; ret: string | null }
   'mt::mindmap::open': {
     args: [pathname: string, configuration?: MindMapConfiguration]
     ret: void
@@ -150,6 +152,7 @@ export interface IpcInvokeChannels {
   'mt::mindmap::save-request': { args: [filePath: string]; ret: void }
   'mt::mindmap::close-file': { args: [filePath: string]; ret: void }
   'mt::mindmap::show': { args: [bounds: DrawioBounds]; ret: void }
+  'mt::mindmap::capture-snapshot': { args: []; ret: string | null }
   'mt::mindmap::ready': {
     args: []
     ret: {
@@ -394,6 +397,7 @@ export interface IpcSyncChannels {
 
 export interface IpcMainEventChannels {
   'language-changed': [language: string]
+  'mt::CHECKING_FOR_UPDATE': []
   'mt::UPDATE_AVAILABLE': [info?: unknown]
   'mt::UPDATE_DOWNLOADED': [info?: unknown]
   'mt::UPDATE_ERROR': [error: unknown]
