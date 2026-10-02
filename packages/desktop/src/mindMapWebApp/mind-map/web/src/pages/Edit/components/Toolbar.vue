@@ -24,8 +24,8 @@
           </div>
         </el-popover>
       </div>
-      <!-- 导出 -->
-      <div class="toolbarBlock">
+      <!-- 导出 (已转至 MarkNotePro 主菜单，此处整体隐藏以保证主工具栏完全居中) -->
+      <div class="toolbarBlock" v-if="false">
         <div class="toolbarBtn" @click="openDirectory" v-if="!isMobile">
           <span class="icon iconfont icondakai"></span>
           <span class="text">{{ $t('toolbar.directory') }}</span>

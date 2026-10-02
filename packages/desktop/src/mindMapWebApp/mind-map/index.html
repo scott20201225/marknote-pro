@@ -23,12 +23,24 @@
       overflow: hidden;
       background-color: transparent;
     }
-    /* 隐藏与桌面宿主文件/目录管理冲突的纯前端独立按钮 */
-    .toolbarBlock:nth-child(2) > .toolbarBtn:nth-child(1), /* 目录 */
-    .toolbarBlock:nth-child(2) > .el-tooltip:nth-child(2), /* 新建文件 */
-    .toolbarBlock:nth-child(2) > .el-tooltip:nth-child(3)  /* 打开文件 */
-    {
+    /* 隐藏顶部工具栏右侧的文件操作卡片（另存为、导入、导出、目录等均已移至主菜单） */
+    .toolbarContainer .toolbar .toolbarBlock:nth-child(2),
+    .toolbarContainer .toolbar .toolbarBlock:last-child:not(:first-child) {
       display: none !important;
+    }
+    /* 确保主操作栏完全水平居中，无多余外边距 */
+    .toolbarContainer .toolbar {
+      position: fixed !important;
+      left: 50% !important;
+      transform: translateX(-50%) !important;
+      margin: 0 auto !important;
+      display: flex !important;
+      justify-content: center !important;
+      width: max-content !important;
+    }
+    .toolbarContainer .toolbar .toolbarBlock,
+    .toolbarContainer .toolbar .toolbarBlock:first-child {
+      margin-right: 0 !important;
     }
     /* 隐藏底部导航栏语言切换下拉框（由 MarkNotePro 统一控制联动） */
     .navigatorContainer > .item:first-child,
