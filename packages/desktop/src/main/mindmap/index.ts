@@ -460,7 +460,117 @@ export const configureMindMap = (win: BrowserWindow, configuration: MindMapConfi
   }
 }
 
+export type MindMapMenuAction = 'import' | 'export' | 'print'
+
+interface MindMapPrintData {
+  type: 'svg' | 'png'
+  content: string
+}
+
+const getMindMapPrintContent = async (entry: MindMapDocumentEntry): Promise<MindMapPrintData | null> => {
+  return (await entry.view.webContents.executeJavaScript(`
+    new Promise(async (resolve) => {
+      try {
+        if (window.__mindMap && typeof window.__mindMap.export === 'function') {
+          const png = await window.__mindMap.export('png', false, 'mindmap')
+          if (typeof png === 'string' && png.length > 50) {
+            return resolve({ type: 'png', content: png })
+          }
+          const svg = await window.__mindMap.export('svg', false, 'mindmap')
+          if (typeof svg === 'string' && svg.includes('<svg')) {
+            return resolve({ type: 'svg', content: svg })
+          }
+        }
+      } catch (e) {
+        console.error('getMindMapPrintContent error:', e)
+      }
+      resolve(null)
+    })
+  `)) as MindMapPrintData | null
+}
+
+const createMindMapPrintWindow = async (data: MindMapPrintData): Promise<BrowserWindow> => {
+  const printWindow = new BrowserWindow({
+    show: false,
+    webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true }
+  })
+  const bodyContent =
+    data.type === 'svg'
+      ? data.content
+      : `<img src="${data.content.startsWith('data:') ? data.content : `data:image/png;base64,${data.content}`}" alt="Mind Map" />`
+  const document = `<!doctype html><html><head><meta charset="UTF-8"><style>@page{margin:10mm;size:auto}html,body{margin:0;padding:0;background:#fff;display:flex;justify-content:center;align-items:center;min-height:100vh}svg{display:block;max-width:100%;max-height:100vh;height:auto;width:auto}img{display:block;max-width:100%;max-height:100vh;width:auto;height:auto;object-fit:contain}</style></head><body>${bodyContent}</body></html>`
+  await printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(document)}`)
+  return printWindow
+}
+
+export const printMindMapDocument = async (win: BrowserWindow): Promise<void> => {
+  const entry = getActiveDocument(win)
+  if (!entry || entry.view.webContents.isDestroyed()) return
+  try {
+    const data = await getMindMapPrintContent(entry)
+    if (data) {
+      const printWindow = await createMindMapPrintWindow(data)
+      printWindow.webContents.print({ printBackground: true }, () => {
+        if (!printWindow.isDestroyed()) printWindow.destroy()
+      })
+      return
+    }
+    log.warn('未能获取思维导图打印图像数据，回退到页面直接打印')
+  } catch (error) {
+    log.error('打印思维导图失败:', error)
+  }
+
+  try {
+    entry.view.webContents.print({ printBackground: true })
+  } catch (err) {
+    log.error('思维导图页面直接打印失败:', err)
+  }
+}
+
+export const invokeMindMapMenuAction = (win: BrowserWindow, action: MindMapMenuAction): void => {
+  const entry = getActiveDocument(win)
+  if (!entry || entry.view.webContents.isDestroyed()) return
+
+  if (action === 'print') {
+    void printMindMapDocument(win)
+    return
+  }
+
+  if (action === 'import') {
+    void entry.view.webContents.executeJavaScript(`
+      (() => {
+        const bus = window.$bus || (window.__vueApp && (window.__vueApp.$bus || (window.__vueApp.__proto__ && window.__vueApp.__proto__.$bus)));
+        if (bus) {
+          bus.$emit('showImport');
+        }
+      })()
+    `)
+    return
+  }
+
+  if (action === 'export') {
+    void entry.view.webContents.executeJavaScript(`
+      (() => {
+        const bus = window.$bus || (window.__vueApp && (window.__vueApp.$bus || (window.__vueApp.__proto__ && window.__vueApp.__proto__.$bus)));
+        if (bus) {
+          bus.$emit('showExport');
+        }
+      })()
+    `)
+    return
+  }
+}
+
 export const registerMindMapHandlers = (): void => {
+  ipcMain.on('mt::mindmap::menu-action', (event, action: MindMapMenuAction) => {
+    const owner = viewOwners.get(event.sender.id)
+    const win = owner
+      ? BrowserWindow.fromId(owner.windowId)
+      : BrowserWindow.fromWebContents(event.sender)
+    if (win && action) {
+      invokeMindMapMenuAction(win, action)
+    }
+  })
   ipcMain.handle(
     'mt::mindmap::open',
     (
