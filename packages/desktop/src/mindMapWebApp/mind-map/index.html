@@ -150,16 +150,50 @@
     }
 
     /* 区域 2：右侧边栏切换栏 */
+    .sidebarTriggerContainer {
+      right: -80px;
+    }
+    .sidebarTriggerContainer.show {
+      right: 0 !important;
+    }
+    .sidebarTriggerContainer.hasActive {
+      right: 305px !important;
+    }
     .sidebarTriggerContainer .trigger,
     .sidebarTriggerContainer.isDark .trigger {
+      width: 78px !important;
+      padding: 4px 2px !important;
       background-color: var(--mm-panel-bg) !important;
       border: 1px solid var(--mm-panel-border) !important;
       box-shadow: 0 4px 16px var(--mm-panel-shadow) !important;
+      overflow-x: hidden !important;
     }
     .sidebarTriggerContainer .trigger .triggerItem,
     .sidebarTriggerContainer.isDark .trigger .triggerItem {
+      min-height: 60px !important;
+      height: auto !important;
+      padding: 6px 2px !important;
+      box-sizing: border-box !important;
       color: var(--mm-panel-text-secondary) !important;
       transition: all 0.2s ease !important;
+      white-space: normal !important;
+      word-break: normal !important;
+      overflow-wrap: break-word !important;
+      hyphens: auto !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: center !important;
+      align-items: center !important;
+    }
+    .sidebarTriggerContainer .trigger .triggerItem .triggerName {
+      font-size: 11px !important;
+      line-height: 1.25 !important;
+      text-align: center !important;
+      max-width: 74px !important;
+      overflow: visible !important;
+      white-space: normal !important;
+      word-break: normal !important;
+      overflow-wrap: break-word !important;
     }
     .sidebarTriggerContainer .trigger .triggerItem:hover,
     .sidebarTriggerContainer.isDark .trigger .triggerItem:hover {
@@ -300,6 +334,95 @@
       color: var(--mm-panel-text) !important;
       margin-top: 6px !important;
     }
+
+    /* 大纲树与全屏大纲编辑主题适配 */
+    .outlineTree,
+    .outlineTree.isDark,
+    .outlineTree .el-tree,
+    .outlineTree.isDark .el-tree {
+      background-color: transparent !important;
+      color: var(--mm-panel-text) !important;
+    }
+    .outlineTree .customNode,
+    .outlineTree.isDark .customNode,
+    .outlineTree .customNode .nodeEdit,
+    .outlineTree.isDark .customNode .nodeEdit {
+      color: var(--mm-panel-text) !important;
+    }
+    .outlineTree .customNode .nodeEdit:focus {
+      caret-color: var(--mm-theme-color) !important;
+      outline: none !important;
+    }
+    .outlineTree .el-tree-node__content,
+    .outlineTree.isDark .el-tree-node__content {
+      color: var(--mm-panel-text) !important;
+      border-radius: 4px !important;
+      transition: all 0.2s ease !important;
+    }
+    .outlineTree .el-tree-node__content:hover,
+    .outlineTree.isDark .el-tree-node__content:hover {
+      background-color: var(--mm-item-hover-bg) !important;
+    }
+    .outlineTree.el-tree--highlight-current .el-tree-node.is-current > .el-tree-node__content,
+    .outlineTree.isDark.el-tree--highlight-current .el-tree-node.is-current > .el-tree-node__content {
+      background-color: var(--mm-item-active-bg) !important;
+      color: var(--mm-theme-color) !important;
+      font-weight: 600 !important;
+    }
+    .outlineTree.el-tree--highlight-current .el-tree-node.is-current > .el-tree-node__content .customNode,
+    .outlineTree.isDark.el-tree--highlight-current .el-tree-node.is-current > .el-tree-node__content .customNode,
+    .outlineTree.el-tree--highlight-current .el-tree-node.is-current > .el-tree-node__content .nodeEdit,
+    .outlineTree.isDark.el-tree--highlight-current .el-tree-node.is-current > .el-tree-node__content .nodeEdit {
+      color: var(--mm-theme-color) !important;
+    }
+    .outlineTree .el-tree-node__expand-icon,
+    .outlineTree .el-tree-node__content .el-tree-node__expand-icon,
+    .outlineTree.isDark .el-tree-node__content .el-tree-node__expand-icon {
+      color: var(--mm-panel-text-secondary) !important;
+    }
+    .outlineTree .el-tree-node__expand-icon.expanded,
+    .outlineTree .el-tree-node__content .el-tree-node__expand-icon.expanded,
+    .outlineTree.isDark .el-tree-node__content .el-tree-node__expand-icon.expanded {
+      color: var(--mm-theme-color) !important;
+    }
+    .outlineTree .el-tree-node__expand-icon.is-leaf::after,
+    .outlineTree .el-tree-node__content .el-tree-node__expand-icon.is-leaf::after,
+    .outlineTree.isDark .el-tree-node__content .el-tree-node__expand-icon.is-leaf::after {
+      background-color: var(--mm-theme-color) !important;
+    }
+    .el-tree__drop-indicator {
+      background-color: var(--mm-theme-color) !important;
+    }
+    .sidebarContainer .btnList .btn,
+    .sidebarContainer .btnList .btn.isDark,
+    .sidebarContainer .btnList .btn .icon,
+    .sidebarContainer .btnList .btn.isDark .icon {
+      color: var(--mm-panel-text-secondary) !important;
+      transition: color 0.2s ease !important;
+    }
+    .sidebarContainer .btnList .btn:hover,
+    .sidebarContainer .btnList .btn.isDark:hover,
+    .sidebarContainer .btnList .btn:hover .icon,
+    .sidebarContainer .btnList .btn.isDark:hover .icon {
+      color: var(--mm-theme-color) !important;
+    }
+    .outlineEditContainer,
+    .outlineEditContainer.isDark {
+      background-color: var(--mm-sidebar-bg) !important;
+      color: var(--mm-panel-text) !important;
+    }
+    .outlineEditContainer .btnList .btn,
+    .outlineEditContainer.isDark .btnList .btn,
+    .outlineEditContainer .btnList .btn .icon,
+    .outlineEditContainer.isDark .btnList .btn .icon {
+      color: var(--mm-panel-text-secondary) !important;
+      transition: color 0.2s ease !important;
+    }
+    .outlineEditContainer .btnList .btn:hover .icon,
+    .outlineEditContainer.isDark .btnList .btn:hover .icon {
+      color: var(--mm-theme-color) !important;
+    }
+
 
     /* 区域 4：底部浮动控制栏与语言下拉框 */
     .navigatorContainer,
@@ -949,19 +1072,51 @@
 
     const BUILTIN_LOCALE_PATCHES = {
       zh: {
-        theme: { title: '综合样式' },
+        theme: { title: '综合样式', classics: '经典', dark: '深色', simple: '简约' },
         toolbar: { theme: '综合样式' }
       },
       zhtw: {
-        theme: { title: '綜合樣式' },
+        theme: { title: '綜合樣式', classics: '經典', dark: '深色', simple: '簡約' },
         toolbar: { theme: '綜合樣式' }
       },
       en: {
-        theme: { title: 'Overall Style' },
+        theme: { title: 'Overall Style', classics: 'Classics', dark: 'Dark', simple: 'Simple' },
         toolbar: { theme: 'Overall Style' }
       },
+      ja: {
+        theme: { title: '総合スタイル', classics: 'クラシック', dark: 'ダーク', simple: 'シンプル' },
+        toolbar: { theme: '総合スタイル' }
+      },
+      de: {
+        theme: { title: 'Gesamtstil', classics: 'Klassiker', dark: 'Dunkel', simple: 'Schlicht' },
+        toolbar: { theme: 'Gesamtstil' }
+      },
+      fr: {
+        theme: { title: 'Style global', classics: 'Classiques', dark: 'Sombre', simple: 'Simple' },
+        toolbar: { theme: 'Style global' }
+      },
+      it: {
+        theme: { title: 'Stile globale', classics: 'Classici', dark: 'Scuro', simple: 'Semplice' },
+        toolbar: { theme: 'Stile globale' }
+      },
+      ko: {
+        theme: { title: '종합 스타일', classics: '클래식', dark: '다크', simple: '심플' },
+        toolbar: { theme: '종합 스타일' }
+      },
+      es: {
+        theme: { title: 'Estilo global', classics: 'Clásicos', dark: 'Oscuro', simple: 'Simple' },
+        toolbar: { theme: 'Estilo global' }
+      },
+      pt: {
+        theme: { title: 'Estilo global', classics: 'Clássicos', dark: 'Escuro', simple: 'Simples' },
+        toolbar: { theme: 'Estilo global' }
+      },
+      tr: {
+        theme: { title: 'Genel Stil', classics: 'Klasikler', dark: 'Karanlık', simple: 'Sade' },
+        toolbar: { theme: 'Genel Stil' }
+      },
       vi: {
-        theme: { title: 'Kiểu tổng hợp' },
+        theme: { title: 'Kiểu tổng hợp', classics: 'Cổ điển', dark: 'Tối', simple: 'Đơn giản' },
         toolbar: { theme: 'Kiểu tổng hợp' }
       }
     };
@@ -1006,6 +1161,13 @@
       if (window.$bus) {
         window.$bus.$emit('lang_change', mappedLang);
       }
+      if (window.__themeComponent && typeof window.__themeComponent.syncFilteredGroups === 'function') {
+        window.__themeComponent.syncFilteredGroups();
+        window.__themeComponent.$forceUpdate();
+      }
+      if (window.__vueApp) {
+        window.__vueApp.$forceUpdate();
+      }
     };
 
     const SIDEBAR_TRIGGER_NAMES = {
@@ -1021,7 +1183,232 @@
       pt: { nodeStyle: 'Estilo do nó', baseStyle: 'Estilo básico', theme: 'Estilo global', structure: 'Estrutura', outline: 'Estrutura de tópicos', setting: 'Configurações' },
       tr: { nodeStyle: 'Düğüm Stili', baseStyle: 'Temel Stil', theme: 'Genel Stil', structure: 'Yapı', outline: 'Ana Hat', setting: 'Ayarlar' },
       vi: { nodeStyle: 'Kiểu nút', baseStyle: 'Kiểu cơ bản', theme: 'Kiểu tổng hợp', structure: 'Cấu trúc', outline: 'Dàn bài', setting: 'Cài đặt' }
+    };
+
+    const THEME_PREFIXES = {
+      dark: {
+        zh: '暗色', zhtw: '暗色', en: 'Dark ', ja: 'ダーク ', de: 'Dunkel ',
+        fr: 'Sombre ', it: 'Scuro ', ko: '다크 ', es: 'Oscuro ', pt: 'Escuro ',
+        tr: 'Karanlık ', vi: 'Tối '
+      },
+      classic: {
+        zh: '经典', zhtw: '經典', en: 'Classic ', ja: 'クラシック ', de: 'Klassisch ',
+        fr: 'Classique ', it: 'Classico ', ko: '클래식 ', es: 'Clásico ', pt: 'Clássico ',
+        tr: 'Klasik ', vi: 'Cổ điển '
+      }
+    };
+
+    const THEME_NAME_LOCALES = {
+      default: {
+        zh: '默认主题', zhtw: '預設主題', en: 'Default', ja: 'デフォルト',
+        de: 'Standard', fr: 'Par défaut', it: 'Predefinito', ko: '기본 테마',
+        es: 'Predeterminado', pt: 'Padrão', tr: 'Varsayılan', vi: 'Mặc định'
+      },
+      classic: {
+        zh: '脑图经典', zhtw: '腦圖經典', en: 'Classic', ja: 'マインドマップクラシック',
+        de: 'Mindmap-Klassiker', fr: 'Classique', it: 'Classico', ko: '마인드맵 클래식',
+        es: 'Clásico', pt: 'Clássico', tr: 'Klasik', vi: 'Cổ điển'
+      },
+      skyGreen: {
+        zh: '天清绿', zhtw: '天清綠', en: 'Sky Green', ja: 'スカイグリーン',
+        de: 'Himmelgrün', fr: 'Vert ciel', it: 'Verde cielo', ko: '스카이 그린',
+        es: 'Verde cielo', pt: 'Verde céu', tr: 'Gök Yeşili', vi: 'Xanh da trời'
+      },
+      classicGreen: {
+        zh: '经典绿', zhtw: '經典綠', en: 'Classic Green', ja: 'クラシックグリーン',
+        de: 'Klassisches Grün', fr: 'Vert classique', it: 'Verde classico', ko: '클래식 그린',
+        es: 'Verde clásico', pt: 'Verde clássico', tr: 'Klasik Yeşil', vi: 'Xanh lục cổ điển'
+      },
+      classicBlue: {
+        zh: '经典蓝', zhtw: '經典藍', en: 'Classic Blue', ja: 'クラシックブルー',
+        de: 'Klassisches Blau', fr: 'Bleu classique', it: 'Blu classico', ko: '클래식 블루',
+        es: 'Azul clásico', pt: 'Azul clássico', tr: 'Klasik Mavi', vi: 'Xanh lam cổ điển'
+      },
+      blueSky: {
+        zh: '天空蓝', zhtw: '天空藍', en: 'Blue Sky', ja: '青空',
+        de: 'Blauer Himmel', fr: 'Ciel bleu', it: 'Cielo blu', ko: '푸른 하늘',
+        es: 'Cielo azul', pt: 'Céu azul', tr: 'Mavi Gökyüzü', vi: 'Bầu trời xanh'
+      },
+      brainImpairedPink: {
+        zh: '活力粉', zhtw: '活力粉', en: 'Vibrant Pink', ja: 'ビビッドピンク',
+        de: 'Lebendiges Pink', fr: 'Rose vif', it: 'Rosa vivace', ko: '비비드 핑크',
+        es: 'Rosa vibrante', pt: 'Rosa vibrante', tr: 'Canlı Pembe', vi: 'Hồng rực rỡ'
+      },
+      earthYellow: {
+        zh: '泥土黄', zhtw: '泥土黃', en: 'Earth Yellow', ja: 'アースイエロー',
+        de: 'Erdgelb', fr: 'Jaune terre', it: 'Giallo terra', ko: '어스 옐로우',
+        es: 'Amarillo tierra', pt: 'Amarelo terra', tr: 'Toprak Sarısı', vi: 'Vàng đất'
+      },
+      freshGreen: {
+        zh: '清新绿', zhtw: '清新綠', en: 'Fresh Green', ja: 'フレッシュグリーン',
+        de: 'Frisches Grün', fr: 'Vert frais', it: 'Verde fresco', ko: '프레시 그린',
+        es: 'Verde fresco', pt: 'Verde fresco', tr: 'Taze Yeşil', vi: 'Xanh tươi'
+      },
+      freshRed: {
+        zh: '清新红', zhtw: '清新紅', en: 'Fresh Red', ja: 'フレッシュレッド',
+        de: 'Frisches Rot', fr: 'Rouge frais', it: 'Rosso fresco', ko: '프레시 레드',
+        es: 'Rojo fresco', pt: 'Vermelho fresco', tr: 'Taze Kırmızı', vi: 'Đỏ tươi'
+      },
+      romanticPurple: {
+        zh: '浪漫紫', zhtw: '浪漫紫', en: 'Romantic Purple', ja: 'ロマンチックパープル',
+        de: 'Romantisches Lila', fr: 'Violet romantique', it: 'Viola romantico', ko: '로맨틱 퍼플',
+        es: 'Púrpura romántico', pt: 'Roxo romântico', tr: 'Romantik Mor', vi: 'Tím lãng mạn'
+      },
+      pinkGrape: {
+        zh: '粉红葡萄', zhtw: '粉紅葡萄', en: 'Pink Grape', ja: 'ピンクグレープ',
+        de: 'Pink Grape', fr: 'Raisin rose', it: 'Uva rosa', ko: '핑크 그레이프',
+        es: 'Uva rosa', pt: 'Uva rosa', tr: 'Pembe Üzüm', vi: 'Nho hồng'
+      },
+      mint: {
+        zh: '薄荷', zhtw: '薄荷', en: 'Mint', ja: 'ミント',
+        de: 'Minze', fr: 'Menthe', it: 'Menta', ko: '민트',
+        es: 'Menta', pt: 'Menta', tr: 'Nane', vi: 'Bạc hà'
+      },
+      gold: {
+        zh: '金色', zhtw: '金色', en: 'Gold', ja: 'ゴールド',
+        de: 'Gold', fr: 'Or', it: 'Oro', ko: '골드',
+        es: 'Oro', pt: 'Ouro', tr: 'Altın', vi: 'Vàng'
+      },
+      vitalityOrange: {
+        zh: '活力橙', zhtw: '活力橙', en: 'Vitality Orange', ja: 'オレンジ',
+        de: 'Orange', fr: 'Orange', it: 'Arancione', ko: '오렌지',
+        es: 'Naranja', pt: 'Laranja', tr: 'Turuncu', vi: 'Cam'
+      },
+      greenLeaf: {
+        zh: '绿叶', zhtw: '綠葉', en: 'Green Leaf', ja: '緑の葉',
+        de: 'Grünes Blatt', fr: 'Feuille verte', it: 'Foglia verde', ko: '녹색 잎',
+        es: 'Hoja verde', pt: 'Folha verde', tr: 'Yeşil Yaprak', vi: 'Lá xanh'
+      },
+      simpleBlack: {
+        zh: '简约黑', zhtw: '簡約黑', en: 'Simple Black', ja: 'シンプルブラック',
+        de: 'Einfaches Schwarz', fr: 'Noir sobre', it: 'Nero semplice', ko: '심플 블랙',
+        es: 'Negro simple', pt: 'Preto simples', tr: 'Sade Siyah', vi: 'Đen đơn giản'
+      },
+      coffee: {
+        zh: '咖啡', zhtw: '咖啡', en: 'Coffee', ja: 'コーヒー',
+        de: 'Kaffee', fr: 'Café', it: 'Caffè', ko: '커피',
+        es: 'Café', pt: 'Café', tr: 'Kahve', vi: 'Cà phê'
+      },
+      blackHumour: {
+        zh: '黑色幽默', zhtw: '黑色幽默', en: 'Black Humour', ja: 'ブラックユーモア',
+        de: 'Schwarzer Humor', fr: 'Humour noir', it: 'Umorismo nero', ko: '블랙 유머',
+        es: 'Humor negro', pt: 'Humor negro', tr: 'Kara Mizah', vi: 'Hài hước đen'
+      },
+      lateNightOffice: {
+        zh: '深夜办公室', zhtw: '深夜辦公室', en: 'Late Night Office', ja: '深夜オフィス',
+        de: 'Spätes Büro', fr: 'Bureau de nuit', it: 'Ufficio notturno', ko: '심야 사무실',
+        es: 'Oficina nocturna', pt: 'Escritório noturno', tr: 'Gece Ofisi', vi: 'Văn phòng đêm muộn'
+      },
+      blackGold: {
+        zh: '黑金', zhtw: '黑金', en: 'Black Gold', ja: 'ブラックゴールド',
+        de: 'Schwarzgold', fr: 'Or noir', it: 'Oro nero', ko: '블랙 골드',
+        es: 'Oro negro', pt: 'Ouro preto', tr: 'Siyah Altın', vi: 'Vàng đen'
+      },
+      autumn: {
+        zh: '秋天', zhtw: '秋天', en: 'Autumn', ja: '秋',
+        de: 'Herbst', fr: 'Automne', it: 'Autunno', ko: '가을',
+        es: 'Otoño', pt: 'Outono', tr: 'Sonbahar', vi: 'Mùa thu'
+      },
+      avocado: {
+        zh: '牛油果', zhtw: '牛油果', en: 'Avocado', ja: 'アボカド',
+        de: 'Avocado', fr: 'Avocat', it: 'Avocado', ko: '아보카도',
+        es: 'Aguacate', pt: 'Abacate', tr: 'Avokado', vi: 'Quả bơ'
+      },
+      orangeJuice: {
+        zh: '橙汁', zhtw: '橙汁', en: 'Orange Juice', ja: 'オレンジジュース',
+        de: 'Orangensaft', fr: "Jus d'orange", it: "Succo d'arancia", ko: '오렌지 주스',
+        es: 'Zumo de naranja', pt: 'Suco de laranja', tr: 'Portakal Suyu', vi: 'Nước cam'
+      },
+      rose: {
+        zh: '玫瑰', zhtw: '玫瑰', en: 'Rose', ja: 'ローズ',
+        de: 'Rose', fr: 'Rose', it: 'Rosa', ko: '로즈',
+        es: 'Rosa', pt: 'Rosa', tr: 'Gül', vi: 'Hoa hồng'
+      },
+      neonLamp: {
+        zh: '霓虹灯', zhtw: '霓虹燈', en: 'Neon Lamp', ja: 'ネオン',
+        de: 'Neonlampe', fr: 'Lampe néon', it: 'Lampada neon', ko: '네온 램프',
+        es: 'Lámpara de neón', pt: 'Lâmpada de néon', tr: 'Neon Lamba', vi: 'Đèn neon'
+      },
+      darkNightLceBlade: {
+        zh: '暗夜冰刃', zhtw: '暗夜冰刃', en: 'Night Ice Blade', ja: 'ナイトアイスブレード',
+        de: 'Nachteisklinge', fr: 'Lame de glace de nuit', it: 'Lama di ghiaccio notturna', ko: '나이트 아이스 블레이드',
+        es: 'Hoja de hielo nocturna', pt: 'Lâmina de gelo noturna', tr: 'Gece Buz Bıçağı', vi: 'Băng đao đêm'
+      },
+      morandi: {
+        zh: '莫兰迪', zhtw: '莫蘭迪', en: 'Morandi', ja: 'モランディ',
+        de: 'Morandi', fr: 'Morandi', it: 'Morandi', ko: '모란디',
+        es: 'Morandi', pt: 'Morandi', tr: 'Morandi', vi: 'Morandi'
+      },
+      cactus: {
+        zh: '仙人掌', zhtw: '仙人掌', en: 'Cactus', ja: 'サボテン',
+        de: 'Kaktus', fr: 'Cactus', it: 'Cactus', ko: '선인장',
+        es: 'Cactus', pt: 'Cacto', tr: 'Kaktüs', vi: 'Cây xương rồng'
+      },
+      minions: {
+        zh: '小黄人', zhtw: '小黃人', en: 'Minions', ja: 'ミニオン',
+        de: 'Minions', fr: 'Minions', it: 'Minions', ko: '미니언즈',
+        es: 'Minions', pt: 'Minions', tr: 'Minyonlar', vi: 'Minions'
+      },
+      courseGreen: {
+        zh: '课程绿', zhtw: '課程綠', en: 'Course Green', ja: 'コースグリーン',
+        de: 'Kursgrün', fr: 'Vert de cours', it: 'Verde corso', ko: '코스 그린',
+        es: 'Verde curso', pt: 'Verde curso', tr: 'Ders Yeşili', vi: 'Xanh khóa học'
+      },
+      redSpirit: {
+        zh: '红色精神', zhtw: '紅色精神', en: 'Red Spirit', ja: 'レッドスピリット',
+        de: 'Roter Geist', fr: 'Esprit rouge', it: 'Spirito rosso', ko: '레드 스피릿',
+        es: 'Espíritu rojo', pt: 'Espírito vermelho', tr: 'Kırmızı Ruh', vi: 'Tinh thần đỏ'
+      },
+      oreo: {
+        zh: '奥利奥', zhtw: '奧利奧', en: 'Oreo', ja: 'オレオ',
+        de: 'Oreo', fr: 'Oreo', it: 'Oreo', ko: '오레오',
+        es: 'Oreo', pt: 'Oreo', tr: 'Oreo', vi: 'Oreo'
+      },
+      shallowSea: {
+        zh: '浅海', zhtw: '淺海', en: 'Shallow Sea', ja: '浅海',
+        de: 'Flachmeer', fr: 'Mer peu profonde', it: 'Mare poco profondo', ko: '얕은 바다',
+        es: 'Mar poco profundo', pt: 'Mar raso', tr: 'Sığ Deniz', vi: 'Biển nông'
+      },
+      lemonBubbles: {
+        zh: '柠檬气泡', zhtw: '檸檬氣泡', en: 'Lemon Bubbles', ja: 'レモンバブル',
+        de: 'Zitronenblasen', fr: 'Bulles de citron', it: 'Bolle di limone', ko: '레몬 버블',
+        es: 'Burbujas de limón', pt: 'Bolhas de limão', tr: 'Limon Baloncuğu', vi: 'Bọt chanh'
+      },
+      seaBlueLine: {
+        zh: '海蓝线', zhtw: '海藍線', en: 'Sea Blue Line', ja: 'シーブルーライン',
+        de: 'Seeblaue Linie', fr: 'Ligne bleu mer', it: 'Linea blu mare', ko: '바다 파란 선',
+        es: 'Línea azul mar', pt: 'Linha azul marinho', tr: 'Deniz Mavisi Çizgi', vi: 'Đường xanh biển'
+      },
+      dark: {
+        zh: '暗色', zhtw: '暗色', en: 'Dark 1', ja: 'ダーク 1',
+        de: 'Dunkel 1', fr: 'Sombre 1', it: 'Scuro 1', ko: '다크 1',
+        es: 'Oscuro 1', pt: 'Escuro 1', tr: 'Karanlık 1', vi: 'Tối 1'
+      }
+    };
+
+    function getLocalizedThemeName(value, fallbackName, lang) {
+      const loc = normalizeLang(lang || currentLang);
+      if (THEME_NAME_LOCALES[value] && THEME_NAME_LOCALES[value][loc]) {
+        return THEME_NAME_LOCALES[value][loc];
+      }
+      if (/^dark(\d*)$/.test(value)) {
+        const num = RegExp.$1 || '1';
+        if (loc === 'zh' || loc === 'zhtw') {
+          return num === '1' && value === 'dark' ? '暗色' : '暗色' + num;
+        }
+        const p = THEME_PREFIXES.dark[loc] || THEME_PREFIXES.dark.en || 'Dark ';
+        return p + num;
+      }
+      if (/^classic(\d+)$/.test(value)) {
+        const num = RegExp.$1;
+        if (loc === 'zh') return '脑图经典' + num;
+        if (loc === 'zhtw') return '腦圖經典' + num;
+        const p = THEME_PREFIXES.classic[loc] || THEME_PREFIXES.classic.en || 'Classic ';
+        return p + num;
+      }
+      return fallbackName;
     }
+
 
 
     const ALL_THEME_PALETTES = {
@@ -2087,7 +2474,7 @@
                 const origGetter = origWatcher.getter
                 origWatcher.getter = function() {
                   const list = origGetter.call(vm) || []
-                  const loc = vm.$i18n ? vm.$i18n.locale : 'zh'
+                  const loc = normalizeLang(vm.$i18n ? vm.$i18n.locale : currentLang)
                   const names = SIDEBAR_TRIGGER_NAMES[loc] || SIDEBAR_TRIGGER_NAMES.zh
                   return list
                     .filter(item => item.value !== 'ai')
@@ -2133,9 +2520,67 @@
                 vm.$forceUpdate()
               }
 
+              const markGroupTypes = (groups) => {
+                if (!Array.isArray(groups)) return
+                groups.forEach((g, idx) => {
+                  if (g.type) return
+                  const list = g.list || []
+                  if (list.some(item => item.dark)) {
+                    g.type = 'dark'
+                  } else if (idx === 0) {
+                    g.type = 'classics'
+                  } else {
+                    g.type = 'simple'
+                  }
+                })
+              }
+
+              const localizeAllThemes = () => {
+                const loc = normalizeLang(vm.$i18n ? vm.$i18n.locale : currentLang)
+                const all = vm.allDefaultGroupList || vm.defaultGroupList || []
+                all.forEach(group => {
+                  if (Array.isArray(group.list)) {
+                    group.list.forEach(item => {
+                      if (!item._rawName) item._rawName = item.name
+                      item.name = getLocalizedThemeName(item.value, item._rawName, loc)
+                    })
+                  }
+                })
+                if (Array.isArray(vm.themeList)) {
+                  vm.themeList.forEach(item => {
+                    if (!item._rawName) item._rawName = item.name
+                    item.name = getLocalizedThemeName(item.value, item._rawName, loc)
+                  })
+                }
+              }
+
+              const updateGroupTabNames = () => {
+                const darkTitle = vm.$t ? vm.$t('theme.dark') : '深色'
+                const classicsTitle = vm.$t ? vm.$t('theme.classics') : '经典'
+                const simpleTitle = vm.$t ? vm.$t('theme.simple') : '简约'
+
+                const all = vm.allDefaultGroupList || vm.defaultGroupList || []
+                all.forEach(group => {
+                  if (group.type === 'dark') {
+                    group.name = darkTitle
+                  } else if (group.type === 'classics') {
+                    group.name = classicsTitle
+                  } else if (group.type === 'simple') {
+                    group.name = simpleTitle
+                  }
+                })
+                if (vm.$refs.sidebar) {
+                  vm.$refs.sidebar.title = vm.$t ? vm.$t('theme.title') : '综合样式'
+                }
+              }
+
               const origInitGroup = vm.initGroup
               vm.initGroup = function() {
                 if (typeof origInitGroup === 'function') origInitGroup.apply(this, arguments)
+                if (Array.isArray(vm.defaultGroupList)) {
+                  markGroupTypes(vm.defaultGroupList)
+                  vm.allDefaultGroupList = [...vm.defaultGroupList]
+                }
                 vm.syncFilteredGroups()
               }
               vm.syncFilteredGroups = function() {
@@ -2143,13 +2588,14 @@
                   vm.allDefaultGroupList = [...vm.defaultGroupList]
                 }
                 const all = vm.allDefaultGroupList || vm.defaultGroupList || []
-                const darkName = vm.$t ? vm.$t('theme.dark') : '暗黑'
-                const classicsName = vm.$t ? vm.$t('theme.classics') : '经典'
-                const simpleName = vm.$t ? vm.$t('theme.simple') : '朴素'
+                markGroupTypes(all)
+                updateGroupTabNames()
+                localizeAllThemes()
+
                 if (vm.isDark) {
-                  vm.defaultGroupList = all.filter(item => item.name === darkName)
+                  vm.defaultGroupList = all.filter(item => item.type === 'dark')
                 } else {
-                  vm.defaultGroupList = all.filter(item => item.name === classicsName || item.name === simpleName)
+                  vm.defaultGroupList = all.filter(item => item.type === 'classics' || item.type === 'simple')
                 }
                 updateAllThemePreviews()
                 const available = vm.groupList || vm.defaultGroupList || []
@@ -2229,6 +2675,12 @@
           const targetLoc = normalizeLang(currentLang);
           i18n.locale = targetLoc;
         }
+        setTimeout(() => {
+          switchMindMapLanguage(currentLang);
+        }, 50);
+        setTimeout(() => {
+          switchMindMapLanguage(currentLang);
+        }, 300);
         return app || rawRes;
       };
     }
