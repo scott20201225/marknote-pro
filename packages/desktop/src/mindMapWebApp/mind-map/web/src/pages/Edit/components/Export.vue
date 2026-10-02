@@ -289,54 +289,78 @@ export default {
     &.isDark {
       .downloadTypeSelectBox {
         .downloadTypeList {
-          background-color: #363b3f;
+          background-color: var(--mm-sidebar-bg, #181822);
+          border-right: 1px solid var(--mm-panel-border, rgba(255, 255, 255, 0.1));
 
           .downloadTypeItem {
-            background-color: #363b3f;
+            background-color: transparent;
+
+            &:hover {
+              background-color: var(--mm-item-hover-bg, rgba(255, 255, 255, 0.08));
+              .name {
+                color: var(--mm-panel-text, rgba(255, 255, 255, 0.9));
+              }
+            }
 
             &.active {
-              background-color: #262a2e;
+              background-color: var(--mm-item-active-bg, rgba(255, 255, 255, 0.12));
+
+              .name {
+                color: var(--mm-theme-color, #409eff);
+                font-weight: 700;
+              }
+
+              .icon.checked {
+                color: var(--mm-theme-color, #409eff);
+              }
             }
 
             .name {
-              color: hsla(0, 0%, 100%, 0.9);
+              color: var(--mm-panel-text-secondary, rgba(255, 255, 255, 0.7));
             }
           }
         }
 
         .downloadTypeContent {
+          background-color: var(--mm-panel-bg, #24283b);
+
           .nameInputBox {
-            border-bottom: 1px solid hsla(0, 0%, 100%, 0.6);
+            border-bottom: 1px solid var(--mm-panel-border, rgba(255, 255, 255, 0.1));
 
             .nameInput {
               .name {
-                color: hsla(0, 0%, 100%, 0.6);
+                color: var(--mm-panel-text, rgba(255, 255, 255, 0.9));
               }
             }
 
             .closeBtn {
-              color: hsla(0, 0%, 100%, 0.6);
+              color: var(--mm-panel-text-secondary, rgba(255, 255, 255, 0.6));
+              &:hover {
+                color: var(--mm-theme-color, #409eff);
+              }
             }
           }
 
           .contentBox {
             .contentRow {
               .contentName {
-                color: hsla(0, 0%, 100%, 0.6);
+                color: var(--mm-panel-text-secondary, rgba(255, 255, 255, 0.6));
               }
 
               .contentValue {
-                color: hsla(0, 0%, 100%, 0.6);
+                color: var(--mm-panel-text, rgba(255, 255, 255, 0.9));
 
                 &.info {
-                  background-color: transparent;
+                  color: var(--mm-theme-color, #409eff);
+                  background-color: var(--mm-item-active-bg, rgba(255, 255, 255, 0.08));
+                  border: 1px solid var(--mm-theme-color, #409eff);
                 }
               }
             }
           }
 
           .btnList {
-            border-top: 1px solid hsla(0, 0%, 100%, 0.6);
+            border-top: 1px solid var(--mm-panel-border, rgba(255, 255, 255, 0.1));
           }
         }
       }
@@ -463,7 +487,8 @@ export default {
         height: 100%;
         overflow-y: auto;
         overflow-x: hidden;
-        background-color: #f2f4f7;
+        background-color: var(--mm-sidebar-bg, #f2f4f7);
+        border-right: 1px solid var(--mm-panel-border, #f2f4f7);
         flex-shrink: 0;
         padding: 16px 0;
 
@@ -475,13 +500,24 @@ export default {
           display: flex;
           align-items: center;
           cursor: pointer;
+          transition: background-color 0.2s ease, color 0.2s ease;
+
+          &:hover {
+            background-color: var(--mm-item-hover-bg, rgba(0, 0, 0, 0.05));
+          }
 
           &.active {
-            background-color: #fff;
+            background-color: var(--mm-item-active-bg, #fff);
+
+            .name {
+              color: var(--mm-theme-color, #409eff);
+              font-weight: 700;
+            }
 
             .icon {
               &.checked {
                 display: block;
+                color: var(--mm-theme-color, #409eff);
               }
             }
           }

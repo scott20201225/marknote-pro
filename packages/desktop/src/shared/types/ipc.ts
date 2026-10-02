@@ -99,6 +99,7 @@ export interface MindMapConfiguration {
   mindMapTheme?: string
   backgroundColor?: string
   themeConfig?: Record<string, unknown>
+  colors?: Record<string, string>
 }
 
 export interface DrawioExportPayload {
@@ -160,6 +161,7 @@ export interface IpcInvokeChannels {
       mindMapTheme?: string
       backgroundColor?: string
       themeConfig?: Record<string, unknown>
+      colors?: Record<string, string>
     } | null
   }
   'mt::fonts::list': { args: []; ret: string[] }
@@ -455,6 +457,7 @@ export interface IpcMainEventChannels {
       mindMapTheme?: string
       backgroundColor?: string
       themeConfig?: Record<string, unknown>
+      colors?: Record<string, string>
     }
   ]
   'mt::mindmap::set-theme': [
@@ -464,6 +467,7 @@ export interface IpcMainEventChannels {
       mindMapTheme?: string
       backgroundColor?: string
       themeConfig?: Record<string, unknown>
+      colors?: Record<string, string>
     }
   ]
   'mt::mindmap::request-save': []

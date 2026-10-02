@@ -294,7 +294,7 @@ export default {
     direction: '方向'
   },
   theme: {
-    title: '主題',
+    title: '綜合樣式',
     classics: '經典',
     dark: '深色',
     simple: '簡約',
@@ -317,7 +317,7 @@ export default {
     summary: '摘要',
     displayOutline: '顯示大綱',
     baseStyle: '基本樣式',
-    theme: '主題',
+    theme: '綜合樣式',
     strusture: '結構',
     newFile: '新增檔案',
     openFile: '開啟檔案',

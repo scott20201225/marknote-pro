@@ -425,7 +425,7 @@ export const sidebarTriggerList = [
     icon: 'iconyangshi'
   },
   {
-    name: '主題',
+    name: '綜合樣式',
     value: 'theme',
     icon: 'iconjingzi'
   },

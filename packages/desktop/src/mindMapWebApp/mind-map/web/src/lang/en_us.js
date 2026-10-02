@@ -299,7 +299,7 @@ export default {
     tag: 'Tag'
   },
   theme: {
-    title: 'Theme',
+    title: 'Overall Style',
     classics: 'Classics',
     dark: 'Darkness',
     simple: 'Simple',
@@ -323,7 +323,7 @@ export default {
     summary: 'Summary',
     displayOutline: 'Display outline',
     baseStyle: 'Base style',
-    theme: 'Theme',
+    theme: 'Overall Style',
     strusture: 'Strusture',
     newFile: 'New file',
     openFile: 'Open file',
