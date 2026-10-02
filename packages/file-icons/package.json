@@ -1,6 +1,6 @@
 {
   "name": "@marknotepro/file-icons",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "MarkNotePro file icons",
   "main": "./build/index.js",
   "module": "./build/index.mjs",
