@@ -2,7 +2,7 @@
   <div
     class="sidebarTriggerContainer "
     @click.stop
-    :class="{ hasActive: show && activeSidebar, show: show, isDark: isDark }"
+    :class="{ hasActive: !!activeSidebar, show: show, isDark: isDark }"
     :style="{ maxHeight: maxHeight + 'px' }"
   >
     <div class="toggleShowBtn" :class="{ hide: !show }" @click="show = !show">
@@ -102,6 +102,7 @@ export default {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  z-index: 4;
 
   &:not(.show) {
     .trigger {
@@ -129,7 +130,11 @@ export default {
   }
 
   &.hasActive {
-    right: 305px;
+    right: 222px;
+
+    &.show {
+      right: 305px;
+    }
   }
 
   .toggleShowBtn {

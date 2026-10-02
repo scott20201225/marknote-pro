@@ -183,16 +183,21 @@
     .sidebarTriggerContainer {
       right: -78px !important;
       transition: all 0.3s ease !important;
+      z-index: 4 !important;
     }
     .sidebarTriggerContainer.show {
       right: 0 !important;
     }
     .sidebarTriggerContainer.hasActive {
+      right: 222px !important;
+    }
+    .sidebarTriggerContainer.hasActive.show {
       right: 305px !important;
     }
     .sidebarTriggerContainer .trigger,
     .sidebarTriggerContainer.isDark .trigger {
       width: 78px !important;
+      box-sizing: border-box !important;
       position: relative !important;
       z-index: 1 !important;
       padding: 4px 2px !important;
@@ -289,6 +294,7 @@
     }
     .sidebarContainer.show,
     .sidebarContainer.isDark.show {
+      z-index: 5 !important;
       box-shadow: -4px 0 16px var(--mm-panel-shadow) !important;
     }
     .searchContainer:not(.show) {
@@ -2748,11 +2754,25 @@
             if (this.$options && this.$options.computed && this.$options.computed.triggerList && typeof this.setActiveSidebar === 'function') {
               const vm = this;
               window.__sidebarTriggerComponent = vm;
+              const updateActiveSidebarClass = () => {
+                if (vm.$el && vm.$el.classList) {
+                  if (vm.activeSidebar) {
+                    vm.$el.classList.add('hasActive');
+                  } else {
+                    vm.$el.classList.remove('hasActive');
+                  }
+                }
+              };
+              vm.$watch('activeSidebar', updateActiveSidebarClass, { immediate: true });
+              vm.$watch('show', () => {
+                vm.$nextTick(updateActiveSidebarClass);
+              });
               this.$nextTick(() => {
                 if (vm._computedWatchers && vm._computedWatchers.triggerList) {
                   vm._computedWatchers.triggerList.dirty = true;
                 }
                 vm.$forceUpdate();
+                updateActiveSidebarClass();
               });
             }
             if (this.defaultGroupList !== undefined && typeof this.syncFilteredGroups === 'function') {
