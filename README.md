@@ -56,10 +56,10 @@ MarkNotePro 是一款本地优先的结构化知识管理与多模态创作工�
 
 ## 产品选择
 
-MarkNotePro 和 MarkTextPro 是两个相互独立、但能力互补的产品。
+MarkNotePro 和 MarkTextPro 是两个相互独立、但能力互补的产品：
 
-- MarkNotePro：集成 Git、Draw.io、GeoGebra 与 MindMap 思维导图的本地结构化笔记工具，强调笔记工作区、分区组、分区、多模态文档（Markdown / Draw.io / GeoGebra / MindMap）和长期知识管理。
-- MarkTextPro：集成 Git 的 Markdown 文件编辑管理器，强调自由文件夹、外部 Markdown 文件、项目文档和临时编辑。
+- **MarkNotePro**：**本地结构化笔记与多模态知识工作台**。强调笔记工作区、分区组、分区与结构化文档体系，原生集成 **Markdown、Draw.io 绘图、GeoGebra 数学建模与 MindMap 思维导图**四大创作能力，适合长期笔记、体系化知识库和专业资料沉淀。
+- **MarkTextPro**：**本地自由文件与项目多模态工作区管理器**。强调开放文件系统、自由文件夹、外部独立文档与代码项目管理，同样原生集成 **Markdown、Draw.io 绘图、GeoGebra 数学建模与 MindMap 思维导图**四大创作能力，适合代码仓库、外部技术文档和自由项目编辑。
 
 相关地址：
 
@@ -68,7 +68,7 @@ MarkNotePro 和 MarkTextPro 是两个相互独立、但能力互补的产品。
 - MarkTextPro GitHub：[https://github.com/scott20201225/marktext-pro](https://github.com/scott20201225/marktext-pro)
 - MarkTextPro Releases：[https://github.com/scott20201225/marktext-pro/releases/latest](https://github.com/scott20201225/marktext-pro/releases/latest)
 
-两者都集成 Git 工作区，都可以用于版本管理、远程同步和多设备协作；选择时更应该看你需要“结构化笔记与多模态知识工作台”还是“自由文件编辑管理器”。
+两者均内置 **Markdown、Draw.io、GeoGebra 与思维导图**四大离线创作引擎，并都深度集成 Git 工作区版本管理；四大核心创作能力与 Git 是二者的共同底座，不是选择的分水岭。选择时更应该看你需要“结构化多模态笔记工作台”还是“自由多模态项目文件管理器”。
 
 下面是同一个项目在两个产品里的展示差异：MarkNotePro 只会展示符合笔记标准的目录与受支持文档（`.md` / `.drawio` / `.ggb` / `.smm`），收敛为分区组 / 分区 / 文档视图；MarkTextPro 则展示真实文件系统结构，更适合完整项目目录和外部文件管理。
 
@@ -89,15 +89,16 @@ MarkNotePro 和 MarkTextPro 是两个相互独立、但能力互补的产品。
 
 选择建议：
 
-| 使用场景 | 推荐产品 |
+| 使用场景 / 需求 | 推荐产品 |
 | --- | --- |
-| 你希望像管理笔记本一样管理长期笔记、知识库、项目资料 | MarkNotePro |
-| 你需要在知识库中直接绘制 Draw.io 架构图/流程图、使用 GeoGebra 进行数学建模，或绘制 MindMap 思维导图 | MarkNotePro |
-| 你接受并需要分区组、分区、笔记这种固定笔记层级 | MarkNotePro |
-| 你希望侧边栏只呈现笔记体系，减少普通文件夹带来的干扰 | MarkNotePro |
-| 你主要编辑外部 Markdown 文件、项目 README、技术文档或临时文件 | MarkTextPro |
-| 你希望保留真实文件夹结构，不希望被笔记层级约束 | MarkTextPro |
-| 你需要一个更自由的本地 Markdown 文件编辑管理器 | MarkTextPro |
+| 你希望像管理笔记本一样管理长期笔记、结构化知识库与项目资料 | MarkNotePro |
+| 你需要在结构化笔记中直接进行 Markdown 写作、绘制 Draw.io 架构图/流程图、使用 GeoGebra 数学建模，或绘制 MindMap 思维导图 | MarkNotePro |
+| 你接受并需要工作区、分区组、分区、文档这种结构化层级 | MarkNotePro |
+| 你希望侧边栏只呈现笔记体系，减少普通杂乱文件夹带来的干扰 | MarkNotePro |
+| 你主要在真实文件夹、代码仓库中工作，或频繁编辑外部独立文档与项目 README | MarkTextPro |
+| 你需要在自由文件夹或项目仓库中直接新建与编辑 Markdown、Draw.io 架构图、GeoGebra 数学模型或 MindMap 思维导图 | MarkTextPro |
+| 你希望保留真实文件系统目录结构，不希望被笔记层级约束 | MarkTextPro |
+| 你需要一个更自由的本地多模态文件与项目工作区管理器 | MarkTextPro |
 
 ## 核心能力
 

@@ -13,10 +13,10 @@ MarkNotePro 是一款集成 Git、Draw.io、GeoGebra 与 MindMap 思维导图的
 
 MarkNotePro 和 MarkTextPro 是两个相互独立、但能力互补的产品：
 
-- **MarkNotePro**：结构化笔记与多模态知识工作台，适合长期笔记、知识库、专业项目资料、分区组 / 分区 / 结构化文档体系，原生集成 Markdown、Draw.io 绘图、GeoGebra 数学建模与 MindMap 思维导图。
-- **MarkTextPro**：Markdown 文件编辑管理器，适合自由文件夹、外部 Markdown 文件、项目 README、技术文档和临时编辑。
+- **MarkNotePro**：结构化笔记与多模态知识工作台，适合长期笔记、知识库、专业项目资料、分区组 / 分区 / 结构化文档体系，原生集成 **Markdown、Draw.io 绘图、GeoGebra 数学建模与 MindMap 思维导图**。
+- **MarkTextPro**：自由文件与项目多模态工作区管理器，适合真实文件夹、代码仓库、外部独立文档、项目 README 和自由编辑，同样原生集成 **Markdown、Draw.io 绘图、GeoGebra 数学建模与 MindMap 思维导图**。
 
-两者都集成 Git 工作区，Git 是共同能力，不是二者的选择分水岭。选择时更应该看你需要“结构化笔记与多模态知识工作台”还是“自由文件编辑管理器”。
+两者均原生内置 **Markdown、Draw.io、GeoGebra 与思维导图**四大创作引擎，并都集成 Git 工作区；四大核心创作能力与 Git 是二者的共同底座，不是选择的分水岭。选择时更应该看你需要“结构化笔记与多模态知识工作台”还是“自由文件与项目工作区管理器”。
 
 ## 产品选择对比图
 
