@@ -1,7 +1,8 @@
 import * as contextMenu from './actions'
 import { t } from '../../i18n'
 import { GEO_GEBRA_MODES } from '../../util/geogebra'
-import type { GeoGebraMode } from '@shared/types/files'
+import { MIND_MAP_STRUCTURES } from '../../util/mindmap'
+import type { GeoGebraMode, MindMapStructure } from '@shared/types/files'
 
 // NOTE: This are mutable fields that may change at runtime.
 
@@ -46,13 +47,27 @@ export const getNewGeoGebraMenu = () => ({
   submenu: getNewGeoGebraModes()
 })
 
-export const getNewMindMap = () => ({
+export const getNewMindMapStructure = (structure: MindMapStructure) => {
+  const option = MIND_MAP_STRUCTURES.find((opt) => opt.value === structure)
+  return {
+    label: t(option?.labelKey ?? 'sideBar.tree.mindMapStructure'),
+    id: `newMindMap-${structure}-menuItem`,
+    click(_menuItem: unknown, _browserWindow: unknown) {
+      contextMenu.newMindMap(structure)
+    }
+  }
+}
+
+export const getNewMindMapStructures = () =>
+  MIND_MAP_STRUCTURES.map(({ value }) => getNewMindMapStructure(value as MindMapStructure))
+
+export const getNewMindMapMenu = () => ({
   label: t('contextMenu.sideBar.newMindMap'),
   id: 'newMindMapMenuItem',
-  click(_menuItem: unknown, _browserWindow: unknown) {
-    contextMenu.newMindMap()
-  }
+  submenu: getNewMindMapStructures()
 })
+
+export const getNewMindMap = () => getNewMindMapMenu()
 
 export const getNewDirectory = () => ({
   label: t('contextMenu.sideBar.newDirectory'),

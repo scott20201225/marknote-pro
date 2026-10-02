@@ -38,6 +38,14 @@
           </option>
         </select>
       </div>
+      <div v-if="showCreateInput && createCacheType === 'mindmap'" class="mindmap-create-options">
+        <label>{{ t('sideBar.tree.mindMapStructure') }}</label>
+        <select v-model="mindMapStructure">
+          <option v-for="item of mindMapStructures" :key="item.value" :value="item.value">
+            {{ t(item.labelKey) }}
+          </option>
+        </select>
+      </div>
       <template v-if="visibleFiles.length">
         <div
           v-for="file of visibleFiles"
@@ -102,8 +110,9 @@ import {
   getVisibleNoteFiles
 } from '../../util/noteWorkspace'
 import type { TreeFileNode, TreeNode } from './types'
-import type { GeoGebraMode } from '@shared/types/files'
+import type { GeoGebraMode, MindMapStructure } from '@shared/types/files'
 import { GEO_GEBRA_MODES } from '../../util/geogebra'
+import { MIND_MAP_STRUCTURES } from '../../util/mindmap'
 
 const props = defineProps<{
   projectTree: TreeNode | null
@@ -161,6 +170,17 @@ const geoGebraMode = computed<GeoGebraMode>({
     const cache = createCache.value as { dirname?: string; type?: string }
     if (!cache.dirname || !cache.type) return
     projectStore.createCache = { dirname: cache.dirname, type: cache.type, geoGebraMode: value }
+  }
+})
+const mindMapStructures = MIND_MAP_STRUCTURES
+const mindMapStructure = computed<MindMapStructure>({
+  get: () =>
+    (createCache.value as { mindMapStructure?: MindMapStructure }).mindMapStructure ??
+    'logicalStructure',
+  set: (value) => {
+    const cache = createCache.value as { dirname?: string; type?: string }
+    if (!cache.dirname || !cache.type) return
+    projectStore.createCache = { dirname: cache.dirname, type: cache.type, mindMapStructure: value }
   }
 })
 const listTitle = computed(() => {
@@ -376,7 +396,8 @@ onBeforeUnmount(() => {
   border-radius: 3px;
 }
 
-.geogebra-create-options {
+.geogebra-create-options,
+.mindmap-create-options {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -385,7 +406,8 @@ onBeforeUnmount(() => {
   color: var(--tree-text-color, var(--sideBarTitleColor));
 }
 
-.geogebra-create-options select {
+.geogebra-create-options select,
+.mindmap-create-options select {
   min-width: 130px;
   flex: 1;
   color: inherit;

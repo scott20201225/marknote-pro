@@ -304,7 +304,14 @@
       "noNotesInArea": "目前分區還沒有筆記",
       "groupNamePlaceholder": "輸入分區組名稱",
       "areaNamePlaceholder": "輸入分區名稱",
-      "documentNamePlaceholder": "輸入筆記名稱"
+      "documentNamePlaceholder": "輸入筆記名稱",
+      "mindMapStructure": "思維導圖結構",
+      "mindMapLogicalStructure": "邏輯結構圖",
+      "mindMapMindMap": "思維導圖",
+      "mindMapOrganizationStructure": "組織結構圖",
+      "mindMapCatalogOrganization": "目錄組織圖",
+      "mindMapTimeline": "時間軸",
+      "mindMapFishbone": "魚骨圖"
     },
     "toc": {
       "title": "目錄"

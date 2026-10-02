@@ -94,12 +94,21 @@ export interface IFileState {
   isGeoGebra?: boolean
   geoGebraMode?: GeoGebraMode
   isMindMap?: boolean
+  mindMapStructure?: MindMapStructure
   // Per-tab display options. These are never written into the Markdown file.
   showHeadingNumbers: boolean
   headingNumberingIncludesTopLevel: boolean
 }
 
 export type GeoGebraMode = 'graphing' | '3d' | 'geometry' | 'cas' | 'probability' | 'scientific'
+
+export type MindMapStructure =
+  | 'logicalStructure'
+  | 'mindMap'
+  | 'organizationStructure'
+  | 'catalogOrganization'
+  | 'timeline'
+  | 'fishbone'
 
 /** Runtime state for one Draw.io tab. The XML stays inside its BrowserView. */
 export interface IDrawioState {

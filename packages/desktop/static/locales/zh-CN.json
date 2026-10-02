@@ -310,7 +310,14 @@
       "geoGebraGeometry": "几何",
       "geoGebraCas": "CAS",
       "geoGebraProbability": "概率",
-      "geoGebraScientific": "Scientific"
+      "geoGebraScientific": "Scientific",
+      "mindMapStructure": "思维导图结构",
+      "mindMapLogicalStructure": "逻辑结构图",
+      "mindMapMindMap": "思维导图",
+      "mindMapOrganizationStructure": "组织结构图",
+      "mindMapCatalogOrganization": "目录组织图",
+      "mindMapTimeline": "时间轴",
+      "mindMapFishbone": "鱼骨图"
     },
     "toc": {
       "title": "目录"

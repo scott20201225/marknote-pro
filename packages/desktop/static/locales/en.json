@@ -310,7 +310,14 @@
       "geoGebraGeometry": "Geometry",
       "geoGebraCas": "CAS",
       "geoGebraProbability": "Probability",
-      "geoGebraScientific": "Scientific"
+      "geoGebraScientific": "Scientific",
+      "mindMapStructure": "Mind map structure",
+      "mindMapLogicalStructure": "Logical structure",
+      "mindMapMindMap": "Mind map",
+      "mindMapOrganizationStructure": "Organization structure",
+      "mindMapCatalogOrganization": "Catalog organization",
+      "mindMapTimeline": "Timeline",
+      "mindMapFishbone": "Fishbone"
     },
     "toc": {
       "title": "Table Of Contents"

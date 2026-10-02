@@ -7,6 +7,7 @@ import type { Rectangle } from 'electron'
 import log from 'electron-log'
 import { writeFile } from '../filesystem'
 import type { MindMapConfiguration } from '../../shared/types/ipc'
+import type { MindMapStructure } from '../../shared/types/files'
 import { getMindMapThemeInfo } from '../../common/mindmapTheme'
 
 const MINDMAP_EXTENSION = '.smm'
@@ -26,7 +27,10 @@ const DEFAULT_MINDMAP_DATA = {
   view: null
 }
 
-const getInitialMindMapData = (configuration?: MindMapConfiguration) => {
+const getInitialMindMapData = (
+  configuration?: MindMapConfiguration,
+  structure?: MindMapStructure
+) => {
   const themeInfo = getMindMapThemeInfo(configuration?.theme)
   const template = configuration?.mindMapTheme || themeInfo.mindMapTheme
   const backgroundColor = configuration?.backgroundColor || themeInfo.backgroundColor
@@ -37,6 +41,7 @@ const getInitialMindMapData = (configuration?: MindMapConfiguration) => {
   }
   return {
     ...DEFAULT_MINDMAP_DATA,
+    layout: structure || DEFAULT_MINDMAP_DATA.layout,
     theme: {
       template,
       config: themeConfig
@@ -145,9 +150,10 @@ const createDocumentEntry = (win: BrowserWindow, filePath: string): MindMapDocum
 
 const readMindMapData = async (
   filePath: string,
-  configuration?: MindMapConfiguration
+  configuration?: MindMapConfiguration,
+  structure?: MindMapStructure
 ): Promise<unknown> => {
-  const fallbackData = getInitialMindMapData(configuration)
+  const fallbackData = getInitialMindMapData(configuration, structure)
   if (!(await fs.pathExists(filePath))) return fallbackData
   try {
     const content = await fsPromises.readFile(filePath, 'utf8')
@@ -269,7 +275,8 @@ const emitState = (
 export const openMindMapFile = async (
   pathname: string,
   owner?: BrowserWindow | null,
-  configuration?: MindMapConfiguration
+  configuration?: MindMapConfiguration,
+  structure?: MindMapStructure
 ): Promise<void> => {
   const filePath = normalizeMindMapPath(pathname)
   const win = owner ?? BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
@@ -296,7 +303,7 @@ export const openMindMapFile = async (
   windowEntry.activePath = filePath
 
   try {
-    const data = await readMindMapData(filePath, windowEntry.configuration)
+    const data = await readMindMapData(filePath, windowEntry.configuration, structure)
     await ensureViewLoaded(entry, {
       filePath,
       data,
@@ -456,8 +463,18 @@ export const configureMindMap = (win: BrowserWindow, configuration: MindMapConfi
 export const registerMindMapHandlers = (): void => {
   ipcMain.handle(
     'mt::mindmap::open',
-    (event, pathname: string, configuration?: MindMapConfiguration) =>
-      openMindMapFile(pathname, BrowserWindow.fromWebContents(event.sender), configuration)
+    (
+      event,
+      pathname: string,
+      configuration?: MindMapConfiguration,
+      structure?: MindMapStructure
+    ) =>
+      openMindMapFile(
+        pathname,
+        BrowserWindow.fromWebContents(event.sender),
+        configuration,
+        structure
+      )
   )
   ipcMain.handle('mt::mindmap::configure', (event, configuration: MindMapConfiguration) => {
     const win = BrowserWindow.fromWebContents(event.sender)

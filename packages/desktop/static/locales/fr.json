@@ -277,7 +277,14 @@
       "closeAll": "Tout fermer",
       "emptyProject": "Projet vide",
       "createFile": "Créer un fichier",
-      "openFolder": "Ouvrir un dossier"
+      "openFolder": "Ouvrir un dossier",
+      "mindMapStructure": "Structure de carte mentale",
+      "mindMapLogicalStructure": "Structure logique",
+      "mindMapMindMap": "Carte mentale",
+      "mindMapOrganizationStructure": "Structure d'organisation",
+      "mindMapCatalogOrganization": "Organisation de catalogue",
+      "mindMapTimeline": "Chronologie",
+      "mindMapFishbone": "Diagramme en arête de poisson"
     },
     "toc": {
       "title": "Table des matières"
