@@ -40,6 +40,10 @@
     .navigatorContainer .item:has(.iconlieri) {
       display: none !important;
     }
+    /* 隐藏前端自带的二级导入弹窗（统一由桌面端直接呼起原生文件系统选择器） */
+    .nodeImportDialog {
+      display: none !important;
+    }
     /* 隐藏所有 AI 相关按钮、图标、更多下拉菜单项和设置项 */
     .toolbarBtn:has(.iconAIshengcheng),
     .triggerItem:has(.iconAIshengcheng),
