@@ -97,16 +97,16 @@ export default {
   position: fixed;
   top: 110px;
   bottom: 80px;
-  right: -80px;
+  right: -60px;
   transition: all 0.3s;
   display: flex;
   flex-direction: column;
   justify-content: center;
 
   &:not(.show) {
-    pointer-events: none;
     .trigger {
       box-shadow: none !important;
+      pointer-events: none;
     }
   }
 
@@ -142,15 +142,16 @@ export default {
     transform: translateY(-50%);
     cursor: pointer;
     transition: left 0.1s linear;
-    z-index: 0;
+    z-index: 10;
     border-top-left-radius: 10px;
     border-bottom-left-radius: 10px;
     display: flex;
     align-items: center;
     padding-left: 4px;
+    pointer-events: auto;
 
     &.hide {
-      left: -8px;
+      left: -26px;
 
       span {
         transform: rotateZ(180deg);
@@ -159,6 +160,10 @@ export default {
 
     &:hover {
       left: -18px;
+
+      &.hide {
+        left: -30px;
+      }
     }
 
     span {
