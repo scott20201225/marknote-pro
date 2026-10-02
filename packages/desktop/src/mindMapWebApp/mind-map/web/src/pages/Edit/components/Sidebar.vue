@@ -73,7 +73,7 @@ export default {
 <style lang="less" scoped>
 .sidebarContainer {
   position: fixed;
-  right: -300px;
+  right: -360px;
   top: 110px;
   bottom: 0;
   width: 300px;
@@ -82,6 +82,12 @@ export default {
   display: flex;
   flex-direction: column;
   transition: all 0.3s;
+  box-shadow: none;
+
+  &:not(.show) {
+    box-shadow: none !important;
+    pointer-events: none;
+  }
 
   &.isDark {
     background-color: #262a2e;

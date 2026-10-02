@@ -226,8 +226,18 @@ export const showMindMapView = (win: BrowserWindow, bounds: Rectangle): void => 
   const boundedBounds: Rectangle = {
     x,
     y,
-    width: Math.max(1, Math.min(normalizedBounds.width, maxWidth)),
-    height: Math.max(1, Math.min(normalizedBounds.height, maxHeight))
+    width: Math.max(
+      1,
+      maxWidth - normalizedBounds.width <= 2
+        ? maxWidth
+        : Math.min(normalizedBounds.width, maxWidth)
+    ),
+    height: Math.max(
+      1,
+      maxHeight - normalizedBounds.height <= 2
+        ? maxHeight
+        : Math.min(normalizedBounds.height, maxHeight)
+    )
   }
   entry.view.setBounds(boundedBounds)
   win.setTopBrowserView(entry.view)
@@ -248,8 +258,18 @@ export const syncMindMapViewBounds = (win: BrowserWindow, bounds: Rectangle): vo
   const boundedBounds: Rectangle = {
     x,
     y,
-    width: Math.max(1, Math.min(normalizedBounds.width, maxWidth)),
-    height: Math.max(1, Math.min(normalizedBounds.height, maxHeight))
+    width: Math.max(
+      1,
+      maxWidth - normalizedBounds.width <= 2
+        ? maxWidth
+        : Math.min(normalizedBounds.width, maxWidth)
+    ),
+    height: Math.max(
+      1,
+      maxHeight - normalizedBounds.height <= 2
+        ? maxHeight
+        : Math.min(normalizedBounds.height, maxHeight)
+    )
   }
   entry.view.setBounds(boundedBounds)
 }
