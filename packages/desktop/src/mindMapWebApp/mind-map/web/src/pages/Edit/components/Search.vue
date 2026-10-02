@@ -253,8 +253,13 @@ export default {
   box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.1);
   position: fixed;
   top: 110px;
-  right: -296px;
+  right: -360px;
   transition: all 0.3s;
+
+  &:not(.show) {
+    box-shadow: none !important;
+    pointer-events: none;
+  }
 
   &.isDark {
     background-color: #363b3f;

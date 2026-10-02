@@ -97,11 +97,18 @@ export default {
   position: fixed;
   top: 110px;
   bottom: 80px;
-  right: -60px;
+  right: -80px;
   transition: all 0.3s;
   display: flex;
   flex-direction: column;
   justify-content: center;
+
+  &:not(.show) {
+    pointer-events: none;
+    .trigger {
+      box-shadow: none !important;
+    }
+  }
 
   &.isDark {
     .trigger {
@@ -165,8 +172,11 @@ export default {
     width: 60px;
     border-color: #eee;
     background-color: #fff;
-    box-shadow: 0 2px 16px 0 rgba(0, 0, 0, 0.06);
+    box-shadow: -4px 2px 12px 0 rgba(0, 0, 0, 0.06);
     border-radius: 6px;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-right: none;
     max-height: 100%;
     overflow-y: auto;
     overflow-x: hidden;

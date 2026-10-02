@@ -15,13 +15,22 @@
   <link href="dist/css/chunk-vendors.css?720fe4d863ea0fdcc0fb" rel="stylesheet">
   <link href="dist/css/app.css?720fe4d863ea0fdcc0fb" rel="stylesheet">
   <style>
-    html, body, #app {
+    html, body, #app, .container, .editContainer {
       width: 100%;
       height: 100%;
       margin: 0;
       padding: 0;
-      overflow: hidden;
+      overflow: hidden !important;
       background-color: transparent;
+    }
+    html::-webkit-scrollbar,
+    body::-webkit-scrollbar,
+    #app::-webkit-scrollbar,
+    .container::-webkit-scrollbar,
+    .editContainer::-webkit-scrollbar {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
     }
     /* 隐藏顶部工具栏右侧的文件操作卡片（另存为、导入、导出、目录等均已移至主菜单） */
     .toolbarContainer .toolbar .toolbarBlock:nth-child(2),
@@ -172,7 +181,7 @@
 
     /* 区域 2：右侧边栏切换栏 */
     .sidebarTriggerContainer {
-      right: -80px;
+      right: -100px !important;
     }
     .sidebarTriggerContainer.show {
       right: 0 !important;
@@ -186,8 +195,14 @@
       padding: 4px 2px !important;
       background-color: var(--mm-panel-bg) !important;
       border: 1px solid var(--mm-panel-border) !important;
-      box-shadow: 0 4px 16px var(--mm-panel-shadow) !important;
+      border-right: none !important;
+      border-top-right-radius: 0 !important;
+      border-bottom-right-radius: 0 !important;
+      box-shadow: -4px 0 12px var(--mm-panel-shadow) !important;
       overflow-x: hidden !important;
+    }
+    .sidebarTriggerContainer:not(.show) .trigger {
+      box-shadow: none !important;
     }
     .sidebarTriggerContainer .trigger .triggerItem,
     .sidebarTriggerContainer.isDark .trigger .triggerItem {
@@ -241,8 +256,22 @@
     .sidebarContainer.isDark {
       background-color: var(--mm-sidebar-bg) !important;
       border-left: 1px solid var(--mm-panel-border) !important;
-      box-shadow: -4px 0 16px var(--mm-panel-shadow) !important;
+      box-shadow: none !important;
       color: var(--mm-panel-text) !important;
+    }
+    .sidebarContainer:not(.show) {
+      box-shadow: none !important;
+      right: -360px !important;
+      pointer-events: none !important;
+    }
+    .sidebarContainer.show,
+    .sidebarContainer.isDark.show {
+      box-shadow: -4px 0 16px var(--mm-panel-shadow) !important;
+    }
+    .searchContainer:not(.show) {
+      box-shadow: none !important;
+      right: -360px !important;
+      pointer-events: none !important;
     }
     .sidebarContainer .sidebarHeader,
     .sidebarContainer.isDark .sidebarHeader {
