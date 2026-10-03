@@ -431,12 +431,13 @@ export const requestMindMapSave = async (win: BrowserWindow, filePath: string): 
           fullData = window.takeOverAppMethods.getMindMapData()
         }
         if (window.__isCustomTheme && fullData) {
+          const isDarkBool = Boolean(window.__customThemeIsDark)
           if (!fullData.theme) fullData.theme = {}
           fullData.theme._isCustomTheme = true
-          fullData.theme._customThemeIsDark = window.__customThemeIsDark
+          fullData.theme._customThemeIsDark = isDarkBool
           if (!fullData.theme.config) fullData.theme.config = {}
           fullData.theme.config._isCustomTheme = true
-          fullData.theme.config._customThemeIsDark = window.__customThemeIsDark
+          fullData.theme.config._customThemeIsDark = isDarkBool
           if (window.__currentBackgroundColor) {
             fullData.theme.config.backgroundColor = window.__currentBackgroundColor
             fullData.theme.config.backgroundImage = 'none'

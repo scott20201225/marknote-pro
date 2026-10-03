@@ -2271,12 +2271,13 @@
         try {
           currentMindMapData = data
           if (isCustomTheme && currentMindMapData) {
+            const isDarkBool = Boolean(customThemeIsDark)
             if (!currentMindMapData.theme) currentMindMapData.theme = {}
             currentMindMapData.theme._isCustomTheme = true
-            currentMindMapData.theme._customThemeIsDark = customThemeIsDark
+            currentMindMapData.theme._customThemeIsDark = isDarkBool
             if (!currentMindMapData.theme.config) currentMindMapData.theme.config = {}
             currentMindMapData.theme.config._isCustomTheme = true
-            currentMindMapData.theme.config._customThemeIsDark = customThemeIsDark
+            currentMindMapData.theme.config._customThemeIsDark = isDarkBool
             if (currentBackgroundColor) {
               currentMindMapData.theme.config.backgroundColor = currentBackgroundColor
               currentMindMapData.theme.config.backgroundImage = 'none'
@@ -2291,7 +2292,7 @@
           }
           notifyModified()
         } catch (e) {
-          console.warn('[MarkNotePro] saveMindMapData error:', e)
+          console.warn('[MindMap] saveMindMapData error:', e)
         }
       },
       getMindMapConfig: () => currentConfig,
@@ -2338,21 +2339,22 @@
       // 检查文件内部是否保存了定制主题信息
       const savedTheme = currentMindMapData?.theme
       const savedIsCustom = !!(savedTheme?._isCustomTheme || savedTheme?.config?._isCustomTheme)
-      const savedCustomIsDark = savedTheme?._customThemeIsDark ?? savedTheme?.config?._customThemeIsDark
+      const savedCustomIsDarkRaw = savedTheme?._customThemeIsDark ?? savedTheme?.config?._customThemeIsDark
+      const savedCustomIsDarkBool = typeof savedCustomIsDarkRaw === 'boolean' ? savedCustomIsDarkRaw : Boolean(savedCustomIsDarkRaw)
 
-      if (savedIsCustom && savedCustomIsDark === isDarkBool) {
+      if (savedIsCustom && savedCustomIsDarkBool === isDarkBool) {
         // 定制主题存在，且深浅主模式一致 -> 定制主题生效！
         isCustomTheme = true
-        customThemeIsDark = savedCustomIsDark
+        customThemeIsDark = isDarkBool
         currentMindMapTheme = savedTheme.template || payload.mindMapTheme || 'classic4'
         currentThemeConfig = {
           ...(savedTheme.config || {}),
           backgroundColor: currentBackgroundColor,
           backgroundImage: 'none',
           _isCustomTheme: true,
-          _customThemeIsDark: customThemeIsDark
+          _customThemeIsDark: isDarkBool
         }
-      } else if (savedIsCustom && savedCustomIsDark !== isDarkBool) {
+      } else if (savedIsCustom && savedCustomIsDarkBool !== isDarkBool) {
         // 深浅模式变动了 -> 定制主题失效，恢复主题默认
         isCustomTheme = false
         customThemeIsDark = null
@@ -2392,9 +2394,10 @@
         }
         if (isCustomTheme) {
           currentMindMapData.theme._isCustomTheme = true
-          currentMindMapData.theme._customThemeIsDark = customThemeIsDark
+          currentMindMapData.theme._customThemeIsDark = isDarkBool
+          if (!currentMindMapData.theme.config) currentMindMapData.theme.config = {}
           currentMindMapData.theme.config._isCustomTheme = true
-          currentMindMapData.theme.config._customThemeIsDark = customThemeIsDark
+          currentMindMapData.theme.config._customThemeIsDark = isDarkBool
         }
       }
 
@@ -2477,13 +2480,13 @@
           applyMindMapTheme(currentMindMapTheme, currentBackgroundColor, currentThemeConfig)
         } else if (isCustomTheme) {
           // 深浅模式未变动，且处于定制主题生效状态！
-          // 用户规则：“当定制主题生效的时候，后续marknote主题变动，但不变动深、浅两种主逻辑，定制主题样式不变，只变背景。”
+          // 用户规则：“当定制主题生效的时候，后续marknote/marktext主题变动，但不变动深、浅两种主逻辑，定制主题样式不变，只变背景。”
           currentThemeConfig = {
             ...(currentThemeConfig || {}),
             backgroundColor: currentBackgroundColor,
             backgroundImage: 'none',
             _isCustomTheme: true,
-            _customThemeIsDark: customThemeIsDark
+            _customThemeIsDark: isDarkBool
           }
           applyMindMapTheme(currentMindMapTheme, currentBackgroundColor, currentThemeConfig)
         } else {
@@ -2494,7 +2497,7 @@
         }
 
         window.__isCustomTheme = isCustomTheme
-        window.__customThemeIsDark = customThemeIsDark
+        window.__customThemeIsDark = isCustomTheme ? isDarkBool : null
 
         // 同步更新 currentMindMapData
         if (currentMindMapData) {
@@ -2509,9 +2512,10 @@
           }
           if (isCustomTheme) {
             currentMindMapData.theme._isCustomTheme = true
-            currentMindMapData.theme._customThemeIsDark = customThemeIsDark
+            currentMindMapData.theme._customThemeIsDark = isDarkBool
+            if (!currentMindMapData.theme.config) currentMindMapData.theme.config = {}
             currentMindMapData.theme.config._isCustomTheme = true
-            currentMindMapData.theme.config._customThemeIsDark = customThemeIsDark
+            currentMindMapData.theme.config._customThemeIsDark = isDarkBool
           } else {
             delete currentMindMapData.theme._isCustomTheme
             delete currentMindMapData.theme._customThemeIsDark
@@ -2529,12 +2533,13 @@
           fullData = window.__mindMap.getData(true)
         }
         if (isCustomTheme && fullData) {
+          const isDarkBool = Boolean(customThemeIsDark)
           if (!fullData.theme) fullData.theme = {}
           fullData.theme._isCustomTheme = true
-          fullData.theme._customThemeIsDark = customThemeIsDark
+          fullData.theme._customThemeIsDark = isDarkBool
           if (!fullData.theme.config) fullData.theme.config = {}
           fullData.theme.config._isCustomTheme = true
-          fullData.theme.config._customThemeIsDark = customThemeIsDark
+          fullData.theme.config._customThemeIsDark = isDarkBool
           if (currentBackgroundColor) {
             fullData.theme.config.backgroundColor = currentBackgroundColor
             fullData.theme.config.backgroundImage = 'none'
@@ -2557,7 +2562,7 @@
         const origBusEmit = window.$bus.$emit
         window.$bus.$emit = function(event, ...args) {
           if (event === 'localStorageExceeded') {
-            console.warn('[MarkNotePro] Silenced localStorageExceeded on $bus')
+            console.warn('[MindMap] Silenced localStorageExceeded on $bus')
             return
           }
           return origBusEmit.apply(this, arguments)
@@ -2582,11 +2587,12 @@
           notifyModified()
         })
 
-        window.$bus.$on('marknotepro::custom_theme_chosen', ({ template, isDark, config }) => {
+        const handleCustomThemeChosen = ({ template, isDark, config }) => {
+          const isDarkBool = Boolean(isDark)
           isCustomTheme = true
-          customThemeIsDark = isDark
+          customThemeIsDark = isDarkBool
           window.__isCustomTheme = true
-          window.__customThemeIsDark = isDark
+          window.__customThemeIsDark = isDarkBool
           currentMindMapTheme = template
           currentThemeConfig = config
           if (currentMindMapData) {
@@ -2594,10 +2600,17 @@
             currentMindMapData.theme.template = template
             currentMindMapData.theme.config = config
             currentMindMapData.theme._isCustomTheme = true
-            currentMindMapData.theme._customThemeIsDark = isDark
+            currentMindMapData.theme._customThemeIsDark = isDarkBool
+            if (currentMindMapData.theme.config) {
+              currentMindMapData.theme.config._isCustomTheme = true
+              currentMindMapData.theme.config._customThemeIsDark = isDarkBool
+            }
           }
           notifyModified()
-        })
+        }
+
+        window.$bus.$on('marknotepro::custom_theme_chosen', handleCustomThemeChosen)
+        window.$bus.$on('marktextpro::custom_theme_chosen', handleCustomThemeChosen)
 
         window.$bus.$on('setLocalConfig', (config) => {
           applyLocalConfig(config)
@@ -2614,12 +2627,13 @@
               fullData = window.__mindMap.getData(true)
             }
             if (isCustomTheme && fullData) {
+              const isDarkBool = Boolean(customThemeIsDark)
               if (!fullData.theme) fullData.theme = {}
               fullData.theme._isCustomTheme = true
-              fullData.theme._customThemeIsDark = customThemeIsDark
+              fullData.theme._customThemeIsDark = isDarkBool
               if (!fullData.theme.config) fullData.theme.config = {}
               fullData.theme.config._isCustomTheme = true
-              fullData.theme.config._customThemeIsDark = customThemeIsDark
+              fullData.theme.config._customThemeIsDark = isDarkBool
               if (currentBackgroundColor) {
                 fullData.theme.config.backgroundColor = currentBackgroundColor
                 fullData.theme.config.backgroundImage = 'none'
@@ -3046,12 +3060,13 @@
               const origChangeTheme = vm.changeTheme
               vm.changeTheme = function(theme, config) {
                 const currentBg = window.__currentBackgroundColor || ''
+                const isDarkBool = typeof vm.isDark === 'boolean' ? vm.isDark : Boolean(vm.isDark)
                 const customConfig = {
                   ...(config || {}),
                   backgroundColor: currentBg,
                   backgroundImage: 'none',
                   _isCustomTheme: true,
-                  _customThemeIsDark: vm.isDark
+                  _customThemeIsDark: isDarkBool
                 }
                 if (vm.mindMap && typeof vm.mindMap.setThemeConfig === 'function') {
                   vm.mindMap.setThemeConfig(customConfig)
@@ -3061,11 +3076,13 @@
                   vm.mindMap.el.style.backgroundImage = 'none'
                 }
                 if (window.$bus) {
-                  window.$bus.$emit('marknotepro::custom_theme_chosen', {
+                  const eventPayload = {
                     template: theme.value,
-                    isDark: vm.isDark,
+                    isDark: isDarkBool,
                     config: customConfig
-                  })
+                  }
+                  window.$bus.$emit('marknotepro::custom_theme_chosen', eventPayload)
+                  window.$bus.$emit('marktextpro::custom_theme_chosen', eventPayload)
                 }
                 let res
                 if (typeof origChangeTheme === 'function') {

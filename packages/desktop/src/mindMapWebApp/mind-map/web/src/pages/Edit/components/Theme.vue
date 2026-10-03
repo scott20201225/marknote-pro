@@ -196,11 +196,12 @@ export default {
     changeTheme(theme, config) {
       this.$bus.$emit('showLoading')
       const currentBg = window.__currentBackgroundColor || ''
+      const isDark = typeof this.isDark === 'boolean' ? this.isDark : Boolean(this.isDark)
       const customConfig = {
         ...(config || {}),
         backgroundColor: currentBg,
         _isCustomTheme: true,
-        _customThemeIsDark: this.isDark
+        _customThemeIsDark: isDark
       }
       this.mindMap.setTheme(theme.value, true)
       if (typeof this.mindMap.setThemeConfig === 'function') {
@@ -211,18 +212,20 @@ export default {
         this.mindMap.el.style.backgroundImage = 'none'
       }
       if (this.$bus) {
-        this.$bus.$emit('marknotepro::custom_theme_chosen', {
+        const payload = {
           template: theme.value,
-          isDark: this.isDark,
+          isDark: isDark,
           config: customConfig
-        })
+        }
+        this.$bus.$emit('marknotepro::custom_theme_chosen', payload)
+        this.$bus.$emit('marktextpro::custom_theme_chosen', payload)
       }
       storeData({
         theme: {
           template: theme.value,
           config: customConfig,
           _isCustomTheme: true,
-          _customThemeIsDark: this.isDark
+          _customThemeIsDark: isDark
         }
       })
     },
@@ -236,7 +239,7 @@ export default {
         return item.value === this.theme
       })
       this.setLocalConfig({
-        isDark: target.dark
+        isDark: Boolean(target && target.dark)
       })
     }
   }
