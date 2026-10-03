@@ -6,7 +6,6 @@ Terminal=false
 Type=Application
 Icon=marknotepro
 Categories=Office;TextEditor;Utility;
-MimeType=text/markdown;
 Keywords=marknotepro;
 StartupWMClass=marknotepro
 Actions=NewWindow;
