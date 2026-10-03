@@ -132,6 +132,67 @@ protocols:
       - x-github-desktop-dev-auth
       - x-github-desktop-auth
       - github-mac
+fileAssociations:
+  - ext: md
+    name: Markdown
+    description: Markdown document
+    mimeType: text/markdown
+    role: Editor
+    icon: icons/md.ico
+  - ext: markdown
+    name: Markdown
+    description: Markdown document
+    mimeType: text/markdown
+    role: Editor
+    icon: icons/md.ico
+  - ext: mmd
+    name: Markdown
+    description: Markdown document
+    mimeType: text/markdown
+    role: Editor
+    icon: icons/md.ico
+  - ext: mdown
+    name: Markdown
+    description: Markdown document
+    mimeType: text/markdown
+    role: Editor
+    icon: icons/md.ico
+  - ext: mdtxt
+    name: Markdown
+    description: Markdown document
+    mimeType: text/markdown
+    role: Editor
+    icon: icons/md.ico
+  - ext: mdtext
+    name: Markdown
+    description: Markdown document
+    mimeType: text/markdown
+    role: Editor
+    icon: icons/md.ico
+  - ext: mdx
+    name: Markdown
+    description: MDX document
+    mimeType: text/markdown
+    role: Editor
+    icon: icons/md.ico
+  - ext: drawio
+    name: Drawio
+    description: Draw.io Diagram
+    mimeType: application/vnd.jgraph.mxfile
+    role: Editor
+    icon: icons/md.ico
+  - ext: ggb
+    name: GeoGebra
+    description: GeoGebra Worksheet
+    mimeType: application/vnd.geogebra.file
+    role: Editor
+    icon: icons/md.ico
+  - ext: smm
+    name: Simple Mind Map
+    description: Simple Mind Map Document
+    mimeType: application/json
+    role: Editor
+    icon: icons/md.ico
 win:
   executableName: marknotepro
   artifactName: 'marknotepro-win-${arch}-${version}.${ext}'
@@ -177,6 +238,15 @@ linux:
   description: 'MarkNotePro is a local-first note app for organizing local notes.'
   maintainer: 'ScottCheng'
   category: 'Office;TextEditor;Utility'
+  mimeTypes:
+    - 'text/markdown'
+    - 'text/x-markdown'
+    - 'text/plain'
+    - 'application/vnd.jgraph.mxfile'
+    - 'application/x-drawio'
+    - 'application/vnd.geogebra.file'
+    - 'application/json'
+    - 'application/x-simple-mind-map'
   icon: 'static/icon.png'
   desktop:
     entry:
@@ -187,3 +257,34 @@ linux:
     - deb
     - rpm
     - tar.gz
+  fileAssociations:
+    - ext: 'md'
+      name: 'Markdown'
+      description: 'Markdown document'
+    - ext: 'markdown'
+      name: 'Markdown'
+      description: 'Markdown document'
+    - ext: 'mmd'
+      name: 'Markdown'
+      description: 'Markdown document'
+    - ext: 'mdown'
+      name: 'Markdown'
+      description: 'Markdown document'
+    - ext: 'mdtxt'
+      name: 'Markdown'
+      description: 'Markdown document'
+    - ext: 'mdtext'
+      name: 'Markdown'
+      description: 'Markdown document'
+    - ext: 'mdx'
+      name: 'Markdown'
+      description: 'MDX document'
+    - ext: 'drawio'
+      name: 'Drawio'
+      description: 'Draw.io Diagram'
+    - ext: 'ggb'
+      name: 'GeoGebra'
+      description: 'GeoGebra Worksheet'
+    - ext: 'smm'
+      name: 'Simple Mind Map'
+      description: 'Simple Mind Map Document'
