@@ -217,6 +217,7 @@ class App {
     const { _args: args, _openFilesCache } = this
     const { preferences, editorBufferStore } = this._accessor
 
+    const rawPreferences = preferences.getAll()
     const startUpAction = rawPreferences.startUpAction
     const defaultDirectoryToOpen = rawPreferences.defaultDirectoryToOpen
     const lastOpenedFolder = preferences.getItem<string>('lastOpenedFolder')

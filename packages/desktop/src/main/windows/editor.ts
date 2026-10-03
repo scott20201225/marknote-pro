@@ -16,6 +16,7 @@ import {
 } from './utils'
 import { TITLE_BAR_HEIGHT, editorWinOptions, isLinux, isOsx, isWindows } from '../config'
 import { showEditorContextMenu } from '../contextMenu/editor'
+import { loadMarkdownFile } from '../filesystem/markdown'
 import { switchLanguage } from '../spellchecker'
 import { isDrawioFile, openDrawioFile } from '../drawio'
 import { isGeoGebraFile, openGeoGebraFile } from '../geogebra'
