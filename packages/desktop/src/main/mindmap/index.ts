@@ -128,7 +128,16 @@ const getOrCreateWindowEntry = (win: BrowserWindow): MindMapWindowEntry => {
   return entry
 }
 
-const createDocumentEntry = (win: BrowserWindow, filePath: string): MindMapDocumentEntry => {
+const createDocumentEntry = (
+  win: BrowserWindow,
+  filePath: string,
+  configuration?: MindMapConfiguration
+): MindMapDocumentEntry => {
+  const windowEntry = getOrCreateWindowEntry(win)
+  const effectiveConfig = configuration || windowEntry.configuration
+  const themeInfo = getMindMapThemeInfo(effectiveConfig.theme)
+  const backgroundColor = effectiveConfig.backgroundColor || themeInfo.backgroundColor
+
   const view = new BrowserView({
     webPreferences: {
       contextIsolation: true,
@@ -138,8 +147,15 @@ const createDocumentEntry = (win: BrowserWindow, filePath: string): MindMapDocum
       preload: path.join(__dirname, '../preload/index.js')
     }
   })
+  if (backgroundColor) {
+    try {
+      view.setBackgroundColor(backgroundColor)
+    } catch (e) {
+      log.warn('设置 BrowserView 初始背景色失败:', e)
+    }
+  }
   const entry: MindMapDocumentEntry = { view, filePath, loaded: false }
-  getOrCreateWindowEntry(win).documents.set(filePath, entry)
+  windowEntry.documents.set(filePath, entry)
   viewOwners.set(view.webContents.id, { windowId: win.id, filePath })
   view.webContents.on('did-fail-load', (_event, code, description, url) => {
     log.error(`思维导图加载失败: ${code} ${description} @ ${url}`)
@@ -195,7 +211,12 @@ const ensureViewLoaded = async (
     )
   }
   const indexPath = path.join(webapp, 'index.html')
-  const fileUrl = pathToFileURL(indexPath).toString()
+  const urlObj = pathToFileURL(indexPath)
+  if (initialPayload.theme) urlObj.searchParams.set('theme', initialPayload.theme)
+  if (initialPayload.backgroundColor) urlObj.searchParams.set('bg', initialPayload.backgroundColor)
+  urlObj.searchParams.set('dark', initialPayload.isDark ? '1' : '0')
+  if (initialPayload.language) urlObj.searchParams.set('lang', initialPayload.language)
+  const fileUrl = urlObj.toString()
 
   entry.view.webContents.once('did-finish-load', () => {
     entry.view.webContents.send('mt::mindmap::init', initialPayload)
@@ -215,6 +236,13 @@ export const showMindMapView = (win: BrowserWindow, bounds: Rectangle): void => 
   windowEntry.lastBounds = bounds
   const entry = getActiveDocument(win)
   if (!entry) return
+  const themeInfo = getMindMapThemeInfo(windowEntry.configuration.theme)
+  const backgroundColor = windowEntry.configuration.backgroundColor || themeInfo.backgroundColor
+  if (backgroundColor) {
+    try {
+      entry.view.setBackgroundColor(backgroundColor)
+    } catch {}
+  }
   windowEntry.visible = true
   const wasAttached = win.getBrowserViews().includes(entry.view)
   if (!wasAttached) win.addBrowserView(entry.view)
@@ -311,7 +339,7 @@ export const openMindMapFile = async (
 
   let entry = windowEntry.documents.get(filePath)
   if (!entry) {
-    entry = createDocumentEntry(win, filePath)
+    entry = createDocumentEntry(win, filePath, windowEntry.configuration)
     try {
       const data = await readMindMapData(filePath, windowEntry.configuration, structure)
       await ensureViewLoaded(entry, {
@@ -332,6 +360,12 @@ export const openMindMapFile = async (
         error instanceof Error ? error.message : String(error)
       )
       return
+    }
+  } else {
+    if (backgroundColor) {
+      try {
+        entry.view.setBackgroundColor(backgroundColor)
+      } catch {}
     }
   }
 
@@ -463,6 +497,11 @@ export const configureMindMap = (win: BrowserWindow, configuration: MindMapConfi
       : themeInfo.isDark
 
   for (const doc of windowEntry.documents.values()) {
+    if (backgroundColor) {
+      try {
+        doc.view.setBackgroundColor(backgroundColor)
+      } catch {}
+    }
     if (!doc.view.webContents.isDestroyed()) {
       doc.view.webContents.send('mt::mindmap::set-theme', {
         isDark,

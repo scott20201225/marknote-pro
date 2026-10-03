@@ -98,6 +98,7 @@ onMounted(() => {
   })
   window.addEventListener('resize', syncBounds)
   window.addEventListener('marknotepro:resume-native-editor', resumeAfterHostOverlay)
+  window.addEventListener('marktextpro:resume-native-editor', resumeAfterHostOverlay)
   themeObserver = new MutationObserver(() => syncConfiguration())
   themeObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] })
 })
@@ -135,6 +136,7 @@ onBeforeUnmount(() => {
   themeObserver = null
   window.removeEventListener('resize', syncBounds)
   window.removeEventListener('marknotepro:resume-native-editor', resumeAfterHostOverlay)
+  window.removeEventListener('marktextpro:resume-native-editor', resumeAfterHostOverlay)
   removeOpenedListener?.()
   removeOpenedListener = null
   window.electron.ipcRenderer.send('mt::drawio::hide')

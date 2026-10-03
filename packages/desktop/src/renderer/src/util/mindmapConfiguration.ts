@@ -43,7 +43,7 @@ export const getMindMapConfiguration = (): MindMapConfiguration => {
   const themeInfo = getMindMapThemeInfo(theme)
   return {
     language: preferencesStore.language || 'zh-CN',
-    dark: document.body.classList.contains('dark'),
+    dark: themeInfo.isDark,
     theme,
     mindMapTheme: themeInfo.mindMapTheme,
     backgroundColor: themeInfo.backgroundColor,
