@@ -285,13 +285,16 @@ const getActiveDocument = (win: BrowserWindow): DrawioDocumentEntry | undefined 
 }
 
 const showDrawioView = (win: BrowserWindow, bounds: Rectangle): void => {
+  const windowEntry = views.get(win.id)
   const entry = getActiveDocument(win)
-  if (!entry) return
+  if (!windowEntry || !entry) return
+  for (const document of windowEntry.documents.values()) {
+    if (document !== entry && win.getBrowserViews().includes(document.view)) {
+      win.removeBrowserView(document.view)
+    }
+  }
   if (!win.getBrowserViews().includes(entry.view)) win.addBrowserView(entry.view)
   entry.view.setBounds(normalizeBounds(bounds))
-  // Keep previously opened Drawio views attached so switching tabs does not
-  // tear down the native view. Only change the z-order to reveal the active
-  // tab; this preserves its web state and removes the visible flash.
   win.setTopBrowserView(entry.view)
 }
 

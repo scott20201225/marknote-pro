@@ -17,7 +17,7 @@ const layoutStore = useLayoutStore()
 const editorStore = useEditorStore()
 const { zoom } = storeToRefs(preferencesStore)
 const { currentFile } = storeToRefs(editorStore)
-const { rightColumn, sideBarWidth, noteNavigationMode, noteListWidth } = storeToRefs(layoutStore)
+const { rightColumn, sideBarWidth, noteNavigationMode, noteListWidth, showSideBar } = storeToRefs(layoutStore)
 let boundsSyncAnimationFrame = 0
 let removeOpenedListener: (() => void) | null = null
 let resizeObserver: ResizeObserver | null = null
@@ -119,7 +119,7 @@ onMounted(() => {
 })
 
 watch(zoom, () => syncBoundsDuringZoom())
-watch([rightColumn, sideBarWidth, noteNavigationMode, noteListWidth], () => {
+watch([rightColumn, sideBarWidth, noteNavigationMode, noteListWidth, showSideBar], () => {
   nextTick(syncBoundsAfterLayout)
 })
 watch(

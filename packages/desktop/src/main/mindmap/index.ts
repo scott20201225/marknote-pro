@@ -254,6 +254,11 @@ export const showMindMapView = (win: BrowserWindow, bounds: Rectangle): void => 
     } catch {}
   }
   windowEntry.visible = true
+  for (const document of windowEntry.documents.values()) {
+    if (document !== entry && win.getBrowserViews().includes(document.view)) {
+      win.removeBrowserView(document.view)
+    }
+  }
   const wasAttached = win.getBrowserViews().includes(entry.view)
   if (!wasAttached) win.addBrowserView(entry.view)
   const normalizedBounds = normalizeBounds(bounds)
@@ -380,6 +385,9 @@ export const openMindMapFile = async (
   }
 
   windowEntry.activePath = filePath
+  if (windowEntry.visible && windowEntry.lastBounds) {
+    showMindMapView(win, windowEntry.lastBounds)
+  }
   win.webContents.send('mt::mindmap::opened', { filePath, title: path.basename(filePath) })
   emitState(win, entry, { modified: false, isSaved: true, isSaving: false })
 }

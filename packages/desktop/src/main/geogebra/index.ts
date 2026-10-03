@@ -505,6 +505,11 @@ const showGeoGebraView = (win: BrowserWindow, bounds: Rectangle): void => {
   const entry = getActiveDocument(win)
   if (!entry) return
   windowEntry.visible = true
+  for (const document of windowEntry.documents.values()) {
+    if (document !== entry && win.getBrowserViews().includes(document.view)) {
+      win.removeBrowserView(document.view)
+    }
+  }
   const wasAttached = win.getBrowserViews().includes(entry.view)
   if (!wasAttached) win.addBrowserView(entry.view)
   const normalizedBounds = normalizeBounds(bounds)
