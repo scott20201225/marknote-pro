@@ -178,6 +178,12 @@ const applyWorkspacePathSilently = async(_event: unknown, workspacePath: string)
   await setWorkspacePath(workspacePath, { switchToNote: false, showMessage: false })
 }
 
+const resumeAfterHostOverlay = (): void => {
+  void showGitHubDesktop().then(() => {
+    if (surfaceRef.value) surfaceRef.value.style.backgroundImage = ''
+  })
+}
+
 onMounted(() => {
   showGitHubDesktop()
     .then(async() => {
@@ -189,6 +195,8 @@ onMounted(() => {
   window.electron.ipcRenderer.on('mt::github-desktop::workspace-selected', applyWorkspacePath)
   window.electron.ipcRenderer.on('mt::github-desktop::workspace-selected-silent', applyWorkspacePathSilently)
   window.addEventListener('resize', syncBounds)
+  window.addEventListener('marknotepro:resume-native-editor', resumeAfterHostOverlay)
+  window.addEventListener('marktextpro:resume-native-editor', resumeAfterHostOverlay)
   bus.on('language-changed', handleLanguageChanged)
 })
 
@@ -215,11 +223,14 @@ const handleLanguageChanged = (locale?: unknown): void => {
 }
 
 onBeforeUnmount(() => {
+  if (surfaceRef.value) surfaceRef.value.style.backgroundImage = ''
   if (boundsSyncAnimationFrame) {
     window.cancelAnimationFrame(boundsSyncAnimationFrame)
     boundsSyncAnimationFrame = 0
   }
   window.removeEventListener('resize', syncBounds)
+  window.removeEventListener('marknotepro:resume-native-editor', resumeAfterHostOverlay)
+  window.removeEventListener('marktextpro:resume-native-editor', resumeAfterHostOverlay)
   bus.off('language-changed', handleLanguageChanged)
   window.electron.ipcRenderer.removeAllListeners('mt::github-desktop::switch-to-note')
   window.electron.ipcRenderer.removeAllListeners('mt::github-desktop::workspace-selected')

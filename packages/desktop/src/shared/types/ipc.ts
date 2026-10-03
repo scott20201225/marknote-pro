@@ -168,6 +168,7 @@ export interface IpcInvokeChannels {
     } | null
   }
   'mt::fonts::list': { args: []; ret: string[] }
+  'mt::github-desktop::capture-snapshot': { args: []; ret: string | null }
   'mt::github-desktop::show': {
     args: [options: GitHubDesktopShowOptions]
     ret: void

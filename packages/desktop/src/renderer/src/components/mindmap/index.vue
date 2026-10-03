@@ -111,6 +111,7 @@ onMounted(() => {
   })
   window.addEventListener('resize', handleWindowResize)
   window.addEventListener('marknotepro:resume-native-editor', resumeAfterHostOverlay)
+  window.addEventListener('marktextpro:resume-native-editor', resumeAfterHostOverlay)
   if (surfaceRef.value) {
     resizeObserver = new ResizeObserver(syncBoundsAfterLayout)
     resizeObserver.observe(surfaceRef.value)
@@ -141,6 +142,7 @@ onBeforeUnmount(() => {
   if (boundsSyncAnimationFrame) window.cancelAnimationFrame(boundsSyncAnimationFrame)
   window.removeEventListener('resize', handleWindowResize)
   window.removeEventListener('marknotepro:resume-native-editor', resumeAfterHostOverlay)
+  window.removeEventListener('marktextpro:resume-native-editor', resumeAfterHostOverlay)
   resizeObserver?.disconnect()
   resizeObserver = null
   removeOpenedListener?.()

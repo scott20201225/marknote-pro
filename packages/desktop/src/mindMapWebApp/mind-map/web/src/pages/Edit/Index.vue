@@ -40,12 +40,7 @@ export default {
   },
   async created() {
     this.initLocalConfig()
-    const loading = this.$loading({
-      lock: true,
-      text: this.$t('other.loading')
-    })
     this.show = true
-    loading.close()
     this.setBodyDark()
   },
   methods: {

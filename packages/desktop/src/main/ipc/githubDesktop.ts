@@ -897,6 +897,19 @@ const hideGitHubDesktop = (win: BrowserWindow): void => {
   }
 }
 
+const captureGitHubDesktopSnapshot = async (win: BrowserWindow): Promise<string | null> => {
+  const entry = views.get(win.id)
+  if (!entry || entry.view.webContents.isDestroyed()) return null
+  try {
+    const image = await entry.view.webContents.capturePage()
+    if (image.isEmpty()) return null
+    return image.toDataURL()
+  } catch (err) {
+    log.error('captureGitHubDesktopSnapshot error:', err)
+    return null
+  }
+}
+
 const getWindowState = (win: BrowserWindow): string => {
   if (win.isFullScreen()) return 'full-screen'
   if (win.isMaximized()) return 'maximized'
@@ -1007,6 +1020,12 @@ const registerGitHubDesktopProtocolHandlers = (): void => {
 }
 
 const registerGitHubDesktopViewHandlers = (): void => {
+  ipcMain.handle('mt::github-desktop::capture-snapshot', async (event) => {
+    const win = getWindowFromSender(event)
+    if (!win) return null
+    return captureGitHubDesktopSnapshot(win)
+  })
+
   ipcMain.handle('mt::github-desktop::show', async (event, options: GitHubDesktopShowOptions | Rectangle) => {
     const win = getWindowFromSender(event)
     if (!win) return

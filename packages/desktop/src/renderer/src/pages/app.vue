@@ -70,13 +70,13 @@
       <geogebra v-if="init" v-show="currentFile?.isGeoGebra === true" />
       <mind-map v-if="init" v-show="currentFile?.isMindMap === true" />
       <command-palette />
-      <about-dialog />
       <export-setting-dialog />
       <move-node-dialog />
       <rename />
       <import-modal />
     </div>
   </div>
+  <about-dialog />
 </template>
 
 <script setup lang="ts">
@@ -405,7 +405,12 @@ watch(hasOverlay, async (visible, wasVisible) => {
   if (visible) {
     let snapshot: string | null = null
     let surfaceSelector = ''
-    if (currentFile.value?.isMindMap) {
+    if (workbench.value === 'git') {
+      surfaceSelector = '.github-desktop-surface'
+      snapshot = await window.electron.ipcRenderer
+        .invoke('mt::github-desktop::capture-snapshot')
+        .catch(() => null)
+    } else if (currentFile.value?.isMindMap) {
       surfaceSelector = '.mindmap-surface'
       snapshot = await window.electron.ipcRenderer
         .invoke('mt::mindmap::capture-snapshot')
@@ -439,14 +444,16 @@ watch(hasOverlay, async (visible, wasVisible) => {
     window.electron.ipcRenderer.send('mt::drawio::hide')
     window.electron.ipcRenderer.send('mt::geogebra::hide')
     window.electron.ipcRenderer.send('mt::mindmap::hide')
+    window.electron.ipcRenderer.send('mt::github-desktop::hide')
     return
   }
   if (wasVisible) {
     nextTick(() => {
       window.dispatchEvent(new Event('marknotepro:resume-native-editor'))
+      window.dispatchEvent(new Event('marktextpro:resume-native-editor'))
       window.requestAnimationFrame(() => {
         const surfaces = document.querySelectorAll<HTMLElement>(
-          '.mindmap-surface, .geogebra-surface, .drawio-surface'
+          '.mindmap-surface, .geogebra-surface, .drawio-surface, .github-desktop-surface'
         )
         surfaces.forEach((el) => {
           el.style.backgroundImage = ''
