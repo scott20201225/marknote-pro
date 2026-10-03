@@ -94,21 +94,28 @@ const normalizeBounds = (bounds: Rectangle): Rectangle => ({
   height: Math.max(1, Math.round(bounds.height))
 })
 
+let lastKnownMindMapConfig: MindMapConfiguration | null = null
+
 const getOrCreateWindowEntry = (win: BrowserWindow): MindMapWindowEntry => {
   const existing = views.get(win.id)
   if (existing) return existing
-  const defaultThemeInfo = getMindMapThemeInfo('light')
+  const baseTheme = lastKnownMindMapConfig?.theme || 'light'
+  const defaultThemeInfo = getMindMapThemeInfo(baseTheme)
   const entry: MindMapWindowEntry = {
     documents: new Map(),
     activePath: null,
     visible: false,
     configuration: {
-      language: 'zh',
-      dark: false,
-      theme: 'light',
-      mindMapTheme: defaultThemeInfo.mindMapTheme,
-      backgroundColor: defaultThemeInfo.backgroundColor,
-      themeConfig: defaultThemeInfo.themeConfig
+      language: lastKnownMindMapConfig?.language || 'zh',
+      dark:
+        typeof lastKnownMindMapConfig?.dark === 'boolean'
+          ? lastKnownMindMapConfig.dark
+          : defaultThemeInfo.isDark,
+      theme: baseTheme,
+      mindMapTheme: lastKnownMindMapConfig?.mindMapTheme || defaultThemeInfo.mindMapTheme,
+      backgroundColor: lastKnownMindMapConfig?.backgroundColor || defaultThemeInfo.backgroundColor,
+      themeConfig: lastKnownMindMapConfig?.themeConfig || defaultThemeInfo.themeConfig,
+      colors: lastKnownMindMapConfig?.colors
     }
   }
   views.set(win.id, entry)
@@ -160,6 +167,9 @@ const createDocumentEntry = (
   view.webContents.on('did-fail-load', (_event, code, description, url) => {
     log.error(`思维导图加载失败: ${code} ${description} @ ${url}`)
   })
+  view.webContents.on('console-message', (_event, level, message, line, sourceId) => {
+    log.info(`[MindMap webContents][level:${level}] ${message} (${sourceId}:${line})`)
+  })
   view.webContents.on('render-process-gone', (_event, details) => {
     log.error('思维导图渲染进程异常退出:', details)
   })
@@ -207,7 +217,7 @@ const ensureViewLoaded = async (
   const webapp = findMindMapWebapp()
   if (!webapp) {
     throw new Error(
-      '找不到 MindMap Web 引擎。请确认 MarkNotePro 项目中的 packages/desktop/src/mindMapWebApp 资源完整。'
+      '找不到 MindMap Web 引擎。请确认 MarkTextPro 项目中的 packages/desktop/src/mindMapWebApp 资源完整。'
     )
   }
   const indexPath = path.join(webapp, 'index.html')
@@ -484,6 +494,7 @@ export const closeMindMapDocument = (win: BrowserWindow, filePath: string): void
 }
 
 export const configureMindMap = (win: BrowserWindow, configuration: MindMapConfiguration): void => {
+  lastKnownMindMapConfig = { ...configuration }
   const windowEntry = views.get(win.id)
   if (!windowEntry) return
   windowEntry.configuration = { ...windowEntry.configuration, ...configuration }
@@ -586,6 +597,12 @@ export const printMindMapDocument = async (win: BrowserWindow): Promise<void> =>
   }
 }
 
+export const isPartitionDirectory = (dir: string | null | undefined): boolean => {
+  if (!dir || typeof dir !== 'string') return false
+  const base = path.basename(dir)
+  return base.startsWith('AREA_')
+}
+
 export const getAvailableImportFilePath = async (
   targetDir: string,
   sourceFilePath: string
@@ -662,31 +679,24 @@ export const transformMarkdownFallback = (
   return root
 }
 
-export const isPartitionDirectory = (dir: string | null | undefined): boolean => {
-  if (!dir) return false
-  return path.basename(dir).startsWith('AREA_')
-}
-
 export const importMindMapDocument = async (win: BrowserWindow): Promise<void> => {
-  // 1. 先判断当前是否选定了有效的分区，未选定时提示用户并直接返回
+  // 1. 先判断当前是否已打开/选择了工作区，未选定时提示用户并直接返回
   let targetDir: string | null = null
   try {
     targetDir = await win.webContents.executeJavaScript(
-      'window.getTargetPartitionDir ? window.getTargetPartitionDir() : null'
+      'window.getTargetDirectory ? window.getTargetDirectory() : (window.getTargetPartitionDir ? window.getTargetPartitionDir() : null)'
     )
   } catch (err) {
-    log.warn('未能从渲染进程获取当前分区目录:', err)
+    log.warn('未能从渲染进程获取当前工作区目录:', err)
   }
 
-  const isTargetDirValid =
-    isPartitionDirectory(targetDir) &&
-    (await fs.pathExists(targetDir!))
+  const isTargetDirValid = !!targetDir && (await fs.pathExists(targetDir))
 
   if (!isTargetDirValid) {
     const notifyTitle = t('notifications.defaultTitle') || '提示'
-    const notifyMessage = t('sideBar.tree.selectPartitionFirst') || '请先选择分区'
+    const notifyMessage = t('sideBar.tree.selectWorkspaceFirst') || '请先选择工作区'
     const notifyDetail =
-      t('sideBar.tree.selectPartitionFirstDetail') || '请在左侧目录树中先选择一个分区，然后再执行导入操作。'
+      t('sideBar.tree.selectWorkspaceFirstDetail') || '请在左侧侧边栏中先打开或选择一个工作区文件夹，然后再执行导入操作。'
 
     win.webContents.send('mt::show-notification', {
       title: notifyTitle,
@@ -860,13 +870,13 @@ export const importMindMapDocument = async (win: BrowserWindow): Promise<void> =
     return
   }
 
-  // 6. 在 MarkNotePro 中打开新文件为新标签页
+  // 6. 在 MarkTextPro 中打开新文件为新标签页
   try {
     await openMindMapFile(newFilePath, win)
     win.webContents.send('mt::show-notification', {
       title: '导入成功',
       type: 'success',
-      message: `已导入并在分区新建文件: ${path.basename(newFilePath)}`
+      message: `已导入并在工作区新建文件: ${path.basename(newFilePath)}`
     })
   } catch (openErr) {
     log.error('打开新建思维导图文件失败:', openErr)
