@@ -2006,7 +2006,7 @@
 
 
 
-    const ALL_THEME_PALETTES = window.ALL_THEME_PALETTES || {};
+    const themePalettes = window.ALL_THEME_PALETTES || ALL_THEME_PALETTES || {};
 
     const applyHostUITheme = (themeName, isDark, backgroundColor, colors) => {
       if (themeName) currentThemeName = themeName;
@@ -2866,6 +2866,8 @@
       return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg)
     }
 
+      const Vue = window.$bus ? window.$bus.constructor : (window.Vue || null);
+      if (Vue && typeof Vue.mixin === 'function') {
         Vue.mixin({
           beforeCreate() {
             if (this.$i18n && !window.__vueI18n) {
@@ -3202,7 +3204,6 @@
           }
         })
       }
-    })()
 
     if (typeof window.initApp === 'function') {
       const rawInitApp = window.initApp;
