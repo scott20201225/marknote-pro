@@ -257,10 +257,12 @@ class WindowManager extends TypedEmitter<WindowManagerEvents> {
   findBestWindowToOpenIn(fileList: string[]): { windowId: number | null; fileList: string[] }[] {
     if (!fileList || !Array.isArray(fileList) || !fileList.length) return []
     const { windows } = this
-    const lastActiveEditorId = this.getActiveEditorId() // editor id or null
+    const editorWindows = this.getWindowsByType(WindowType.EDITOR)
+    const fallbackEditorId =
+      this.getActiveEditorId() ?? (editorWindows.length > 0 ? editorWindows[0].id : null)
 
     if (this.windowCount <= 1) {
-      return [{ windowId: lastActiveEditorId, fileList }]
+      return [{ windowId: fallbackEditorId, fileList }]
     }
 
     // Array of scores, same order like fileList.
@@ -283,7 +285,7 @@ class WindowManager extends TypedEmitter<WindowManagerEvents> {
     }
 
     const buf: { windowId: number | null; fileList: string[] }[] = []
-    const len = filePathScores!.length
+    const len = filePathScores ? filePathScores.length : 0
     for (let i = 0; i < len; ++i) {
       let { id: windowId, score } = filePathScores![i]
 
@@ -291,8 +293,8 @@ class WindowManager extends TypedEmitter<WindowManagerEvents> {
         // Skip files that already opened.
         continue
       } else if (score === 0) {
-        // There is no best window to open the file(s) in.
-        windowId = lastActiveEditorId
+        // There is no best window to open the file(s) in. Default to active or first editor window.
+        windowId = fallbackEditorId
       }
 
       let item = buf.find((w) => w.windowId === windowId)
@@ -397,36 +399,6 @@ class WindowManager extends TypedEmitter<WindowManagerEvents> {
         log.error(`Cannot find window id "${win.id}" to open file.`)
         return
       }
-      if (isDrawioFile(filePath)) {
-        const workspaceRoot = editor.openedRootDirectory
-        if (workspaceRoot && isChildOfDirectory(workspaceRoot, filePath)) {
-          void openDrawioFile(filePath, win)
-        } else {
-          void shell.openPath(filePath)
-        }
-        return
-      }
-      if (isGeoGebraFile(filePath)) {
-        const workspaceRoot = editor.openedRootDirectory
-        if (workspaceRoot && isChildOfDirectory(workspaceRoot, filePath)) {
-          void openGeoGebraFile(filePath, win)
-        } else {
-          void shell.openPath(filePath)
-        }
-        return
-      }
-      if (isMindMapFile(filePath)) {
-        const workspaceRoot = editor.openedRootDirectory
-        if (workspaceRoot && isChildOfDirectory(workspaceRoot, filePath)) {
-          void openMindMapFile(filePath, win)
-        } else {
-          void shell.openPath(filePath)
-        }
-        return
-      }
-      hideDrawioView(win)
-      hideGeoGebraView(win)
-      hideMindMapView(win)
       editor.openTab(filePath, options, true)
     })
 

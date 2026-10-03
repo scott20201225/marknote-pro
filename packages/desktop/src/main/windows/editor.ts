@@ -26,7 +26,8 @@ type RawMarkdownDocument = Awaited<ReturnType<typeof loadMarkdownFile>>
 
 // The deferred file/markdown to open before the window finishes loading.
 interface PendingFile {
-  doc: RawMarkdownDocument
+  filePath: string
+  doc?: RawMarkdownDocument
   options: Record<string, unknown>
   selected: boolean
 }
@@ -369,21 +370,33 @@ class EditorWindow extends BaseWindow {
         continue
       }
       if (isDrawioFile(filePath)) {
-        this.addToOpenedFiles(filePath)
-        this._accessor.menu.addRecentlyUsedDocument(filePath)
-        void openDrawioFile(filePath, browserWindow)
+        if (this.lifecycle === WindowLifecycle.READY) {
+          this.addToOpenedFiles(filePath)
+          this._accessor.menu.addRecentlyUsedDocument(filePath)
+          void openDrawioFile(filePath, browserWindow)
+        } else {
+          this._filesToOpen!.push({ filePath, options, selected })
+        }
         continue
       }
       if (isGeoGebraFile(filePath)) {
-        this.addToOpenedFiles(filePath)
-        this._accessor.menu.addRecentlyUsedDocument(filePath)
-        void openGeoGebraFile(filePath, browserWindow)
+        if (this.lifecycle === WindowLifecycle.READY) {
+          this.addToOpenedFiles(filePath)
+          this._accessor.menu.addRecentlyUsedDocument(filePath)
+          void openGeoGebraFile(filePath, browserWindow)
+        } else {
+          this._filesToOpen!.push({ filePath, options, selected })
+        }
         continue
       }
       if (isMindMapFile(filePath)) {
-        this.addToOpenedFiles(filePath)
-        this._accessor.menu.addRecentlyUsedDocument(filePath)
-        void openMindMapFile(filePath, browserWindow)
+        if (this.lifecycle === WindowLifecycle.READY) {
+          this.addToOpenedFiles(filePath)
+          this._accessor.menu.addRecentlyUsedDocument(filePath)
+          void openMindMapFile(filePath, browserWindow)
+        } else {
+          this._filesToOpen!.push({ filePath, options, selected })
+        }
         continue
       }
       loadMarkdownFile(
@@ -397,7 +410,7 @@ class EditorWindow extends BaseWindow {
           if (this.lifecycle === WindowLifecycle.READY) {
             this._doOpenTab(rawDocument, options, selected)
           } else {
-            this._filesToOpen!.push({ doc: rawDocument, options, selected })
+            this._filesToOpen!.push({ filePath, doc: rawDocument, options, selected })
           }
         })
         .catch((err: Error) => {
@@ -630,8 +643,22 @@ class EditorWindow extends BaseWindow {
     }
     this._directoryToOpen = null
 
-    for (const { doc, options, selected } of this._filesToOpen!) {
-      this._doOpenTab(doc, options, selected)
+    for (const { filePath, doc, options, selected } of this._filesToOpen!) {
+      if (isDrawioFile(filePath)) {
+        this.addToOpenedFiles(filePath)
+        this._accessor.menu.addRecentlyUsedDocument(filePath)
+        void openDrawioFile(filePath, this.browserWindow)
+      } else if (isGeoGebraFile(filePath)) {
+        this.addToOpenedFiles(filePath)
+        this._accessor.menu.addRecentlyUsedDocument(filePath)
+        void openGeoGebraFile(filePath, this.browserWindow)
+      } else if (isMindMapFile(filePath)) {
+        this.addToOpenedFiles(filePath)
+        this._accessor.menu.addRecentlyUsedDocument(filePath)
+        void openMindMapFile(filePath, this.browserWindow)
+      } else if (doc) {
+        this._doOpenTab(doc, options, selected)
+      }
     }
     this._filesToOpen!.length = 0
   }
