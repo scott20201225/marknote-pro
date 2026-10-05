@@ -179,6 +179,7 @@ export interface IpcInvokeChannels {
   'mt::kdbx::save': { args: [pathname: string]; ret: void }
   'mt::kdbx::create-group': { args: [pathname: string, parentId: string, name: string]; ret: KdbxVaultSnapshot }
   'mt::kdbx::rename-group': { args: [pathname: string, groupId: string, name: string]; ret: KdbxVaultSnapshot }
+  'mt::kdbx::move-group': { args: [pathname: string, groupId: string, targetGroupId: string]; ret: KdbxVaultSnapshot }
   'mt::kdbx::delete-group': { args: [pathname: string, groupId: string]; ret: KdbxVaultSnapshot }
   'mt::kdbx::empty-recycle-bin': { args: [pathname: string]; ret: KdbxVaultSnapshot }
   'mt::kdbx::create-entry': { args: [pathname: string, input: KdbxEntryInput]; ret: KdbxEntryDetail }
@@ -188,6 +189,9 @@ export interface IpcInvokeChannels {
   }
   'mt::kdbx::update-entry': { args: [pathname: string, entryId: string, input: KdbxEntryInput]; ret: KdbxEntryDetail }
   'mt::kdbx::delete-entry': { args: [pathname: string, entryId: string]; ret: KdbxVaultSnapshot }
+  'mt::kdbx::move-entries': { args: [pathname: string, entryIds: string[], targetGroupId: string]; ret: KdbxVaultSnapshot }
+  'mt::kdbx::restore-entry': { args: [pathname: string, entryId: string]; ret: KdbxVaultSnapshot }
+  'mt::kdbx::restore-entries': { args: [pathname: string, entryIds: string[]]; ret: KdbxVaultSnapshot }
   'mt::kdbx::history-entry': { args: [pathname: string, entryId: string, historyIndex: number]; ret: KdbxEntryRevision }
   'mt::kdbx::restore-history': { args: [pathname: string, entryId: string, historyIndex: number]; ret: KdbxEntryDetail }
   'mt::kdbx::delete-history': { args: [pathname: string, entryId: string, historyIndex: number]; ret: KdbxEntryDetail }
