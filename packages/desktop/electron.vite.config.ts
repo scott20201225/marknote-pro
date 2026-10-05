@@ -44,7 +44,10 @@ export default defineConfig({
         '@': resolve(__dirname, 'src/renderer/src'),
         common: resolve(__dirname, 'src/common'),
         muya: resolve(__dirname, '../muyajs'),
-        '@shared': resolve(__dirname, 'src/shared')
+        '@shared': resolve(__dirname, 'src/shared'),
+        // KDBXWeb is maintained as vendored source. Bundle it into the main
+        // process so packaged builds never depend on its ignored dist/ output.
+        kdbxweb: resolve(__dirname, 'src/kdbxWebApp/kdbxweb/lib/index.ts')
       },
       extensions: ['.mjs', '.ts', '.js', '.json']
     }
