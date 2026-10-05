@@ -1032,7 +1032,7 @@
     "username": "ユーザー名",
     "vault": "保管庫",
     "vaultFile": "保管庫ファイル",
-    "vaultSecurityInfo": "KDBX は KeePass 互換の標準暗号化形式を使用し、パスワード項目と添付ファイルはマスターパスワードで保護されます。.kdbx ファイルは Git などで同期できます。マスターパスワードを忘れると復元できません。",
+    "vaultSecurityInfo": "KDBX は KeePass 互換の標準暗号化形式を使用し、パスワード項目と添付ファイルはマスターパスワードで保護されます。マスターパスワードを忘れると復元できません。",
     "viewHistory": "表示"
   },
   "dialog": {

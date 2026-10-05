@@ -1071,7 +1071,7 @@
     "username": "用户名",
     "vault": "密码库",
     "vaultFile": "密码库文件",
-    "vaultSecurityInfo": "KDBX 使用 KeePass 兼容的标准加密格式，密钥条目和附件均受主密码保护。可将 .kdbx 文件纳入 Git 等方式同步；请妥善保管主密码，忘记后无法恢复。",
+    "vaultSecurityInfo": "KDBX 使用 KeePass 兼容的标准加密格式，密钥条目和附件均受主密码保护。请妥善保管主密码，忘记后无法恢复。",
     "viewHistory": "查看"
   },
   "dialog": {
