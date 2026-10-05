@@ -63,7 +63,12 @@ MarkNotePro 集成了以下优秀的开源与第三方项目，各组件原始�
    - License: MIT License
    - Notice: MarkNotePro 内置的 Git 工作区组件基于 GitHub Desktop 适配构建，遵循 MIT 许可证。
 
-5. MarkText & Muya (Upstream Base)
+5. KDBXWeb
+   - Copyright: Copyright (C) 2021-2025 Antelle (https://github.com/keeweb/kdbxweb)
+   - License: MIT License (https://github.com/keeweb/kdbxweb/blob/master/LICENSE)
+   - Notice: MarkNotePro 内置的 `.kdbx` 加密密码库读写能力基于 KDBXWeb 构建。KDBXWeb 原始 MIT 许可证文本随其源代码保留于 `packages/desktop/src/kdbxWebApp/kdbxweb/LICENSE`。
+
+6. MarkText & Muya (Upstream Base)
    - Copyright (c) 2017-present Luo Ran
    - Copyright (c) 2018-present MarkText Contributors
    - License: MIT License
@@ -86,4 +91,3 @@ MarkNotePro 集成了以下优秀的开源与第三方项目，各组件原始�
    OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
    ARISING FROM, OUT OF OR IN CONNECTION WITH THE UPSTREAM SOFTWARE OR THE USE
    OR OTHER DEALINGS IN THE UPSTREAM SOFTWARE.
-
