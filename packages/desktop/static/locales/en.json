@@ -1071,7 +1071,7 @@
     "username": "Username",
     "vault": "Vault",
     "vaultFile": "Vault file",
-    "vaultSecurityInfo": "KDBX uses the standard KeePass-compatible encryption format: password entries and attachments are protected by the master password. You can sync the .kdbx file with Git or another service. Keep the master password safe: it cannot be recovered.",
+    "vaultSecurityInfo": "KDBX uses the standard KeePass-compatible encryption format: password entries and attachments are protected by the master password. Keep the master password safe: it cannot be recovered.",
     "viewHistory": "View"
   },
   "dialog": {
