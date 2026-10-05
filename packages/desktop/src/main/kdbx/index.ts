@@ -21,6 +21,9 @@ const KDBX_EXTENSION = '.kdbx'
 const KDBXE_EXTENSION = '.kdbxe'
 const MAX_ENTRY_HISTORY = 10
 const KDBX_PASSWORD_ERROR = '密码必须为 8-16 位，且同时包含大写字母、小写字母和数字'
+// Kept only while an entry is in the recycle bin so it can return to its original group.
+const ORIGINAL_GROUP_ID_FIELD = 'MarkNotePro.OriginalGroupId'
+const ORIGINAL_GROUP_PATH_FIELD = 'MarkNotePro.OriginalGroupPath'
 const imageMimeType = (name: string): string | undefined => ({
   avif: 'image/avif',
   gif: 'image/gif',
@@ -89,7 +92,7 @@ const getFieldValue = (entry: KdbxEntry, key: string): string => {
 }
 
 const toFields = (entry: KdbxEntry): KdbxField[] =>
-  [...entry.fields.entries()].map(([key, value]) => ({
+  [...entry.fields.entries()].filter(([key]) => key !== ORIGINAL_GROUP_ID_FIELD && key !== ORIGINAL_GROUP_PATH_FIELD).map(([key, value]) => ({
     key,
     value: value instanceof ProtectedValue ? value.getText() : value,
     protected: value instanceof ProtectedValue
@@ -204,6 +207,82 @@ const findEntry = (vault: Kdbx, id: string): KdbxEntry | undefined =>
 
 const findGroup = (vault: Kdbx, id: string): KdbxGroup | undefined =>
   vault.getGroup(id)
+
+const isSameOrDescendantGroup = (group: KdbxGroup, ancestor: KdbxGroup): boolean => {
+  let current: KdbxGroup | undefined = group
+  while (current) {
+    if (getId(current.uuid) === getId(ancestor.uuid)) return true
+    current = current.parentGroup
+  }
+  return false
+}
+
+const groupPathForRestore = (vault: Kdbx, group: KdbxGroup | undefined): string[] => {
+  const root = vault.getDefaultGroup()
+  const result: string[] = []
+  let current = group
+  while (current && current !== root) {
+    result.unshift(current.name || '未命名分组')
+    current = current.parentGroup
+  }
+  return result
+}
+
+const recycleGroupPath = (vault: Kdbx, entry: KdbxEntry): string[] => {
+  const binId = recycleBinId(vault)
+  const result: string[] = []
+  let current = entry.parentGroup
+  while (current && getId(current.uuid) !== binId) {
+    result.unshift(current.name || '未命名分组')
+    current = current.parentGroup
+  }
+  return result
+}
+
+const originalGroupPath = (entry: KdbxEntry): string[] => {
+  const raw = getFieldValue(entry, ORIGINAL_GROUP_PATH_FIELD)
+  if (!raw) return []
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    return Array.isArray(parsed) && parsed.every(item => typeof item === 'string' && item.trim()) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+const rememberOriginalGroup = (vault: Kdbx, entry: KdbxEntry): void => {
+  if (!entry.parentGroup) return
+  entry.fields.set(ORIGINAL_GROUP_ID_FIELD, getId(entry.parentGroup.uuid))
+  entry.fields.set(ORIGINAL_GROUP_PATH_FIELD, JSON.stringify(groupPathForRestore(vault, entry.parentGroup)))
+}
+
+const ensureGroupPath = (vault: Kdbx, pathParts: string[]): KdbxGroup => {
+  let group = vault.getDefaultGroup()
+  for (const name of pathParts) {
+    const existing = group.groups.find(child => child.name === name)
+    group = existing || vault.createGroup(group, name)
+  }
+  return group
+}
+
+const restoreEntryGroup = (vault: Kdbx, entry: KdbxEntry, restoredGroups = new Map<string, KdbxGroup>()): KdbxGroup => {
+  const originalGroupId = getFieldValue(entry, ORIGINAL_GROUP_ID_FIELD)
+  const originalPath = originalGroupPath(entry)
+  const originalGroup = originalGroupId ? findGroup(vault, originalGroupId) : undefined
+  const activeOriginalGroup = originalGroup && !isInRecycleBin({ parentGroup: originalGroup } as KdbxEntry, recycleBinId(vault))
+    ? originalGroup
+    : undefined
+  const targetPath = originalPath.length ? originalPath : activeOriginalGroup ? groupPathForRestore(vault, activeOriginalGroup) : recycleGroupPath(vault, entry)
+  const key = originalGroupId ? `id:${originalGroupId}` : `entry:${getId(entry.uuid)}`
+  let group = restoredGroups.get(key)
+  if (!group) {
+    group = activeOriginalGroup || ensureGroupPath(vault, targetPath)
+    restoredGroups.set(key, group)
+  }
+  entry.fields.delete(ORIGINAL_GROUP_ID_FIELD)
+  entry.fields.delete(ORIGINAL_GROUP_PATH_FIELD)
+  return group
+}
 
 const recycleBinId = (vault: Kdbx): string =>
   vault.meta.recycleBinUuid ? getId(vault.meta.recycleBinUuid) : ''
@@ -441,8 +520,9 @@ export const registerKdbxHandlers = (): void => {
   ipcMain.handle('mt::kdbx::entry', (event, filePath: string, entryId: string) => {
     const win = BrowserWindow.fromWebContents(event.sender)
     if (!win) throw new Error('找不到编辑窗口')
-    const entry = findEntry(getSession(win, filePath).vault, entryId)
-    return entry ? toEntryDetail(entry) : null
+    const session = getSession(win, filePath)
+    const entry = findEntry(session.vault, entryId)
+    return entry ? toEntryDetail(entry, recycleBinId(session.vault)) : null
   })
 
   ipcMain.handle('mt::kdbx::save', async (event, filePath: string) => {
@@ -476,6 +556,20 @@ export const registerKdbxHandlers = (): void => {
     return snapshot(session.vault)
   })
 
+  ipcMain.handle('mt::kdbx::move-group', async(event, filePath: string, groupId: string, targetGroupId: string) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win) throw new Error('找不到编辑窗口')
+    const session = getSession(win, filePath)
+    const group = findGroup(session.vault, groupId)
+    const target = findGroup(session.vault, targetGroupId)
+    if (!group || group === session.vault.getDefaultGroup()) throw new Error('不能移动根密钥组')
+    if (!target || isInRecycleBin({ parentGroup: target } as KdbxEntry, recycleBinId(session.vault))) throw new Error('请选择正常密钥组作为目标')
+    if (isSameOrDescendantGroup(target, group)) throw new Error('不能移动到当前密钥组或其子密钥组')
+    session.vault.move(group, target)
+    await saveMutation(win, session)
+    return snapshot(session.vault)
+  })
+
   ipcMain.handle('mt::kdbx::delete-group', async(event, filePath: string, groupId: string) => {
     const win = BrowserWindow.fromWebContents(event.sender)
     if (!win) throw new Error('找不到编辑窗口')
@@ -488,6 +582,7 @@ export const registerKdbxHandlers = (): void => {
       session.vault.move(group, undefined)
       session.vault.cleanup({ binaries: true })
     } else {
+      allEntries([group]).forEach(entry => rememberOriginalGroup(session.vault, entry))
       session.vault.remove(group)
     }
     await saveMutation(win, session)
@@ -551,8 +646,52 @@ export const registerKdbxHandlers = (): void => {
       session.vault.move(entry, undefined)
       session.vault.cleanup({ binaries: true })
     } else {
+      rememberOriginalGroup(session.vault, entry)
       session.vault.remove(entry)
     }
+    await saveMutation(win, session)
+    return snapshot(session.vault)
+  })
+
+  ipcMain.handle('mt::kdbx::move-entries', async(event, filePath: string, entryIds: string[], targetGroupId: string) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win) throw new Error('找不到编辑窗口')
+    const session = getSession(win, filePath)
+    const target = findGroup(session.vault, targetGroupId)
+    if (!target || isInRecycleBin({ parentGroup: target } as KdbxEntry, recycleBinId(session.vault))) throw new Error('请选择正常密钥组作为目标')
+    const binId = recycleBinId(session.vault)
+    const entries = [...new Set(entryIds)]
+      .map(entryId => findEntry(session.vault, entryId))
+      .filter((entry): entry is KdbxEntry => !!entry && !isInRecycleBin(entry, binId))
+    if (entries.length === 0) throw new Error('请选择至少一个正常密钥条目')
+    entries.forEach(entry => session.vault.move(entry, target))
+    await saveMutation(win, session)
+    return snapshot(session.vault)
+  })
+
+  ipcMain.handle('mt::kdbx::restore-entry', async(event, filePath: string, entryId: string) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win) throw new Error('找不到编辑窗口')
+    const session = getSession(win, filePath)
+    const entry = findEntry(session.vault, entryId)
+    if (!entry) throw new Error('找不到此密钥条目')
+    if (!isInRecycleBin(entry, recycleBinId(session.vault))) throw new Error('此条目不在回收站中')
+    session.vault.move(entry, restoreEntryGroup(session.vault, entry))
+    await saveMutation(win, session)
+    return snapshot(session.vault)
+  })
+
+  ipcMain.handle('mt::kdbx::restore-entries', async(event, filePath: string, entryIds: string[]) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win) throw new Error('找不到编辑窗口')
+    const session = getSession(win, filePath)
+    const binId = recycleBinId(session.vault)
+    const entries = [...new Set(entryIds)]
+      .map(entryId => findEntry(session.vault, entryId))
+      .filter((entry): entry is KdbxEntry => !!entry && isInRecycleBin(entry, binId))
+    if (entries.length === 0) throw new Error('请选择至少一个回收站密钥条目')
+    const restoredGroups = new Map<string, KdbxGroup>()
+    entries.forEach(entry => session.vault.move(entry, restoreEntryGroup(session.vault, entry, restoredGroups)))
     await saveMutation(win, session)
     return snapshot(session.vault)
   })

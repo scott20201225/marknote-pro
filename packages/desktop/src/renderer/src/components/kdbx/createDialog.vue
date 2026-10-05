@@ -33,6 +33,7 @@ import { QuestionFilled } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import bus from '@/bus'
 import notice from '@/services/notification'
+import { ElMessage } from 'element-plus'
 import { useProjectStore } from '@/store/project'
 import { isKdbxPasswordValid } from '@shared/kdbxPassword'
 
@@ -47,14 +48,16 @@ const creating = ref(false)
 const filePath = ref('')
 const password = ref('')
 const confirmPassword = ref('')
+const createAttempted = ref(false)
 const filename = computed(() => filePath.value ? window.path.basename(filePath.value) : '')
-const passwordInvalid = computed(() => password.value.length > 0 && !isKdbxPasswordValid(password.value))
-const passwordMismatch = computed(() => confirmPassword.value.length > 0 && password.value !== confirmPassword.value)
+const passwordInvalid = computed(() => (password.value.length > 0 && !isKdbxPasswordValid(password.value)) || (createAttempted.value && !isKdbxPasswordValid(password.value)))
+const passwordMismatch = computed(() => (confirmPassword.value.length > 0 || createAttempted.value) && password.value !== confirmPassword.value)
 
 const reset = (): void => {
   filePath.value = ''
   password.value = ''
   confirmPassword.value = ''
+  createAttempted.value = false
   projectStore.createCache = {}
 }
 
@@ -62,6 +65,7 @@ const open = (request: KdbxCreateRequest): void => {
   filePath.value = request.filePath
   password.value = ''
   confirmPassword.value = ''
+  createAttempted.value = false
   visible.value = true
 }
 
@@ -75,10 +79,13 @@ const onCreateRequest = (request: unknown): void => {
 }
 
 const createVault = async(): Promise<void> => {
+  createAttempted.value = true
   if (!isKdbxPasswordValid(password.value)) {
+    ElMessage.error(t('kdbx.passwordRule'))
     return
   }
   if (password.value !== confirmPassword.value) {
+    ElMessage.error(t('kdbx.passwordMismatch'))
     return
   }
   creating.value = true
@@ -104,7 +111,7 @@ onBeforeUnmount(() => bus.off('KDBX::create-request', onCreateRequest))
 </script>
 
 <style scoped>
-.kdbx-create-title { display: flex; align-items: center; gap: 8px; }.kdbx-create-title button { display: inline-flex; width: 22px; height: 22px; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: transparent; color: var(--themeColor); cursor: help; }.kdbx-create-title button:hover { background: var(--floatHoverColor); }.kdbx-password-rule { margin-top: 6px; color: var(--editorColor50); font-size: 12px; line-height: 1.4; }.kdbx-password-rule.error { color: var(--el-color-danger); }.kdbx-create-dialog :deep(.is-password-invalid .el-input__wrapper) { box-shadow: 0 0 0 1px var(--el-color-danger) inset !important; }
+.kdbx-create-title { display: flex; align-items: center; gap: 8px; }.kdbx-create-title button { display: inline-flex; width: 22px; height: 22px; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: transparent; color: var(--themeColor); cursor: help; }.kdbx-create-title button:hover { background: var(--floatHoverColor); }.kdbx-password-rule { margin-top: 6px; color: var(--editorColor50); font-size: 12px; line-height: 1.4; }.kdbx-password-rule.error { color: var(--deleteColor, #ff6969) !important; }:global(.kdbx-create-dialog .el-input.is-password-invalid .el-input__wrapper) { box-shadow: 0 0 0 1px var(--deleteColor, #ff6969) inset !important; }
 :global(.kdbx-create-dialog) { --el-bg-color: var(--floatBgColor); --el-bg-color-overlay: var(--floatBgColor); --el-fill-color-blank: var(--floatBgColor); --el-text-color-primary: var(--editorColor); --el-text-color-regular: var(--editorColor80); --el-text-color-secondary: var(--editorColor50); --el-border-color: var(--floatBorderColor); --el-border-color-light: var(--floatBorderColor); background: var(--floatBgColor); border: 1px solid var(--floatBorderColor); color: var(--editorColor); }.kdbx-create-dialog :deep(.el-dialog__title), .kdbx-create-dialog :deep(.el-form-item__label) { color: var(--editorColor); }.kdbx-create-dialog :deep(.el-dialog__close) { color: var(--editorColor50); }.kdbx-create-dialog :deep(.el-input__wrapper) { background: var(--inputBgColor); box-shadow: 0 0 0 1px var(--floatBorderColor) inset; }.kdbx-create-dialog :deep(.el-input__inner) { color: var(--editorColor); }.kdbx-create-dialog :deep(.el-button--default) { background: var(--floatBgColor); border-color: var(--floatBorderColor); color: var(--editorColor); }
 :global(.kdbx-security-popover) { box-sizing: border-box; max-width: calc(100vw - 32px); padding: 10px 12px; border-color: var(--floatBorderColor); background: var(--floatBgColor); color: var(--editorColor); font-size: 13px; line-height: 1.55; white-space: normal; word-break: break-word; }.kdbx-security-popover p { margin: 0; }.kdbx-security-popover :global(.el-popper__arrow::before) { background: var(--floatBgColor); border-color: var(--floatBorderColor); }
 </style>
