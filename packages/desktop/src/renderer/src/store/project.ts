@@ -1,5 +1,6 @@
 import { ref, watch } from 'vue'
 import { defineStore } from 'pinia'
+import { ElMessageBox } from 'element-plus'
 import {
   addFile,
   unlinkFile,
@@ -31,6 +32,7 @@ import type { FileChangeDetail } from '@shared/types/files'
 import type { GeoGebraMode, MindMapStructure } from '@shared/types/files'
 import { getDrawioConfiguration } from '../util/drawioConfiguration'
 import { getMindMapConfiguration } from '../util/mindmapConfiguration'
+import { t } from '../i18n'
 
 type ProjectTree = TreeNode
 type TreeChange = FileChangeDetail
@@ -98,6 +100,7 @@ const getBasename = (pathname: string): string => {
 const isDrawingPath = (pathname: string): boolean => /\.drawio$/i.test(pathname)
 const isGeoGebraPath = (pathname: string): boolean => /\.ggb$/i.test(pathname)
 const isMindMapPath = (pathname: string): boolean => /\.smm$/i.test(pathname)
+const isKdbxPath = (pathname: string): boolean => /\.kdbx$/i.test(pathname)
 
 const isProjectPathMatch = (a: string, b: string): boolean => {
   if (window.fileUtils.isSamePathSync(a, b)) return true
@@ -512,10 +515,11 @@ export const useProjectStore = defineStore('project', () => {
         mtimeMs: stat.mtimeMs ?? Date.now(),
         isDirectory: false,
         isFile: true,
-        isMarkdown: !isDrawingPath(dest) && !isGeoGebraPath(dest) && !isMindMapPath(dest),
+        isMarkdown: !isDrawingPath(dest) && !isGeoGebraPath(dest) && !isMindMapPath(dest) && !isKdbxPath(dest),
         isDrawing: isDrawingPath(dest),
         isGeoGebra: isGeoGebraPath(dest),
-        isMindMap: isMindMapPath(dest)
+        isMindMap: isMindMapPath(dest),
+        isKdbx: isKdbxPath(dest)
       },
       String(preferencesStore.fileSortBy),
       String(preferencesStore.fileSortOrder)
@@ -936,26 +940,41 @@ export const useProjectStore = defineStore('project', () => {
       }
       bus.emit('SIDEBAR::show-new-input')
     })
-    bus.on('SIDEBAR::remove', () => {
-      const { pathname } = activeItem.value
-      const isDirectory = !!activeItem.value?.isDirectory
-      window.electron.ipcRenderer
-        .invoke('mt::fs-trash-item', pathname)
-        .then(() => {
-          editorStore.CLOSE_TABS_BY_PATH(pathname, { includeDescendants: isDirectory })
-          removeDeletedPathFromTree(pathname, isDirectory)
-          syncPathReferencesAfterDelete(pathname, isDirectory)
-          if (hasDeletedPathInTree(pathname, isDirectory) && projectTree.value?.pathname) {
-            window.electron.ipcRenderer.send('mt::reload-workspace', projectTree.value.pathname)
+    bus.on('SIDEBAR::remove', async () => {
+      const item = activeItem.value
+      if (!item?.pathname) return
+
+      const isDirectory = !!item.isDirectory
+      try {
+        await ElMessageBox.confirm(
+          t(isDirectory ? 'contextMenu.sideBar.deleteDirectoryConfirm' : 'contextMenu.sideBar.deleteFileConfirm', { name: item.name }),
+          t('contextMenu.sideBar.delete'),
+          {
+            confirmButtonText: t('common.ok'),
+            cancelButtonText: t('common.cancel'),
+            confirmButtonClass: 'el-button--danger',
+            type: 'warning'
           }
+        )
+      } catch {
+        return
+      }
+
+      try {
+        await window.electron.ipcRenderer.invoke('mt::fs-trash-item', item.pathname)
+        editorStore.CLOSE_TABS_BY_PATH(item.pathname, { includeDescendants: isDirectory })
+        removeDeletedPathFromTree(item.pathname, isDirectory)
+        syncPathReferencesAfterDelete(item.pathname, isDirectory)
+        if (hasDeletedPathInTree(item.pathname, isDirectory) && projectTree.value?.pathname) {
+          window.electron.ipcRenderer.send('mt::reload-workspace', projectTree.value.pathname)
+        }
+      } catch (err) {
+        notice.notify({
+          title: 'Error while deleting',
+          type: 'error',
+          message: err instanceof Error ? err.message : String(err)
         })
-        .catch((err) => {
-          notice.notify({
-            title: 'Error while deleting',
-            type: 'error',
-            message: err instanceof Error ? err.message : String(err)
-          })
-        })
+      }
     })
     bus.on('SIDEBAR::copy-cut', (type: unknown) => {
       const rootPath = projectTree.value?.pathname ?? null
@@ -1088,6 +1107,12 @@ export const useProjectStore = defineStore('project', () => {
       if (!storedName.toLowerCase().endsWith('.smm')) {
         storedName += '.smm'
       }
+    } else if (type === 'kdbx') {
+      fileType = 'file'
+      storedName = name.trim()
+      if (!storedName.toLowerCase().endsWith('.kdbx')) {
+        storedName += '.kdbx'
+      }
     } else {
       fileType = 'directory'
     }
@@ -1119,7 +1144,14 @@ export const useProjectStore = defineStore('project', () => {
       return
     }
 
-    create(fullName, fileType)
+    if (type === 'kdbx') {
+      bus.emit('KDBX::create-request', { filePath: fullName })
+      return
+    }
+
+    const createOperation = create(fullName, fileType)
+
+    createOperation
       .then(() => {
         createCache.value = {}
         if (fileType === 'file' && type !== 'drawing' && type !== 'geogebra' && type !== 'mindmap') {
@@ -1177,6 +1209,8 @@ export const useProjectStore = defineStore('project', () => {
           ? `${name.trim().replace(/\.ggb$/i, '')}.ggb`
           : isMindMapPath(src)
             ? `${name.trim().replace(/\.smm$/i, '')}.smm`
+            : isKdbxPath(src)
+              ? `${name.trim().replace(/\.kdbx$/i, '')}.kdbx`
             : toStoredNoteName(name, kind)
     }
     if (!storedName) return

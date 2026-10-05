@@ -2,6 +2,7 @@ import {
   SEPARATOR,
   getNewFile,
   getNewDrawing,
+  getNewKdbx,
   getNewGeoGebraMenu,
   getNewMindMapMenu,
   getNewDirectory,
@@ -61,6 +62,7 @@ export const showContextMenu = (
   if (kind === 'root') {
     contextItems = [
       getNewDrawing(),
+      getNewKdbx(),
       getNewGeoGebraMenu(),
       getNewMindMapMenu(),
       getNewGroup(),
@@ -95,6 +97,7 @@ export const showContextMenu = (
   } else if (kind === 'area') {
     contextItems = [
       getNewDrawing(),
+      getNewKdbx(),
       getNewGeoGebraMenu(),
       getNewMindMapMenu(),
       getNewDocument(),
@@ -115,6 +118,7 @@ export const showContextMenu = (
     contextItems = [
       getNewDocument(),
       getNewDrawing(),
+      getNewKdbx(),
       getNewGeoGebraMenu(),
       getNewMindMapMenu(),
       SEPARATOR,
@@ -132,6 +136,7 @@ export const showContextMenu = (
     contextItems = [
       getNewFile(),
       getNewDrawing(),
+      getNewKdbx(),
       getNewGeoGebraMenu(),
       getNewMindMapMenu(),
       getNewDirectory(),
@@ -172,6 +177,7 @@ export const showNoteListContextMenu = (
   if (kind === 'root') {
     contextItems = [
       getNewDrawing(),
+      getNewKdbx(),
       getNewGeoGebraMenu(),
       getNewMindMapMenu(),
       getNewGroup(),
@@ -198,6 +204,7 @@ export const showNoteListContextMenu = (
   } else if (kind === 'area') {
     contextItems = [
       getNewDrawing(),
+      getNewKdbx(),
       getNewGeoGebraMenu(),
       getNewMindMapMenu(),
       getNewDocument(),
@@ -215,6 +222,7 @@ export const showNoteListContextMenu = (
     contextItems = [
       getNewDocument(),
       getNewDrawing(),
+      getNewKdbx(),
       getNewGeoGebraMenu(),
       getNewMindMapMenu(),
       SEPARATOR,
@@ -228,7 +236,7 @@ export const showNoteListContextMenu = (
       getShowInFolder()
     ]
   } else {
-    contextItems = [getNewDocument(), getNewMindMapMenu(), SEPARATOR, getPASTE(), getCopyPath()]
+    contextItems = [getNewDocument(), getNewKdbx(), getNewMindMapMenu(), SEPARATOR, getPASTE(), getCopyPath()]
   }
 
   const items = normalizeContextItems(contextItems, hasPathCache)

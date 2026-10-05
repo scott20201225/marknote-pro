@@ -105,6 +105,28 @@
   --notificationWarningBg: #ff8800;
   --notificationErrorColor: #ffffff;
   --notificationErrorBg: #ff6969;
+
+  /* Element Plus is used for application dialogs and form controls. Keep its
+     palette tied to the active MarkNotePro skin rather than its light defaults. */
+  --el-color-primary: var(--themeColor);
+  --el-color-danger: var(--deleteColor);
+  --el-bg-color: var(--editorBgColor);
+  --el-bg-color-page: var(--editorBgColor);
+  --el-bg-color-overlay: var(--floatBgColor);
+  --el-fill-color-blank: var(--floatBgColor);
+  --el-fill-color: var(--inputBgColor);
+  --el-fill-color-light: var(--floatHoverColor);
+  --el-fill-color-lighter: var(--floatHoverColor);
+  --el-fill-color-extra-light: var(--floatHoverColor);
+  --el-text-color-primary: var(--editorColor80);
+  --el-text-color-regular: var(--editorColor);
+  --el-text-color-secondary: var(--editorColor50);
+  --el-text-color-placeholder: var(--editorColor50);
+  --el-border-color: var(--floatBorderColor);
+  --el-border-color-light: var(--floatBorderColor);
+  --el-border-color-lighter: var(--floatBorderColor);
+  --el-border-color-extra-light: var(--floatBorderColor);
+  --el-mask-color: var(--maskColor);
 }
 
 ::-webkit-scrollbar,
@@ -224,9 +246,64 @@ body {
   padding: 8px 6px;
 }
 
-input.el-input__inner {
+.el-input__wrapper,
+.el-select__wrapper {
   background: var(--inputBgColor);
-  border: 1px solid var(--editorColor10);
+  box-shadow: 0 0 0 1px var(--floatBorderColor) inset;
+}
+
+.el-input__inner,
+.el-textarea__inner,
+.el-select__selected-item,
+.el-select__placeholder {
+  color: var(--editorColor80);
+  -webkit-text-fill-color: currentColor;
+}
+
+.el-input__inner {
+  background: transparent;
+  border: 0;
+}
+
+.el-textarea__inner {
+  background: var(--inputBgColor);
+  box-shadow: 0 0 0 1px var(--floatBorderColor) inset;
+}
+
+.el-input__prefix,
+.el-input__suffix,
+.el-select__caret {
+  color: var(--editorColor50);
+}
+
+.el-select-dropdown,
+.el-popper.el-select__popper {
+  border-color: var(--floatBorderColor);
+  background: var(--floatBgColor);
+}
+
+.el-select-dropdown__item,
+.el-select-dropdown__empty {
+  color: var(--editorColor);
+}
+
+.el-select-dropdown__item.hover,
+.el-select-dropdown__item:hover,
+.el-select-dropdown__item.is-selected {
+  background: var(--floatHoverColor);
+  color: var(--themeColor);
+}
+
+.el-message-box {
+  border: 1px solid var(--floatBorderColor);
+  background: var(--floatBgColor);
+  box-shadow: 0 8px 24px var(--floatShadow);
+}
+
+.el-message-box__title,
+.el-message-box__content,
+.el-message-box__message,
+.el-message-box__headerbtn {
   color: var(--editorColor80);
 }
 
@@ -427,4 +504,26 @@ button.button-primary:not(.custom):focus,
 
 .el-tabs__active-bar {
   background-color: var(--themeColor);
+}
+
+/* Element Plus overlays are shared by the KDBX editor and must inherit the app skin. */
+.el-select__selection .el-tag,
+.el-select__wrapper .el-tag {
+  --el-tag-bg-color: var(--floatHoverColor);
+  --el-tag-border-color: var(--floatBorderColor);
+  --el-tag-text-color: var(--editorColor);
+  background-color: var(--floatHoverColor);
+  border-color: var(--floatBorderColor);
+  color: var(--editorColor);
+}
+
+.el-select__selection .el-tag .el-tag__close,
+.el-select__wrapper .el-tag .el-tag__close {
+  color: var(--editorColor50);
+}
+
+.el-select__selection .el-tag .el-tag__close:hover,
+.el-select__wrapper .el-tag .el-tag__close:hover {
+  background-color: var(--itemBgColor);
+  color: var(--editorColor);
 }

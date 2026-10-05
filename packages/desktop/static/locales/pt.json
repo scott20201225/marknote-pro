@@ -231,7 +231,9 @@
       "cut": "Cortar",
       "paste": "Colar",
       "rename": "Renomear",
-      "moveToTrash": "Mover para Lixeira",
+      "delete": "Excluir",
+      "deleteFileConfirm": "Excluir permanentemente o arquivo \"{name}\"? Esta ação não pode ser desfeita.",
+      "deleteDirectoryConfirm": "Excluir permanentemente a pasta \"{name}\" e todas as subpastas e arquivos? Esta ação não pode ser desfeita.",
       "showInFolder": "Mostrar na Pasta"
     },
     "tabs": {
@@ -925,6 +927,13 @@
   "common": {
     "cancel": "Cancelar",
     "ok": "OK"
+  },
+  "kdbx": {
+    "allGroups": "Todos os grupos",
+    "currentPassword": "Current master password", "newPassword": "New master password", "passwordMismatch": "Passwords do not match", "passwordReset": "Master password reset", "resetPassword": "Reset master password", "resetPasswordFailed": "Could not reset master password",
+    "hidePassword": "Hide password", "showPassword": "Show password",
+    "passwordRule": "Use 8-16 characters with an uppercase letter, a lowercase letter, and a number", "vaultSecurityInfo": "KDBX uses the standard KeePass-compatible encryption format: password entries and attachments are protected by the master password. You can sync the .kdbx file with Git or another service. Keep the master password safe: it cannot be recovered.",
+    "cancelEdit": "Cancel editing", "copied": "Copied to clipboard", "copy": "Copy", "deleteHistory": "Delete history version", "deleteHistoryConfirm": "This history version will be permanently deleted and cannot be restored. Continue?", "discardChangesConfirm": "Discard unsaved changes?", "downloadAttachment": "Download attachment", "edit": "Edit", "export": "Export", "invalidPassword": "The password is incorrect", "previewAttachment": "Preview attachment", "restoreHistoryConfirm": "Restoring this version overwrites the current password entry and creates a new history version. Confirm restore?", "unlockFailed": "Unable to unlock the vault"
   },
   "dialog": {
     "cancel": "Cancelar",

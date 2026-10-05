@@ -27,6 +27,14 @@ export const getNewDrawing = () => ({
   }
 })
 
+export const getNewKdbx = () => ({
+  label: t('contextMenu.sideBar.newKdbx'),
+  id: 'newKdbxMenuItem',
+  click(_menuItem: unknown, _browserWindow: unknown) {
+    contextMenu.newKdbx()
+  }
+})
+
 export const getNewGeoGebra = (mode: GeoGebraMode) => {
   const modeOption = GEO_GEBRA_MODES.find((option) => option.value === mode)
   return {
@@ -150,7 +158,7 @@ export const getRENAME = () => ({
 })
 
 export const getDELETE = () => ({
-  label: t('contextMenu.sideBar.moveToTrash'),
+  label: t('contextMenu.sideBar.delete'),
   id: 'deleteMenuItem',
   click(_menuItem: unknown, _browserWindow: unknown) {
     contextMenu.remove()

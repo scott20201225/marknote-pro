@@ -22,6 +22,7 @@ export interface TreeFileNode {
   isDrawing?: boolean
   isGeoGebra?: boolean
   isMindMap?: boolean
+  isKdbx?: boolean
 }
 
 export interface TreeFolderNode {

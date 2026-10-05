@@ -30,9 +30,11 @@ import type {
   FileChangeDetail,
   UnsavedFile,
   UnsavedDrawioFile,
+  UnsavedKdbxFile,
   UnsavedMindMapFile
 } from './files'
-import type { GeoGebraMode } from './files'
+import type { GeoGebraMode, MindMapStructure } from './files'
+import type { KdbxEntryDetail, KdbxEntryInput, KdbxEntryRevision, KdbxVaultSnapshot } from './kdbx'
 import type { BufferedState as BufferedStateType } from './bufferedState'
 import type { MenuTemplate, MenuPopupPosition } from './menu'
 
@@ -144,7 +146,7 @@ export interface IpcInvokeChannels {
   'mt::geogebra::show': { args: [bounds: DrawioBounds]; ret: void }
   'mt::geogebra::capture-snapshot': { args: []; ret: string | null }
   'mt::mindmap::open': {
-    args: [pathname: string, configuration?: MindMapConfiguration]
+    args: [pathname: string, configuration?: MindMapConfiguration, structure?: MindMapStructure]
     ret: void
   }
   'mt::mindmap::configure': { args: [configuration: MindMapConfiguration]; ret: void }
@@ -167,6 +169,33 @@ export interface IpcInvokeChannels {
       colors?: Record<string, string>
     } | null
   }
+  'mt::kdbx::open': { args: [pathname: string]; ret: void }
+  'mt::kdbx::create': { args: [pathname: string, password: string]; ret: void }
+  'mt::kdbx::unlock': { args: [pathname: string, password: string]; ret: KdbxVaultSnapshot }
+  'mt::kdbx::lock': { args: [pathname: string]; ret: void }
+  'mt::kdbx::reset-password': { args: [pathname: string, currentPassword: string, newPassword: string]; ret: void }
+  'mt::kdbx::snapshot': { args: [pathname: string]; ret: KdbxVaultSnapshot }
+  'mt::kdbx::entry': { args: [pathname: string, entryId: string]; ret: KdbxEntryDetail | null }
+  'mt::kdbx::save': { args: [pathname: string]; ret: void }
+  'mt::kdbx::create-group': { args: [pathname: string, parentId: string, name: string]; ret: KdbxVaultSnapshot }
+  'mt::kdbx::rename-group': { args: [pathname: string, groupId: string, name: string]; ret: KdbxVaultSnapshot }
+  'mt::kdbx::delete-group': { args: [pathname: string, groupId: string]; ret: KdbxVaultSnapshot }
+  'mt::kdbx::empty-recycle-bin': { args: [pathname: string]; ret: KdbxVaultSnapshot }
+  'mt::kdbx::create-entry': { args: [pathname: string, input: KdbxEntryInput]; ret: KdbxEntryDetail }
+  'mt::kdbx::commit-entry': {
+    args: [pathname: string, entryId: string, input: KdbxEntryInput]
+    ret: KdbxEntryDetail
+  }
+  'mt::kdbx::update-entry': { args: [pathname: string, entryId: string, input: KdbxEntryInput]; ret: KdbxEntryDetail }
+  'mt::kdbx::delete-entry': { args: [pathname: string, entryId: string]; ret: KdbxVaultSnapshot }
+  'mt::kdbx::history-entry': { args: [pathname: string, entryId: string, historyIndex: number]; ret: KdbxEntryRevision }
+  'mt::kdbx::restore-history': { args: [pathname: string, entryId: string, historyIndex: number]; ret: KdbxEntryDetail }
+  'mt::kdbx::delete-history': { args: [pathname: string, entryId: string, historyIndex: number]; ret: KdbxEntryDetail }
+  'mt::kdbx::read-attachment': { args: [pathname: string, entryId: string, name: string]; ret: ArrayBuffer }
+  'mt::kdbx::preview-attachment': { args: [pathname: string, entryId: string, name: string]; ret: string }
+  'mt::kdbx::export-entries': { args: [pathname: string, entryIds: string[], extractionCode: string]; ret: boolean }
+  'mt::kdbx::select-import-file': { args: []; ret: string | null }
+  'mt::kdbx::import-entries': { args: [pathname: string, groupId: string, importFilePath: string, extractionCode: string]; ret: KdbxVaultSnapshot }
   'mt::fonts::list': { args: []; ret: string[] }
   'mt::github-desktop::capture-snapshot': { args: []; ret: string | null }
   'mt::github-desktop::show': {
@@ -266,7 +295,8 @@ export interface IpcSendChannels {
   'mt::close-window-confirm': [
     unsavedFiles: UnsavedFile[],
     unsavedDrawioFiles?: UnsavedDrawioFile[],
-    unsavedMindMapFiles?: UnsavedMindMapFile[]
+    unsavedMindMapFiles?: UnsavedMindMapFile[],
+    unsavedKdbxFiles?: UnsavedKdbxFile[]
   ]
   'mt::cmd-close-window': []
   'mt::cmd-import-file': []
@@ -361,6 +391,7 @@ export interface IpcSendChannels {
   'mt::drawio-menu-mode': [enabled: boolean]
   'mt::geogebra-menu-mode': [enabled: boolean]
   'mt::mindmap-menu-mode': [enabled: boolean]
+  'mt::kdbx-menu-mode': [enabled: boolean]
   'mt::mindmap::hide': []
   'mt::mindmap::set-bounds': [bounds: DrawioBounds]
   'mt::mindmap::state': [payload: { modified?: boolean; data?: unknown }]
@@ -452,6 +483,18 @@ export interface IpcMainEventChannels {
       lastSavedHash?: string
     }
   ]
+  'mt::kdbx::opened': [payload: { filePath: string; title: string }]
+  'mt::kdbx::state': [
+    payload: {
+      filePath: string
+      locked?: boolean
+      modified: boolean
+      isSaved: boolean
+      isSaving: boolean
+      saveError?: string
+    }
+  ]
+  'mt::kdbx-lock': []
   'mt::mindmap::init': [
     payload: {
       filePath?: string

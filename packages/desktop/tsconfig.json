@@ -25,6 +25,7 @@
     "out",
     "dist",
     "../muyajs/**/*",
+    "src/kdbxWebApp/kdbxweb/**/*",
     "src/renderer/src/assets/symbolIcon/index.js",
     "**/*.min.json"
   ]

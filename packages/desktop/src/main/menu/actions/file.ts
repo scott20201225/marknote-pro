@@ -24,6 +24,7 @@ import { normalizeAndResolvePath, writeFile } from '../../filesystem'
 import { writeMarkdownFile } from '../../filesystem/markdown'
 import { createDrawioFile, isDrawioFile, openDrawioFile, saveDrawioDocuments } from '../../drawio'
 import { createMindMapFile, isMindMapFile, openMindMapFile, saveMindMapDocuments } from '../../mindmap'
+import { saveKdbxDocuments } from '../../kdbx'
 import { getPath, getRecommendTitleFromMarkdownString } from '../../utils'
 import {
   normalizeLinkUrlCandidate,
@@ -32,7 +33,7 @@ import {
 } from '../../utils/linkOpenWith'
 import pandoc from '../../utils/pandoc'
 import { t } from '../../i18n'
-import type { ExportType, UnsavedDrawioFile, UnsavedFile, UnsavedMindMapFile } from '@shared/types/files'
+import type { ExportType, UnsavedDrawioFile, UnsavedFile, UnsavedKdbxFile, UnsavedMindMapFile } from '@shared/types/files'
 
 type Win = BrowserWindow | null | undefined
 
@@ -509,9 +510,10 @@ const showUnsavedFilesMessage = async (
   win: BrowserWindow,
   files: UnsavedFile[],
   drawioFiles: UnsavedDrawioFile[] = [],
-  mindMapFiles: UnsavedMindMapFile[] = []
+  mindMapFiles: UnsavedMindMapFile[] = [],
+  kdbxFiles: UnsavedKdbxFile[] = []
 ): Promise<{ needSave: boolean } | null> => {
-  const allFiles = [...files, ...drawioFiles, ...mindMapFiles]
+  const allFiles = [...files, ...drawioFiles, ...mindMapFiles, ...kdbxFiles]
   const { response } = await dialog.showMessageBox(win, {
     type: 'warning',
     buttons: [t('dialog.save'), t('dialog.dontSave'), t('dialog.cancel')],
@@ -694,7 +696,8 @@ ipcMain.on(
     e,
     unsavedFiles: UnsavedFile[],
     unsavedDrawioFiles: UnsavedDrawioFile[] = [],
-    unsavedMindMapFiles: UnsavedMindMapFile[] = []
+    unsavedMindMapFiles: UnsavedMindMapFile[] = [],
+    unsavedKdbxFiles: UnsavedKdbxFile[] = []
   ) => {
     const win = BrowserWindow.fromWebContents(e.sender)
     if (!win) {
@@ -704,7 +707,8 @@ ipcMain.on(
       win,
       unsavedFiles,
       unsavedDrawioFiles,
-      unsavedMindMapFiles
+      unsavedMindMapFiles,
+      unsavedKdbxFiles
     )
     if (!userResult) {
       return
@@ -731,7 +735,8 @@ ipcMain.on(
         saveMindMapDocuments(
           win,
           unsavedMindMapFiles.map((file) => file.pathname)
-        )
+        ),
+        saveKdbxDocuments(win)
       ])
       .then(() => {
         ipcMain.emit('window-close-by-id', win.id)

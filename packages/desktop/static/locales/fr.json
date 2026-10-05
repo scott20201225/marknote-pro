@@ -231,7 +231,9 @@
       "cut": "Couper",
       "paste": "Coller",
       "rename": "Renommer",
-      "moveToTrash": "Déplacer vers la corbeille",
+      "delete": "Supprimer",
+      "deleteFileConfirm": "Supprimer définitivement le fichier \"{name}\" ? Cette action est irréversible.",
+      "deleteDirectoryConfirm": "Supprimer définitivement le dossier \"{name}\" et tous ses sous-dossiers et fichiers ? Cette action est irréversible.",
       "showInFolder": "Afficher dans le dossier"
     },
     "tabs": {
@@ -925,6 +927,13 @@
   "common": {
     "cancel": "Annuler",
     "ok": "OK"
+  },
+  "kdbx": {
+    "allGroups": "Tous les groupes",
+    "currentPassword": "Current master password", "newPassword": "New master password", "passwordMismatch": "Passwords do not match", "passwordReset": "Master password reset", "resetPassword": "Reset master password", "resetPasswordFailed": "Could not reset master password",
+    "hidePassword": "Hide password", "showPassword": "Show password",
+    "passwordRule": "Use 8-16 characters with an uppercase letter, a lowercase letter, and a number", "vaultSecurityInfo": "KDBX uses the standard KeePass-compatible encryption format: password entries and attachments are protected by the master password. You can sync the .kdbx file with Git or another service. Keep the master password safe: it cannot be recovered.",
+    "cancelEdit": "Cancel editing", "copied": "Copied to clipboard", "copy": "Copy", "deleteHistory": "Delete history version", "deleteHistoryConfirm": "This history version will be permanently deleted and cannot be restored. Continue?", "discardChangesConfirm": "Discard unsaved changes?", "downloadAttachment": "Download attachment", "edit": "Edit", "export": "Export", "invalidPassword": "The password is incorrect", "previewAttachment": "Preview attachment", "restoreHistoryConfirm": "Restoring this version overwrites the current password entry and creates a new history version. Confirm restore?", "unlockFailed": "Unable to unlock the vault"
   },
   "dialog": {
     "cancel": "Annuler",

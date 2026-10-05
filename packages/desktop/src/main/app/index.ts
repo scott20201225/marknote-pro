@@ -27,6 +27,7 @@ import SettingWindow from '../windows/setting'
 import { isDrawioFile, openDrawioFile } from '../drawio'
 import { isGeoGebraFile, openGeoGebraFile } from '../geogebra'
 import { isMindMapFile, openMindMapFile } from '../mindmap'
+import { isKdbxFile, openKdbxFile } from '../kdbx'
 import { zoomIn, zoomOut } from '../windows/utils'
 import { setLanguage } from '../i18n'
 import { getNativeThemeSource, isDarkApplicationTheme } from './nativeTheme'
@@ -70,6 +71,10 @@ const normalizeOpenPath = (pathname: string): PathInfo | null => {
     return resolved ? { isDir: false, path: resolved } : null
   }
   if (isMindMapFile(pathname) && fs.existsSync(pathname)) {
+    const resolved = normalizeAndResolvePath(pathname)
+    return resolved ? { isDir: false, path: resolved } : null
+  }
+  if (isKdbxFile(pathname) && fs.existsSync(pathname)) {
     const resolved = normalizeAndResolvePath(pathname)
     return resolved ? { isDir: false, path: resolved } : null
   }

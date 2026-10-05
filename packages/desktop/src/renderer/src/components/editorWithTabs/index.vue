@@ -80,6 +80,7 @@ const hasMarkdownFile = computed(
     !currentFile.value.isDrawing &&
     !currentFile.value.isGeoGebra &&
     !currentFile.value.isMindMap
+    && !currentFile.value.isKdbx
 )
 
 </script>

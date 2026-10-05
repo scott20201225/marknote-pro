@@ -104,6 +104,10 @@ const handleFileClick = (): void => {
     )
     return
   }
+  if (props.file.isKdbx || /\.kdbx$/i.test(pathname)) {
+    void window.electron.ipcRenderer.invoke('mt::kdbx::open', pathname)
+    return
+  }
   if (!isMarkdownFile) return
   const openedTab = tabs.value.find((f) => window.fileUtils.isSamePathSync(f.pathname, pathname))
   if (openedTab) {

@@ -21,6 +21,7 @@ import { switchLanguage } from '../spellchecker'
 import { isDrawioFile, openDrawioFile } from '../drawio'
 import { isGeoGebraFile, openGeoGebraFile } from '../geogebra'
 import { isMindMapFile, openMindMapFile } from '../mindmap'
+import { isKdbxFile, openKdbxFile } from '../kdbx'
 import fs from 'fs'
 
 type RawMarkdownDocument = Awaited<ReturnType<typeof loadMarkdownFile>>
@@ -400,6 +401,16 @@ class EditorWindow extends BaseWindow {
         }
         continue
       }
+      if (isKdbxFile(filePath)) {
+        if (this.lifecycle === WindowLifecycle.READY) {
+          this.addToOpenedFiles(filePath)
+          this._accessor.menu.addRecentlyUsedDocument(filePath)
+          void openKdbxFile(filePath, browserWindow)
+        } else {
+          this._filesToOpen!.push({ filePath, options, selected })
+        }
+        continue
+      }
       loadMarkdownFile(
         filePath,
         eol,
@@ -657,6 +668,10 @@ class EditorWindow extends BaseWindow {
         this.addToOpenedFiles(filePath)
         this._accessor.menu.addRecentlyUsedDocument(filePath)
         void openMindMapFile(filePath, this.browserWindow)
+      } else if (isKdbxFile(filePath)) {
+        this.addToOpenedFiles(filePath)
+        this._accessor.menu.addRecentlyUsedDocument(filePath)
+        void openKdbxFile(filePath, this.browserWindow)
       } else if (doc) {
         this._doOpenTab(doc, options, selected)
       }

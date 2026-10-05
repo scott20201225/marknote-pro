@@ -12,6 +12,10 @@ export const newDrawing = (_menuItem?: MenuItemArg, _browserWindow?: BrowserWind
   bus.emit('SIDEBAR::new', 'drawing')
 }
 
+export const newKdbx = (_menuItem?: MenuItemArg, _browserWindow?: BrowserWindowArg): void => {
+  bus.emit('SIDEBAR::new', 'kdbx')
+}
+
 export const newGeoGebra = (
   mode: GeoGebraMode = 'graphing',
   _browserWindow?: BrowserWindowArg

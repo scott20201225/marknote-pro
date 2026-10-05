@@ -148,14 +148,15 @@ const showCreateInput = computed<boolean>(() => {
     selectedKind.value === 'area' ||
     selectedKind.value === 'document' ||
     ((selectedKind.value === 'root' || selectedKind.value === 'group') &&
-      (cache.type === 'drawing' || cache.type === 'geogebra' || cache.type === 'mindmap'))
+      (cache.type === 'drawing' || cache.type === 'geogebra' || cache.type === 'mindmap' || cache.type === 'kdbx'))
   if (!canCreateInList) return false
   if (
     cache.type !== 'document' &&
     cache.type !== 'file' &&
     cache.type !== 'drawing' &&
     cache.type !== 'geogebra' &&
-    cache.type !== 'mindmap'
+    cache.type !== 'mindmap' &&
+    cache.type !== 'kdbx'
   )
     return false
   return cache.dirname === listTarget.value.pathname
@@ -291,6 +292,10 @@ const handleFileClick = (file: TreeFileNode): void => {
   }
   if (file.isMindMap || /\.smm$/i.test(pathname)) {
     void window.electron.ipcRenderer.invoke('mt::mindmap::open', pathname, getMindMapConfiguration())
+    return
+  }
+  if (file.isKdbx || /\.kdbx$/i.test(pathname)) {
+    void window.electron.ipcRenderer.invoke('mt::kdbx::open', pathname)
     return
   }
   const openedTab = tabs.value.find((tab) =>
