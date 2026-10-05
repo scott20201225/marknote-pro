@@ -13,6 +13,7 @@ import theme from './theme'
 import drawioFile from './drawioFile'
 import geogebraFile from './geogebraFile'
 import mindmapFile from './mindmapFile'
+import kdbxFile from './kdbxFile'
 import type Keybindings from '../../keyboard/shortcutHandler'
 import type Preference from '../../preferences'
 
@@ -47,6 +48,7 @@ export default function (
     drawioAutoSave?: boolean
     geogebraMode?: boolean
     mindmapMode?: boolean
+    kdbxMode?: boolean
   } = {}
 ): MenuItemConstructorOptions[] {
   if (options.drawioMode) {
@@ -77,6 +79,17 @@ export default function (
     return [
       ...(process.platform === 'darwin' ? [marknotepro(keybindings)] : []),
       mindmapFile(keybindings, !!autoSave),
+      theme(preferences),
+      language(preferences),
+      help()
+    ]
+  }
+
+  if (options.kdbxMode) {
+    const { autoSave } = preferences.getAll() as { autoSave?: boolean }
+    return [
+      ...(process.platform === 'darwin' ? [marknotepro(keybindings)] : []),
+      kdbxFile(keybindings, !!autoSave),
       theme(preferences),
       language(preferences),
       help()

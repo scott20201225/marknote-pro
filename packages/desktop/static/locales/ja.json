@@ -231,7 +231,9 @@
       "cut": "切り取り",
       "paste": "貼り付け",
       "rename": "名前を変更",
-      "moveToTrash": "ゴミ箱に移動",
+      "delete": "削除",
+      "deleteFileConfirm": "ファイル「{name}」を完全に削除しますか？この操作は元に戻せません。",
+      "deleteDirectoryConfirm": "フォルダー「{name}」とすべてのサブフォルダーおよびファイルを完全に削除しますか？この操作は元に戻せません。",
       "showInFolder": "フォルダで表示"
     },
     "tabs": {
@@ -925,6 +927,13 @@
   "common": {
     "cancel": "キャンセル",
     "ok": "OK"
+  },
+  "kdbx": {
+    "allGroups": "すべてのグループ",
+    "currentPassword": "現在のマスターパスワード", "newPassword": "新しいマスターパスワード", "passwordMismatch": "パスワードが一致しません", "passwordReset": "マスターパスワードを変更しました", "resetPassword": "マスターパスワードを変更", "resetPasswordFailed": "マスターパスワードを変更できませんでした",
+    "hidePassword": "パスワードを隠す", "showPassword": "パスワードを表示",
+    "passwordRule": "8-16 文字で、大文字、小文字、数字をそれぞれ含めてください", "vaultSecurityInfo": "KDBX は KeePass 互換の標準暗号化形式を使用し、パスワード項目と添付ファイルはマスターパスワードで保護されます。.kdbx ファイルは Git などで同期できます。マスターパスワードを忘れると復元できません。",
+    "cancelEdit": "Cancel editing", "copied": "Copied to clipboard", "copy": "Copy", "deleteHistory": "Delete history version", "deleteHistoryConfirm": "This history version will be permanently deleted and cannot be restored. Continue?", "discardChangesConfirm": "Discard unsaved changes?", "downloadAttachment": "Download attachment", "edit": "Edit", "export": "Export", "invalidPassword": "The password is incorrect", "previewAttachment": "Preview attachment", "restoreHistoryConfirm": "Restoring this version overwrites the current password entry and creates a new history version. Confirm restore?", "unlockFailed": "Unable to unlock the vault"
   },
   "dialog": {
     "cancel": "キャンセル",

@@ -11,6 +11,7 @@ import { registerGitHubDesktopHandlers } from './githubDesktop'
 import { registerDrawioHandlers } from '../drawio'
 import { registerGeoGebraHandlers } from '../geogebra'
 import { registerMindMapHandlers } from '../mindmap'
+import { registerKdbxHandlers } from '../kdbx'
 
 export const registerSandboxIpcHandlers = (): void => {
   registerBootInfo()
@@ -26,4 +27,5 @@ export const registerSandboxIpcHandlers = (): void => {
   registerDrawioHandlers()
   registerGeoGebraHandlers()
   registerMindMapHandlers()
+  registerKdbxHandlers()
 }

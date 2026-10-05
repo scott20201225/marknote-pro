@@ -223,6 +223,9 @@ importers:
       katex:
         specifier: ^0.17.0
         version: 0.17.0
+      kdbxweb:
+        specifier: file:src/kdbxWebApp/kdbxweb
+        version: file:packages/desktop/src/kdbxWebApp/kdbxweb
       keytar:
         specifier: ^7.9.0
         version: 7.9.0
@@ -7325,6 +7328,9 @@ packages:
   fecha@4.2.3:
     resolution: {integrity: sha512-OP2IUU6HeYKJi3i0z4A19kHMQoLVs4Hc+DPqqxI2h/DPZHTm/vjsfC6P0b4jCMy14XizLBqvndQ+UilD7707Jw==}
 
+  fflate@0.7.5:
+    resolution: {integrity: sha512-QieYf//cis6ywHNi5qW1+PXPQ4bC+XVJAtS4AXIML8P76GroEiOxm/oQtn1f02UkJY1+KsXMJcC+R2v/Eg4G3g==}
+
   file-entry-cache@11.1.5:
     resolution: {integrity: sha512-+PFTHITI08JIGhnNpGNI8T8inUpgZfk3GNEqfT9R2zZV2iFXg3CvqzSl/uEhs7TSGujYRELEANyDvS8Fj7+S7Q==}
 
@@ -8343,6 +8349,10 @@ packages:
   katex@0.17.0:
     resolution: {integrity: sha512-Vdw0ATsQ9V+LuegM/BTwQqV/6cTl5lbGcIrU+BCgLxyf6bo38ybOr372tuSIxir3CN720flu1meYR6XzNMwQnw==}
     hasBin: true
+
+  kdbxweb@file:packages/desktop/src/kdbxWebApp/kdbxweb:
+    resolution: {directory: packages/desktop/src/kdbxWebApp/kdbxweb, type: directory}
+    engines: {node: '>=20.19.0', pnpm: '>=10'}
 
   keytar@7.9.0:
     resolution: {integrity: sha512-VPD8mtVtm5JNtA2AErl6Chp06JBfy7diFQ7TQQhdpWOl6MrCRB+eRbvAZUsbGQS9kiMq0coJsy0W0vHpDCkWsQ==}
@@ -19470,6 +19480,8 @@ snapshots:
 
   fecha@4.2.3: {}
 
+  fflate@0.7.5: {}
+
   file-entry-cache@11.1.5:
     dependencies:
       flat-cache: 6.1.23
@@ -20573,6 +20585,11 @@ snapshots:
   katex@0.17.0:
     dependencies:
       commander: 8.3.0
+
+  kdbxweb@file:packages/desktop/src/kdbxWebApp/kdbxweb:
+    dependencies:
+      '@xmldom/xmldom': 0.8.13
+      fflate: 0.7.5
 
   keytar@7.9.0:
     dependencies:

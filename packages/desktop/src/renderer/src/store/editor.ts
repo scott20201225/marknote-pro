@@ -29,9 +29,11 @@ import type {
   IDrawioState,
   IGeoGebraState,
   IMindMapState,
+  IKdbxState,
   GeoGebraMode,
   UnsavedDrawioFile,
   UnsavedGeoGebraFile,
+  UnsavedKdbxFile,
   UnsavedMindMapFile,
   FileNotification,
   LineEnding,
@@ -170,6 +172,7 @@ export interface EditorState {
   drawioStates: Record<string, IDrawioState>
   geogebraStates: Record<string, IGeoGebraState>
   mindMapStates: Record<string, IMindMapState>
+  kdbxStates: Record<string, IKdbxState>
   listToc: TocItem[]
   toc: TocTreeNode[]
 }
@@ -191,6 +194,7 @@ export const useEditorStore = defineStore('editor', {
     drawioStates: {},
     geogebraStates: {},
     mindMapStates: {},
+    kdbxStates: {},
     listToc: [], // Used for equal check and for searching for the correct github-slug to jump to
     toc: []
   }),
@@ -281,6 +285,22 @@ export const useEditorStore = defineStore('editor', {
                 isSaved: tab.isSaved,
                 isSaving: false
               } satisfies IMindMapState
+            ])
+        )
+        s.kdbxStates = Object.fromEntries(
+          tabs
+            .filter((tab) => tab.isKdbx)
+            .map((tab) => [
+              tab.id,
+              {
+                id: tab.id,
+                pathname: tab.pathname,
+                filename: tab.filename,
+                locked: true,
+                modified: false,
+                isSaved: tab.isSaved,
+                isSaving: false
+              } satisfies IKdbxState
             ])
         )
         s.listToc = []
@@ -628,6 +648,12 @@ export const useEditorStore = defineStore('editor', {
         }
         return
       }
+      if (this.currentFile.isKdbx) {
+        if (this.currentFile.pathname) {
+          void window.electron.ipcRenderer.invoke('mt::kdbx::save', this.currentFile.pathname)
+        }
+        return
+      }
       this.flushActiveEditor()
       const projectStore = useProjectStore()
       const { id, filename, pathname, markdown } = this.currentFile
@@ -769,7 +795,7 @@ export const useEditorStore = defineStore('editor', {
           })
           .then(() => {
             const unsavedFiles = this.tabs
-              .filter((file) => !file.isDrawing && !file.isGeoGebra && !file.isMindMap && !file.isSaved)
+              .filter((file) => !file.isDrawing && !file.isGeoGebra && !file.isMindMap && !file.isKdbx && !file.isSaved)
               .map((file) => {
                 const { id, filename, pathname, markdown } = file
                 const options = getOptionsFromState(file)
@@ -807,16 +833,29 @@ export const useEditorStore = defineStore('editor', {
                 pathname: file.pathname
               }))
 
+            const unsavedKdbxFiles: UnsavedKdbxFile[] = this.tabs
+              .filter((file) => {
+                if (!file.isKdbx) return false
+                const state = this.kdbxStates[file.id]
+                return state ? state.modified || !state.isSaved : !file.isSaved
+              })
+              .map((file) => ({
+                id: file.id,
+                filename: file.filename,
+                pathname: file.pathname
+              }))
+
             if (
-              (unsavedFiles.length || unsavedDrawioFiles.length || unsavedMindMapFiles.length) &&
-              preferencesStore.startUpAction !== 'restoreAll'
+              (unsavedFiles.length || unsavedDrawioFiles.length || unsavedMindMapFiles.length || unsavedKdbxFiles.length) &&
+              (preferencesStore.startUpAction !== 'restoreAll' || unsavedKdbxFiles.length > 0)
             ) {
               // Ignore unsaved files when user has chosen to restore all on startup, as they will be restored anyway.
               window.electron.ipcRenderer.send(
                 'mt::close-window-confirm',
                 deepClone(unsavedFiles),
                 deepClone(unsavedDrawioFiles),
-                deepClone(unsavedMindMapFiles)
+                deepClone(unsavedMindMapFiles),
+                deepClone(unsavedKdbxFiles)
               )
             } else {
               window.electron.ipcRenderer.send('mt::close-window')
@@ -952,6 +991,40 @@ export const useEditorStore = defineStore('editor', {
       })
     },
 
+    LISTEN_FOR_KDBX_STATE(): void {
+      window.electron.ipcRenderer.on('mt::kdbx::state', (_, payload) => {
+        if (!payload || typeof payload.filePath !== 'string') return
+        const tab = this.tabs.find(
+          (file) => file.isKdbx && window.fileUtils.isSamePathSync(file.pathname, payload.filePath)
+        )
+        if (!tab) return
+        const previous = this.kdbxStates[tab.id]
+        const state: IKdbxState = {
+          id: tab.id,
+          pathname: tab.pathname,
+          filename: tab.filename,
+          locked: payload.locked === true,
+          modified: payload.modified === true,
+          isSaved: payload.isSaved === true,
+          isSaving: payload.isSaving === true,
+          ...(payload.saveError ? { saveError: payload.saveError } : {})
+        }
+        this.kdbxStates[tab.id] = state
+        tab.isSaved = state.isSaved && !state.modified
+        if (payload.saveError) {
+          notice.notify({ title: t('dialog.saveFailure'), message: payload.saveError, type: 'error', time: 20000, showConfirm: false })
+        }
+        if (state.isSaved) {
+          const timer = autoSaveTimers.get(tab.id)
+          if (timer) clearTimeout(timer)
+          autoSaveTimers.delete(tab.id)
+        } else if (state.modified && !state.isSaving) {
+          this.HANDLE_KDBX_AUTO_SAVE({ id: tab.id, pathname: tab.pathname })
+        }
+        debouncedSendBufferedState()
+      })
+    },
+
     LISTEN_FOR_SAVE_CLOSE(): void {
       window.electron.ipcRenderer.on('mt::force-close-tabs-by-id', (_, tabIdList) => {
         if (Array.isArray(tabIdList) && tabIdList.length) {
@@ -969,6 +1042,7 @@ export const useEditorStore = defineStore('editor', {
             !file.isDrawing &&
             !file.isGeoGebra &&
             !file.isMindMap &&
+            !file.isKdbx &&
             !(file.isSaved && /[^\n]/.test(file.markdown))
         )
         .map((file) => {
@@ -996,13 +1070,20 @@ export const useEditorStore = defineStore('editor', {
         return state ? state.modified || !state.isSaved : !file.isSaved
       })
 
+      const unsavedKdbxFiles = tabs.filter((file) => {
+        if (!file.isKdbx) return false
+        const state = this.kdbxStates[file.id]
+        return state ? state.modified || !state.isSaved : !file.isSaved
+      })
+
       if (closeTabs) {
         const savedTabIds = tabs
           .filter(
             (file) =>
               file.isSaved &&
               !unsavedDrawioFiles.some((item) => item.id === file.id) &&
-              !unsavedMindMapFiles.some((item) => item.id === file.id)
+              !unsavedMindMapFiles.some((item) => item.id === file.id) &&
+              !unsavedKdbxFiles.some((item) => item.id === file.id)
           )
           .map((file) => file.id)
         this.CLOSE_TABS(savedTabIds)
@@ -1023,6 +1104,13 @@ export const useEditorStore = defineStore('editor', {
             )
           ).then(() => this.CLOSE_TABS(unsavedMindMapFiles.map((file) => file.id)))
         }
+        if (unsavedKdbxFiles.length) {
+          void Promise.all(
+            unsavedKdbxFiles.map((file) =>
+              window.electron.ipcRenderer.invoke('mt::kdbx::save', file.pathname)
+            )
+          ).then(() => this.CLOSE_TABS(unsavedKdbxFiles.map((file) => file.id)))
+        }
       } else {
         if (unsavedFiles.length) {
           window.electron.ipcRenderer.send('mt::save-tabs', deepClone(unsavedFiles))
@@ -1035,6 +1123,11 @@ export const useEditorStore = defineStore('editor', {
         void Promise.all(
           unsavedMindMapFiles.map((file) =>
             window.electron.ipcRenderer.invoke('mt::mindmap::save-request', file.pathname)
+          )
+        )
+        void Promise.all(
+          unsavedKdbxFiles.map((file) =>
+            window.electron.ipcRenderer.invoke('mt::kdbx::save', file.pathname)
           )
         )
       }
@@ -1132,6 +1225,10 @@ export const useEditorStore = defineStore('editor', {
         if (!window.fileUtils.isSamePathSync(nextPath, tab.pathname)) {
           tab.pathname = nextPath
           tab.filename = window.path.basename(nextPath)
+          if (tab.isKdbx && this.kdbxStates[tab.id]) {
+            this.kdbxStates[tab.id].pathname = nextPath
+            this.kdbxStates[tab.id].filename = tab.filename
+          }
           tab.notifications = tab.notifications.filter(
             (item) => item.exclusiveType !== 'file_changed'
           )
@@ -1162,7 +1259,8 @@ export const useEditorStore = defineStore('editor', {
           oldCurrentFile &&
           !oldCurrentFile.isDrawing &&
           !oldCurrentFile.isGeoGebra &&
-          !oldCurrentFile.isMindMap
+          !oldCurrentFile.isMindMap &&
+          !oldCurrentFile.isKdbx
         ) {
           this.flushActiveEditor()
         }
@@ -1175,7 +1273,7 @@ export const useEditorStore = defineStore('editor', {
           this.updateTabIdToIndex()
         }
 
-        if (!currentFile.isDrawing && !currentFile.isGeoGebra && !currentFile.isMindMap) {
+        if (!currentFile.isDrawing && !currentFile.isGeoGebra && !currentFile.isMindMap && !currentFile.isKdbx) {
           bus.emit('file-changed', {
             id,
             markdown,
@@ -1331,6 +1429,46 @@ export const useEditorStore = defineStore('editor', {
       this.UPDATE_CURRENT_FILE(mindMapTab)
     },
 
+    OPEN_KDBX_TAB({ filePath, title }: { filePath: string; title?: string }): void {
+      const existingTab = this.tabs.find((tab) =>
+        window.fileUtils.isSamePathSync(tab.pathname, filePath)
+      )
+      if (existingTab) {
+        existingTab.isKdbx = true
+        if (!this.kdbxStates[existingTab.id]) {
+          this.kdbxStates[existingTab.id] = {
+            id: existingTab.id,
+            pathname: existingTab.pathname,
+            filename: existingTab.filename,
+            locked: true,
+            modified: false,
+            isSaved: existingTab.isSaved,
+            isSaving: false
+          }
+        }
+        this.UPDATE_CURRENT_FILE(existingTab)
+        return
+      }
+
+      const tab = createDocumentState({
+        pathname: filePath,
+        filename: title || window.path.basename(filePath),
+        markdown: '',
+        isSaved: true,
+        isKdbx: true
+      })
+      this.kdbxStates[tab.id] = {
+        id: tab.id,
+        pathname: filePath,
+        filename: tab.filename,
+        locked: true,
+        modified: false,
+        isSaved: true,
+        isSaving: false
+      }
+      this.UPDATE_CURRENT_FILE(tab)
+    },
+
     // This events are only used during window creation.
     LISTEN_FOR_BOOTSTRAP_WINDOW(): void {
       const preferencesStore = usePreferencesStore()
@@ -1468,6 +1606,13 @@ export const useEditorStore = defineStore('editor', {
           .catch((error) => console.error('Failed to save MindMap tab before closing', error))
         return
       }
+      if (target.isKdbx && !target.isSaved) {
+        void window.electron.ipcRenderer
+          .invoke('mt::kdbx::save', target.pathname)
+          .then(() => this.FORCE_CLOSE_TAB(target))
+          .catch((error) => console.error('Failed to save KDBX tab before closing', error))
+        return
+      }
 
       if (target.isSaved) {
         this.FORCE_CLOSE_TAB(target)
@@ -1544,6 +1689,11 @@ export const useEditorStore = defineStore('editor', {
         }
       }
 
+      if (file.isKdbx) {
+        delete this.kdbxStates[file.id]
+        if (file.pathname) void window.electron.ipcRenderer.invoke('mt::kdbx::lock', file.pathname)
+      }
+
       this.updateTabIdToIndex() // Update before sending it out to prevent stale mappings.
 
       if (currentFile && file.id === currentFile.id) {
@@ -1555,6 +1705,7 @@ export const useEditorStore = defineStore('editor', {
           !fileState.isDrawing &&
           !fileState.isGeoGebra &&
           !fileState.isMindMap &&
+          !fileState.isKdbx &&
           typeof fileState.markdown === 'string'
         ) {
           const { id, markdown, cursor, history, pathname, scrollTop, blocks, muyaIndexCursor } =
@@ -1607,6 +1758,13 @@ export const useEditorStore = defineStore('editor', {
           .invoke('mt::mindmap::save-request', file.pathname)
           .then(() => this.FORCE_CLOSE_TAB(file))
           .catch((error) => console.error('Failed to save MindMap tab before closing', error))
+        return
+      }
+      if (file.isKdbx) {
+        void window.electron.ipcRenderer
+          .invoke('mt::kdbx::save', file.pathname)
+          .then(() => this.FORCE_CLOSE_TAB(file))
+          .catch((error) => console.error('Failed to save KDBX tab before closing', error))
         return
       }
       const { id, pathname, filename, markdown } = file
@@ -1669,6 +1827,10 @@ export const useEditorStore = defineStore('editor', {
             void window.electron.ipcRenderer.invoke('mt::mindmap::close-file', pathname)
           }
         }
+        if (closed?.isKdbx) {
+          delete this.kdbxStates[closed.id]
+          if (pathname) void window.electron.ipcRenderer.invoke('mt::kdbx::lock', pathname)
+        }
 
         if (pathname) {
           window.electron.ipcRenderer.send('mt::window-tab-closed', pathname)
@@ -1693,6 +1855,7 @@ export const useEditorStore = defineStore('editor', {
           !this.currentFile.isDrawing &&
           !this.currentFile.isGeoGebra &&
           !this.currentFile.isMindMap &&
+          !this.currentFile.isKdbx &&
           typeof this.currentFile.markdown === 'string'
         ) {
           const { id, markdown, cursor, history, pathname, scrollTop, blocks, muyaIndexCursor } =
@@ -2150,6 +2313,27 @@ export const useEditorStore = defineStore('editor', {
           void window.electron.ipcRenderer
             .invoke('mt::mindmap::save-request', pathname)
             .catch((error) => console.error('思维导图自动保存失败', error))
+        }
+      }, preferencesStore.autoSaveDelay)
+      autoSaveTimers.set(id, timer)
+    },
+
+    HANDLE_KDBX_AUTO_SAVE({ id, pathname }: { id: string; pathname: string }): void {
+      const preferencesStore = usePreferencesStore()
+      if (!preferencesStore.autoSave || !id || !pathname) return
+      if (autoSaveTimers.has(id)) {
+        const timer = autoSaveTimers.get(id)
+        if (timer) clearTimeout(timer)
+        autoSaveTimers.delete(id)
+      }
+      const timer = setTimeout(() => {
+        autoSaveTimers.delete(id)
+        const tab = this.tabs.find((item) => item.id === id)
+        const state = this.kdbxStates[id]
+        if (tab?.isKdbx && state?.modified && !state.isSaving) {
+          void window.electron.ipcRenderer
+            .invoke('mt::kdbx::save', pathname)
+            .catch((error) => console.error('KDBX 自动保存失败', error))
         }
       }, preferencesStore.autoSaveDelay)
       autoSaveTimers.set(id, timer)
@@ -2729,6 +2913,7 @@ interface BufferedTabState {
   isDrawing: boolean
   isGeoGebra: boolean
   isMindMap: boolean
+  isKdbx: boolean
   geoGebraMode?: GeoGebraMode
 }
 
@@ -2755,6 +2940,7 @@ const createBufferedTabState = (tab: Partial<IFileState> & { id: string }): Buff
     isDrawing: tab.isDrawing === true,
     isGeoGebra: tab.isGeoGebra === true,
     isMindMap: tab.isMindMap === true,
+    isKdbx: tab.isKdbx === true,
     geoGebraMode: tab.geoGebraMode
   }
 }

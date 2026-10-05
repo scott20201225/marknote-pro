@@ -95,6 +95,9 @@ export interface IFileState {
   geoGebraMode?: GeoGebraMode
   isMindMap?: boolean
   mindMapStructure?: MindMapStructure
+  // KDBX is rendered by the native Vue vault editor. The decrypted database
+  // stays in the main-process vault session and is never treated as Markdown.
+  isKdbx?: boolean
   // Per-tab display options. These are never written into the Markdown file.
   showHeadingNumbers: boolean
   headingNumberingIncludesTopLevel: boolean
@@ -145,6 +148,17 @@ export interface IMindMapState {
   lastSavedHash?: string
 }
 
+export interface IKdbxState {
+  id: string
+  pathname: string
+  filename: string
+  locked: boolean
+  modified: boolean
+  isSaved: boolean
+  isSaving: boolean
+  saveError?: string
+}
+
 export interface UnsavedDrawioFile {
   id: string
   filename: string
@@ -158,6 +172,12 @@ export interface UnsavedGeoGebraFile {
 }
 
 export interface UnsavedMindMapFile {
+  id: string
+  filename: string
+  pathname: string
+}
+
+export interface UnsavedKdbxFile {
   id: string
   filename: string
   pathname: string

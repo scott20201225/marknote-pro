@@ -16,6 +16,7 @@ import { isChildOfDirectory } from '../../common/filesystem/paths'
 import { hideDrawioView, isDrawioFile, openDrawioFile } from '../drawio'
 import { hideGeoGebraView, isGeoGebraFile, openGeoGebraFile } from '../geogebra'
 import { hideMindMapView, isMindMapFile, openMindMapFile } from '../mindmap'
+import { isKdbxFile, openKdbxFile } from '../kdbx'
 
 class WindowActivityList {
   // Oldest             Newest

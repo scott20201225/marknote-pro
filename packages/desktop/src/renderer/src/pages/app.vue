@@ -6,7 +6,8 @@
     :class="{
       'drawio-open': currentFile?.isDrawing === true,
       'geogebra-open': currentFile?.isGeoGebra === true,
-      'mindmap-open': currentFile?.isMindMap === true
+      'mindmap-open': currentFile?.isMindMap === true,
+      'kdbx-open': currentFile?.isKdbx === true
     }"
   >
     <side-bar v-if="init" />
@@ -17,7 +18,7 @@
         :pathname="pathname"
         :filename="filename"
         :active="windowActive"
-        :word-count="drawioFile || geogebraFile || mindMapFile ? null : wordCount"
+        :word-count="drawioFile || geogebraFile || mindMapFile || currentFile?.isKdbx ? null : wordCount"
         :platform="platform"
         :is-saved="isSaved"
       />
@@ -53,10 +54,10 @@
         </button>
       </div>
       <recent
-        v-if="!hasCurrentFile && init && !currentFile?.isDrawing && !currentFile?.isGeoGebra && !currentFile?.isMindMap"
+        v-if="!hasCurrentFile && init && !currentFile?.isDrawing && !currentFile?.isGeoGebra && !currentFile?.isMindMap && !currentFile?.isKdbx"
       />
       <editor-with-tabs
-        v-if="hasCurrentFile && init && !currentFile?.isDrawing && !currentFile?.isGeoGebra && !currentFile?.isMindMap"
+        v-if="hasCurrentFile && init && !currentFile?.isDrawing && !currentFile?.isGeoGebra && !currentFile?.isMindMap && !currentFile?.isKdbx"
         :markdown="markdown"
         :cursor="cursor"
         :muya-index-cursor="muyaIndexCursor"
@@ -69,6 +70,8 @@
       <drawio v-if="init" v-show="currentFile?.isDrawing === true" />
       <geogebra v-if="init" v-show="currentFile?.isGeoGebra === true" />
       <mind-map v-if="init" v-show="currentFile?.isMindMap === true" />
+      <kdbx v-if="init && currentFile?.isKdbx === true" />
+      <kdbx-create-dialog />
       <command-palette />
       <export-setting-dialog />
       <move-node-dialog />
@@ -101,6 +104,8 @@ import GitDesktop from '@/components/gitDesktop/index.vue'
 import Drawio from '@/components/drawio/index.vue'
 import Geogebra from '@/components/geogebra/index.vue'
 import MindMap from '@/components/mindmap/index.vue'
+import Kdbx from '@/components/kdbx/index.vue'
+import KdbxCreateDialog from '@/components/kdbx/createDialog.vue'
 import bus from '@/bus'
 import { DEFAULT_STYLE } from '@/config'
 import { useLayoutStore } from '@/store/layout'
@@ -169,7 +174,8 @@ const hasCurrentFile = computed<boolean>(() => {
     currentFile.value?.markdown !== undefined &&
     !currentFile.value?.isDrawing &&
     !currentFile.value?.isGeoGebra &&
-    !currentFile.value?.isMindMap
+    !currentFile.value?.isMindMap &&
+    !currentFile.value?.isKdbx
   )
 })
 
@@ -257,6 +263,11 @@ const openMindMap = (_event: unknown, payload: { filePath: string; title: string
   }
 }
 
+const openKdbx = (_event: unknown, payload: { filePath: string; title: string }): void => {
+  editorStore.OPEN_KDBX_TAB(payload)
+  if (payload.filePath) projectStore.SELECT_NOTE_PATH(window.path.dirname(payload.filePath))
+}
+
 const closeDrawio = (_event: unknown, payload?: { filePath?: string }): void => {
   if (payload?.filePath && payload.filePath !== currentFile.value?.pathname) return
   drawioFile.value = null
@@ -311,6 +322,7 @@ watch([currentFile, () => preferencesStore.preferenceLoaded], ([file, preference
   window.electron.ipcRenderer.send('mt::drawio-menu-mode', !!file?.isDrawing)
   window.electron.ipcRenderer.send('mt::geogebra-menu-mode', !!file?.isGeoGebra)
   window.electron.ipcRenderer.send('mt::mindmap-menu-mode', !!file?.isMindMap)
+  window.electron.ipcRenderer.send('mt::kdbx-menu-mode', !!file?.isKdbx)
   if (file?.isDrawing) {
     // Both editors use independent native BrowserViews. Remove GeoGebra
     // before attaching Draw.io so it can never cover the sidebar or canvas.
@@ -372,6 +384,17 @@ watch([currentFile, () => preferencesStore.preferenceLoaded], ([file, preference
         getMindMapConfiguration()
       )
     }
+    return
+  }
+
+  if (file?.isKdbx) {
+    drawioFile.value = null
+    geogebraFile.value = null
+    mindMapFile.value = null
+    window.electron.ipcRenderer.send('mt::drawio::hide')
+    window.electron.ipcRenderer.send('mt::geogebra::hide')
+    window.electron.ipcRenderer.send('mt::mindmap::hide')
+    void window.electron.ipcRenderer.invoke('mt::kdbx::open', file.pathname)
     return
   }
 
@@ -523,6 +546,7 @@ onMounted(() => {
   window.electron.ipcRenderer.on('mt::geogebra::opened', openGeoGebra)
   window.electron.ipcRenderer.on('mt::geogebra::closed', closeGeoGebra)
   window.electron.ipcRenderer.on('mt::mindmap::opened', openMindMap)
+  window.electron.ipcRenderer.on('mt::kdbx::opened', openKdbx)
   window.electron.ipcRenderer.on('mt::mindmap::closed', closeMindMap)
   window.electron.ipcRenderer.on('mt::drawio::autosave-changed', (_event, enabled) => {
     window.electron.ipcRenderer.send('mt::drawio-autosave-changed', enabled)
@@ -530,6 +554,7 @@ onMounted(() => {
   window.electron.ipcRenderer.send('mt::drawio-menu-mode', !!currentFile.value?.isDrawing)
   window.electron.ipcRenderer.send('mt::geogebra-menu-mode', !!currentFile.value?.isGeoGebra)
   window.electron.ipcRenderer.send('mt::mindmap-menu-mode', !!currentFile.value?.isMindMap)
+  window.electron.ipcRenderer.send('mt::kdbx-menu-mode', !!currentFile.value?.isKdbx)
   window.addEventListener('wheel', handleWindowZoomWheel, { capture: true, passive: false })
   window.addEventListener('gesturestart', handleWindowZoomGestureStart)
   window.addEventListener('gesturechange', handleWindowZoomGestureChange)
@@ -614,6 +639,7 @@ onMounted(() => {
   editorStore.LISTEN_FOR_DRAWIO_STATE()
   editorStore.LISTEN_FOR_GEOGEBRA_STATE()
   editorStore.LISTEN_FOR_MINDMAP_STATE()
+  editorStore.LISTEN_FOR_KDBX_STATE()
   editorStore.LISTEN_FOR_SAVE_AS()
   editorStore.LISTEN_FOR_MOVE_TO()
   editorStore.LISTEN_FOR_SAVE()
@@ -703,11 +729,13 @@ onBeforeUnmount(() => {
   window.electron.ipcRenderer.removeAllListeners('mt::geogebra::opened')
   window.electron.ipcRenderer.removeAllListeners('mt::geogebra::closed')
   window.electron.ipcRenderer.removeAllListeners('mt::mindmap::opened')
+  window.electron.ipcRenderer.removeAllListeners('mt::kdbx::opened')
   window.electron.ipcRenderer.removeAllListeners('mt::mindmap::closed')
   window.electron.ipcRenderer.removeAllListeners('mt::drawio::autosave-changed')
   window.electron.ipcRenderer.removeAllListeners('mt::drawio::state')
   window.electron.ipcRenderer.removeAllListeners('mt::geogebra::state')
   window.electron.ipcRenderer.removeAllListeners('mt::mindmap::state')
+  window.electron.ipcRenderer.removeAllListeners('mt::kdbx::state')
   window.removeEventListener('wheel', handleWindowZoomWheel, true)
   window.removeEventListener('gesturestart', handleWindowZoomGestureStart)
   window.removeEventListener('gesturechange', handleWindowZoomGestureChange)

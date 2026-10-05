@@ -89,6 +89,8 @@ const documentStateKeys = [
   'isDrawing',
   'isGeoGebra',
   'isMindMap',
+  'isKdbx',
+  'isKdbx',
   'geoGebraMode',
   'showHeadingNumbers',
   'headingNumberingIncludesTopLevel'

@@ -23,6 +23,7 @@ const getClassByName = (name: string): string | null => {
 const className = computed<string[]>(() => {
   if (/\.ggb$/i.test(props.name)) return ['geogebra-file-icon']
   if (/\.smm$/i.test(props.name)) return ['mindmap-file-icon']
+  if (/\.kdbx$/i.test(props.name)) return ['kdbx-file-icon']
 
   let classNames: string | null | undefined = getClassByName(
     props.name ? props.name : 'mock.md'
@@ -52,6 +53,7 @@ onMounted(async() => {
 <template>
   <span v-if="className[0] === 'geogebra-file-icon'" class="file-icon geogebra-file-icon">G</span>
   <span v-else-if="className[0] === 'mindmap-file-icon'" class="file-icon mindmap-file-icon">M</span>
+  <span v-else-if="className[0] === 'kdbx-file-icon'" class="file-icon kdbx-file-icon">K</span>
   <span v-else :class="className" class="file-icon" />
 </template>
 
@@ -86,6 +88,22 @@ onMounted(async() => {
   margin-right: 5px;
   border-radius: 3px;
   background: #6366f1;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+  font-family: Arial, sans-serif;
+}
+
+.kdbx-file-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-right: 5px;
+  border-radius: 3px;
+  background: #ba7b26;
   color: #fff;
   font-size: 11px;
   font-weight: 700;
