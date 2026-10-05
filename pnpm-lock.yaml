@@ -94,6 +94,9 @@ importers:
       '@vscode/ripgrep':
         specifier: ^1.18.0
         version: 1.18.0
+      '@xmldom/xmldom':
+        specifier: ^0.8.13
+        version: 0.8.13
       '@xterm/xterm':
         specifier: ^5.5.0
         version: 5.5.0
@@ -187,6 +190,9 @@ importers:
       execall:
         specifier: ^3.0.0
         version: 3.0.0
+      fflate:
+        specifier: ^0.7.5
+        version: 0.7.5
       flowchart.js:
         specifier: ^1.18.0
         version: 1.18.0
@@ -223,9 +229,6 @@ importers:
       katex:
         specifier: ^0.17.0
         version: 0.17.0
-      kdbxweb:
-        specifier: file:src/kdbxWebApp/kdbxweb
-        version: file:packages/desktop/src/kdbxWebApp/kdbxweb
       keytar:
         specifier: ^7.9.0
         version: 7.9.0
@@ -8349,10 +8352,6 @@ packages:
   katex@0.17.0:
     resolution: {integrity: sha512-Vdw0ATsQ9V+LuegM/BTwQqV/6cTl5lbGcIrU+BCgLxyf6bo38ybOr372tuSIxir3CN720flu1meYR6XzNMwQnw==}
     hasBin: true
-
-  kdbxweb@file:packages/desktop/src/kdbxWebApp/kdbxweb:
-    resolution: {directory: packages/desktop/src/kdbxWebApp/kdbxweb, type: directory}
-    engines: {node: '>=20.19.0', pnpm: '>=10'}
 
   keytar@7.9.0:
     resolution: {integrity: sha512-VPD8mtVtm5JNtA2AErl6Chp06JBfy7diFQ7TQQhdpWOl6MrCRB+eRbvAZUsbGQS9kiMq0coJsy0W0vHpDCkWsQ==}
@@ -20585,11 +20584,6 @@ snapshots:
   katex@0.17.0:
     dependencies:
       commander: 8.3.0
-
-  kdbxweb@file:packages/desktop/src/kdbxWebApp/kdbxweb:
-    dependencies:
-      '@xmldom/xmldom': 0.8.13
-      fflate: 0.7.5
 
   keytar@7.9.0:
     dependencies:
