@@ -162,7 +162,7 @@ let fileHandle = null
 const defaultBtnList = [
   'back',
   'forward',
-  'painter',
+  // 'painter',
   'siblingNode',
   'childNode',
   'deleteNode',

@@ -420,11 +420,6 @@ export const sidebarTriggerList = [
     icon: 'iconzhuti'
   },
   {
-    name: '基礎樣式',
-    value: 'baseStyle',
-    icon: 'iconyangshi'
-  },
-  {
     name: '綜合樣式',
     value: 'theme',
     icon: 'iconjingzi'

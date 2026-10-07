@@ -405,6 +405,7 @@
     /* 隐藏所有 AI 相关按钮、图标、更多下拉菜单项和设置项 */
     .toolbarBtn:has(.iconAIshengcheng),
     .triggerItem:has(.iconAIshengcheng),
+    .triggerItem:has(.iconyangshi),
     .el-dropdown-menu__item:has([command="aiChat"]),
     .el-dropdown-menu__item:has(.iconAIshengcheng),
     li[command="aiChat"],
@@ -2900,15 +2901,15 @@
                     const loc = normalizeLang(this.$i18n ? this.$i18n.locale : currentLang);
                     const names = SIDEBAR_TRIGGER_NAMES[loc] || SIDEBAR_TRIGGER_NAMES.zh;
                     return list
-                      .filter(item => item && item.value !== 'ai')
+                      .filter(item => item && item.value !== 'ai' && item.value !== 'baseStyle')
                       .map(item => ({
                         ...item,
                         name: (names && names[item.value]) || item.name
                       }));
                   } catch (e) {
-                    console.error('[MarkNotePro] Error in wrapped triggerList getter:', e);
+                    console.error('[MindMap] Error in wrapped triggerList getter:', e);
                     try {
-                      return rawGetter.call(this) || [];
+                      return (rawGetter.call(this) || []).filter(item => item && item.value !== 'ai' && item.value !== 'baseStyle');
                     } catch (_) {
                       return [];
                     }
@@ -2919,6 +2920,31 @@
                   this.$options.computed.triggerList = wrappedGetter;
                 } else {
                   this.$options.computed.triggerList = { ...origComputed, get: wrappedGetter };
+                }
+              }
+            }
+
+            if (this.$options && (this.$options.name === 'Toolbar' || (this.$options.computed && this.$options.computed.btnLit))) {
+              const origBtnLit = this.$options.computed.btnLit;
+              const rawGetter = typeof origBtnLit === 'function' ? origBtnLit : origBtnLit.get;
+              if (rawGetter && !rawGetter.__marknotepro_painter_wrapped) {
+                const wrappedGetter = function() {
+                  try {
+                    const list = rawGetter.call(this) || [];
+                    return list.filter(item => item !== 'painter');
+                  } catch (e) {
+                    try {
+                      return (rawGetter.call(this) || []).filter(item => item !== 'painter');
+                    } catch (_) {
+                      return [];
+                    }
+                  }
+                };
+                wrappedGetter.__marknotepro_painter_wrapped = true;
+                if (typeof origBtnLit === 'function') {
+                  this.$options.computed.btnLit = wrappedGetter;
+                } else {
+                  this.$options.computed.btnLit = { ...origBtnLit, get: wrappedGetter };
                 }
               }
             }
