@@ -45,6 +45,9 @@ export default {
 
     triggerList() {
       let list = sidebarTriggerList[this.$i18n.locale] || sidebarTriggerList.zh
+      list = list.filter(item => {
+        return item && item.value !== 'baseStyle'
+      })
       if (this.isReadonly) {
         list = list.filter(item => {
           return ['outline', 'shortcutKey', 'ai'].includes(item.value)

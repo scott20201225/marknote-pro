@@ -444,11 +444,6 @@ export const sidebarTriggerList = [
     icon: 'iconzhuti'
   },
   {
-    name: 'Kiểu nền tảng',
-    value: 'baseStyle',
-    icon: 'iconyangshi'
-  },
-  {
     name: 'Kiểu tổng hợp',
     value: 'theme',
     icon: 'iconjingzi'
