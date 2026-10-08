@@ -73,6 +73,23 @@ const isSameOrDescendantPath = (pathname: string, parent: string): boolean => {
   return relative === '' || (!!relative && !relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative))
 }
 
+const syncVaultName = (vault: Kdbx, filePath: string): boolean => {
+  const expectedName = path.basename(filePath, path.extname(filePath))
+  if (!expectedName) return false
+  let changed = false
+  if (vault.meta.name !== expectedName) {
+    vault.meta.name = expectedName
+    changed = true
+  }
+  const defaultGroup = vault.getDefaultGroup()
+  if (defaultGroup && defaultGroup.name !== expectedName) {
+    defaultGroup.name = expectedName
+    defaultGroup.times.update()
+    changed = true
+  }
+  return changed
+}
+
 const remapSessionPaths = (win: BrowserWindow, src: string, dest: string): void => {
   const windowSessions = getWindowSessions(win)
   for (const [filePath, session] of [...windowSessions]) {
@@ -81,7 +98,12 @@ const remapSessionPaths = (win: BrowserWindow, src: string, dest: string): void 
     windowSessions.delete(filePath)
     session.filePath = nextPath
     windowSessions.set(nextPath, session)
-    notifyState(win, session)
+    if (syncVaultName(session.vault, nextPath)) {
+      markModified(win, session)
+      saveSession(win, session)
+    } else {
+      notifyState(win, session)
+    }
   }
 }
 
@@ -186,12 +208,13 @@ const toGroupSummary = (group: KdbxGroup, recycleBinId = '', isRoot = false): Kd
 const allEntries = (groups: KdbxGroup[]): KdbxEntry[] =>
   groups.flatMap((group) => [...group.entries, ...allEntries(group.groups)])
 
-const snapshot = (vault: Kdbx): KdbxVaultSnapshot => {
+const snapshot = (vault: Kdbx, filePath?: string): KdbxVaultSnapshot => {
   const entries = allEntries(vault.groups)
   const recycleBinId = vault.meta.recycleBinUuid ? getId(vault.meta.recycleBinUuid) : ''
   const recycleBin = recycleBinId ? vault.getGroup(recycleBinId) : undefined
+  const expectedName = filePath ? path.basename(filePath, path.extname(filePath)) : ''
   return {
-    name: vault.meta.name || '密码库',
+    name: expectedName || vault.meta.name || '密码库',
     groups: vault.groups
       .filter((group) => getId(group.uuid) !== recycleBinId)
       .map((group, index) => toGroupSummary(group, recycleBinId, index === 0)),
@@ -456,17 +479,21 @@ export const registerKdbxHandlers = (): void => {
     await credentials.ready
     const data = await fs.readFile(filePath)
     const vault = await Kdbx.load(asArrayBuffer(data), credentials)
+    const needsSave = syncVaultName(vault, filePath)
     const session: VaultSession = {
       filePath,
       vault,
-      modified: false,
+      modified: needsSave,
       isSaving: false,
       saveChain: Promise.resolve(),
-      revision: 0
+      revision: needsSave ? 1 : 0
     }
     getWindowSessions(win).set(filePath, session)
+    if (needsSave) {
+      await saveSession(win, session)
+    }
     notifyState(win, session)
-    return snapshot(vault)
+    return snapshot(vault, filePath)
   })
 
   ipcMain.handle('mt::kdbx::lock', async (event, filePath: string) => {
@@ -514,7 +541,8 @@ export const registerKdbxHandlers = (): void => {
   ipcMain.handle('mt::kdbx::snapshot', (event, filePath: string) => {
     const win = BrowserWindow.fromWebContents(event.sender)
     if (!win) throw new Error('找不到编辑窗口')
-    return snapshot(getSession(win, filePath).vault)
+    const session = getWindowSessions(win).get(filePath)
+    return session ? snapshot(session.vault, session.filePath) : null
   })
 
   ipcMain.handle('mt::kdbx::entry', (event, filePath: string, entryId: string) => {
@@ -539,7 +567,7 @@ export const registerKdbxHandlers = (): void => {
     if (!name.trim()) throw new Error('分组名称不能为空')
     session.vault.createGroup(parent, name.trim())
     await saveMutation(win, session)
-    return snapshot(session.vault)
+    return snapshot(session.vault, session.filePath)
   })
 
   ipcMain.handle('mt::kdbx::rename-group', async(event, filePath: string, groupId: string, name: string) => {
@@ -553,7 +581,7 @@ export const registerKdbxHandlers = (): void => {
     group.name = name.trim()
     group.times.update()
     await saveMutation(win, session)
-    return snapshot(session.vault)
+    return snapshot(session.vault, session.filePath)
   })
 
   ipcMain.handle('mt::kdbx::move-group', async(event, filePath: string, groupId: string, targetGroupId: string) => {
@@ -567,7 +595,7 @@ export const registerKdbxHandlers = (): void => {
     if (isSameOrDescendantGroup(target, group)) throw new Error('不能移动到当前密钥组或其子密钥组')
     session.vault.move(group, target)
     await saveMutation(win, session)
-    return snapshot(session.vault)
+    return snapshot(session.vault, session.filePath)
   })
 
   ipcMain.handle('mt::kdbx::delete-group', async(event, filePath: string, groupId: string) => {
@@ -586,7 +614,7 @@ export const registerKdbxHandlers = (): void => {
       session.vault.remove(group)
     }
     await saveMutation(win, session)
-    return snapshot(session.vault)
+    return snapshot(session.vault, session.filePath)
   })
 
   ipcMain.handle('mt::kdbx::empty-recycle-bin', async(event, filePath: string) => {
@@ -599,7 +627,7 @@ export const registerKdbxHandlers = (): void => {
     session.vault.createRecycleBin()
     session.vault.cleanup({ binaries: true })
     await saveMutation(win, session)
-    return snapshot(session.vault)
+    return snapshot(session.vault, session.filePath)
   })
 
   ipcMain.handle('mt::kdbx::create-entry', async(event, filePath: string, input: KdbxEntryInput) => {
@@ -650,7 +678,7 @@ export const registerKdbxHandlers = (): void => {
       session.vault.remove(entry)
     }
     await saveMutation(win, session)
-    return snapshot(session.vault)
+    return snapshot(session.vault, session.filePath)
   })
 
   ipcMain.handle('mt::kdbx::move-entries', async(event, filePath: string, entryIds: string[], targetGroupId: string) => {
@@ -666,7 +694,7 @@ export const registerKdbxHandlers = (): void => {
     if (entries.length === 0) throw new Error('请选择至少一个正常密钥条目')
     entries.forEach(entry => session.vault.move(entry, target))
     await saveMutation(win, session)
-    return snapshot(session.vault)
+    return snapshot(session.vault, session.filePath)
   })
 
   ipcMain.handle('mt::kdbx::restore-entry', async(event, filePath: string, entryId: string) => {
@@ -678,7 +706,7 @@ export const registerKdbxHandlers = (): void => {
     if (!isInRecycleBin(entry, recycleBinId(session.vault))) throw new Error('此条目不在回收站中')
     session.vault.move(entry, restoreEntryGroup(session.vault, entry))
     await saveMutation(win, session)
-    return snapshot(session.vault)
+    return snapshot(session.vault, session.filePath)
   })
 
   ipcMain.handle('mt::kdbx::restore-entries', async(event, filePath: string, entryIds: string[]) => {
@@ -693,7 +721,7 @@ export const registerKdbxHandlers = (): void => {
     const restoredGroups = new Map<string, KdbxGroup>()
     entries.forEach(entry => session.vault.move(entry, restoreEntryGroup(session.vault, entry, restoredGroups)))
     await saveMutation(win, session)
-    return snapshot(session.vault)
+    return snapshot(session.vault, session.filePath)
   })
 
   ipcMain.handle('mt::kdbx::history-entry', (event, filePath: string, entryId: string, historyIndex: number) => {
@@ -811,7 +839,7 @@ export const registerKdbxHandlers = (): void => {
     if (importedEntries.length === 0) throw new Error('密钥导出文件没有可导入的条目')
     for (const entry of importedEntries) await copyEntryToGroup(entry, session.vault, group)
     await saveMutation(win, session)
-    return snapshot(session.vault)
+    return snapshot(session.vault, session.filePath)
   })
 
   ipcMain.on('mt::sidebar-path-renamed', (event, payload: { src?: string; dest?: string }) => {

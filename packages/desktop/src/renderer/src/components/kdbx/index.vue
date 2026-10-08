@@ -10,7 +10,7 @@
 
     <template v-else>
       <aside class="kdbx-groups">
-        <div class="kdbx-pane-title kdbx-vault-title"><span :title="vault?.name">{{ vault?.name }}</span><div>
+        <div class="kdbx-pane-title kdbx-vault-title"><span :title="vaultDisplayName">{{ vaultDisplayName }}</span><div>
           <el-tooltip :content="t('kdbx.newGroup')" :show-after="350"><button :title="t('kdbx.newGroup')" type="button" @click.stop="createGroup()"><el-icon><FolderAdd /></el-icon></button></el-tooltip>
           <el-tooltip :content="t('kdbx.resetPassword')" :show-after="350"><button :title="t('kdbx.resetPassword')" type="button" @click.stop="openResetPassword"><el-icon><Key /></el-icon></button></el-tooltip>
           <el-tooltip :content="t('kdbx.lock')" :show-after="350"><button :title="t('kdbx.lock')" type="button" @click.stop="lock"><el-icon><Lock /></el-icon></button></el-tooltip>
@@ -48,7 +48,7 @@
           <dl class="kdbx-entry-view">
             <dt>{{ t('kdbx.title') }}</dt><dd>{{ draft.title || t('kdbx.untitled') }}</dd>
             <dt>{{ t('kdbx.username') }}</dt><dd>{{ draft.username || '-' }}</dd>
-            <dt>{{ t('kdbx.password') }}</dt><dd class="kdbx-password-view"><span>{{ showPassword ? viewPassword || '-' : viewPassword ? '••••••••' : '-' }}</span><el-tooltip v-if="viewPassword && !draft.isRecycleBin" :content="showPassword ? t('kdbx.hidePassword') : t('kdbx.showPassword')" :show-after="350"><button :title="showPassword ? t('kdbx.hidePassword') : t('kdbx.showPassword')" type="button" @click="showPassword = !showPassword"><el-icon><Hide v-if="showPassword" /><View v-else /></el-icon></button></el-tooltip></dd>
+            <dt>{{ t('kdbx.password') }}</dt><dd class="kdbx-password-view"><span>{{ showPassword ? viewPassword || '-' : viewPassword ? '••••••••' : '-' }}</span><el-tooltip v-if="viewPassword && !draft.isRecycleBin" :content="showPassword ? t('kdbx.hidePassword') : t('kdbx.showPassword')" :show-after="350"><button :title="showPassword ? t('kdbx.hidePassword') : t('kdbx.showPassword')" type="button" @click="showPassword = !showPassword"><el-icon><Hide v-if="showPassword" /><View v-else /></el-icon></button></el-tooltip><el-tooltip v-if="viewPassword && !draft.isRecycleBin" :content="t('kdbx.copy')" :show-after="350"><button :title="t('kdbx.copy')" type="button" @click="copyText(viewPassword)"><el-icon><DocumentCopy /></el-icon></button></el-tooltip></dd>
             <template v-if="viewTotpList.length === 1">
               <dt>{{ viewTotpList[0].label || t('kdbx.totp') }}</dt>
               <dd class="kdbx-totp-view">
@@ -103,7 +103,7 @@
               </div>
             </div>
           </section>
-          <section v-if="viewCustomFields.length" class="kdbx-section"><div class="kdbx-section-title"><strong>{{ t('kdbx.customFields') }}</strong></div><dl class="kdbx-entry-view kdbx-custom-field-view"><template v-for="field in viewCustomFields" :key="field.key"><dt>{{ field.key }}</dt><dd>{{ field.protected ? '••••••••' : field.value || '-' }}</dd></template></dl></section>
+          <section v-if="viewCustomFields.length" class="kdbx-section"><div class="kdbx-section-title"><strong>{{ t('kdbx.customFields') }}</strong></div><dl class="kdbx-entry-view kdbx-custom-field-view"><template v-for="field in viewCustomFields" :key="field.key"><dt>{{ field.key }}</dt><dd class="kdbx-custom-field-val"><span class="kdbx-custom-field-text">{{ (isCustomFieldRevealed(field.key) || !field.protected) ? (field.value || '-') : (field.value ? '••••••••' : '-') }}</span><div v-if="!draft.isRecycleBin" class="kdbx-custom-field-actions"><el-tooltip v-if="field.protected && field.value" :content="isCustomFieldRevealed(field.key) ? t('kdbx.hidePassword') : t('kdbx.showPassword')" :show-after="350"><button :title="isCustomFieldRevealed(field.key) ? t('kdbx.hidePassword') : t('kdbx.showPassword')" type="button" @click="toggleCustomFieldReveal(field.key)"><el-icon><Hide v-if="isCustomFieldRevealed(field.key)" /><View v-else /></el-icon></button></el-tooltip><el-tooltip v-if="field.value" :content="t('kdbx.copy')" :show-after="350"><button :title="t('kdbx.copy')" type="button" @click="copyText(field.value)"><el-icon><DocumentCopy /></el-icon></button></el-tooltip></div></dd></template></dl></section>
           <section class="kdbx-section"><div class="kdbx-section-title"><strong>{{ t('kdbx.attachments') }}</strong></div><div v-if="viewAttachments.length === 0" class="kdbx-section-empty">{{ t('kdbx.noAttachments') }}</div><div v-for="attachment in viewAttachments" :key="attachment.id" class="kdbx-attachment"><div><el-icon><Document /></el-icon><span>{{ attachment.name }}</span><em>{{ formatSize(attachment.size) }}</em></div><template v-if="!draft.isRecycleBin"><el-tooltip v-if="isPreviewable(attachment)" :content="t('kdbx.previewAttachment')" :show-after="350"><button :title="t('kdbx.previewAttachment')" type="button" @click="previewAttachment(attachment)"><el-icon><View /></el-icon></button></el-tooltip><el-tooltip :content="t('kdbx.downloadAttachment')" :show-after="350"><button :title="t('kdbx.downloadAttachment')" type="button" @click="downloadAttachment(attachment)"><el-icon><Download /></el-icon></button></el-tooltip></template></div></section>
           <section v-if="draft.historyCount" class="kdbx-section kdbx-history"><div class="kdbx-section-title"><strong>{{ t('kdbx.history') }} ({{ draft.historyCount }})</strong></div><div v-for="item in draft.history" :key="item.index" class="kdbx-history-row"><div><strong>{{ item.title || t('kdbx.untitled') }}</strong><span>{{ item.updatedAt ? new Date(item.updatedAt).toLocaleString() : '' }}</span></div><button type="button" @click="viewHistory(item.index)">{{ t('kdbx.viewHistory') }}</button><button type="button" @click="restoreHistory(item.index)">{{ t('kdbx.restoreHistory') }}</button><button class="kdbx-history-delete" :title="t('kdbx.deleteHistory')" type="button" @click="deleteHistory(item.index)"><el-icon><Delete /></el-icon></button></div></section>
         </template>
@@ -228,6 +228,7 @@ const expandedGroups = ref(new Set<string>()); const allItemsExpanded = ref(true
 const moveDialogVisible = ref(false); const moveTargetGroupId = ref(''); const moveGroupSourceId = ref(''); const moveEntryIds = ref<string[]>([]); const moving = ref(false)
 const resetPasswordVisible = ref(false); const resettingPassword = ref(false); const resetAttempted = ref(false); const currentPasswordIncorrect = ref(false); const resetCurrentPassword = ref(''); const resetNewPassword = ref(''); const resetConfirmPassword = ref('')
 const customFields = ref<CustomField[]>([])
+const revealedCustomFields = ref(new Set<string>())
 const attachmentDrafts = ref<AttachmentDraft[]>([])
 const totpFilterQuery = ref('')
 const now = ref(Date.now())
@@ -236,6 +237,7 @@ let nextCustomFieldId = 0
 let nextAttachmentDraftId = 0
 const filePath = computed(() => currentFile.value?.isKdbx ? currentFile.value.pathname : '')
 const displayFilename = computed(() => currentFile.value?.filename.replace(/\.kdbx$/i, '') ?? '')
+const vaultDisplayName = computed(() => displayFilename.value || vault.value?.name || t('kdbx.vault'))
 const normalEntries = computed(() => (vault.value?.entries || []).filter(entry => !entry.isRecycleBin))
 const recycleEntries = computed(() => (vault.value?.entries || []).filter(entry => entry.isRecycleBin))
 const entryTags = (entry: KdbxVaultSnapshot['entries'][number]): string[] => (entry.tags || []).filter(tag => tag.trim())
@@ -248,9 +250,9 @@ const moveTargetTree = computed<MoveGroupOption[]>(() => { const sourceId = move
 const groupDisplayName = (group: KdbxGroupSummary): string => group.isRoot ? t('kdbx.allGroups') : group.name
 const displayGroupPath = (path: string[]): string[] => path.map((name, index) => index === 0 ? t('kdbx.allGroups') : name)
 const filteredEntries = computed(() => { const value = query.value.trim().toLocaleLowerCase(); return (selectedRecycle.value ? recycleEntries.value : normalEntries.value).filter((entry) => { const tags = entryTags(entry); if (!selectedRecycle.value && selectedGroup.value && entry.groupId !== selectedGroup.value) return false; if (!selectedRecycle.value && selectedTag.value && !tags.includes(selectedTag.value)) return false; if (!selectedRecycle.value && selectedUntagged.value && tags.length > 0) return false; if (!value) return true; const fields: Record<string, string> = { title: entry.title, username: entry.username, url: entry.url, notes: entry.notes }; return searchFields.value.some(field => fields[field]?.toLocaleLowerCase().includes(value)) || tags.some(tag => tag.toLocaleLowerCase().includes(value)) }) })
-const entryPathParts = computed(() => { if (!draft.value) return []; const vaultName = vault.value?.name || t('kdbx.vault'); const groups = displayGroupPath(draft.value.groupPath).filter((name, index) => index !== 0 || name !== vaultName); return [vaultName, ...groups, draft.value.title || t('kdbx.untitled')] })
+const entryPathParts = computed(() => { if (!draft.value) return []; const vaultName = vaultDisplayName.value; const groups = displayGroupPath(draft.value.groupPath).filter((name, index) => index !== 0 || name !== vaultName); return [vaultName, ...groups, draft.value.title || t('kdbx.untitled')] })
 const entryPath = computed(() => entryPathParts.value.join(' / '))
-const editEntryPath = computed(() => { if (!editDraft.value) return ''; const vaultName = vault.value?.name || t('kdbx.vault'); const groups = displayGroupPath(editDraft.value.groupPath).filter((name, index) => index !== 0 || name !== vaultName); return [vaultName, ...groups, editDraft.value.title || t('kdbx.untitled')].join(' / ') })
+const editEntryPath = computed(() => { if (!editDraft.value) return ''; const vaultName = vaultDisplayName.value; const groups = displayGroupPath(editDraft.value.groupPath).filter((name, index) => index !== 0 || name !== vaultName); return [vaultName, ...groups, editDraft.value.title || t('kdbx.untitled')].join(' / ') })
 const draftAttachments = computed(() => attachmentDrafts.value.filter(attachment => !attachment.removed))
 const viewPassword = computed(() => draft.value?.fields.find(field => field.key === 'Password')?.value || '')
 const viewTotpList = computed<ViewTotpItem[]>(() => {
@@ -319,7 +321,7 @@ const loadCustomFields = (detail: KdbxEntryDetail): void => {
 const loadAttachments = (detail: KdbxEntryDetail): void => { attachmentDrafts.value = detail.attachments.map(attachment => ({ ...attachment, id: `attachment-${nextAttachmentDraftId++}`, removed: false })) }
 const clearAttachmentPreview = (): void => { if (attachmentPreviewUrl.value.startsWith('blob:')) URL.revokeObjectURL(attachmentPreviewUrl.value); attachmentPreviewUrl.value = ''; attachmentPreviewName.value = '' }
 const clearEditDraft = (): void => { editDraft.value = null; passwordField.value = ''; totpField.value = ''; editing.value = false; newEntry.value = false; clearCustomFields(); attachmentDrafts.value = []; clearAttachmentPreview() }
-const clearDraft = (): void => { draft.value = null; selectedEntryId.value = ''; showPassword.value = false; clearEditDraft() }
+const clearDraft = (): void => { draft.value = null; selectedEntryId.value = ''; showPassword.value = false; revealedCustomFields.value = new Set(); clearEditDraft() }
 const lock = async(): Promise<void> => { const pathname = filePath.value; if (!pathname) return; await window.electron.ipcRenderer.invoke('mt::kdbx::lock', pathname); if (pathname !== filePath.value) return; vault.value = null; clearDraft(); password.value = ''; unlockPasswordVisible.value = false; locked.value = true }
 const clearResetPassword = (): void => { resetAttempted.value = false; currentPasswordIncorrect.value = false; resetCurrentPassword.value = ''; resetNewPassword.value = ''; resetConfirmPassword.value = '' }
 const openResetPassword = (): void => { clearResetPassword(); resetPasswordVisible.value = true }
@@ -336,7 +338,7 @@ const toggleGroup = (id: string): void => { const next = new Set(expandedGroups.
 const openGroupMenu = (group: FlatGroup, event: MouseEvent): void => { entryMenu.value = null; groupMenu.value = { group, x: event.clientX, y: event.clientY } }
 const openEntryMenu = (entry: KdbxVaultSnapshot['entries'][number], event: MouseEvent): void => { groupMenu.value = null; entryMenu.value = { entry, x: event.clientX, y: event.clientY } }
 const groupPathFor = (targetId: string, groups = vault.value?.groups || [], ancestors: string[] = []): string[] => { for (const group of groups) { const current = [...ancestors, groupDisplayName(group)]; if (group.id === targetId) return current; const found = groupPathFor(targetId, group.groups, current); if (found.length) return found } return [] }
-const selectEntry = async(id: string): Promise<void> => { if (!filePath.value) return; if (editing.value && id !== selectedEntryId.value) { try { await ElMessageBox.confirm(t('kdbx.discardChangesConfirm'), t('kdbx.cancelEdit'), { ...messageBoxTheme, confirmButtonText: t('common.ok'), cancelButtonText: t('common.cancel'), type: 'warning' }) } catch { return } clearEditDraft() } const detail = await window.electron.ipcRenderer.invoke('mt::kdbx::entry', filePath.value, id); if (!detail) return; selectedEntryId.value = id; draft.value = detail; showPassword.value = false }
+const selectEntry = async(id: string): Promise<void> => { if (!filePath.value) return; if (editing.value && id !== selectedEntryId.value) { try { await ElMessageBox.confirm(t('kdbx.discardChangesConfirm'), t('kdbx.cancelEdit'), { ...messageBoxTheme, confirmButtonText: t('common.ok'), cancelButtonText: t('common.cancel'), type: 'warning' }) } catch { return } clearEditDraft() } const detail = await window.electron.ipcRenderer.invoke('mt::kdbx::entry', filePath.value, id); if (!detail) return; selectedEntryId.value = id; draft.value = detail; showPassword.value = false; revealedCustomFields.value = new Set() }
 const clearMoveDialog = (): void => { moveTargetGroupId.value = ''; moveGroupSourceId.value = ''; moveEntryIds.value = [] }
 const openGroupMove = (group: FlatGroup): void => { groupMenu.value = null; moveGroupSourceId.value = group.id; moveEntryIds.value = []; moveTargetGroupId.value = ''; moveDialogVisible.value = true }
 const openEntryMove = (entryIds: string[]): void => { if (!entryIds.length) return; entryMenu.value = null; moveGroupSourceId.value = ''; moveEntryIds.value = [...new Set(entryIds)]; moveTargetGroupId.value = ''; moveDialogVisible.value = true }
@@ -392,6 +394,17 @@ const copyTotpCode = (): void => {
 const copyTotpItem = (item: ViewTotpItem): void => {
   window.electron.clipboard.writeText(item.result.code)
   ElMessage.success(t('kdbx.totpCopied'))
+}
+const copyText = (text: string): void => {
+  if (!text) return
+  window.electron.clipboard.writeText(text)
+  ElMessage.success(t('kdbx.copied'))
+}
+const isCustomFieldRevealed = (key: string): boolean => revealedCustomFields.value.has(key)
+const toggleCustomFieldReveal = (key: string): void => {
+  const next = new Set(revealedCustomFields.value)
+  next.has(key) ? next.delete(key) : next.add(key)
+  revealedCustomFields.value = next
 }
 const getFieldTotp = (val: string): TotpGenerationResult | null => {
   if (!val || typeof val !== 'string') return null
@@ -539,4 +552,9 @@ button { border: 0; background: transparent; color: inherit; cursor: pointer; } 
 .kdbx-totp-card-body { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
 .kdbx-totp-card-code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 16px; font-weight: 700; letter-spacing: 1px; color: var(--themeColor); }
 :global(.kdbx-select-popper .el-popper__arrow::before) { background: var(--floatBgColor) !important; border-color: var(--floatBorderColor) !important; }
+.kdbx-custom-field-val { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-width: 0; }
+.kdbx-custom-field-text { min-width: 0; flex: 1; white-space: pre-wrap; overflow-wrap: anywhere; }
+.kdbx-custom-field-actions { display: flex; align-items: center; gap: 2px; flex: 0 0 auto; }
+.kdbx-custom-field-actions button { display: inline-flex; width: 28px; height: 28px; align-items: center; justify-content: center; color: var(--editorColor50); border-radius: 4px; }
+.kdbx-custom-field-actions button:hover { background: var(--floatHoverColor); color: var(--editorColor); }
 </style>
