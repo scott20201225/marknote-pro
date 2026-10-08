@@ -965,7 +965,9 @@
   },
   "common": {
     "cancel": "取消",
-    "ok": "确定"
+    "ok": "确定",
+    "clear": "清空",
+    "delete": "删除"
   },
   "kdbx": {
     "addAttachment": "添加附件",
@@ -1110,7 +1112,8 @@
     "primaryTotp": "主 2FA 口令",
     "importTotpBtn": "批量导入 2FA",
     "totpAuthCodes": "2FA 动态口令",
-    "filterTotp": "搜索 2FA..."
+    "filterTotp": "搜索 2FA...",
+    "totpParsed": "2FA 二维码已成功解析"
   },
   "dialog": {
     "cancel": "取消",

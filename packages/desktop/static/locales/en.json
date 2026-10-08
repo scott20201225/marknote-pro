@@ -965,7 +965,9 @@
   },
   "common": {
     "cancel": "Cancel",
-    "ok": "OK"
+    "ok": "OK",
+    "clear": "Clear",
+    "delete": "Delete"
   },
   "kdbx": {
     "addAttachment": "Add attachment",
@@ -1110,7 +1112,8 @@
     "primaryTotp": "Primary 2FA Code",
     "importTotpBtn": "Batch Import 2FA",
     "totpAuthCodes": "2FA One-Time Passwords",
-    "filterTotp": "Filter 2FA..."
+    "filterTotp": "Filter 2FA...",
+    "totpParsed": "2FA QR code parsed successfully"
   },
   "dialog": {
     "cancel": "Cancel",
