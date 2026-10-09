@@ -64,9 +64,12 @@ export class SerialEngineSession {
       try {
         // Use fs read/write stream on macOS/Linux serial devices
         const port = this.config.serialPort || this.config.portPath || ''
+        this.onDataCallback(`\x1b[90m正在连接串口 ${port} (${this.config.baudRate || 115200} bps)...\x1b[0m\r\n`)
         if (process.platform === 'darwin' || process.platform === 'linux') {
           if (!fs.existsSync(port)) {
-            throw new Error(`串口设备不存在: ${port}`)
+            const err = new Error(`串口设备不存在: ${port}`)
+            this.onDataCallback(`\r\n\x1b[31;1m[连接失败] ${err.message}\x1b[0m\r\n`)
+            throw err
           }
           const readStream = fs.createReadStream(port)
           const writeStream = fs.createWriteStream(port)
@@ -77,6 +80,7 @@ export class SerialEngineSession {
 
           readStream.on('error', (err) => {
             this.status = 'error'
+            this.onDataCallback(`\r\n\x1b[31;1m[连接失败] ${err.message || err}\x1b[0m\r\n`)
             this.onStatusCallback({ ...this.getSessionInfo(), error: err.message })
           })
 

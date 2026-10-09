@@ -75,21 +75,30 @@ export class TerminalManager {
         let session: AnySession
         if (config.type === 'ssh') {
           session = new SshEngineSession(sessionId, config, callbacks)
-          await (session as SshEngineSession).connect(cols, rows)
         } else if (config.type === 'telnet') {
           session = new TelnetEngineSession(sessionId, config, callbacks)
-          await (session as TelnetEngineSession).connect()
         } else if (config.type === 'serial') {
           session = new SerialEngineSession(sessionId, config, callbacks)
-          await (session as SerialEngineSession).connect()
         } else if (config.type === 'rawSocket') {
           session = new RawSocketEngineSession(sessionId, config, callbacks)
-          await (session as RawSocketEngineSession).connect()
         } else {
           throw new Error(`不支持的连接类型: ${(config as any).type}`)
         }
 
         this.sessions.set(sessionId, session)
+
+        // Asynchronously initiate connection so the session info & tab are created immediately
+        Promise.resolve().then(() => {
+          if (config.type === 'ssh') {
+            return (session as SshEngineSession).connect(cols, rows)
+          } else {
+            return session.connect()
+          }
+        }).catch((err) => {
+          callbacks.onData(`\r\n\x1b[31;1m[连接失败] ${err?.message || err}\x1b[0m\r\n`)
+          callbacks.onStatus({ ...session.getSessionInfo(), status: 'error', error: err?.message || String(err) })
+        })
+
         return session.getSessionInfo()
       }
     )
