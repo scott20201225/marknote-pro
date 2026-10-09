@@ -261,8 +261,11 @@ body {
 }
 
 .el-input__inner {
-  background: transparent;
-  border: 0;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  padding: 0;
 }
 
 .el-textarea__inner {
