@@ -22,9 +22,23 @@ export class ZModemSessionHandler {
 
     this.sentry = new ZModem.Sentry({
       to_terminal: (octets: number[] | Uint8Array) => {
+        const arr = Array.from(octets)
+        let idx = ZModem.ZMLIB.find_subarray(arr, [42, 42, 24, 66])
+        if (idx === -1) {
+          idx = ZModem.ZMLIB.find_subarray(arr, [42, 42, 66, 48])
+        }
+        if (idx !== -1) {
+          // 剥离 ZMODEM 原始握手序列，保留握手前的换行等字符
+          const before = arr.slice(0, idx)
+          if (before.length > 0) {
+            this.onTerminalData(Buffer.from(before).toString('utf-8'))
+          }
+          return
+        }
+
         let text = Buffer.from(octets).toString('utf-8')
-        // 过滤掉 ZMODEM 协议原始握手特征头（例如 **B00000000000000）
-        text = text.replace(/\*{1,2}\x18?B[0-9a-fA-F]{14}[\r\n\x8a]*/g, '')
+        // 兜底正则过滤
+        text = text.replace(/\*{1,2}\x18?B[0-9a-fA-F]{14}[^\r\n]*[\r\n]*/g, '')
         if (text) {
           this.onTerminalData(text)
         }
@@ -34,10 +48,12 @@ export class ZModemSessionHandler {
       },
       on_detect: async (detection: any) => {
         this.isActive = true
+        // 握手捕获时立即清理当前行残留，保持界面整洁
+        this.onTerminalData('\r\x1b[2K')
         await this.handleDetection(detection)
       },
       on_retract: () => {
-        this.onTerminalData('\r\n\x1b[33m[ZMODEM] 传输已取消\x1b[0m\r\n')
+        this.onTerminalData('\r\x1b[2K\x1b[33m[ZMODEM] 传输已取消\x1b[0m\r\n')
         this.activeSession = null
         this.isActive = false
       }
@@ -289,7 +305,7 @@ export class ZModemSessionHandler {
       }
       this.activeSession = null
       this.isActive = false
-      this.onTerminalData('\r\n\x1b[33m[ZMODEM] 传输已中止\x1b[0m\r\n')
+      this.onTerminalData('\r\x1b[2K\x1b[33m[ZMODEM] 传输已中止\x1b[0m\r\n')
     }
   }
 
