@@ -42,6 +42,9 @@ export class LinuxHardwareProbe {
         stream.on('data', (data: Buffer) => {
           output += data.toString()
         })
+        stream.on('error', () => {
+          // ignore probe stream errors
+        })
 
         stream.on('close', () => {
           if (output.includes('---PROBE_END---')) {

@@ -50,13 +50,24 @@ export class SshEngineSession {
     return new Promise<void>((resolve, reject) => {
       let isResolved = false
 
+      // In ssh2, keepaliveInterval is in milliseconds (0 to disable).
+      // UI / configs pass seconds. If > 0 and <= 600, convert to milliseconds.
+      let kaInterval = 0
+      if (typeof this.config.keepaliveInterval === 'number') {
+        if (this.config.keepaliveInterval > 0 && this.config.keepaliveInterval <= 600) {
+          kaInterval = this.config.keepaliveInterval * 1000
+        } else if (this.config.keepaliveInterval > 600) {
+          kaInterval = this.config.keepaliveInterval
+        }
+      }
+
       const connectConfig: ConnectConfig = {
         host: this.config.host,
         port: this.config.port || 22,
         username: this.config.username || 'root',
-        keepaliveInterval: this.config.keepaliveInterval || 15000,
-        keepaliveCountMax: 3,
-        readyTimeout: this.config.readyTimeout || 20000,
+        keepaliveInterval: kaInterval,
+        keepaliveCountMax: 10,
+        readyTimeout: this.config.readyTimeout && this.config.readyTimeout > 100 ? this.config.readyTimeout : 20000,
         tryKeyboard: true
       }
 
@@ -69,7 +80,15 @@ export class SshEngineSession {
         connectConfig.password = this.config.password
       }
 
+      console.log(`[Terminal/SSH] Connecting to ${connectConfig.username}@${connectConfig.host}:${connectConfig.port}`, {
+        authType: this.config.authType,
+        hasPassword: Boolean(this.config.password),
+        hasKey: Boolean(this.config.privateKey),
+        hasTotp: Boolean(this.config.totpSecret)
+      })
+
       this.client.on('keyboard-interactive', (name, instructions, instructionsLang, prompts, finish) => {
+        console.log('[Terminal/SSH] 2FA / keyboard-interactive prompt:', prompts.map(p => p.prompt))
         this.has2fa = true
         const responses: string[] = []
 
@@ -106,12 +125,14 @@ export class SshEngineSession {
       })
 
       this.client.on('ready', () => {
+        console.log(`[Terminal/SSH] Successfully connected to ${this.config.host}:${this.config.port || 22}`)
         this.status = 'connected'
         this.onStatusCallback(this.getSessionInfo())
 
         // 1. Open Shell channel
         this.client.shell({ term: 'xterm-256color', cols, rows }, (err, stream) => {
           if (err) {
+            console.error('[Terminal/SSH] Failed to open shell channel:', err)
             if (!isResolved) {
               isResolved = true
               reject(err)
@@ -126,6 +147,7 @@ export class SshEngineSession {
           })
 
           stream.on('close', () => {
+            console.log('[Terminal/SSH] Shell stream closed')
             this.status = 'disconnected'
             this.onStatusCallback(this.getSessionInfo())
           })
@@ -153,6 +175,7 @@ export class SshEngineSession {
       this.onDataCallback(`\x1b[90m正在连接至 ${this.config.username ? `${this.config.username}@` : ''}${this.config.host}:${this.config.port || 22}...\x1b[0m\r\n`)
 
       this.client.on('error', (err) => {
+        console.error(`[Terminal/SSH] Connection error on ${this.config.host}:`, err)
         this.status = 'error'
         this.onDataCallback(`\r\n\x1b[31;1m[连接失败] ${err.message || err}\x1b[0m\r\n`)
         this.onStatusCallback({ ...this.getSessionInfo(), error: err.message })
@@ -163,6 +186,7 @@ export class SshEngineSession {
       })
 
       this.client.on('close', () => {
+        console.log(`[Terminal/SSH] Connection closed: ${this.config.host}`)
         this.status = 'disconnected'
         this.onStatusCallback(this.getSessionInfo())
         this.cleanup()
