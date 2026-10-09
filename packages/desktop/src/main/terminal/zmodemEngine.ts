@@ -1,6 +1,6 @@
 import * as fs from 'fs'
 import * as path from 'path'
-import { dialog, BrowserWindow } from 'electron'
+import { dialog, BrowserWindow, app } from 'electron'
 import * as ZModem from 'zmodem.js'
 
 export class ZModemSessionHandler {
@@ -98,84 +98,120 @@ export class ZModemSessionHandler {
   }
 
   private async handleReceive(zsession: any): Promise<void> {
-    const win = this.getWindow() || BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0]
+    const pendingReceives: Promise<void>[] = []
 
-    return new Promise<void>((resolve, reject) => {
-      let isEnded = false
-
-      zsession.on('offer', async (xfer: any) => {
-        try {
-          const details = xfer.get_details()
-          const defaultName = details.name || 'download.bin'
-
-          // Prompt user to save file
-          const { canceled, filePath } = await dialog.showSaveDialog(win, {
-            title: `ZMODEM 下载: ${defaultName}`,
-            defaultPath: defaultName,
-            buttonLabel: '保存'
-          })
-
-          if (canceled || !filePath) {
-            this.onTerminalData(`\r\n\x1b[33m[ZMODEM] 取消接收: ${defaultName}\x1b[0m\r\n`)
-            xfer.skip()
-            return
-          }
-
-          this.onTerminalData(`\r\n\x1b[36m[ZMODEM] 开始下载: ${defaultName} (${this.formatBytes(details.size || 0)})\x1b[0m\r\n`)
-
-          const writeStream = fs.createWriteStream(filePath)
-          let receivedBytes = 0
-          let lastReport = Date.now()
-
-          await xfer.accept({
-            on_input: (chunk: Uint8Array | number[]) => {
-              const buf = Buffer.from(chunk)
-              writeStream.write(buf)
-              receivedBytes += buf.length
-
-              const now = Date.now()
-              if (now - lastReport > 300 || (details.size && receivedBytes >= details.size)) {
-                lastReport = now
-                const pct = details.size > 0 ? Math.round((receivedBytes / details.size) * 100) : 0
-                this.onTerminalData(`\r\x1b[33m[ZMODEM 进度] ${pct}% (${this.formatBytes(receivedBytes)}/${this.formatBytes(details.size || 0)})\x1b[0m`)
-              }
-            }
-          })
-
-          await new Promise<void>((resStream) => {
-            writeStream.end(() => resStream())
-          })
-
-          this.onTerminalData(`\r\n\x1b[32;1m[ZMODEM 完成] 文件已保存至: ${filePath}\x1b[0m\r\n`)
-        } catch (err) {
-          try {
-            xfer.skip()
-          } catch {
-            // ignore
-          }
-          reject(err)
-        }
-      })
-
-      zsession.on('session_end', () => {
-        if (!isEnded) {
-          isEnded = true
-          resolve()
-        }
-      })
-
-      zsession.start()
+    zsession.on('offer', (xfer: any) => {
+      pendingReceives.push(this.receiveFile(xfer, zsession))
     })
+
+    zsession.start()
+
+    await new Promise<void>((resolve) => zsession.on('session_end', resolve))
+    await Promise.all(pendingReceives)
+  }
+
+  private async receiveFile(xfer: any, zsession: any): Promise<void> {
+    try {
+      const details = xfer.get_details()
+      const defaultName = details.name || 'download.bin'
+      const win = this.getWindow() || BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0]
+
+      let defaultPath = defaultName
+      try {
+        defaultPath = path.join(app.getPath('downloads'), defaultName)
+      } catch {
+        if (process.env.HOME) {
+          defaultPath = path.join(process.env.HOME, 'Downloads', defaultName)
+        }
+      }
+
+      const dialogOpts = {
+        title: `ZMODEM 下载文件: ${defaultName}`,
+        defaultPath,
+        buttonLabel: '保存'
+      }
+
+      if (win && !win.isDestroyed()) {
+        try {
+          win.focus()
+        } catch {
+          // ignore
+        }
+      }
+
+      const { canceled, filePath } = win && !win.isDestroyed()
+        ? await dialog.showSaveDialog(win, dialogOpts)
+        : await dialog.showSaveDialog(dialogOpts)
+
+      if (canceled || !filePath) {
+        this.onTerminalData(`\r\n\x1b[33m[ZMODEM] 用户拒绝接收: ${defaultName}\x1b[0m\r\n`)
+        try {
+          xfer.skip()
+        } catch {
+          // ignore
+        }
+        return
+      }
+
+      this.onTerminalData(`\r\n\x1b[36m[ZMODEM] 开始接收文件: ${defaultName} (${this.formatBytes(details.size || 0)})\x1b[0m\r\n`)
+
+      const writeStream = fs.createWriteStream(filePath)
+      let receivedBytes = 0
+      let lastReport = Date.now()
+
+      await xfer.accept({
+        on_input: (chunk: Uint8Array | number[]) => {
+          const buf = Buffer.from(chunk)
+          writeStream.write(buf)
+          receivedBytes += buf.length
+
+          const now = Date.now()
+          if (now - lastReport > 300 || (details.size && receivedBytes >= details.size)) {
+            lastReport = now
+            const pct = details.size > 0 ? Math.round((receivedBytes / details.size) * 100) : 0
+            this.onTerminalData(`\r\x1b[33m[ZMODEM 进度] ${pct}% (${this.formatBytes(receivedBytes)}/${this.formatBytes(details.size || 0)})\x1b[0m`)
+          }
+        }
+      })
+
+      await new Promise<void>((resStream) => {
+        writeStream.end(() => resStream())
+      })
+
+      this.onTerminalData(`\r\n\x1b[32;1m[ZMODEM 完成] 文件已保存至: ${filePath}\x1b[0m\r\n`)
+    } catch (err: any) {
+      console.error('[ZMODEM] receiveFile error:', err)
+      this.onTerminalData(`\r\n\x1b[31;1m[ZMODEM 错误] ${err?.message || err}\x1b[0m\r\n`)
+      try {
+        xfer.skip()
+      } catch {
+        // ignore
+      }
+    }
   }
 
   private async handleSend(zsession: any): Promise<void> {
     const win = this.getWindow() || BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0]
 
-    const { canceled, filePaths } = await dialog.showOpenDialog(win, {
-      title: 'ZMODEM 选择上传文件',
-      properties: ['openFile', 'multiSelections'],
-      buttonLabel: '上传'
-    })
+    if (win && !win.isDestroyed()) {
+      try {
+        win.focus()
+      } catch {
+        // ignore
+      }
+    }
+
+    const { canceled, filePaths } = win && !win.isDestroyed()
+      ? await dialog.showOpenDialog(win, {
+          title: 'ZMODEM 选择上传文件',
+          properties: ['openFile', 'multiSelections'],
+          buttonLabel: '上传'
+        })
+      : await dialog.showOpenDialog({
+          title: 'ZMODEM 选择上传文件',
+          properties: ['openFile', 'multiSelections'],
+          buttonLabel: '上传'
+        })
 
     if (canceled || !filePaths || filePaths.length === 0) {
       this.onTerminalData('\r\n\x1b[33m[ZMODEM] 取消文件上传\x1b[0m\r\n')
@@ -235,6 +271,10 @@ export class ZModemSessionHandler {
     }
   }
 
+  public isSessionActive(): boolean {
+    return this.isActive || this.activeSession !== null
+  }
+
   public abort(): void {
     if (this.activeSession) {
       try {
@@ -244,6 +284,7 @@ export class ZModemSessionHandler {
       }
       this.activeSession = null
       this.isActive = false
+      this.onTerminalData('\r\n\x1b[33m[ZMODEM] 传输已中止\x1b[0m\r\n')
     }
   }
 

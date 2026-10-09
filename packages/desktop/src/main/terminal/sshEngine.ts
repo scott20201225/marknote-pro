@@ -217,6 +217,13 @@ export class SshEngineSession {
   public write(data: string): void {
     if (data === '\x03') {
       this.zmodemHandler?.abort()
+      if (this.shellStream && this.shellStream.writable) {
+        this.shellStream.write(data)
+      }
+      return
+    }
+    if (this.zmodemHandler?.isSessionActive()) {
+      return
     }
     if (this.shellStream && this.shellStream.writable) {
       this.shellStream.write(data)
