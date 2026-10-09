@@ -36,6 +36,7 @@ export const useTerminalStore = defineStore('terminal', () => {
 
   // Data event listeners map: sessionId -> Set<(data: string) => void>
   const dataListeners = new Map<string, Set<(data: string) => void>>()
+  const sessionDataBuffers = new Map<string, string[]>()
 
   let isInitialized = false
 
@@ -46,8 +47,13 @@ export const useTerminalStore = defineStore('terminal', () => {
     // Listen for terminal data
     window.electron.ipcRenderer.on('mt::terminal:data', (_event, { sessionId, data }: { sessionId: string; data: string }) => {
       const listeners = dataListeners.get(sessionId)
-      if (listeners) {
+      if (listeners && listeners.size > 0) {
         listeners.forEach((fn) => fn(data))
+      } else {
+        if (!sessionDataBuffers.has(sessionId)) {
+          sessionDataBuffers.set(sessionId, [])
+        }
+        sessionDataBuffers.get(sessionId)!.push(data)
       }
     })
 
@@ -86,6 +92,16 @@ export const useTerminalStore = defineStore('terminal', () => {
       dataListeners.set(sessionId, new Set())
     }
     dataListeners.get(sessionId)!.add(fn)
+
+    // Replay any buffered chunks
+    if (sessionDataBuffers.has(sessionId)) {
+      const buffered = sessionDataBuffers.get(sessionId)!
+      while (buffered.length > 0) {
+        const chunk = buffered.shift()
+        if (chunk) fn(chunk)
+      }
+    }
+
     return () => {
       dataListeners.get(sessionId)?.delete(fn)
     }
