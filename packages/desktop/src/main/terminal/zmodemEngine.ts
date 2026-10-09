@@ -22,7 +22,12 @@ export class ZModemSessionHandler {
 
     this.sentry = new ZModem.Sentry({
       to_terminal: (octets: number[] | Uint8Array) => {
-        this.onTerminalData(Buffer.from(octets).toString('utf-8'))
+        let text = Buffer.from(octets).toString('utf-8')
+        // 过滤掉 ZMODEM 协议原始握手特征头（例如 **B00000000000000）
+        text = text.replace(/\*{1,2}\x18?B[0-9a-fA-F]{14}[\r\n\x8a]*/g, '')
+        if (text) {
+          this.onTerminalData(text)
+        }
       },
       sender: (octets: number[] | Uint8Array) => {
         this.sendToSession(Buffer.from(octets))
@@ -144,7 +149,7 @@ export class ZModemSessionHandler {
         : await dialog.showSaveDialog(dialogOpts)
 
       if (canceled || !filePath) {
-        this.onTerminalData(`\r\n\x1b[33m[ZMODEM] 用户拒绝接收: ${defaultName}\x1b[0m\r\n`)
+        this.onTerminalData(`\r\x1b[2K\x1b[33m[ZMODEM] 用户拒绝接收: ${defaultName}\x1b[0m\r\n`)
         try {
           xfer.skip()
         } catch {
@@ -153,7 +158,7 @@ export class ZModemSessionHandler {
         return
       }
 
-      this.onTerminalData(`\r\n\x1b[36m[ZMODEM] 开始接收文件: ${defaultName} (${this.formatBytes(details.size || 0)})\x1b[0m\r\n`)
+      this.onTerminalData(`\r\x1b[2K\x1b[36m[ZMODEM] 开始接收文件: ${defaultName} (${this.formatBytes(details.size || 0)})\x1b[0m\r\n`)
 
       const writeStream = fs.createWriteStream(filePath)
       let receivedBytes = 0
@@ -214,7 +219,7 @@ export class ZModemSessionHandler {
         })
 
     if (canceled || !filePaths || filePaths.length === 0) {
-      this.onTerminalData('\r\n\x1b[33m[ZMODEM] 取消文件上传\x1b[0m\r\n')
+      this.onTerminalData('\r\x1b[2K\x1b[33m[ZMODEM] 取消文件上传\x1b[0m\r\n')
       try {
         zsession.abort()
       } catch {
@@ -227,7 +232,7 @@ export class ZModemSessionHandler {
       const stats = fs.statSync(filePath)
       const fileName = path.basename(filePath)
 
-      this.onTerminalData(`\r\n\x1b[36m[ZMODEM] 开始上传: ${fileName} (${this.formatBytes(stats.size)})\x1b[0m\r\n`)
+      this.onTerminalData(`\r\x1b[2K\x1b[36m[ZMODEM] 开始上传: ${fileName} (${this.formatBytes(stats.size)})\x1b[0m\r\n`)
 
       const offer = {
         name: fileName,
