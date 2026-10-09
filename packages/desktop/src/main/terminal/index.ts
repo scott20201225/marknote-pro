@@ -31,9 +31,20 @@ export class TerminalManager {
     // 1. Connect
     ipcMain.handle(
       'mt::terminal:connect',
-      async (_event, config: ITerminalConnectionConfig, cols?: number, rows?: number) => {
-        const sessionId = `term_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`
+      async (_event, config: ITerminalConnectionConfig, cols?: number, rows?: number, existingSessionId?: string) => {
+        const sessionId = existingSessionId || `term_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`
         const win = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0]
+
+        // Cleanup old engine session if reconnecting an existing session
+        const oldSession = this.sessions.get(sessionId)
+        if (oldSession) {
+          try {
+            oldSession.cleanup()
+          } catch {
+            // ignore
+          }
+          this.sessions.delete(sessionId)
+        }
 
         const callbacks = {
           onData: (data: string) => {

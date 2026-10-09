@@ -1486,10 +1486,14 @@ export const useEditorStore = defineStore('editor', {
 
     OPEN_TERMINAL_TAB({
       sessionId,
-      title
+      title,
+      config,
+      kdbxEntryId
     }: {
       sessionId: string
       title?: string
+      config?: any
+      kdbxEntryId?: string
     }): void {
       const existingTab = this.tabs.find(
         (tab) => tab.isTerminal && tab.terminalSessionId === sessionId
@@ -1497,6 +1501,12 @@ export const useEditorStore = defineStore('editor', {
       if (existingTab) {
         if (title && existingTab.filename !== title) {
           existingTab.filename = title
+        }
+        if (config) {
+          existingTab.terminalConfig = config
+        }
+        if (kdbxEntryId) {
+          existingTab.terminalKdbxEntryId = kdbxEntryId
         }
         this.UPDATE_CURRENT_FILE(existingTab)
         return
@@ -1508,7 +1518,9 @@ export const useEditorStore = defineStore('editor', {
         markdown: '',
         isSaved: true,
         isTerminal: true,
-        terminalSessionId: sessionId
+        terminalSessionId: sessionId,
+        terminalConfig: config,
+        terminalKdbxEntryId: kdbxEntryId
       })
       this.UPDATE_CURRENT_FILE(terminalTab)
     },
