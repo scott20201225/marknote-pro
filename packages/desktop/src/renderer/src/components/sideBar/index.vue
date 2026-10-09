@@ -59,6 +59,7 @@ import { sideBarIcons, sideBarBottomIcons } from './help'
 import Tree from './tree.vue'
 import SideBarSearch from './search.vue'
 import { storeToRefs } from 'pinia'
+import bus from '@/bus'
 import type { TabDescriptor } from './types'
 
 const TREE_MODE_MIN_WIDTH = 220

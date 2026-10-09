@@ -221,6 +221,10 @@ class EditorWindow extends BaseWindow {
         this._markdownToOpen!.length = 0
       }
 
+      if (process.env.NODE_ENV === 'development') {
+        win!.webContents.openDevTools({ mode: 'right' })
+      }
+
       // Listen on default system mouse zoom event (e.g. Ctrl+MouseWheel on Linux/Windows).
       win!.webContents.on('zoom-changed', (_event, zoomDirection) => {
         if (shouldIgnoreZoomChanged(win!.webContents)) return

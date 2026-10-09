@@ -64,6 +64,7 @@ This file contains all third-party packages and embedded applications that are b
 55. draw.io / diagrams.net (Apache-2.0)
 56. GeoGebra (GeoGebra Non-Commercial License / GPL-3.0 / CC-BY-NC-SA-3.0)
 57. GitHub Desktop (MIT)
+58. Tabby (MIT)
 
 
 -------------------------------------------------
@@ -412,6 +413,14 @@ Source code is licensed under the GNU General Public License v3.0 (GPLv3). Softw
 -------------------------------------------------
 Copyright (c) GitHub, Inc.
 Licensed under the MIT License (https://github.com/desktop/desktop).
+
+
+
+# Tabby (MIT)
+-------------------------------------------------
+Copyright (c) 2017-present Eugenia Kim (Eugeny) (https://github.com/Eugeny/tabby)
+Licensed under the MIT License (https://github.com/Eugeny/tabby/blob/master/LICENSE).
+
 
 
 

@@ -58,6 +58,12 @@ ${licenseText}
       licenses: 'MIT',
       licenseText:
         'Copyright (c) GitHub, Inc.\nLicensed under the MIT License (https://github.com/desktop/desktop).'
+    },
+    {
+      name: 'Tabby (Terminal Schemes)',
+      licenses: 'MIT',
+      licenseText:
+        'Copyright (c) 2017-present Eugenia Kim (Eugeny) (https://github.com/Eugeny/tabby).\nLicensed under the MIT License (https://github.com/Eugeny/tabby/blob/master/LICENSE).'
     }
   ]
 

@@ -12,6 +12,7 @@ import { registerDrawioHandlers } from '../drawio'
 import { registerGeoGebraHandlers } from '../geogebra'
 import { registerMindMapHandlers } from '../mindmap'
 import { registerKdbxHandlers } from '../kdbx'
+import { registerTerminalHandlers } from '../terminal'
 
 export const registerSandboxIpcHandlers = (): void => {
   registerBootInfo()
@@ -28,4 +29,6 @@ export const registerSandboxIpcHandlers = (): void => {
   registerGeoGebraHandlers()
   registerMindMapHandlers()
   registerKdbxHandlers()
+  registerTerminalHandlers()
 }
+

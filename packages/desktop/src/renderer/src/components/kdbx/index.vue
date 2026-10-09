@@ -38,15 +38,64 @@
       <main class="kdbx-entries">
         <div class="kdbx-toolbar"><el-input v-model="query" :placeholder="t('kdbx.search')" clearable><template #prefix><el-icon><Search /></el-icon></template></el-input><el-tooltip :content="t('kdbx.searchOptions')" :show-after="350"><button :title="t('kdbx.searchOptions')" :class="{ active: showSearchOptions }" type="button" @click.stop="showSearchOptions = !showSearchOptions"><el-icon><Filter /></el-icon></button></el-tooltip><el-tooltip :content="selectedRecycle ? t('kdbx.restoreHistory') : t('kdbx.exportSelected', { count: selectedEntryIds.size })" :show-after="350"><button class="kdbx-export-selected" :title="selectedRecycle ? t('kdbx.restoreHistory') : t('kdbx.exportSelected', { count: selectedEntryIds.size })" :disabled="selectedEntryIds.size === 0 || exportingEntries" type="button" @click.stop="selectedRecycle ? restoreSelectedEntries() : exportSelectedEntries()"><el-icon :class="{ 'is-loading': exportingEntries }"><Loading v-if="exportingEntries" /><RefreshRight v-else-if="selectedRecycle" /><Download v-else /></el-icon><sup v-if="selectedEntryIds.size">{{ selectedEntryIds.size }}</sup></button></el-tooltip><el-tooltip v-if="!selectedRecycle" :content="t('kdbx.moveTo')" :show-after="350"><button :title="t('kdbx.moveTo')" :disabled="selectedEntryIds.size === 0" type="button" @click.stop="openEntryMove([...selectedEntryIds])"><el-icon><FolderOpened /></el-icon></button></el-tooltip><el-tooltip v-if="!selectedRecycle" :content="t('kdbx.newEntry')" :show-after="350"><button :title="t('kdbx.newEntry')" type="button" @click="createEntry"><el-icon><Plus /></el-icon></button></el-tooltip></div>
         <div v-if="showSearchOptions" class="kdbx-search-options"><span>{{ t('kdbx.searchFields') }}</span><el-checkbox-group v-model="searchFields"><el-checkbox value="title">{{ t('kdbx.title') }}</el-checkbox><el-checkbox value="username">{{ t('kdbx.username') }}</el-checkbox><el-checkbox value="url">{{ t('kdbx.url') }}</el-checkbox><el-checkbox value="notes">{{ t('kdbx.notes') }}</el-checkbox></el-checkbox-group></div>
-        <div v-for="entry in filteredEntries" :key="entry.id" class="kdbx-entry-row" :class="{ active: selectedEntryId === entry.id }" @contextmenu.prevent.stop="openEntryMenu(entry, $event)"><el-checkbox :model-value="selectedEntryIds.has(entry.id)" :aria-label="t('kdbx.selectEntry')" @click.stop @change="toggleEntrySelection(entry.id)" /><button class="kdbx-entry-select" :title="entry.title || t('kdbx.untitled')" type="button" @click="selectEntry(entry.id)"><span class="kdbx-entry-title">{{ entry.title || t('kdbx.untitled') }}</span><span class="kdbx-entry-username">{{ entry.username || t('kdbx.noUsername') }}</span></button><el-tooltip :content="t('kdbx.entryActions')" :show-after="350"><button class="kdbx-entry-more" :title="t('kdbx.entryActions')" type="button" @click.stop="openEntryMenu(entry, $event)"><el-icon><MoreFilled /></el-icon></button></el-tooltip></div>
+        <div v-for="entry in filteredEntries" :key="entry.id" class="kdbx-entry-row" :class="{ active: selectedEntryId === entry.id }" @contextmenu.prevent.stop="openEntryMenu(entry, $event)">
+          <el-checkbox :model-value="selectedEntryIds.has(entry.id)" :aria-label="t('kdbx.selectEntry')" @click.stop @change="toggleEntrySelection(entry.id)" />
+          <button class="kdbx-entry-select" :title="entry.title || t('kdbx.untitled')" type="button" @click="selectEntry(entry.id)">
+            <span class="kdbx-entry-title">
+              <span v-if="getEntryUrlType(entry)" class="kdbx-proto-badge" :class="`proto-${getEntryUrlType(entry)?.toLowerCase()}`">{{ getEntryUrlTypeBadge(entry) }}</span>
+              {{ entry.title || t('kdbx.untitled') }}
+            </span>
+            <span class="kdbx-entry-username">{{ entry.username || (getEntryUrlType(entry) ? entry.url || t('kdbx.noUsername') : t('kdbx.noUsername')) }}</span>
+          </button>
+          <div class="kdbx-entry-actions">
+            <el-tooltip v-if="getEntryUrlType(entry)" :content="t('kdbx.connectTerminal')" :show-after="350">
+              <button class="kdbx-entry-terminal-btn" :title="t('kdbx.connectTerminal')" type="button" @click.stop="connectTerminalFromEntry(entry)">
+                <el-icon><Monitor /></el-icon>
+              </button>
+            </el-tooltip>
+            <el-tooltip :content="t('kdbx.entryActions')" :show-after="350">
+              <button class="kdbx-entry-more" :title="t('kdbx.entryActions')" type="button" @click.stop="openEntryMenu(entry, $event)">
+                <el-icon><MoreFilled /></el-icon>
+              </button>
+            </el-tooltip>
+          </div>
+        </div>
         <div v-if="filteredEntries.length === 0" class="kdbx-empty">{{ t('kdbx.noEntries') }}</div>
       </main>
 
       <aside class="kdbx-detail">
         <template v-if="draft">
-          <div class="kdbx-detail-title"><div class="kdbx-breadcrumb" :title="entryPath"><span v-for="(part, index) in entryPathParts" :key="`${part}-${index}`">{{ part }}</span></div><div><template v-if="draft.isRecycleBin"><el-tooltip :content="t('kdbx.restoreHistory')" :show-after="350"><button :title="t('kdbx.restoreHistory')" type="button" @click="restoreEntry"><el-icon><RefreshRight /></el-icon></button></el-tooltip><el-tooltip :content="t('kdbx.deletePermanently')" :show-after="350"><button :title="t('kdbx.deletePermanently')" type="button" @click="deleteEntry"><el-icon><Delete /></el-icon></button></el-tooltip></template><template v-else><el-tooltip :content="t('kdbx.edit')" :show-after="350"><button :title="t('kdbx.edit')" type="button" @click.stop="beginEdit"><el-icon><Edit /></el-icon></button></el-tooltip><el-tooltip :content="t('kdbx.copy')" :show-after="350"><button :title="t('kdbx.copy')" type="button" @click.stop="copyEntry"><el-icon><DocumentCopy /></el-icon></button></el-tooltip><el-tooltip :content="t('kdbx.export')" :show-after="350"><button :title="t('kdbx.export')" :disabled="exportingEntries" type="button" @click.stop="exportEntries([draft.id])"><el-icon><Download /></el-icon></button></el-tooltip><el-tooltip :content="t('kdbx.moveTo')" :show-after="350"><button :title="t('kdbx.moveTo')" type="button" @click.stop="openEntryMove([draft.id])"><el-icon><FolderOpened /></el-icon></button></el-tooltip><el-tooltip :content="t('kdbx.delete')" :show-after="350"><button :title="t('kdbx.delete')" type="button" @click="deleteEntry"><el-icon><Delete /></el-icon></button></el-tooltip></template></div></div>
+          <div class="kdbx-detail-title">
+            <div class="kdbx-breadcrumb" :title="entryPath">
+              <span v-for="(part, index) in entryPathParts" :key="`${part}-${index}`">{{ part }}</span>
+            </div>
+            <div>
+              <template v-if="draft.isRecycleBin">
+                <el-tooltip :content="t('kdbx.restoreHistory')" :show-after="350"><button :title="t('kdbx.restoreHistory')" type="button" @click="restoreEntry"><el-icon><RefreshRight /></el-icon></button></el-tooltip>
+                <el-tooltip :content="t('kdbx.deletePermanently')" :show-after="350"><button :title="t('kdbx.deletePermanently')" type="button" @click="deleteEntry"><el-icon><Delete /></el-icon></button></el-tooltip>
+              </template>
+              <template v-else>
+                <el-tooltip v-if="getEntryUrlType(draft)" :content="t('kdbx.connectTerminal')" :show-after="350">
+                  <button class="kdbx-terminal-direct-btn" :title="t('kdbx.connectTerminal')" type="button" @click.stop="connectTerminalFromDraft">
+                    <el-icon><Monitor /></el-icon>
+                  </button>
+                </el-tooltip>
+                <el-tooltip :content="t('kdbx.edit')" :show-after="350"><button :title="t('kdbx.edit')" type="button" @click.stop="beginEdit"><el-icon><Edit /></el-icon></button></el-tooltip>
+                <el-tooltip :content="t('kdbx.copy')" :show-after="350"><button :title="t('kdbx.copy')" type="button" @click.stop="copyEntry"><el-icon><DocumentCopy /></el-icon></button></el-tooltip>
+                <el-tooltip :content="t('kdbx.export')" :show-after="350"><button :title="t('kdbx.export')" :disabled="exportingEntries" type="button" @click.stop="exportEntries([draft.id])"><el-icon><Download /></el-icon></button></el-tooltip>
+                <el-tooltip :content="t('kdbx.moveTo')" :show-after="350"><button :title="t('kdbx.moveTo')" type="button" @click.stop="openEntryMove([draft.id])"><el-icon><FolderOpened /></el-icon></button></el-tooltip>
+                <el-tooltip :content="t('kdbx.delete')" :show-after="350"><button :title="t('kdbx.delete')" type="button" @click="deleteEntry"><el-icon><Delete /></el-icon></button></el-tooltip>
+              </template>
+            </div>
+          </div>
           <dl class="kdbx-entry-view">
             <dt>{{ t('kdbx.title') }}</dt><dd>{{ draft.title || t('kdbx.untitled') }}</dd>
+            <template v-if="getEntryUrlType(draft)">
+              <dt>{{ t('kdbx.entryType') }}</dt>
+              <dd>
+                <span class="kdbx-proto-badge" :class="`proto-${getEntryUrlType(draft)?.toLowerCase()}`">{{ getEntryUrlTypeBadge(draft) }}</span>
+              </dd>
+            </template>
             <dt>{{ t('kdbx.username') }}</dt><dd>{{ draft.username || '-' }}</dd>
             <dt>{{ t('kdbx.password') }}</dt><dd class="kdbx-password-view"><span>{{ showPassword ? viewPassword || '-' : viewPassword ? '••••••••' : '-' }}</span><el-tooltip v-if="viewPassword && !draft.isRecycleBin" :content="showPassword ? t('kdbx.hidePassword') : t('kdbx.showPassword')" :show-after="350"><button :title="showPassword ? t('kdbx.hidePassword') : t('kdbx.showPassword')" type="button" @click="showPassword = !showPassword"><el-icon><Hide v-if="showPassword" /><View v-else /></el-icon></button></el-tooltip><el-tooltip v-if="viewPassword && !draft.isRecycleBin" :content="t('kdbx.copy')" :show-after="350"><button :title="t('kdbx.copy')" type="button" @click="copyText(viewPassword)"><el-icon><DocumentCopy /></el-icon></button></el-tooltip></dd>
             <template v-if="viewTotpList.length === 1">
@@ -112,9 +161,22 @@
     </template>
 
     <div v-if="groupMenu" class="kdbx-group-menu" :style="{ left: `${groupMenu.x}px`, top: `${groupMenu.y}px` }" @click.stop><button type="button" @click="createGroup(groupMenu.group.id)"><el-icon><FolderAdd /></el-icon>{{ t('kdbx.newGroup') }}</button><button type="button" @click="importEntries(groupMenu.group.id)"><el-icon><Upload /></el-icon>{{ t('kdbx.import') }}</button><template v-if="!groupMenu.group.isRoot"><button type="button" @click="openGroupMove(groupMenu.group)"><el-icon><FolderOpened /></el-icon>{{ t('kdbx.moveTo') }}</button><button type="button" @click="renameGroup(groupMenu.group)"><el-icon><Edit /></el-icon>{{ t('kdbx.renameGroup') }}</button><button type="button" @click="deleteGroup(groupMenu.group)"><el-icon><Delete /></el-icon>{{ t('kdbx.delete') }}</button></template></div>
-    <div v-if="entryMenu" class="kdbx-group-menu kdbx-entry-menu" :style="{ left: `${entryMenu.x}px`, top: `${entryMenu.y}px` }" @click.stop><template v-if="entryMenu.entry.isRecycleBin"><button type="button" @click="runEntryMenuAction('restore')"><el-icon><RefreshRight /></el-icon>{{ t('kdbx.restoreHistory') }}</button><button type="button" @click="runEntryMenuAction('delete')"><el-icon><Delete /></el-icon>{{ t('kdbx.deletePermanently') }}</button></template><template v-else><button type="button" @click="runEntryMenuAction('edit')"><el-icon><Edit /></el-icon>{{ t('kdbx.edit') }}</button><button type="button" @click="runEntryMenuAction('copy')"><el-icon><DocumentCopy /></el-icon>{{ t('kdbx.copy') }}</button><button type="button" @click="runEntryMenuAction('export')"><el-icon><Download /></el-icon>{{ t('kdbx.export') }}</button><button type="button" @click="runEntryMenuAction('move')"><el-icon><FolderOpened /></el-icon>{{ t('kdbx.moveTo') }}</button><button type="button" @click="runEntryMenuAction('delete')"><el-icon><Delete /></el-icon>{{ t('kdbx.delete') }}</button></template></div>
+    <div v-if="entryMenu" class="kdbx-group-menu kdbx-entry-menu" :style="{ left: `${entryMenu.x}px`, top: `${entryMenu.y}px` }" @click.stop>
+      <template v-if="entryMenu.entry.isRecycleBin">
+        <button type="button" @click="runEntryMenuAction('restore')"><el-icon><RefreshRight /></el-icon>{{ t('kdbx.restoreHistory') }}</button>
+        <button type="button" @click="runEntryMenuAction('delete')"><el-icon><Delete /></el-icon>{{ t('kdbx.deletePermanently') }}</button>
+      </template>
+      <template v-else>
+        <button v-if="getEntryUrlType(entryMenu.entry)" type="button" @click="runEntryMenuAction('connect-terminal')"><el-icon><Monitor /></el-icon>{{ t('kdbx.connectTerminal') }}</button>
+        <button type="button" @click="runEntryMenuAction('edit')"><el-icon><Edit /></el-icon>{{ t('kdbx.edit') }}</button>
+        <button type="button" @click="runEntryMenuAction('copy')"><el-icon><DocumentCopy /></el-icon>{{ t('kdbx.copy') }}</button>
+        <button type="button" @click="runEntryMenuAction('export')"><el-icon><Download /></el-icon>{{ t('kdbx.export') }}</button>
+        <button type="button" @click="runEntryMenuAction('move')"><el-icon><FolderOpened /></el-icon>{{ t('kdbx.moveTo') }}</button>
+        <button type="button" @click="runEntryMenuAction('delete')"><el-icon><Delete /></el-icon>{{ t('kdbx.delete') }}</button>
+      </template>
+    </div>
     <el-dialog v-model="moveDialogVisible" class="kdbx-dialog" :title="moveGroupSourceId ? t('kdbx.moveGroup') : t('kdbx.moveEntries')" width="460px" :close-on-click-modal="false" @closed="clearMoveDialog"><div class="kdbx-move-tree"><el-tree v-if="moveTargetTree.length" :data="moveTargetTree" node-key="id" :expand-on-click-node="false" :highlight-current="true" default-expand-all @node-click="selectMoveTarget"><template #default="{ data }"><div class="kdbx-move-tree-row"><el-icon><Folder /></el-icon><span>{{ data.label }}</span></div></template></el-tree><div v-else class="kdbx-empty">{{ t('kdbx.noEntries') }}</div></div><template #footer><el-button @click="moveDialogVisible = false">{{ t('common.cancel') }}</el-button><el-button type="primary" :loading="moving" :disabled="!moveTargetGroupId" @click="confirmMove">{{ t('common.ok') }}</el-button></template></el-dialog>
-    <el-dialog v-model="historyDialogVisible" class="kdbx-dialog" :title="t('kdbx.historyVersion')" width="620px"><template v-if="historyPreview"><dl class="kdbx-history-preview"><dt>{{ t('kdbx.title') }}</dt><dd>{{ historyPreview.title || t('kdbx.untitled') }}</dd><dt>{{ t('kdbx.username') }}</dt><dd>{{ historyPreview.username }}</dd><dt>{{ t('kdbx.url') }}</dt><dd>{{ historyPreview.url }}</dd><dt>{{ t('kdbx.tags') }}</dt><dd>{{ historyPreview.tags.join(', ') }}</dd><dt>{{ t('kdbx.notes') }}</dt><dd>{{ historyPreview.notes }}</dd><dt>{{ t('kdbx.customFields') }}</dt><dd>{{ historyPreview.fields.filter(field => !standardFieldKeys.includes(field.key)).map(field => `${field.key}: ${field.value}`).join('\n') || '-' }}</dd><dt>{{ t('kdbx.attachments') }}</dt><dd>{{ historyPreview.attachments.map(attachment => attachment.name).join(', ') || '-' }}</dd></dl></template></el-dialog>
+    <el-dialog v-model="historyDialogVisible" class="kdbx-dialog" :title="t('kdbx.historyVersion')" width="620px"><template v-if="historyPreview"><dl class="kdbx-history-preview"><dt>{{ t('kdbx.title') }}</dt><dd>{{ historyPreview.title || t('kdbx.untitled') }}</dd><dt>{{ t('kdbx.username') }}</dt><dd>{{ historyPreview.username }}</dd><dt>{{ t('kdbx.url') }}</dt><dd>{{ historyPreview.url }}</dd><dt>{{ t('kdbx.tags') }}</dt><dd>{{ historyPreview.tags.join(', ') }}</dd><dt>{{ t('kdbx.notes') }}</dt><dd>{{ historyPreview.notes }}</dd><dt>{{ t('kdbx.customFields') }}</dt><dd>{{ historyPreview.fields.filter(field => !standardFieldKeys.includes(field.key) && field.key.toLowerCase() !== 'key_url_type').map(field => `${field.key}: ${field.value}`).join('\n') || '-' }}</dd><dt>{{ t('kdbx.attachments') }}</dt><dd>{{ historyPreview.attachments.map(attachment => attachment.name).join(', ') || '-' }}</dd></dl></template></el-dialog>
     <el-dialog v-model="resetPasswordVisible" class="kdbx-dialog kdbx-reset-password-dialog" :title="t('kdbx.resetPassword')" width="440px" :close-on-click-modal="false" @closed="clearResetPassword">
       <el-form label-position="top" @submit.prevent="resetVaultPassword">
         <el-form-item :label="t('kdbx.currentPassword')"><el-input v-model="resetCurrentPassword" :class="{ 'is-password-invalid': currentPasswordInvalid }" type="password" show-password autocomplete="current-password" @input="currentPasswordIncorrect = false" /><div v-if="currentPasswordIncorrect" class="kdbx-password-rule error">{{ t('kdbx.currentPasswordInvalid') }}</div></el-form-item>
@@ -126,6 +188,17 @@
     <el-dialog v-model="attachmentPreviewVisible" class="kdbx-dialog" :title="attachmentPreviewName" width="min(860px, calc(100vw - 48px))" @closed="clearAttachmentPreview"><img v-if="attachmentPreviewUrl" class="kdbx-attachment-preview" :src="attachmentPreviewUrl" :alt="attachmentPreviewName" /></el-dialog>
     <el-dialog v-if="editDraft" v-model="editing" class="kdbx-dialog kdbx-edit-dialog" :title="editEntryPath" width="min(760px, calc(100vw - 48px))" :close-on-click-modal="false" @closed="cancelEdit">
       <div class="kdbx-edit-form">
+        <label>{{ t('kdbx.entryType') }}
+          <el-select v-model="editEntryType" :placeholder="t('kdbx.selectEntryType')" popper-class="kdbx-select-popper">
+            <el-option :label="t('kdbx.entryTypes.normal')" value="Normal" />
+            <el-option :label="t('kdbx.entryTypes.ssh')" value="SSH" />
+            <el-option :label="t('kdbx.entryTypes.telnet')" value="Telnet" />
+            <!-- Serial 与 RawSocket 暂不暴露选项（后期按需启用），底层实现与解析代码完整保留
+            <el-option :label="t('kdbx.entryTypes.serial')" value="Serial" />
+            <el-option :label="t('kdbx.entryTypes.rawSocket')" value="RawSocket" />
+            -->
+          </el-select>
+        </label>
         <label>{{ t('kdbx.title') }}<el-input v-model="editDraft.title" /></label>
         <label>{{ t('kdbx.username') }}<el-input v-model="editDraft.username" /></label>
         <label>{{ t('kdbx.password') }}<el-input v-model="passwordField" type="password" show-password /></label>
@@ -144,7 +217,7 @@
             <span>{{ t('kdbx.totpCurrentCode') }}: <strong>{{ editTotpPreview.formattedCode }}</strong> ({{ editTotpPreview.remainingSeconds }}s)</span>
           </div>
         </div>
-        <label>{{ t('kdbx.url') }}<el-input v-model="editDraft.url" /></label>
+        <label>{{ getUrlLabel }}<el-input v-model="editDraft.url" :placeholder="getUrlPlaceholder" /></label>
         <label>{{ t('kdbx.tags') }}<el-select v-model="editDraft.tags" multiple filterable allow-create default-first-option popper-class="kdbx-select-popper"><el-option v-for="tag in vault?.tags" :key="tag" :label="tag" :value="tag" /></el-select></label>
         <label>{{ t('kdbx.notes') }}<el-input v-model="editDraft.notes" type="textarea" :rows="4" /></label>
         <section class="kdbx-section">
@@ -188,10 +261,12 @@
 import { computed, onBeforeUnmount, onMounted, ref, toRaw, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowDown, ArrowRight, Delete, DeleteFilled, Document, DocumentAdd, DocumentCopy, Download, Edit, Filter, Folder, FolderAdd, FolderOpened, FullScreen, Hide, Key, Loading, Lock, MoreFilled, Paperclip, Plus, PriceTag, RefreshRight, Search, Tickets, Upload, View } from '@element-plus/icons-vue'
+import { ArrowDown, ArrowRight, Delete, DeleteFilled, Document, DocumentAdd, DocumentCopy, Download, Edit, Filter, Folder, FolderAdd, FolderOpened, FullScreen, Hide, Key, Loading, Lock, Monitor, MoreFilled, Paperclip, Plus, PriceTag, RefreshRight, Search, Tickets, Upload, View } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import { useEditorStore } from '@/store/editor'
-import type { KdbxEntryDetail, KdbxEntryInput, KdbxEntryRevision, KdbxField, KdbxGroupSummary, KdbxVaultSnapshot } from '@shared/types/kdbx'
+import { useTerminalStore } from '@/store/terminal'
+import type { KdbxEntryDetail, KdbxEntryInput, KdbxEntryRevision, KdbxEntrySummary, KdbxField, KdbxGroupSummary, KdbxVaultSnapshot } from '@shared/types/kdbx'
+import type { ITerminalConnectionConfig, TerminalProtocolType } from '@shared/types/terminal'
 import { isKdbxPasswordValid, KDBX_PASSWORD_PATTERN } from '@shared/kdbxPassword'
 import { generateTotp, isTotpField, isTotpKey, isTotpValue, parseOtpUri } from '@shared/totp'
 import type { TotpGenerationResult } from '@shared/totp'
@@ -219,11 +294,14 @@ const errorMessage = (reason: unknown, fallback: string): string => {
   const message = reason instanceof Error ? reason.message : typeof reason === 'string' ? reason : ''
   return message.replace(/^Error invoking remote method '[^']+':\s*(?:Error:\s*)?/, '').replace(/^Error:\s*/, '') || fallback
 }
-const { currentFile } = storeToRefs(useEditorStore())
+const editorStore = useEditorStore()
+const { currentFile } = storeToRefs(editorStore)
+const terminalStore = useTerminalStore()
 const vault = ref<KdbxVaultSnapshot | null>(null)
 const locked = ref(true); const password = ref(''); const error = ref(''); const unlocking = ref(false); const unlockPasswordVisible = ref(false)
 const query = ref(''); const searchFields = ref(['title', 'username', 'url', 'notes']); const showSearchOptions = ref(false)
 const selectedGroup = ref(''); const selectedTag = ref(''); const selectedUntagged = ref(false); const selectedRecycle = ref(false); const selectedEntryId = ref(''); const selectedEntryIds = ref(new Set<string>()); const draft = ref<KdbxEntryDetail | null>(null); const editDraft = ref<KdbxEntryDetail | null>(null); const passwordField = ref(''); const totpField = ref(''); const savingEntry = ref(false); const exportingEntries = ref(false); const editing = ref(false); const newEntry = ref(false); const showPassword = ref(false)
+const editEntryType = ref<'Normal' | 'SSH' | 'Telnet' | 'Serial' | 'RawSocket'>('Normal')
 const expandedGroups = ref(new Set<string>()); const allItemsExpanded = ref(true); const groupMenu = ref<GroupMenuState | null>(null); const entryMenu = ref<EntryMenuState | null>(null); const attachmentInput = ref<HTMLInputElement | null>(null); const qrScanDialogRef = ref<InstanceType<typeof QrScanDialog> | null>(null); const batchImportDialogRef = ref<InstanceType<typeof BatchImportTotpDialog> | null>(null); const historyDialogVisible = ref(false); const historyPreview = ref<KdbxEntryRevision | null>(null); const attachmentPreviewVisible = ref(false); const attachmentPreviewUrl = ref(''); const attachmentPreviewName = ref('')
 const moveDialogVisible = ref(false); const moveTargetGroupId = ref(''); const moveGroupSourceId = ref(''); const moveEntryIds = ref<string[]>([]); const moving = ref(false)
 const resetPasswordVisible = ref(false); const resettingPassword = ref(false); const resetAttempted = ref(false); const currentPasswordIncorrect = ref(false); const resetCurrentPassword = ref(''); const resetNewPassword = ref(''); const resetConfirmPassword = ref('')
@@ -255,13 +333,66 @@ const entryPath = computed(() => entryPathParts.value.join(' / '))
 const editEntryPath = computed(() => { if (!editDraft.value) return ''; const vaultName = vaultDisplayName.value; const groups = displayGroupPath(editDraft.value.groupPath).filter((name, index) => index !== 0 || name !== vaultName); return [vaultName, ...groups, editDraft.value.title || t('kdbx.untitled')].join(' / ') })
 const draftAttachments = computed(() => attachmentDrafts.value.filter(attachment => !attachment.removed))
 const viewPassword = computed(() => draft.value?.fields.find(field => field.key === 'Password')?.value || '')
+
+const getEntryUrlType = (entry: KdbxEntrySummary | KdbxEntryDetail | null | undefined): string | null => {
+  if (!entry) return null
+  let val: string | null = null
+  if ('urlType' in entry && entry.urlType) {
+    val = entry.urlType
+  } else if ('fields' in entry && Array.isArray((entry as KdbxEntryDetail).fields)) {
+    val = (entry as KdbxEntryDetail).fields.find(f => f.key.toLowerCase() === 'key_url_type')?.value || null
+  }
+  if (!val || val.toLowerCase() === 'normal' || val.toLowerCase() === 'null' || val.trim() === '') {
+    return null
+  }
+  const norm = val.trim().toLowerCase()
+  if (norm === 'ssh') return 'SSH'
+  if (norm === 'telnet') return 'Telnet'
+  if (norm === 'series' || norm === 'serial') return 'Serial'
+  if (norm === 'rawrocket' || norm === 'rawsocket' || norm === 'raw_rocket' || norm === 'socket') return 'RawSocket'
+  return val.trim()
+}
+
+const getEntryUrlTypeBadge = (entry: KdbxEntrySummary | KdbxEntryDetail | null | undefined): string => {
+  const proto = getEntryUrlType(entry)
+  if (!proto) return ''
+  if (proto === 'RawSocket') return 'RAW SOCKET'
+  return proto.toUpperCase()
+}
+
+const getUrlLabel = computed(() => {
+  if (!editEntryType.value || editEntryType.value === 'Normal') {
+    return t('kdbx.url')
+  }
+  if (editEntryType.value === 'Serial') {
+    return t('kdbx.serialDeviceUrlLabel')
+  }
+  return t('kdbx.hostPortLabel')
+})
+
+const getUrlPlaceholder = computed(() => {
+  if (editEntryType.value === 'SSH') {
+    return t('kdbx.placeholders.ssh')
+  }
+  if (editEntryType.value === 'Serial') {
+    return t('kdbx.placeholders.serial')
+  }
+  if (editEntryType.value === 'Telnet') {
+    return t('kdbx.placeholders.telnet')
+  }
+  if (editEntryType.value === 'RawSocket') {
+    return t('kdbx.placeholders.rawSocket')
+  }
+  return ''
+})
+
 const viewTotpList = computed<ViewTotpItem[]>(() => {
   if (!draft.value) return []
   const items: ViewTotpItem[] = []
   const fields = draft.value.fields || []
   for (let i = 0; i < fields.length; i++) {
     const field = fields[i]
-    if (standardFieldKeys.includes(field.key)) continue
+    if (standardFieldKeys.includes(field.key) || field.key.toLowerCase() === 'key_url_type') continue
     if (isTotpField(field) || isTotpValue(field.value)) {
       const res = generateTotp(field.value, now.value)
       if (res) {
@@ -300,6 +431,7 @@ const viewCustomFields = computed(() => {
   const totpKeys = new Set(viewTotpList.value.map(item => item.key))
   return (draft.value.fields || []).filter(field =>
     !standardFieldKeys.includes(field.key) &&
+    field.key.toLowerCase() !== 'key_url_type' &&
     !totpKeys.has(field.key) &&
     !isTotpField(field) &&
     !isTotpValue(field.value)
@@ -316,11 +448,11 @@ const clearCustomFields = (): void => { customFields.value = []; totpField.value
 const loadCustomFields = (detail: KdbxEntryDetail): void => {
   const totpEntry = detail.fields.find(field => isTotpField(field))
   totpField.value = totpEntry?.value || ''
-  customFields.value = detail.fields.filter(field => !standardFieldKeys.includes(field.key) && field !== totpEntry).map(field => ({ ...field, id: `custom-${nextCustomFieldId++}` }))
+  customFields.value = detail.fields.filter(field => !standardFieldKeys.includes(field.key) && field !== totpEntry && field.key.toLowerCase() !== 'key_url_type').map(field => ({ ...field, id: `custom-${nextCustomFieldId++}` }))
 }
 const loadAttachments = (detail: KdbxEntryDetail): void => { attachmentDrafts.value = detail.attachments.map(attachment => ({ ...attachment, id: `attachment-${nextAttachmentDraftId++}`, removed: false })) }
 const clearAttachmentPreview = (): void => { if (attachmentPreviewUrl.value.startsWith('blob:')) URL.revokeObjectURL(attachmentPreviewUrl.value); attachmentPreviewUrl.value = ''; attachmentPreviewName.value = '' }
-const clearEditDraft = (): void => { editDraft.value = null; passwordField.value = ''; totpField.value = ''; editing.value = false; newEntry.value = false; clearCustomFields(); attachmentDrafts.value = []; clearAttachmentPreview() }
+const clearEditDraft = (): void => { editDraft.value = null; passwordField.value = ''; totpField.value = ''; editEntryType.value = 'Normal'; editing.value = false; newEntry.value = false; clearCustomFields(); attachmentDrafts.value = []; clearAttachmentPreview() }
 const clearDraft = (): void => { draft.value = null; selectedEntryId.value = ''; showPassword.value = false; revealedCustomFields.value = new Set(); clearEditDraft() }
 const lock = async(): Promise<void> => { const pathname = filePath.value; if (!pathname) return; await window.electron.ipcRenderer.invoke('mt::kdbx::lock', pathname); if (pathname !== filePath.value) return; vault.value = null; clearDraft(); password.value = ''; unlockPasswordVisible.value = false; locked.value = true }
 const clearResetPassword = (): void => { resetAttempted.value = false; currentPasswordIncorrect.value = false; resetCurrentPassword.value = ''; resetNewPassword.value = ''; resetConfirmPassword.value = '' }
@@ -344,12 +476,178 @@ const openGroupMove = (group: FlatGroup): void => { groupMenu.value = null; move
 const openEntryMove = (entryIds: string[]): void => { if (!entryIds.length) return; entryMenu.value = null; moveGroupSourceId.value = ''; moveEntryIds.value = [...new Set(entryIds)]; moveTargetGroupId.value = ''; moveDialogVisible.value = true }
 const selectMoveTarget = (group: MoveGroupOption): void => { moveTargetGroupId.value = group.id }
 const confirmMove = async(): Promise<void> => { if (!filePath.value || !moveTargetGroupId.value || moving.value) return; moving.value = true; try { vault.value = moveGroupSourceId.value ? await window.electron.ipcRenderer.invoke('mt::kdbx::move-group', filePath.value, moveGroupSourceId.value, moveTargetGroupId.value) : await window.electron.ipcRenderer.invoke('mt::kdbx::move-entries', filePath.value, [...moveEntryIds.value], moveTargetGroupId.value); clearEntrySelection(); clearDraft(); expandAllGroups(); moveDialogVisible.value = false; ElMessage.success(t('kdbx.moved')) } catch (error) { ElMessage.error(errorMessage(error, t('kdbx.moveFailed'))) } finally { moving.value = false } }
-const runEntryMenuAction = async(action: 'edit' | 'copy' | 'export' | 'move' | 'delete' | 'restore'): Promise<void> => { const entry = entryMenu.value?.entry; entryMenu.value = null; if (!entry) return; if (action === 'move') { openEntryMove([entry.id]); return } await selectEntry(entry.id); if (draft.value?.id !== entry.id) return; if (action === 'edit') beginEdit(); else if (action === 'copy') copyEntry(); else if (action === 'export') await exportEntries([entry.id]); else if (action === 'restore') await restoreEntry(); else await deleteEntry() }
+
+function parseEntryToTerminalConfig(entry: KdbxEntryDetail | KdbxEntrySummary, fullFields?: KdbxField[]): ITerminalConnectionConfig {
+  const fields = fullFields || ('fields' in entry ? (entry as KdbxEntryDetail).fields : []) || []
+  const getFieldValue = (key: string) => fields.find(f => f.key.toLowerCase() === key.toLowerCase())?.value || ''
+
+  const rawUrlType = getFieldValue('key_url_type') || ('urlType' in entry ? entry.urlType : '') || ''
+  const protocolField = getFieldValue('protocol') || getFieldValue('type') || rawUrlType
+  const portField = getFieldValue('port')
+  const privateKeyField = getFieldValue('privatekey') || getFieldValue('ssh_key') || getFieldValue('private_key')
+  const passphraseField = getFieldValue('passphrase')
+  const jumpHostField = getFieldValue('jumphost') || getFieldValue('jump_host')
+  const jumpPortField = getFieldValue('jumpport') || getFieldValue('jump_port')
+  const jumpUserField = getFieldValue('jumpuser') || getFieldValue('jump_user')
+  const jumpPassField = getFieldValue('jumppass') || getFieldValue('jump_pass')
+  const baudRateField = getFieldValue('baudrate') || getFieldValue('baud_rate')
+  const serialPortField = getFieldValue('serialport') || getFieldValue('serial_port')
+  const socketProtoField = getFieldValue('socketproto') || getFieldValue('socket_protocol')
+
+  let type: TerminalProtocolType = 'ssh'
+  const normalizedProto = (protocolField || '').toLowerCase()
+  if (normalizedProto.includes('telnet')) {
+    type = 'telnet'
+  } else if (normalizedProto.includes('serial') || normalizedProto.includes('series')) {
+    type = 'serial'
+  } else if (normalizedProto.includes('raw') || normalizedProto.includes('socket') || normalizedProto.includes('rocket')) {
+    type = 'rawSocket'
+  } else {
+    type = 'ssh'
+  }
+
+  let rawUrl = (entry.url || '').trim()
+  let host = rawUrl
+  let port = type === 'telnet' ? 23 : (type === 'rawSocket' ? 9000 : 22)
+  let username = entry.username || ''
+  let password = fields.find(f => f.key === 'Password')?.value || ''
+  let baudRate = 115200
+  let serialPort = serialPortField || ''
+
+  if (rawUrl) {
+    if (rawUrl.includes('://')) {
+      try {
+        const u = new URL(rawUrl)
+        if (u.hostname) host = u.hostname
+        if (u.port) port = Number(u.port)
+        if (u.username) username = decodeURIComponent(u.username)
+        if (u.password) password = decodeURIComponent(u.password)
+        if (u.pathname && type === 'serial' && !serialPort) {
+          serialPort = u.pathname
+        }
+      } catch {
+        const match = rawUrl.match(/^[a-zA-Z0-9_-]+:\/\/([^:/]+)(?::(\d+))?/)
+        if (match) {
+          host = match[1]
+          if (match[2]) port = Number(match[2])
+        }
+      }
+    } else if (type === 'serial') {
+      if (rawUrl.includes(':')) {
+        const [p, b] = rawUrl.split(':')
+        serialPort = p.trim()
+        if (b && Number(b)) baudRate = Number(b)
+      } else {
+        serialPort = rawUrl
+      }
+    } else if (rawUrl.includes(':')) {
+      const parts = rawUrl.split(':')
+      host = parts[0].trim()
+      const parsedPort = Number(parts[1])
+      if (parsedPort) port = parsedPort
+    }
+  }
+
+  if (portField && Number(portField)) {
+    port = Number(portField)
+  }
+  if (baudRateField && Number(baudRateField)) {
+    baudRate = Number(baudRateField)
+  }
+
+  let totpSecret = ''
+  const totpItem = fields.find(f => isTotpField(f) || isTotpValue(f.value))
+  if (totpItem) {
+    totpSecret = totpItem.value
+  }
+
+  return {
+    id: `kdbx_${entry.id}_${Date.now()}`,
+    name: entry.title || host || serialPort || t('kdbx.terminalConnection'),
+    type,
+    host: host || '127.0.0.1',
+    port,
+    username: username || (type === 'ssh' ? 'root' : ''),
+    authType: privateKeyField ? 'privateKey' : 'password',
+    password,
+    privateKey: privateKeyField,
+    passphrase: passphraseField,
+    totpSecret,
+    jumpHost: jumpHostField,
+    jumpPort: Number(jumpPortField) || 22,
+    jumpUsername: jumpUserField,
+    jumpPassword: jumpPassField,
+    keepaliveInterval: 0,
+    serialPort: serialPort || host,
+    baudRate,
+    dataBits: 8,
+    stopBits: 1,
+    parity: 'none',
+    socketProtocol: (socketProtoField as any) || 'tcp'
+  }
+}
+
+const connectTerminalFromEntry = async(entry: KdbxVaultSnapshot['entries'][number]): Promise<void> => {
+  if (!filePath.value) return
+  try {
+    const detail = await window.electron.ipcRenderer.invoke('mt::kdbx::entry', filePath.value, entry.id)
+    if (!detail) return
+    const config = parseEntryToTerminalConfig(detail)
+    const session = await terminalStore.connect(config)
+    const proto = (session?.type || config?.type || 'ssh').toUpperCase()
+    editorStore.OPEN_TERMINAL_TAB({
+      sessionId: session.id,
+      title: session.title ? `${proto}: ${session.title}` : `${proto}: ${config.name || config.host || t('terminal.title')}`,
+      config: JSON.parse(JSON.stringify(config)),
+      kdbxEntryId: detail.id
+    })
+  } catch (err: any) {
+    ElMessage.error(`${t('kdbx.connectTerminalFailed')}: ${err?.message || err}`)
+  }
+}
+
+const connectTerminalFromDraft = async(): Promise<void> => {
+  if (!draft.value) return
+  try {
+    const config = parseEntryToTerminalConfig(draft.value)
+    const session = await terminalStore.connect(config)
+    const proto = (session?.type || config?.type || 'ssh').toUpperCase()
+    editorStore.OPEN_TERMINAL_TAB({
+      sessionId: session.id,
+      title: session.title ? `${proto}: ${session.title}` : `${proto}: ${config.name || config.host || t('terminal.title')}`,
+      config: JSON.parse(JSON.stringify(config)),
+      kdbxEntryId: draft.value.id
+    })
+  } catch (err: any) {
+    ElMessage.error(`${t('kdbx.connectTerminalFailed')}: ${err?.message || err}`)
+  }
+}
+
+const runEntryMenuAction = async(action: 'edit' | 'copy' | 'export' | 'move' | 'delete' | 'restore' | 'connect-terminal'): Promise<void> => {
+  const entry = entryMenu.value?.entry
+  entryMenu.value = null
+  if (!entry) return
+  if (action === 'connect-terminal') {
+    await connectTerminalFromEntry(entry)
+    return
+  }
+  if (action === 'move') { openEntryMove([entry.id]); return }
+  await selectEntry(entry.id)
+  if (draft.value?.id !== entry.id) return
+  if (action === 'edit') beginEdit()
+  else if (action === 'copy') copyEntry()
+  else if (action === 'export') await exportEntries([entry.id])
+  else if (action === 'restore') await restoreEntry()
+  else await deleteEntry()
+}
 const toInput = (): KdbxEntryInput => {
   const active = editDraft.value!
-  const fields = customFields.value.filter(field => field.key.trim() && !isTotpKey(field.key.trim())).map(field => ({ key: field.key.trim(), value: field.value, protected: field.protected }))
+  const fields = customFields.value.filter(field => field.key.trim() && !isTotpKey(field.key.trim()) && field.key.trim().toLowerCase() !== 'key_url_type').map(field => ({ key: field.key.trim(), value: field.value, protected: field.protected }))
   if (totpField.value.trim()) {
     fields.unshift({ key: 'otp', value: totpField.value.trim(), protected: true })
+  }
+  if (editEntryType.value && editEntryType.value !== 'Normal') {
+    fields.push({ key: 'key_url_type', value: editEntryType.value, protected: false })
   }
   fields.push({ key: 'Password', value: passwordField.value, protected: true })
   return {
@@ -370,8 +668,17 @@ const createGroup = async(parentId = selectedGroup.value): Promise<void> => { if
 const renameGroup = async(group: FlatGroup): Promise<void> => { if (!filePath.value) return; groupMenu.value = null; try { const { value } = await ElMessageBox.prompt(t('kdbx.groupName'), t('kdbx.renameGroup'), { ...messageBoxTheme, inputValue: group.name, confirmButtonText: t('common.ok'), cancelButtonText: t('common.cancel'), inputPattern: /\S/, inputErrorMessage: t('kdbx.groupNameRequired') }); vault.value = await window.electron.ipcRenderer.invoke('mt::kdbx::rename-group', filePath.value, group.id, value) } catch { /* cancelled */ } }
 const deleteGroup = async(group: FlatGroup): Promise<void> => { if (!filePath.value) return; groupMenu.value = null; try { await ElMessageBox.confirm(t('kdbx.deleteGroupConfirm', { name: group.name }), t('kdbx.delete'), { ...messageBoxTheme, confirmButtonText: t('common.ok'), cancelButtonText: t('common.cancel'), type: 'warning' }); vault.value = await window.electron.ipcRenderer.invoke('mt::kdbx::delete-group', filePath.value, group.id); clearEntrySelection(); if (selectedGroup.value === group.id) selectAll() } catch { /* cancelled */ } }
 const emptyRecycleBin = async(): Promise<void> => { if (!filePath.value) return; try { await ElMessageBox.confirm(t('kdbx.emptyRecycleBinConfirm'), t('kdbx.emptyRecycleBin'), { ...messageBoxTheme, confirmButtonText: t('kdbx.deletePermanently'), cancelButtonText: t('common.cancel'), type: 'warning' }); vault.value = await window.electron.ipcRenderer.invoke('mt::kdbx::empty-recycle-bin', filePath.value); clearEntrySelection(); selectedEntryId.value = ''; clearDraft() } catch { /* cancelled */ } }
-const createEntry = async(): Promise<void> => { if (!filePath.value || selectedRecycle.value) return; if (editing.value) { try { await ElMessageBox.confirm(t('kdbx.discardChangesConfirm'), t('kdbx.cancelEdit'), { ...messageBoxTheme, confirmButtonText: t('common.ok'), cancelButtonText: t('common.cancel'), type: 'warning' }) } catch { return } clearEditDraft() } const groupId = selectedGroup.value || flatGroups.value[0]?.id || ''; if (!groupId) return; editDraft.value = { id: '', groupId, title: '', username: '', url: '', notes: '', tags: [], updatedAt: null, groupPath: groupPathFor(groupId), isRecycleBin: false, fields: [], attachments: [], historyCount: 0, history: [] }; passwordField.value = ''; totpField.value = ''; clearCustomFields(); attachmentDrafts.value = []; newEntry.value = true; editing.value = true }
-const beginEdit = (): void => { if (!draft.value) return; editDraft.value = structuredClone(toRaw(draft.value)); passwordField.value = viewPassword.value; loadCustomFields(editDraft.value); loadAttachments(editDraft.value); newEntry.value = false; editing.value = true }
+const createEntry = async(): Promise<void> => { if (!filePath.value || selectedRecycle.value) return; if (editing.value) { try { await ElMessageBox.confirm(t('kdbx.discardChangesConfirm'), t('kdbx.cancelEdit'), { ...messageBoxTheme, confirmButtonText: t('common.ok'), cancelButtonText: t('common.cancel'), type: 'warning' }) } catch { return } clearEditDraft() } const groupId = selectedGroup.value || flatGroups.value[0]?.id || ''; if (!groupId) return; editDraft.value = { id: '', groupId, title: '', username: '', url: '', notes: '', tags: [], updatedAt: null, groupPath: groupPathFor(groupId), isRecycleBin: false, fields: [], attachments: [], historyCount: 0, history: [] }; passwordField.value = ''; totpField.value = ''; editEntryType.value = 'Normal'; clearCustomFields(); attachmentDrafts.value = []; newEntry.value = true; editing.value = true }
+const beginEdit = (): void => {
+  if (!draft.value) return
+  editDraft.value = structuredClone(toRaw(draft.value))
+  passwordField.value = viewPassword.value
+  editEntryType.value = (getEntryUrlType(editDraft.value) as any) || 'Normal'
+  loadCustomFields(editDraft.value)
+  loadAttachments(editDraft.value)
+  newEntry.value = false
+  editing.value = true
+}
 const cancelEdit = (): void => { clearEditDraft() }
 const saveEntry = async(): Promise<void> => { if (!filePath.value || !editDraft.value || savingEntry.value) return; savingEntry.value = true; try { const detail = newEntry.value ? await window.electron.ipcRenderer.invoke('mt::kdbx::create-entry', filePath.value, toInput()) : await window.electron.ipcRenderer.invoke('mt::kdbx::commit-entry', filePath.value, editDraft.value.id, toInput()); draft.value = detail; selectedEntryId.value = detail.id; showPassword.value = false; clearEditDraft(); clearEntrySelection(); await refresh(); ElMessage.success(t('kdbx.saved')) } catch (err) { ElMessage.error(errorMessage(err, t('kdbx.saveFailed'))) } finally { savingEntry.value = false } }
 const deleteEntry = async(): Promise<void> => { if (!filePath.value || !draft.value) return; const permanent = draft.value.isRecycleBin; try { await ElMessageBox.confirm(permanent ? t('kdbx.deletePermanentlyConfirm') : t('kdbx.moveToRecycleBinConfirm'), permanent ? t('kdbx.deletePermanently') : t('kdbx.delete'), { ...messageBoxTheme, confirmButtonText: t('common.ok'), cancelButtonText: t('common.cancel'), type: 'warning' }); vault.value = await window.electron.ipcRenderer.invoke('mt::kdbx::delete-entry', filePath.value, draft.value.id); clearEntrySelection(); clearDraft() } catch { /* cancelled */ } }
@@ -386,11 +693,6 @@ const attachmentMimeType = (name: string): string => { const extension = name.sp
 const downloadAttachment = async(attachment: AttachmentDraft): Promise<void> => { try { const data = await readAttachment(attachment); const link = document.createElement('a'); const url = URL.createObjectURL(new Blob([data], { type: attachmentMimeType(attachment.name) })); link.href = url; link.download = attachment.name; link.click(); setTimeout(() => URL.revokeObjectURL(url), 0) } catch (err) { ElMessage.error(errorMessage(err, t('kdbx.attachmentFailed'))) } }
 const isPreviewable = (attachment: AttachmentDraft): boolean => /\.(avif|gif|jpe?g|png|svg|webp)$/i.test(attachment.name)
 const previewAttachment = async(attachment: AttachmentDraft): Promise<void> => { try { clearAttachmentPreview(); if (attachment.data) attachmentPreviewUrl.value = URL.createObjectURL(new Blob([attachment.data], { type: attachmentMimeType(attachment.name) })); else { if (!filePath.value || !draft.value) throw new Error(t('kdbx.attachmentFailed')); attachmentPreviewUrl.value = await window.electron.ipcRenderer.invoke('mt::kdbx::preview-attachment', filePath.value, draft.value.id, attachment.name) } attachmentPreviewName.value = attachment.name; attachmentPreviewVisible.value = true } catch (err) { ElMessage.error(errorMessage(err, t('kdbx.attachmentFailed'))) } }
-const copyTotpCode = (): void => {
-  if (viewTotpList.value.length > 0) {
-    copyTotpItem(viewTotpList.value[0])
-  }
-}
 const copyTotpItem = (item: ViewTotpItem): void => {
   window.electron.clipboard.writeText(item.result.code)
   ElMessage.success(t('kdbx.totpCopied'))
@@ -501,7 +803,20 @@ onBeforeUnmount(() => {
 .kdbx-groups, .kdbx-entries { min-height: 0; border-right: 1px solid var(--itemBgColor); }.kdbx-groups { display: flex; flex-direction: column; overflow: hidden; }.kdbx-entries { overflow: auto; }.kdbx-pane-title, .kdbx-toolbar, .kdbx-detail-title { min-height: 42px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 10px; border-bottom: 1px solid var(--itemBgColor); }.kdbx-vault-title > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.kdbx-vault-title > div, .kdbx-detail-title > div:last-child { display: flex; }
 button { border: 0; background: transparent; color: inherit; cursor: pointer; } button:disabled { cursor: not-allowed; opacity: .45; }.kdbx-toolbar > button, .kdbx-pane-title button, .kdbx-detail-title button, .kdbx-section-title button, .kdbx-more { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 28px; height: 28px; }.kdbx-toolbar > button:hover, .kdbx-toolbar > button.active, .kdbx-pane-title button:hover, .kdbx-detail-title button:hover, .kdbx-section-title button:hover, .kdbx-more:hover { background: var(--floatHoverColor); }
 .kdbx-nav-item { width: 100%; min-height: 34px; display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 7px; align-items: center; padding: 6px 12px; text-align: left; }.kdbx-nav-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.kdbx-nav-item em, .kdbx-tree-label em { color: var(--editorColor50); font-size: 12px; font-style: normal; }.kdbx-nav-item.active, .kdbx-tree-row.active { background: var(--floatHoverColor); color: var(--themeColor); }.kdbx-tree { flex: 1; min-height: 0; overflow: auto; padding: 6px 0; }.kdbx-all-root { display: flex; align-items: stretch; padding-left: 8px; }.kdbx-all-root .kdbx-nav-item { min-width: 0; padding-left: 3px; padding-right: 40px; }.kdbx-all-toggle { display: inline-flex; flex: 0 0 18px; width: 18px; align-items: center; justify-content: center; color: var(--editorColor50); }.kdbx-all-toggle:hover { background: var(--floatHoverColor); color: var(--editorColor); }.kdbx-all-children { padding-left: 20px; }.kdbx-tags { padding-bottom: 6px; margin-bottom: 6px; border-bottom: 1px solid var(--itemBgColor); }.kdbx-tag { padding-left: 9px; padding-right: 40px; color: var(--editorColor50); }.kdbx-tree-row { display: flex; align-items: center; min-height: 30px; padding-right: 7px; }.kdbx-tree-label { min-width: 0; flex: 1; display: grid; grid-template-columns: 17px minmax(0, 1fr) auto; gap: 6px; align-items: center; padding: 5px 3px; text-align: left; }.kdbx-tree-label span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.kdbx-tree-toggle { display: inline-flex; width: 18px; justify-content: center; color: var(--editorColor50); }.kdbx-more { visibility: hidden; }.kdbx-tree-row:hover { background: var(--floatHoverColor); }.kdbx-tree-row:hover .kdbx-more, .kdbx-recycle:hover .kdbx-more { visibility: visible; }.kdbx-recycle { position: relative; display: flex; border-top: 1px solid var(--itemBgColor); }.kdbx-recycle .kdbx-nav-item { padding-right: 34px; }.kdbx-recycle > .kdbx-more { position: absolute; right: 5px; top: 3px; }
-.kdbx-toolbar { position: sticky; top: 0; z-index: 1; background: var(--editorBgColor); }.kdbx-toolbar .el-input { min-width: 0; }.kdbx-export-selected { position: relative; }.kdbx-export-selected sup { position: absolute; top: 1px; right: 1px; min-width: 12px; height: 12px; border-radius: 6px; background: var(--themeColor); color: var(--editorBgColor); font-size: 9px; line-height: 12px; text-align: center; }.kdbx-search-options { display: grid; gap: 7px; padding: 10px 12px; border-bottom: 1px solid var(--itemBgColor); background: var(--floatBgColor); font-size: 12px; }.kdbx-search-options :deep(.el-checkbox-group) { display: flex; flex-wrap: wrap; gap: 10px; }.kdbx-search-options :deep(.el-checkbox) { margin-right: 0; }.kdbx-entry-row { display: grid; grid-template-columns: 20px minmax(0, 1fr) 28px; gap: 8px; align-items: center; min-height: 56px; padding: 0 12px; border-bottom: 1px solid var(--itemBgColor); }.kdbx-entry-select { display: grid; gap: 3px; min-width: 0; min-height: 56px; padding: 9px 0; text-align: left; }.kdbx-entry-more { visibility: hidden; display: inline-flex; width: 28px; height: 28px; align-items: center; justify-content: center; }.kdbx-entry-row:hover .kdbx-entry-more, .kdbx-entry-row.active .kdbx-entry-more { visibility: visible; }.kdbx-entry-more:hover { background: var(--floatHoverColor); }.kdbx-entry-row:hover, .kdbx-entry-row.active { background: var(--floatHoverColor); }.kdbx-entry-title, .kdbx-entry-username { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.kdbx-entry-title { font-weight: 600; }.kdbx-entry-username { color: var(--editorColor50); font-size: 12px; }
+.kdbx-toolbar { position: sticky; top: 0; z-index: 1; background: var(--editorBgColor); }.kdbx-toolbar .el-input { min-width: 0; }.kdbx-export-selected { position: relative; }.kdbx-export-selected sup { position: absolute; top: 1px; right: 1px; min-width: 12px; height: 12px; border-radius: 6px; background: var(--themeColor); color: var(--editorBgColor); font-size: 9px; line-height: 12px; text-align: center; }.kdbx-search-options { display: grid; gap: 7px; padding: 10px 12px; border-bottom: 1px solid var(--itemBgColor); background: var(--floatBgColor); font-size: 12px; }.kdbx-search-options :deep(.el-checkbox-group) { display: flex; flex-wrap: wrap; gap: 10px; }.kdbx-search-options :deep(.el-checkbox) { margin-right: 0; }.kdbx-entry-row { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: 8px; align-items: center; min-height: 56px; padding: 0 12px; border-bottom: 1px solid var(--itemBgColor); }.kdbx-entry-select { display: grid; gap: 3px; min-width: 0; min-height: 56px; padding: 9px 0; text-align: left; }.kdbx-entry-more { visibility: hidden; display: inline-flex; width: 28px; height: 28px; align-items: center; justify-content: center; }.kdbx-entry-row:hover .kdbx-entry-more, .kdbx-entry-row.active .kdbx-entry-more { visibility: visible; }.kdbx-entry-more:hover { background: var(--floatHoverColor); }.kdbx-entry-row:hover, .kdbx-entry-row.active { background: var(--floatHoverColor); }.kdbx-entry-title, .kdbx-entry-username { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.kdbx-entry-title { font-weight: 600; display: flex; align-items: center; gap: 6px; }.kdbx-entry-username { color: var(--editorColor50); font-size: 12px; }
+.kdbx-entry-actions { display: flex; align-items: center; gap: 2px; }
+.kdbx-entry-actions .kdbx-entry-terminal-btn { visibility: hidden; display: inline-flex; width: 28px; height: 28px; align-items: center; justify-content: center; color: var(--themeColor, #409eff); border-radius: 4px; transition: all 0.2s; }
+.kdbx-entry-row:hover .kdbx-entry-actions .kdbx-entry-terminal-btn, .kdbx-entry-row.active .kdbx-entry-actions .kdbx-entry-terminal-btn { visibility: visible; }
+.kdbx-entry-actions .kdbx-entry-terminal-btn:hover { background: var(--floatHoverColor); transform: scale(1.1); }
+.kdbx-terminal-direct-btn { display: inline-flex; width: 28px; height: 28px; align-items: center; justify-content: center; color: var(--themeColor, #409eff); border-radius: 4px; transition: all 0.2s; }
+.kdbx-terminal-direct-btn:hover { background: var(--floatHoverColor); transform: scale(1.1); }
+
+.kdbx-proto-badge { display: inline-flex; align-items: center; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 3px; line-height: 1.2; vertical-align: middle; text-transform: uppercase; flex: 0 0 auto; }
+.kdbx-proto-badge.proto-ssh { background: rgba(64, 158, 255, 0.15); color: #409eff; border: 1px solid rgba(64, 158, 255, 0.35); }
+.kdbx-proto-badge.proto-telnet { background: rgba(230, 162, 60, 0.15); color: #e6a23c; border: 1px solid rgba(230, 162, 60, 0.35); }
+.kdbx-proto-badge.proto-series, .kdbx-proto-badge.proto-serial { background: rgba(103, 194, 58, 0.15); color: #67c23a; border: 1px solid rgba(103, 194, 58, 0.35); }
+.kdbx-proto-badge.proto-rawrocket, .kdbx-proto-badge.proto-rawsocket { background: rgba(144, 147, 153, 0.18); color: #909399; border: 1px solid rgba(144, 147, 153, 0.35); }
+
 .kdbx-detail { min-width: 0; overflow: auto; padding: 0 16px 24px; }.kdbx-detail label { display: grid; gap: 6px; margin-top: 14px; font-size: 12px; color: var(--editorColor50); }.kdbx-detail :deep(.el-input__wrapper), .kdbx-detail :deep(.el-select__wrapper), .kdbx-detail :deep(.el-textarea__inner) { background: var(--inputBgColor); box-shadow: 0 0 0 1px var(--floatBorderColor) inset; color: var(--editorColor); }.kdbx-detail :deep(.el-input__inner), .kdbx-detail :deep(.el-textarea__inner), .kdbx-detail :deep(.el-select__selected-item) { color: var(--editorColor80); }.kdbx-detail-title { position: sticky; top: 0; z-index: 2; margin: 0 -16px; padding: 0 16px; background: var(--editorBgColor); }.kdbx-breadcrumb { min-width: 0; display: flex; overflow: hidden; color: var(--editorColor50); font-size: 12px; white-space: nowrap; }.kdbx-breadcrumb span { overflow: hidden; text-overflow: ellipsis; }.kdbx-breadcrumb span + span::before { content: '/'; padding: 0 5px; color: var(--editorColor50); }
 .kdbx-section { margin-top: 18px; border-top: 1px solid var(--itemBgColor); padding-top: 10px; }.kdbx-section-title { display: flex; align-items: center; justify-content: space-between; min-height: 28px; }.kdbx-custom-field { display: grid; grid-template-columns: minmax(110px, .6fr) minmax(150px, 1fr) 28px 28px; gap: 6px; align-items: center; margin-top: 7px; }.kdbx-custom-field :deep(.el-checkbox) { display: inline-flex; justify-self: center; width: 28px; height: 28px; margin: 0; }.kdbx-custom-field :deep(.el-checkbox__label) { display: inline-flex; padding-left: 4px; color: var(--editorColor50); }.kdbx-file-input { display: none; }.kdbx-section-empty { padding: 8px 0; color: var(--editorColor50); font-size: 12px; }.kdbx-entry-view { display: grid; grid-template-columns: 116px minmax(0, 1fr); gap: 10px 14px; margin: 16px 0 0; }.kdbx-entry-view dt { color: var(--editorColor50); font-size: 12px; }.kdbx-entry-view dd { min-width: 0; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }.kdbx-custom-field-view { margin-top: 10px; }.kdbx-tag-chip { display: inline-flex; margin: 0 5px 4px 0; padding: 2px 7px; border: 1px solid var(--floatBorderColor); border-radius: 3px; background: var(--floatHoverColor); color: var(--editorColor); font-size: 12px; }.kdbx-attachment { display: flex; align-items: center; gap: 4px; min-height: 32px; }.kdbx-attachment > div { min-width: 0; flex: 1; display: grid; grid-template-columns: 17px minmax(0, 1fr) auto; gap: 6px; align-items: center; text-align: left; }.kdbx-attachment span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.kdbx-attachment em { color: var(--editorColor50); font-size: 12px; font-style: normal; }.kdbx-attachment > button { display: inline-flex; width: 28px; height: 28px; align-items: center; justify-content: center; }.kdbx-attachment:hover { background: var(--floatHoverColor); }.kdbx-attachment-preview { display: block; width: auto; max-width: 100%; height: auto; max-height: calc(100vh - 180px); margin: 0 auto; object-fit: contain; }
 .kdbx-history-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 8px; align-items: center; min-height: 43px; border-bottom: 1px solid var(--itemBgColor); }.kdbx-history-row > div { min-width: 0; display: grid; gap: 2px; }.kdbx-history-row strong, .kdbx-history-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.kdbx-history-row span { color: var(--editorColor50); font-size: 11px; }.kdbx-history-row > button { padding: 4px 6px; color: var(--themeColor); font-size: 12px; }.kdbx-history-delete { display: inline-flex; width: 28px; height: 28px; align-items: center; justify-content: center; padding: 0 !important; color: var(--editorColor50) !important; }.kdbx-history-row > button:hover { background: var(--floatHoverColor); }.kdbx-empty { display: grid; place-items: center; min-height: 120px; color: var(--editorColor50); }.kdbx-group-menu { position: fixed; z-index: 30; display: grid; min-width: 142px; padding: 4px; border: 1px solid var(--floatBorderColor); background: var(--floatBgColor); box-shadow: 0 5px 16px rgb(0 0 0 / 18%); }.kdbx-group-menu button { display: grid; grid-template-columns: 18px 1fr; gap: 7px; align-items: center; padding: 7px; text-align: left; font-size: 13px; }.kdbx-group-menu button:hover { background: var(--floatHoverColor); }.kdbx-move-tree { min-height: 220px; max-height: 420px; overflow: auto; padding: 4px 0; border: 1px solid var(--floatBorderColor); border-radius: 6px; background: var(--sideBarBgColor); }.kdbx-move-tree-row { display: flex; align-items: center; gap: 8px; min-width: 0; }.kdbx-move-tree-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.kdbx-move-tree :deep(.el-tree) { background: transparent; color: var(--editorColor); }.kdbx-move-tree :deep(.el-tree-node__content) { height: 30px; }.kdbx-move-tree :deep(.el-tree-node__content:hover), .kdbx-move-tree :deep(.el-tree-node.is-current > .el-tree-node__content) { background: var(--floatHoverColor); }.kdbx-history-preview { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 10px 14px; margin: 0; }.kdbx-history-preview dt { color: var(--editorColor50); }.kdbx-history-preview dd { min-width: 0; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }.kdbx-edit-form { display: grid; gap: 14px; }.kdbx-edit-form > label { display: grid; gap: 6px; color: var(--editorColor50); font-size: 12px; }.kdbx-edit-form :deep(.el-input__wrapper), .kdbx-edit-form :deep(.el-select__wrapper), .kdbx-edit-form :deep(.el-textarea__inner) { background: var(--inputBgColor); box-shadow: 0 0 0 1px var(--floatBorderColor) inset; color: var(--editorColor); }.kdbx-edit-form :deep(.el-input__inner), .kdbx-edit-form :deep(.el-textarea__inner), .kdbx-edit-form :deep(.el-select__selected-item) { color: var(--editorColor80); }.kdbx-password-rule { margin-top: 6px; color: var(--editorColor50); font-size: 12px; line-height: 1.4; }.kdbx-password-rule.error { color: var(--deleteColor, #ff6969) !important; }:global(.kdbx-reset-password-dialog .el-input.is-password-invalid .el-input__wrapper) { box-shadow: 0 0 0 1px var(--deleteColor, #ff6969) inset !important; }.kdbx-password-view { display: flex; align-items: center; gap: 6px; }.kdbx-password-view > span { min-width: 0; flex: 1; }.kdbx-password-view > button { display: inline-flex; width: 28px; height: 28px; align-items: center; justify-content: center; color: var(--editorColor50); }.kdbx-password-view > button:hover { background: var(--floatHoverColor); color: var(--editorColor); }
