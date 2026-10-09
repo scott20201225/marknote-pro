@@ -150,8 +150,11 @@ export class SshEngineSession {
         this.probe.start(2500)
       })
 
+      this.onDataCallback(`\x1b[90m正在连接至 ${this.config.username ? `${this.config.username}@` : ''}${this.config.host}:${this.config.port || 22}...\x1b[0m\r\n`)
+
       this.client.on('error', (err) => {
         this.status = 'error'
+        this.onDataCallback(`\r\n\x1b[31;1m[连接失败] ${err.message || err}\x1b[0m\r\n`)
         this.onStatusCallback({ ...this.getSessionInfo(), error: err.message })
         if (!isResolved) {
           isResolved = true

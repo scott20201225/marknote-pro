@@ -330,37 +330,39 @@ defineExpose({
 
 .terminal-disconnected-overlay {
   position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(2px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  bottom: 16px;
+  right: 20px;
   z-index: 10;
+  pointer-events: auto;
 }
 
 .disconnected-card {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 12px;
-  padding: 24px 32px;
-  background: var(--sideBarBgColor, #1e1e1e);
-  border: 1px solid var(--itemBgColor, #333);
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  gap: 10px;
+  padding: 8px 14px;
+  background: var(--floatBgColor, #2d3139);
+  border: 1px solid var(--floatBorderColor, #4b5263);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
 .status-dot.error {
-  width: 12px;
-  height: 12px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: #f56c6c;
-  box-shadow: 0 0 8px #f56c6c;
+  box-shadow: 0 0 6px #f56c6c;
+  flex-shrink: 0;
 }
 
 .status-msg {
   color: var(--editorColor, #e0e0e0);
-  font-size: 14px;
+  font-size: 13px;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>
