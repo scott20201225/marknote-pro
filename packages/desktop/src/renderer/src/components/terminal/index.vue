@@ -11,8 +11,8 @@
         <span class="session-protocol-badge" :class="currentSession?.config.type || 'ssh'">
           {{ (currentSession?.config.type || 'SSH').toUpperCase() }}
         </span>
-        <span class="session-title-text" :title="currentSession?.title || file?.filename || '终端'">
-          {{ currentSession?.title || file?.filename || '终端' }}
+        <span class="session-title-text" :title="currentSession?.title || file?.filename || t('terminal.title')">
+          {{ currentSession?.title || file?.filename || t('terminal.title') }}
         </span>
         <span v-if="currentSession?.config.host" class="session-host-text">
           ({{ currentSession.config.username ? `${currentSession.config.username}@` : '' }}{{ currentSession.config.host }}{{ currentSession.config.port ? `:${currentSession.config.port}` : '' }})
@@ -24,49 +24,26 @@
           link
           @click="reconnectSession(currentSession)"
         >
-          重新连接
+          {{ t('terminal.reconnect') }}
         </el-button>
       </div>
 
       <div class="header-right-tools">
-        <!-- Tabby 190+ Themes Selector -->
-        <el-select
-          v-model="selectedThemeName"
-          size="small"
-          filterable
-          placeholder="终端主题"
-          class="terminal-theme-select"
-          @change="onThemeSelect"
-        >
-          <el-option label="✨ 自动适配皮肤主题 (推荐)" value="auto" />
-          <el-option-group label="Tabby 官方色盘 (190+ 款)">
-            <el-option
-              v-for="t in allThemes"
-              :key="t.name"
-              :label="t.name"
-              :value="t.name"
-            >
-              <div class="theme-option-row">
-                <span>{{ t.name }}</span>
-                <span class="theme-color-chip" :style="{ background: t.background, borderColor: t.foreground }" />
-              </div>
-            </el-option>
-          </el-option-group>
-        </el-select>
-
         <!-- SFTP Toggle (SSH only) -->
-        <el-button
-          v-if="currentSession?.config.type === 'ssh'"
-          size="small"
-          :type="sftpDrawerVisible ? 'primary' : 'default'"
-          :icon="FolderOpened"
-          @click="toggleSftpDrawer"
-        >
-          SFTP
-        </el-button>
+        <el-tooltip :content="t('terminal.sftp.tooltip')" placement="bottom" :show-after="400">
+          <el-button
+            v-if="currentSession?.config.type === 'ssh'"
+            size="small"
+            :type="isCurrentSftpOpen ? 'primary' : 'default'"
+            :icon="FolderOpened"
+            @click="toggleSftpDrawer"
+          >
+            SFTP
+          </el-button>
+        </el-tooltip>
 
         <!-- Clear Terminal Screen -->
-        <el-tooltip content="清屏" placement="bottom" :show-after="400">
+        <el-tooltip :content="t('terminal.clearScreen')" placement="bottom" :show-after="400">
           <el-button
             size="small"
             :icon="Delete"
@@ -76,7 +53,7 @@
         </el-tooltip>
 
         <!-- Search in Terminal -->
-        <el-tooltip content="在终端中查找" placement="bottom" :show-after="400">
+        <el-tooltip :content="t('terminal.search')" placement="bottom" :show-after="400">
           <el-button
             size="small"
             :icon="Search"
@@ -85,15 +62,6 @@
           />
         </el-tooltip>
 
-        <!-- New Connection Button -->
-        <el-tooltip content="新建连接" placement="bottom" :show-after="400">
-          <el-button
-            size="small"
-            :icon="Plus"
-            circle
-            @click="openNewConnectionDialog"
-          />
-        </el-tooltip>
       </div>
     </div>
 
@@ -105,44 +73,46 @@
         :stats="currentActiveStats"
       />
 
-      <!-- Multi-session Canvas Viewport -->
-      <div class="terminals-viewport">
-        <template v-if="sessions.length > 0">
-          <div
-            v-for="session in sessions"
-            :key="session.id"
-            class="terminal-canvas-slot"
-            v-show="session.id === currentSessionId"
-          >
-            <terminal-canvas
-              :ref="(el) => setCanvasRef(session.id, el)"
-              :session="session"
-              :is-active="session.id === currentSessionId"
-              @reconnect="reconnectSession"
-            />
-          </div>
-        </template>
+      <div class="terminal-body-container">
+        <!-- Multi-session Canvas Viewport -->
+        <div class="terminals-viewport">
+          <template v-if="sessions.length > 0">
+            <div
+              v-for="session in sessions"
+              :key="session.id"
+              class="terminal-canvas-slot"
+              v-show="session.id === currentSessionId"
+            >
+              <terminal-canvas
+                :ref="(el) => setCanvasRef(session.id, el)"
+                :session="session"
+                :is-active="session.id === currentSessionId"
+                @reconnect="reconnectSession"
+              />
+            </div>
+          </template>
 
-        <!-- No session state -->
-        <div v-if="!currentSession" class="terminal-not-found-state">
-          <div class="empty-card">
-            <el-icon :size="48" class="empty-icon"><Monitor /></el-icon>
-            <h3>终端会话未连接或已关闭</h3>
-            <p>您可以新建连接，或在 KDBX 密码库中点击“直连终端”</p>
-            <el-button type="primary" size="small" :icon="Plus" @click="openNewConnectionDialog">
-              新建终端连接
-            </el-button>
+          <!-- No session state -->
+          <div v-if="!currentSession" class="terminal-not-found-state">
+            <div class="empty-card">
+              <el-icon :size="48" class="empty-icon"><Monitor /></el-icon>
+              <h3>{{ t('terminal.noSessionTitle') }}</h3>
+              <p>{{ t('terminal.noSessionDesc') }}</p>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- SFTP Drawer -->
-      <sftp-drawer
-        v-if="sftpDrawerVisible && currentSession?.config.type === 'ssh'"
-        :visible="sftpDrawerVisible"
-        :session-id="currentSessionId"
-        @close="sftpDrawerVisible = false"
-      />
+        <!-- Multi-session SFTP Drawers (Preserves each session's drawer state, hidden when inactive) -->
+        <template v-for="session in sessions" :key="session.id">
+          <SftpDrawer
+            v-if="session.config.type === 'ssh' && terminalStore.hasEverOpenedSftp(session.id)"
+            :visible="session.id === currentSessionId && terminalStore.isSftpOpen(session.id)"
+            :session-id="session.id"
+            :session-status="session.status"
+            @close="terminalStore.setSftpOpen(session.id, false)"
+          />
+        </template>
+      </div>
     </div>
 
     <!-- Dialogs -->
@@ -162,16 +132,16 @@ import {
   Search
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { t } from '@/i18n'
 import { useTerminalStore } from '@/store/terminal'
 import { useEditorStore } from '@/store/editor'
-import { TABBY_COLOR_SCHEMES } from '@shared/terminalThemes'
 import bus from '@/bus'
 import type { IFileState } from '@shared/types/files'
 import type { ITerminalConnectionConfig, ITerminalSessionInfo } from '@shared/types/terminal'
 
 import TerminalCanvas from './TerminalCanvas.vue'
 import StatsBar from './StatsBar.vue'
-import SFTPDrawer from './SFTPDrawer.vue'
+import SftpDrawer from './SFTPDrawer.vue'
 import NewConnectionDialog from './NewConnectionDialog.vue'
 import TwoFactorDialog from './TwoFactorDialog.vue'
 
@@ -185,20 +155,22 @@ const editorStore = useEditorStore()
 const {
   sessions,
   activeSessionId,
-  sessionStats,
-  selectedThemeName,
-  sftpDrawerVisible
+  sessionStats
 } = storeToRefs(terminalStore)
 
 const newConnDialogRef = ref<InstanceType<typeof NewConnectionDialog> | null>(null)
 const canvasRefs = new Map<string, any>()
-const allThemes = TABBY_COLOR_SCHEMES
 
 const currentSessionId = computed<string>(() => {
   if (props.file?.terminalSessionId) {
     return props.file.terminalSessionId
   }
   return activeSessionId.value
+})
+
+const isCurrentSftpOpen = computed(() => {
+  if (!currentSessionId.value) return false
+  return terminalStore.isSftpOpen(currentSessionId.value)
 })
 
 const currentSession = computed<ITerminalSessionInfo | null>(() => {
@@ -215,10 +187,10 @@ const currentActiveStats = computed(() => {
 
 const statusTitle = computed(() => {
   const s = currentSession.value?.status
-  if (s === 'connected') return '已连接'
-  if (s === 'connecting') return '正在连接...'
-  if (s === 'error') return `连接错误: ${currentSession.value?.error || ''}`
-  return '已断开'
+  if (s === 'connected') return t('terminal.status.connected')
+  if (s === 'connecting') return t('terminal.status.connecting')
+  if (s === 'error') return `${t('terminal.status.error')}: ${currentSession.value?.error || ''}`
+  return t('terminal.status.disconnected')
 })
 
 watch(
@@ -239,12 +211,14 @@ function setCanvasRef(sessionId: string, el: any): void {
   }
 }
 
-function onThemeSelect(name: string): void {
-  terminalStore.setTheme(name)
+function toggleSftpDrawer(): void {
+  if (!currentSessionId.value) return
+  terminalStore.toggleSftp(currentSessionId.value)
 }
 
-function toggleSftpDrawer(): void {
-  terminalStore.sftpDrawerVisible = !terminalStore.sftpDrawerVisible
+function closeSftpDrawer(): void {
+  if (!currentSessionId.value) return
+  terminalStore.setSftpOpen(currentSessionId.value, false)
 }
 
 function clearActiveTerminal(): void {
@@ -271,11 +245,11 @@ async function handleConnectNew(config: ITerminalConnectionConfig): Promise<void
     const proto = (session?.type || config?.type || 'ssh').toUpperCase()
     editorStore.OPEN_TERMINAL_TAB({
       sessionId: session.id,
-      title: session.title ? `${proto}: ${session.title}` : `${proto}: ${config.name || config.host || '终端'}`,
+      title: session.title ? `${proto}: ${session.title}` : `${proto}: ${config.name || config.host || t('terminal.title')}`,
       config: JSON.parse(JSON.stringify(config))
     })
   } catch (err: any) {
-    ElMessage.error(`连接失败: ${err?.message || err}`)
+    ElMessage.error(t('terminal.connectionFailed', { error: err?.message || err }))
   }
 }
 
@@ -286,7 +260,7 @@ async function reconnectSession(session: ITerminalSessionInfo): Promise<void> {
     }
     await terminalStore.reconnect(session.id)
   } catch (err: any) {
-    ElMessage.error(`重连失败: ${err?.message || err}`)
+    ElMessage.error(t('terminal.reconnectFailed', { error: err?.message || err }))
   }
 }
 
@@ -422,27 +396,20 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
 }
 
-.terminal-theme-select {
-  width: 170px;
-}
-
-.theme-option-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-}
-
-.theme-color-chip {
-  width: 14px;
-  height: 14px;
-  border-radius: 3px;
-  border: 1px solid #666;
-  flex-shrink: 0;
-}
-
 .terminal-main-workspace {
   display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  position: relative;
+  overflow: hidden;
+  background: var(--editorBgColor, #1e1e1e);
+}
+
+.terminal-body-container {
+  display: flex;
+  flex-direction: row;
   flex: 1;
   min-height: 0;
   min-width: 0;
@@ -458,6 +425,7 @@ onBeforeUnmount(() => {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  background: var(--editorBgColor, #1e1e1e);
 }
 
 .terminal-canvas-slot {
@@ -468,6 +436,7 @@ onBeforeUnmount(() => {
   min-width: 0;
   display: flex;
   flex-direction: column;
+  background: var(--editorBgColor, #1e1e1e);
 }
 
 .terminal-not-found-state {

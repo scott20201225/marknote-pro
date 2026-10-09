@@ -135,7 +135,7 @@ const cursorBlink = ref(terminalStore.cursorBlink)
 const scrollback = ref(terminalStore.scrollback)
 
 const currentThemeObj = computed(() => {
-  const appTheme = preferencesStore.theme || 'dark'
+  const appTheme = preferencesStore.theme || 'light'
   const customTheme = selectedTheme.value === 'auto' ? undefined : selectedTheme.value
   return getAdaptiveTerminalTheme(appTheme, customTheme)
 })

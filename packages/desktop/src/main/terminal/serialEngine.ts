@@ -1,4 +1,5 @@
 import * as fs from 'fs'
+import { t } from '../i18n'
 import type { ITerminalConnectionConfig, ITerminalSessionInfo } from '../../shared/types/terminal'
 
 export interface ISerialPortInfo {
@@ -64,11 +65,12 @@ export class SerialEngineSession {
       try {
         // Use fs read/write stream on macOS/Linux serial devices
         const port = this.config.serialPort || this.config.portPath || ''
-        this.onDataCallback(`\x1b[90m正在连接串口 ${port} (${this.config.baudRate || 115200} bps)...\x1b[0m\r\n`)
+        const target = `Serial ${port} (${this.config.baudRate || 115200} bps)`
+        this.onDataCallback(`\x1b[90m${t('terminal.connecting', { target })}\x1b[0m\r\n`)
         if (process.platform === 'darwin' || process.platform === 'linux') {
           if (!fs.existsSync(port)) {
-            const err = new Error(`串口设备不存在: ${port}`)
-            this.onDataCallback(`\r\n\x1b[31;1m[连接失败] ${err.message}\x1b[0m\r\n`)
+            const err = new Error(`Serial port not found: ${port}`)
+            this.onDataCallback(`\r\n\x1b[31;1m${t('terminal.connectionFailed', { error: err.message })}\x1b[0m\r\n`)
             throw err
           }
           const readStream = fs.createReadStream(port)

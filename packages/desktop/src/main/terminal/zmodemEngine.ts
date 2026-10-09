@@ -2,6 +2,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { dialog, BrowserWindow, app } from 'electron'
 import * as ZModem from 'zmodem.js'
+import { t } from '../i18n'
 
 export class ZModemSessionHandler {
   private sentry: any
@@ -147,9 +148,9 @@ export class ZModemSessionHandler {
       }
 
       const dialogOpts = {
-        title: `ZMODEM 下载文件: ${defaultName}`,
+        title: t('terminal.zmodem.downloadTitle', { name: defaultName }),
         defaultPath,
-        buttonLabel: '保存'
+        buttonLabel: t('terminal.zmodem.save')
       }
 
       if (win && !win.isDestroyed()) {
@@ -165,7 +166,7 @@ export class ZModemSessionHandler {
         : await dialog.showSaveDialog(dialogOpts)
 
       if (canceled || !filePath) {
-        this.onTerminalData(`\r\x1b[2K\x1b[33m[ZMODEM] 用户拒绝接收: ${defaultName}\x1b[0m\r\n`)
+        this.onTerminalData(`\r\x1b[2K\x1b[33m${t('terminal.zmodem.userRejected', { name: defaultName })}\x1b[0m\r\n`)
         try {
           xfer.skip()
         } catch {
@@ -174,7 +175,7 @@ export class ZModemSessionHandler {
         return
       }
 
-      this.onTerminalData(`\r\x1b[2K\x1b[36m[ZMODEM] 开始接收文件: ${defaultName} (${this.formatBytes(details.size || 0)})\x1b[0m\r\n`)
+      this.onTerminalData(`\r\x1b[2K\x1b[36m${t('terminal.zmodem.startReceive', { name: defaultName, size: this.formatBytes(details.size || 0) })}\x1b[0m\r\n`)
 
       const writeStream = fs.createWriteStream(filePath)
       let receivedBytes = 0
@@ -190,7 +191,7 @@ export class ZModemSessionHandler {
           if (now - lastReport > 300 || (details.size && receivedBytes >= details.size)) {
             lastReport = now
             const pct = details.size > 0 ? Math.round((receivedBytes / details.size) * 100) : 0
-            this.onTerminalData(`\r\x1b[33m[ZMODEM 进度] ${pct}% (${this.formatBytes(receivedBytes)}/${this.formatBytes(details.size || 0)})\x1b[0m`)
+            this.onTerminalData(`\r\x1b[33m${t('terminal.zmodem.progress', { pct, received: this.formatBytes(receivedBytes), total: this.formatBytes(details.size || 0) })}\x1b[0m`)
           }
         }
       })
@@ -199,10 +200,10 @@ export class ZModemSessionHandler {
         writeStream.end(() => resStream())
       })
 
-      this.onTerminalData(`\r\n\x1b[32;1m[ZMODEM 完成] 文件已保存至: ${filePath}\x1b[0m\r\n`)
+      this.onTerminalData(`\r\n\x1b[32;1m${t('terminal.zmodem.complete', { path: filePath })}\x1b[0m\r\n`)
     } catch (err: any) {
       console.error('[ZMODEM] receiveFile error:', err)
-      this.onTerminalData(`\r\n\x1b[31;1m[ZMODEM 错误] ${err?.message || err}\x1b[0m\r\n`)
+      this.onTerminalData(`\r\n\x1b[31;1m${t('terminal.zmodem.error', { error: err?.message || err })}\x1b[0m\r\n`)
       try {
         xfer.skip()
       } catch {
@@ -224,18 +225,18 @@ export class ZModemSessionHandler {
 
     const { canceled, filePaths } = win && !win.isDestroyed()
       ? await dialog.showOpenDialog(win, {
-          title: 'ZMODEM 选择上传文件',
+          title: t('terminal.zmodem.uploadTitle'),
           properties: ['openFile', 'multiSelections'],
-          buttonLabel: '上传'
+          buttonLabel: t('terminal.zmodem.upload')
         })
       : await dialog.showOpenDialog({
-          title: 'ZMODEM 选择上传文件',
+          title: t('terminal.zmodem.uploadTitle'),
           properties: ['openFile', 'multiSelections'],
-          buttonLabel: '上传'
+          buttonLabel: t('terminal.zmodem.upload')
         })
 
     if (canceled || !filePaths || filePaths.length === 0) {
-      this.onTerminalData('\r\x1b[2K\x1b[33m[ZMODEM] 取消文件上传\x1b[0m\r\n')
+      this.onTerminalData(`\r\x1b[2K\x1b[33m${t('terminal.zmodem.canceled')}\x1b[0m\r\n`)
       try {
         zsession.abort()
       } catch {
@@ -248,7 +249,7 @@ export class ZModemSessionHandler {
       const stats = fs.statSync(filePath)
       const fileName = path.basename(filePath)
 
-      this.onTerminalData(`\r\x1b[2K\x1b[36m[ZMODEM] 开始上传: ${fileName} (${this.formatBytes(stats.size)})\x1b[0m\r\n`)
+      this.onTerminalData(`\r\x1b[2K\x1b[36m${t('terminal.zmodem.prepareSend', { name: fileName, size: this.formatBytes(stats.size) })}\x1b[0m\r\n`)
 
       const offer = {
         name: fileName,
@@ -277,13 +278,13 @@ export class ZModemSessionHandler {
         if (now - lastReport > 300 || sentBytes >= stats.size) {
           lastReport = now
           const pct = Math.round((sentBytes / stats.size) * 100)
-          this.onTerminalData(`\r\x1b[33m[ZMODEM 进度] ${pct}% (${this.formatBytes(sentBytes)}/${this.formatBytes(stats.size)})\x1b[0m`)
+          this.onTerminalData(`\r\x1b[33m${t('terminal.zmodem.progress', { pct, received: this.formatBytes(sentBytes), total: this.formatBytes(stats.size) })}\x1b[0m`)
         }
       }
 
       await xfer.end()
-      this.onTerminalData(`\r\n\x1b[32;1m[ZMODEM 完成] 文件已上传: ${fileName}\x1b[0m\r\n`)
     }
+    this.onTerminalData(`\r\n\x1b[32;1m${t('terminal.zmodem.uploadComplete')}\x1b[0m\r\n`)
 
     try {
       await zsession.close()

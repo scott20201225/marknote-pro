@@ -416,6 +416,7 @@ export interface IpcSendChannels {
   'mt::geogebra-menu-mode': [enabled: boolean]
   'mt::mindmap-menu-mode': [enabled: boolean]
   'mt::kdbx-menu-mode': [enabled: boolean]
+  'mt::terminal-menu-mode': [enabled: boolean]
   'mt::mindmap::hide': []
   'mt::mindmap::set-bounds': [bounds: DrawioBounds]
   'mt::mindmap::state': [payload: { modified?: boolean; data?: unknown }]

@@ -1,5 +1,6 @@
 import { BrowserWindow } from 'electron'
 import { Client, type ClientChannel, type ConnectConfig } from 'ssh2'
+import { t } from '../i18n'
 import { generateTotp } from '../../shared/totp'
 import type {
   ITerminalConnectionConfig,
@@ -10,6 +11,81 @@ import type {
 } from '../../shared/types/terminal'
 import { LinuxHardwareProbe } from './probeEngine'
 import { ZModemSessionHandler } from './zmodemEngine'
+// 全局记录已消费的 2FA 动态口令及主机排队锁，防止多终端同时登录同一主机触发 Linux PAM 防重放拦截
+const consumedTotpMap = new Map<string, { code: string; step: number; timestamp: number }>()
+const totpMutexMap = new Map<string, Promise<void>>()
+
+async function acquireUniqueTotp(
+  hostKey: string,
+  secret: string,
+  onNotify?: (msg: string) => void
+): Promise<string> {
+  // 清理 120 秒前过期的防重放记录，防止内存泄漏
+  const now = Date.now()
+  for (const [key, val] of consumedTotpMap.entries()) {
+    if (now - val.timestamp > 120000) {
+      consumedTotpMap.delete(key)
+    }
+  }
+
+  // 1. 获取该主机的排队锁，确保多个并发连接按顺序申请 2FA 动态码
+  while (totpMutexMap.has(hostKey)) {
+    await totpMutexMap.get(hostKey)
+  }
+
+  let releaseLock: () => void = () => {}
+  const lockPromise = new Promise<void>((resolve) => {
+    releaseLock = resolve
+  })
+  totpMutexMap.set(hostKey, lockPromise)
+
+  try {
+    let res = generateTotp(secret)
+    if (!res) return ''
+
+    // 2. 如果当前动态码处于周期末尾（剩余有效期 <= 2 秒），主动延迟进入新周期，防止网络延迟导致服务端拒登
+    if (res.remainingSeconds <= 2) {
+      const waitMs = res.remainingSeconds * 1000 + 300
+      onNotify?.(`\x1b[33m${t('terminal.twoFactor.expiringWait', { sec: res.remainingSeconds })}\x1b[0m\r\n`)
+      await new Promise((r) => setTimeout(r, waitMs))
+      res = generateTotp(secret)
+      if (!res) return ''
+    }
+
+    // 3. 检查当前 30 秒周期是否已被其他会话消费（Linux pam_google_authenticator 默认启用防重放规则：同一周期内同一验证码只能使用一次）
+    const period = res.period || 30
+    let currentStep = Math.floor(Date.now() / (1000 * period))
+    const lastConsumed = consumedTotpMap.get(hostKey)
+
+    if (lastConsumed && lastConsumed.step === currentStep) {
+      const totalWaitSeconds = res.remainingSeconds || period
+      onNotify?.(
+        `\x1b[33m${t('terminal.twoFactor.replayNotice')}\x1b[0m\r\n`
+      )
+      for (let sec = totalWaitSeconds; sec > 0; sec--) {
+        onNotify?.(`\r\x1b[33m${t('terminal.twoFactor.waitingNextCycle', { sec })}\x1b[0m`)
+        await new Promise((r) => setTimeout(r, 1000))
+      }
+      onNotify?.(`\r\x1b[32m${t('terminal.twoFactor.readyConnecting')}\x1b[0m\r\n`)
+      await new Promise((r) => setTimeout(r, 300))
+      res = generateTotp(secret)
+      if (!res) return ''
+      currentStep = Math.floor(Date.now() / (1000 * period))
+    }
+
+    // 记录本次消费
+    consumedTotpMap.set(hostKey, {
+      code: res.code,
+      step: currentStep,
+      timestamp: Date.now()
+    })
+
+    return res.code
+  } finally {
+    totpMutexMap.delete(hostKey)
+    releaseLock()
+  }
+}
 
 export class SshEngineSession {
   public id: string
@@ -17,6 +93,7 @@ export class SshEngineSession {
   public client: Client
   public shellStream: ClientChannel | null = null
   public sftpClient: any = null
+  private sftpPromise: Promise<any> | null = null
   public probe: LinuxHardwareProbe | null = null
   public status: ITerminalSessionInfo['status'] = 'connecting'
   public has2fa = false
@@ -50,6 +127,18 @@ export class SshEngineSession {
   }
 
   public async connect(cols = 80, rows = 24): Promise<void> {
+    if (this.client) {
+      try {
+        this.client.removeAllListeners()
+        this.client.destroy()
+      } catch {
+        // ignore
+      }
+    }
+    this.client = new Client()
+    this.status = 'connecting'
+    this.has2fa = false
+
     return new Promise<void>((resolve, reject) => {
       let isResolved = false
 
@@ -70,7 +159,7 @@ export class SshEngineSession {
         username: this.config.username || 'root',
         keepaliveInterval: kaInterval,
         keepaliveCountMax: 10,
-        readyTimeout: this.config.readyTimeout && this.config.readyTimeout > 100 ? this.config.readyTimeout : 20000,
+        readyTimeout: this.config.readyTimeout && this.config.readyTimeout > 100 ? this.config.readyTimeout : (this.config.totpSecret ? 60000 : 20000),
         tryKeyboard: true
       }
 
@@ -102,9 +191,13 @@ export class SshEngineSession {
             const isTotp = /verification|code|otp|token|one-time|2fa/i.test(promptText)
 
             if (isTotp && this.config.totpSecret) {
-              const res = generateTotp(this.config.totpSecret)
-              if (res?.code) {
-                responses.push(res.code)
+              const hostKey = `${this.config.username || 'root'}@${this.config.host}:${this.config.port || 22}`
+              const code = await acquireUniqueTotp(hostKey, this.config.totpSecret, (msg) => {
+                this.onDataCallback(msg)
+              })
+              if (code) {
+                console.log(`[Terminal/SSH] 自动提交 2FA 动态码: [${code}] for ${hostKey}`)
+                responses.push(code)
                 continue
               }
             }
@@ -121,6 +214,9 @@ export class SshEngineSession {
               responses.push('')
             }
           }
+
+          // 增加 150ms 自然缓冲，符合人机交互与 PAM 管道读取时序
+          await new Promise((resolve) => setTimeout(resolve, 150))
           finish(responses)
         }
 
@@ -176,26 +272,24 @@ export class SshEngineSession {
           }
         })
 
-        // 2. Open SFTP channel
-        this.client.sftp((err, sftp) => {
-          if (!err && sftp) {
-            this.sftpClient = sftp
+        // 2. Start Linux hardware monitoring probe after connection has stabilized
+        setTimeout(() => {
+          if (this.status === 'connected' && this.client) {
+            this.probe = new LinuxHardwareProbe(this.client, (stats) => {
+              this.onStatsCallback(stats)
+            })
+            this.probe.start(5000)
           }
-        })
-
-        // 3. Start Linux hardware monitoring probe
-        this.probe = new LinuxHardwareProbe(this.client, (stats) => {
-          this.onStatsCallback(stats)
-        })
-        this.probe.start(2500)
+        }, 3000)
       })
 
-      this.onDataCallback(`\x1b[90m正在连接至 ${this.config.username ? `${this.config.username}@` : ''}${this.config.host}:${this.config.port || 22}...\x1b[0m\r\n`)
+      const target = `${this.config.username ? `${this.config.username}@` : ''}${this.config.host}:${this.config.port || 22}`
+      this.onDataCallback(`\x1b[90m${t('terminal.connecting', { target })}\x1b[0m\r\n`)
 
       this.client.on('error', (err) => {
         console.error(`[Terminal/SSH] Connection error on ${this.config.host}:`, err)
         this.status = 'error'
-        this.onDataCallback(`\r\n\x1b[31;1m[连接失败] ${err.message || err}\x1b[0m\r\n`)
+        this.onDataCallback(`\r\n\x1b[31;1m${t('terminal.connectionFailed', { error: err.message || err })}\x1b[0m\r\n`)
         this.onStatusCallback({ ...this.getSessionInfo(), error: err.message })
         if (!isResolved) {
           isResolved = true
@@ -252,6 +346,63 @@ export class SshEngineSession {
     }
   }
 
+  public async getSftpClient(): Promise<any> {
+    if (this.sftpClient) return this.sftpClient
+    if (this.sftpPromise) return this.sftpPromise
+
+    if (this.status === 'connecting') {
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(() => {
+          cleanup()
+          reject(new Error('SSH 正在连接中，等待超时'))
+        }, 15000)
+
+        const checkInterval = setInterval(() => {
+          if (this.status === 'connected') {
+            cleanup()
+            resolve()
+          } else if (this.status === 'disconnected' || this.status === 'error') {
+            cleanup()
+            reject(new Error('SSH 连接失败或已断开'))
+          }
+        }, 150)
+
+        const cleanup = () => {
+          clearTimeout(timer)
+          clearInterval(checkInterval)
+        }
+      })
+    }
+
+    if (!this.client || this.status !== 'connected') {
+      throw new Error('SSH 连接未就绪或已断开')
+    }
+
+    this.sftpPromise = new Promise((resolve, reject) => {
+      this.client.sftp((err: any, sftp: any) => {
+        if (err) {
+          console.error(`[Terminal/SSH] Failed to open SFTP channel:`, err)
+          this.sftpPromise = null
+          return reject(err)
+        }
+        this.sftpClient = sftp
+        sftp.on('close', () => {
+          console.log('[Terminal/SSH] SFTP channel closed')
+          this.sftpClient = null
+          this.sftpPromise = null
+        })
+        sftp.on('error', (sftpErr: any) => {
+          console.error('[Terminal/SSH] SFTP channel error:', sftpErr)
+          this.sftpClient = null
+          this.sftpPromise = null
+        })
+        resolve(sftp)
+      })
+    })
+
+    return this.sftpPromise
+  }
+
   public cleanup(): void {
     if (this.zmodemHandler) {
       this.zmodemHandler.abort()
@@ -262,14 +413,31 @@ export class SshEngineSession {
       this.probe = null
     }
     if (this.sftpClient) {
+      try {
+        this.sftpClient.end()
+      } catch {
+        // ignore
+      }
       this.sftpClient = null
     }
+    this.sftpPromise = null
     if (this.shellStream) {
       this.shellStream.removeAllListeners()
+      try {
+        this.shellStream.end()
+      } catch {
+        // ignore
+      }
       this.shellStream = null
     }
     if (this.client) {
-      this.client.end()
+      this.client.removeAllListeners()
+      try {
+        this.client.end()
+        this.client.destroy()
+      } catch {
+        // ignore
+      }
     }
   }
 }

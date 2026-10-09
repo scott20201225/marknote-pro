@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     v-model="visible"
-    title="双因素认证 (2FA / 键盘交互)"
+    :title="t('terminal.twoFactor.title')"
     width="420px"
     :close-on-click-modal="false"
     :close-on-press-escape="false"
@@ -12,27 +12,28 @@
         {{ promptPayload.instruction }}
       </div>
       <div class="two-factor-prompt">
-        {{ promptPayload?.prompt || '请输入验证码 / 动态口令:' }}
+        {{ promptPayload?.prompt || t('terminal.twoFactor.defaultPrompt') }}
       </div>
       <el-input
         ref="inputRef"
         v-model="code"
         type="text"
-        placeholder="6位验证码或应答字符..."
+        :placeholder="t('terminal.twoFactor.placeholder')"
         autocomplete="one-time-code"
         autofocus
         @keyup.enter="submit"
       />
     </div>
     <template #footer>
-      <el-button @click="cancel">取消</el-button>
-      <el-button type="primary" :disabled="!code" @click="submit">确认</el-button>
+      <el-button @click="cancel">{{ t('terminal.twoFactor.cancel') }}</el-button>
+      <el-button type="primary" :disabled="!code" @click="submit">{{ t('terminal.twoFactor.confirm') }}</el-button>
     </template>
   </el-dialog>
 </template>
 
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue'
+import { t } from '@/i18n'
 import { useTerminalStore } from '@/store/terminal'
 import { storeToRefs } from 'pinia'
 
@@ -44,16 +45,22 @@ const code = ref('')
 const promptPayload = ref<any>(null)
 const inputRef = ref<any>(null)
 
-watch(is2faDialogOpen, (open) => {
-  visible.value = open
-  if (open) {
-    code.value = ''
-    promptPayload.value = pending2fa.value
-    nextTick(() => {
-      inputRef.value?.focus()
-    })
-  }
-})
+watch(
+  () => terminalStore.pending2fa,
+  (val) => {
+    if (val) {
+      code.value = ''
+      promptPayload.value = val
+      visible.value = true
+      nextTick(() => {
+        inputRef.value?.focus()
+      })
+    } else {
+      visible.value = false
+    }
+  },
+  { immediate: true }
+)
 
 function submit(): void {
   if (!promptPayload.value) return

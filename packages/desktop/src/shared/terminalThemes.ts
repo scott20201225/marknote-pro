@@ -4403,30 +4403,104 @@ export const TABBY_COLOR_SCHEMES: ITerminalTheme[] = [
 ]
 
 /**
+ * Exact background colors of MarkNotePro official themes
+ */
+export const MARKNOTE_THEME_BG_COLORS: Record<string, string> = {
+  // Light
+  light: "#ffffff",
+  "default-light": "#ffffff",
+  ulysses: "#f3f3f3",
+  graphite: "#f7f7f7",
+  "ayu-light": "#fafafa",
+  "catppuccin-latte": "#eff1f5",
+  "gruvbox-light": "#fbf1c7",
+  "tokyo-night-light": "#d5d6db",
+  "solarized-light": "#fdf6e3",
+  "everforest-light": "#fdf6e3",
+  "rose-pine-dawn": "#faf4ed",
+  "github-light": "#f4f4f4",
+  day: "#f7f7f7",
+
+  // Dark
+  dark: "#282828",
+  "default-dark": "#282828",
+  "material-dark": "#34393f",
+  "material-theme": "#34393f",
+  "one-dark": "#282c34",
+  dracula: "#282a36",
+  nord: "#2e3440",
+  "catppuccin-mocha": "#1e1e2e",
+  "gruvbox-dark": "#282828",
+  "tokyo-night": "#1a1b26",
+  "tokyo-night-storm": "#24283b",
+  "solarized-dark": "#002b36",
+  "ayu-dark": "#0a0e14",
+  "ayu-mirage": "#1f2430",
+  "everforest-dark": "#2d353b",
+  "rose-pine": "#191724",
+  "rose-pine-moon": "#232136",
+  "monokai-pro": "#2d2a2e",
+  "synthwave-84": "#262335",
+  "horizon-dark": "#1c1e26",
+  palenight: "#292d3e",
+  "oxocarbon-dark": "#161616",
+  kanagawa: "#1f1f28",
+  nightfox: "#192330",
+  cyberdream: "#16181a",
+  night: "#191919",
+  tomorrow: "#1d1f21",
+  github_dark: "#0e1019"
+}
+
+/**
  * 1:1 Mapping between MarkNotePro application themes and Tabby terminal color schemes
+ * Selected to match the most similar background color in Tabby 190+ schemes
  */
 export const MARKNOTE_THEME_MAP: Record<string, string> = {
+  // Light Themes
+  light: "CLRS",                  // MarkNote: #ffffff -> Tabby: #ffffff (exact 0.00)
+  "default-light": "CLRS",
+  ulysses: "Github",              // MarkNote: #f3f3f3 -> Tabby: #f4f4f4 (diff 1.73)
+  graphite: "3024 Day",           // MarkNote: #f7f7f7 -> Tabby: #f7f7f7 (exact 0.00)
+  "ayu-light": "OneHalfLight",    // MarkNote: #fafafa -> Tabby: #fafafa (exact 0.00)
+  "catppuccin-latte": "PencilLight", // MarkNote: #eff1f5 -> Tabby: #f1f1f1 (diff 4.47)
+  "gruvbox-light": "Solarized Light", // MarkNote: #fbf1c7 -> Tabby: #fcf4dc
+  "tokyo-night-light": "TokyoNight Day", // MarkNote: #d5d6db -> Tabby: #e1e2e7
+  "solarized-light": "Solarized Light", // MarkNote: #fdf6e3 -> Tabby: #fcf4dc (diff 7.35)
+  "everforest-light": "Solarized Light", // MarkNote: #fdf6e3 -> Tabby: #fcf4dc (diff 7.35)
+  "rose-pine-dawn": "Rose Pine Dawn", // MarkNote: #faf4ed -> Tabby: #faf4ed (exact 0.00)
+  "github-light": "Github",
+  day: "3024 Day",
+
   // Dark Themes
-  dark: "Dracula",
-  dracula: "Dracula",
-  "one-dark": "One Half Dark",
-  "solarized-dark": "Solarized Dark",
-  nord: "Nord",
-  graphite: "Nord",
-  "material-dark": "Material",
-  "material-theme": "Material",
+  dark: "IC_Orange_PPL",          // MarkNote: #282828 -> Tabby: #262626 (diff 3.46)
+  "default-dark": "IC_Orange_PPL",
+  "material-dark": "Relaxed",     // MarkNote: #34393f -> Tabby: #343a43 (diff 4.12)
+  "material-theme": "Relaxed",
+  "one-dark": "OneHalfDark",      // MarkNote: #282c34 -> Tabby: #282c34 (exact 0.00)
+  dracula: "OneHalfDark",         // MarkNote: #282a36 -> Tabby: #282c34 (diff 2.83)
+  nord: "Nord",                   // MarkNote: #2e3440 -> Tabby: #2e3440 (exact 0.00)
+  "catppuccin-mocha": "Dracula",  // MarkNote: #1e1e2e -> Tabby: #1e1f29 (diff 5.10)
+  "gruvbox-dark": "IC_Orange_PPL",// MarkNote: #282828 -> Tabby: #262626 (diff 3.46)
+  "tokyo-night": "TokyoNight",    // MarkNote: #1a1b26 -> Tabby: #1a1b26 (exact 0.00)
+  "tokyo-night-storm": "TokyoNight Storm", // MarkNote: #24283b -> Tabby: #24283b (exact 0.00)
+  "solarized-dark": "Solarized Dark", // MarkNote: #002b36 -> Tabby: #001e27
+  "ayu-dark": "Glacier",          // MarkNote: #0a0e14 -> Tabby: #0c1115 (diff 3.74)
+  "ayu-mirage": "base2tone-sea-dark", // MarkNote: #1f2430 -> Tabby: #1d262f (diff 3.00)
+  "everforest-dark": "Nord",      // MarkNote: #2d353b -> Tabby: #2e3440 (diff 5.20)
+  "rose-pine": "Rose Pine",       // MarkNote: #191724 -> Tabby: #191724 (exact 0.00)
+  "rose-pine-moon": "Rose Pine Moon", // MarkNote: #232136 -> Tabby: #232136 (exact 0.00)
+  "monokai-pro": "Tomorrow Night Eighties", // MarkNote: #2d2a2e -> Tabby: #2d2d2d (diff 3.16)
+  "synthwave-84": "Rose Pine Moon", // MarkNote: #262335 -> Tabby: #232136 (diff 3.74)
+  "horizon-dark": "Firewatch",    // MarkNote: #1c1e26 -> Tabby: #1e2027 (diff 3.00)
+  palenight: "TokyoNight Storm",  // MarkNote: #292d3e -> Tabby: #24283b (diff 7.68)
+  "oxocarbon-dark": "NightLion v2", // MarkNote: #161616 -> Tabby: #171717 (diff 1.73)
+  kanagawa: "Dracula",            // MarkNote: #1f1f28 -> Tabby: #1e1f29 (diff 1.41)
+  nightfox: "base2tone-drawbridge-dark", // MarkNote: #192330 -> Tabby: #1b1f32 (diff 4.90)
+  cyberdream: "Atom",             // MarkNote: #16181a -> Tabby: #161719 (diff 1.41)
   night: "3024 Night",
   tomorrow: "Tomorrow Night",
-  "tokyo-night": "Afterglow",
-  github_dark: "Argonaut",
-
-  // Light Themes
-  light: "One Half Light",
-  "default-light": "One Half Light",
-  "solarized-light": "Solarized Light",
-  ulysses: "Solarized Light",
-  "github-light": "3024 Day",
-  day: "3024 Day"
+  github_dark: "Argonaut"
 }
 
 /**
@@ -4443,6 +4517,47 @@ export function getLuminance(hex: string): number {
 }
 
 /**
+ * Calculate color distance between two hex colors
+ */
+function colorDistance(hex1: string, hex2: string): number {
+  const c1 = (hex1 || "#000000").replace("#", "")
+  const c2 = (hex2 || "#000000").replace("#", "")
+  if (c1.length !== 6 || c2.length !== 6) return 999
+  const r1 = parseInt(c1.substring(0, 2), 16) || 0
+  const g1 = parseInt(c1.substring(2, 4), 16) || 0
+  const b1 = parseInt(c1.substring(4, 6), 16) || 0
+  const r2 = parseInt(c2.substring(0, 2), 16) || 0
+  const g2 = parseInt(c2.substring(2, 4), 16) || 0
+  const b2 = parseInt(c2.substring(4, 6), 16) || 0
+  return Math.sqrt((r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2)
+}
+
+/**
+ * Find the Tabby theme with the most similar background color to a given hex color
+ */
+export function findClosestTabbyThemeByBg(targetHex: string, preferDark?: boolean): ITerminalTheme {
+  const targetLum = getLuminance(targetHex)
+  const isTargetDark = preferDark !== undefined ? preferDark : targetLum < 128
+
+  let best = TABBY_COLOR_SCHEMES[0]
+  let minDiff = Infinity
+
+  for (const scheme of TABBY_COLOR_SCHEMES) {
+    const sLum = getLuminance(scheme.background)
+    const isSDark = sLum < 128
+    if (isSDark !== isTargetDark) continue
+
+    const diff = colorDistance(targetHex, scheme.background)
+    if (diff < minDiff) {
+      minDiff = diff
+      best = scheme
+    }
+  }
+
+  return best
+}
+
+/**
  * Get Terminal Theme by name, with safe fallback
  */
 export function getTerminalThemeByName(name: string): ITerminalTheme {
@@ -4451,38 +4566,110 @@ export function getTerminalThemeByName(name: string): ITerminalTheme {
   )
   if (found) return found
 
-  // Default to Dracula
+  // Default to OneHalfDark
   return (
-    TABBY_COLOR_SCHEMES.find(s => s.name === "Dracula") ||
+    TABBY_COLOR_SCHEMES.find(s => s.name === "OneHalfDark") ||
     TABBY_COLOR_SCHEMES[0]
   )
 }
 
 /**
- * Adapt terminal theme seamlessly based on MarkNotePro active app theme
- * Guarantee high contrast (no dark text on dark bg, no light text on light bg)
+ * Extract active --editorBgColor from runtime DOM if in browser environment
  */
-export function getAdaptiveTerminalTheme(appTheme: string, userCustomThemeName?: string): ITerminalTheme {
-  if (userCustomThemeName) {
+export function getActiveDomEditorBg(): string | null {
+  if (typeof document === 'undefined') return null
+  try {
+    const raw = getComputedStyle(document.documentElement).getPropertyValue('--editorBgColor').trim()
+    if (!raw) return null
+    if (raw.startsWith('#')) {
+      if (raw.length === 7) return raw
+      if (raw.length === 4) {
+        return `#${raw[1]}${raw[1]}${raw[2]}${raw[2]}${raw[3]}${raw[3]}`
+      }
+    }
+    const rgbMatch = raw.match(/\d+/g)
+    if (rgbMatch && rgbMatch.length >= 3) {
+      const r = Math.min(255, parseInt(rgbMatch[0], 10)).toString(16).padStart(2, '0')
+      const g = Math.min(255, parseInt(rgbMatch[1], 10)).toString(16).padStart(2, '0')
+      const b = Math.min(255, parseInt(rgbMatch[2], 10)).toString(16).padStart(2, '0')
+      return `#${r}${g}${b}`
+    }
+  } catch {
+    // Ignore DOM access errors in non-browser context
+  }
+  return null
+}
+
+/**
+ * Adapt terminal theme seamlessly based on MarkNotePro active app theme
+ * Matches the most similar background color in Tabby 190+ schemes
+ */
+export function getAdaptiveTerminalTheme(appTheme?: string, userCustomThemeName?: string): ITerminalTheme {
+  if (userCustomThemeName && userCustomThemeName !== 'auto') {
     const custom = getTerminalThemeByName(userCustomThemeName)
     if (custom) return custom
   }
 
-  const targetSchemeName = MARKNOTE_THEME_MAP[appTheme.toLowerCase()] || (appTheme.includes("light") ? "One Half Light" : "Dracula")
-  const matched = getTerminalThemeByName(targetSchemeName)
+  const domBg = getActiveDomEditorBg()
+  let cleanTheme = (appTheme || "").toLowerCase().trim()
 
-  // Contrast Safety Verification
-  const bgLuminance = getLuminance(matched.background)
-  const fgLuminance = getLuminance(matched.foreground)
-
-  // If contrast ratio is dangerously low, apply safe contrast text
-  if (Math.abs(bgLuminance - fgLuminance) < 80) {
-    return {
-      ...matched,
-      foreground: bgLuminance < 128 ? "#f8f8f2" : "#1f2328",
-      cursor: bgLuminance < 128 ? "#f8f8f2" : "#1f2328"
+  // If theme is empty or 'auto', infer from DOM background or default to 'light'
+  if (!cleanTheme || cleanTheme === 'auto') {
+    if (domBg) {
+      cleanTheme = getLuminance(domBg) < 128 ? 'dark' : 'light'
+    } else {
+      cleanTheme = 'light' // MarkNotePro default style is light
     }
   }
 
-  return matched
+  // Cross-check: If DOM background is present, ensure we don't pick dark when DOM is light or vice-versa
+  if (domBg) {
+    const isDomDark = getLuminance(domBg) < 128
+    const knownThemeBg = MARKNOTE_THEME_BG_COLORS[cleanTheme]
+    if (knownThemeBg) {
+      const isThemeDark = getLuminance(knownThemeBg) < 128
+      if (isDomDark !== isThemeDark) {
+        cleanTheme = isDomDark ? 'dark' : 'light'
+      }
+    }
+  }
+
+  const targetSchemeName = MARKNOTE_THEME_MAP[cleanTheme]
+
+  let matched: ITerminalTheme
+  if (targetSchemeName) {
+    matched = getTerminalThemeByName(targetSchemeName)
+  } else {
+    // If unknown or custom theme, find closest by known background or DOM background
+    const targetBg = MARKNOTE_THEME_BG_COLORS[cleanTheme] || domBg
+    if (targetBg) {
+      matched = findClosestTabbyThemeByBg(targetBg)
+    } else {
+      const isLight = cleanTheme.includes("light") || cleanTheme.includes("day") || cleanTheme.includes("white")
+      matched = getTerminalThemeByName(isLight ? "CLRS" : "IC_Orange_PPL")
+    }
+  }
+
+  // Seamless background alignment: if exact editor background is known, match it 100%
+  const exactBg = MARKNOTE_THEME_BG_COLORS[cleanTheme]
+  const background = exactBg || domBg || matched.background
+
+  // Contrast Safety Verification
+  const bgLuminance = getLuminance(background)
+  const fgLuminance = getLuminance(matched.foreground)
+
+  let foreground = matched.foreground
+  let cursor = matched.cursor || matched.foreground
+  if (Math.abs(bgLuminance - fgLuminance) < 80) {
+    foreground = bgLuminance < 128 ? "#f8f8f2" : "#1f2328"
+    cursor = foreground
+  }
+
+  return {
+    ...matched,
+    background,
+    foreground,
+    cursor
+  }
 }
+
