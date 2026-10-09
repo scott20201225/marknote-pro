@@ -42,14 +42,14 @@
           <el-checkbox :model-value="selectedEntryIds.has(entry.id)" :aria-label="t('kdbx.selectEntry')" @click.stop @change="toggleEntrySelection(entry.id)" />
           <button class="kdbx-entry-select" :title="entry.title || t('kdbx.untitled')" type="button" @click="selectEntry(entry.id)">
             <span class="kdbx-entry-title">
-              <span v-if="getEntryUrlType(entry)" class="kdbx-proto-badge" :class="`proto-${getEntryUrlType(entry)?.toLowerCase()}`">{{ getEntryUrlType(entry) }}</span>
+              <span v-if="getEntryUrlType(entry)" class="kdbx-proto-badge" :class="`proto-${getEntryUrlType(entry)?.toLowerCase()}`">{{ getEntryUrlTypeBadge(entry) }}</span>
               {{ entry.title || t('kdbx.untitled') }}
             </span>
             <span class="kdbx-entry-username">{{ entry.username || (getEntryUrlType(entry) ? entry.url || t('kdbx.noUsername') : t('kdbx.noUsername')) }}</span>
           </button>
           <div class="kdbx-entry-actions">
-            <el-tooltip v-if="getEntryUrlType(entry)" content="直连终端" :show-after="350">
-              <button class="kdbx-entry-terminal-btn" title="直连终端" type="button" @click.stop="connectTerminalFromEntry(entry)">
+            <el-tooltip v-if="getEntryUrlType(entry)" :content="t('kdbx.connectTerminal')" :show-after="350">
+              <button class="kdbx-entry-terminal-btn" :title="t('kdbx.connectTerminal')" type="button" @click.stop="connectTerminalFromEntry(entry)">
                 <el-icon><Monitor /></el-icon>
               </button>
             </el-tooltip>
@@ -75,8 +75,8 @@
                 <el-tooltip :content="t('kdbx.deletePermanently')" :show-after="350"><button :title="t('kdbx.deletePermanently')" type="button" @click="deleteEntry"><el-icon><Delete /></el-icon></button></el-tooltip>
               </template>
               <template v-else>
-                <el-tooltip v-if="getEntryUrlType(draft)" content="直连终端" :show-after="350">
-                  <button class="kdbx-terminal-direct-btn" title="直连终端" type="button" @click.stop="connectTerminalFromDraft">
+                <el-tooltip v-if="getEntryUrlType(draft)" :content="t('kdbx.connectTerminal')" :show-after="350">
+                  <button class="kdbx-terminal-direct-btn" :title="t('kdbx.connectTerminal')" type="button" @click.stop="connectTerminalFromDraft">
                     <el-icon><Monitor /></el-icon>
                   </button>
                 </el-tooltip>
@@ -91,9 +91,9 @@
           <dl class="kdbx-entry-view">
             <dt>{{ t('kdbx.title') }}</dt><dd>{{ draft.title || t('kdbx.untitled') }}</dd>
             <template v-if="getEntryUrlType(draft)">
-              <dt>条目类型</dt>
+              <dt>{{ t('kdbx.entryType') }}</dt>
               <dd>
-                <span class="kdbx-proto-badge" :class="`proto-${getEntryUrlType(draft)?.toLowerCase()}`">{{ getEntryUrlType(draft) }}</span>
+                <span class="kdbx-proto-badge" :class="`proto-${getEntryUrlType(draft)?.toLowerCase()}`">{{ getEntryUrlTypeBadge(draft) }}</span>
               </dd>
             </template>
             <dt>{{ t('kdbx.username') }}</dt><dd>{{ draft.username || '-' }}</dd>
@@ -167,7 +167,7 @@
         <button type="button" @click="runEntryMenuAction('delete')"><el-icon><Delete /></el-icon>{{ t('kdbx.deletePermanently') }}</button>
       </template>
       <template v-else>
-        <button v-if="getEntryUrlType(entryMenu.entry)" type="button" @click="runEntryMenuAction('connect-terminal')"><el-icon><Monitor /></el-icon>直连终端</button>
+        <button v-if="getEntryUrlType(entryMenu.entry)" type="button" @click="runEntryMenuAction('connect-terminal')"><el-icon><Monitor /></el-icon>{{ t('kdbx.connectTerminal') }}</button>
         <button type="button" @click="runEntryMenuAction('edit')"><el-icon><Edit /></el-icon>{{ t('kdbx.edit') }}</button>
         <button type="button" @click="runEntryMenuAction('copy')"><el-icon><DocumentCopy /></el-icon>{{ t('kdbx.copy') }}</button>
         <button type="button" @click="runEntryMenuAction('export')"><el-icon><Download /></el-icon>{{ t('kdbx.export') }}</button>
@@ -188,13 +188,13 @@
     <el-dialog v-model="attachmentPreviewVisible" class="kdbx-dialog" :title="attachmentPreviewName" width="min(860px, calc(100vw - 48px))" @closed="clearAttachmentPreview"><img v-if="attachmentPreviewUrl" class="kdbx-attachment-preview" :src="attachmentPreviewUrl" :alt="attachmentPreviewName" /></el-dialog>
     <el-dialog v-if="editDraft" v-model="editing" class="kdbx-dialog kdbx-edit-dialog" :title="editEntryPath" width="min(760px, calc(100vw - 48px))" :close-on-click-modal="false" @closed="cancelEdit">
       <div class="kdbx-edit-form">
-        <label>条目类型
-          <el-select v-model="editEntryType" placeholder="选择条目类型" popper-class="kdbx-select-popper">
-            <el-option label="普通条目 (Normal)" value="Normal" />
-            <el-option label="SSH 会话 (SSH)" value="SSH" />
-            <el-option label="Telnet 会话 (Telnet)" value="Telnet" />
-            <el-option label="物理串口 (Series)" value="Series" />
-            <el-option label="原始套接字 (RawRocket)" value="RawRocket" />
+        <label>{{ t('kdbx.entryType') }}
+          <el-select v-model="editEntryType" :placeholder="t('kdbx.selectEntryType')" popper-class="kdbx-select-popper">
+            <el-option :label="t('kdbx.entryTypes.normal')" value="Normal" />
+            <el-option :label="t('kdbx.entryTypes.ssh')" value="SSH" />
+            <el-option :label="t('kdbx.entryTypes.telnet')" value="Telnet" />
+            <el-option :label="t('kdbx.entryTypes.serial')" value="Serial" />
+            <el-option :label="t('kdbx.entryTypes.rawSocket')" value="RawSocket" />
           </el-select>
         </label>
         <label>{{ t('kdbx.title') }}<el-input v-model="editDraft.title" /></label>
@@ -215,7 +215,7 @@
             <span>{{ t('kdbx.totpCurrentCode') }}: <strong>{{ editTotpPreview.formattedCode }}</strong> ({{ editTotpPreview.remainingSeconds }}s)</span>
           </div>
         </div>
-        <label>{{ editEntryType && editEntryType !== 'Normal' ? (editEntryType === 'Series' ? '串口设备 / 网址 (如 COM3 或 /dev/ttyUSB0:115200)' : '主机网址 / 端口 (URL，如 192.168.1.1:22)') : t('kdbx.url') }}<el-input v-model="editDraft.url" :placeholder="editEntryType === 'SSH' ? '如 192.168.1.1:22 或 ssh://root@192.168.1.1:22' : (editEntryType === 'Series' ? '如 COM3 或 /dev/ttyUSB0:115200' : (editEntryType === 'Telnet' ? '如 192.168.1.1:23' : (editEntryType === 'RawRocket' ? '如 192.168.1.1:9000' : '')))" /></label>
+        <label>{{ getUrlLabel }}<el-input v-model="editDraft.url" :placeholder="getUrlPlaceholder" /></label>
         <label>{{ t('kdbx.tags') }}<el-select v-model="editDraft.tags" multiple filterable allow-create default-first-option popper-class="kdbx-select-popper"><el-option v-for="tag in vault?.tags" :key="tag" :label="tag" :value="tag" /></el-select></label>
         <label>{{ t('kdbx.notes') }}<el-input v-model="editDraft.notes" type="textarea" :rows="4" /></label>
         <section class="kdbx-section">
@@ -299,7 +299,7 @@ const vault = ref<KdbxVaultSnapshot | null>(null)
 const locked = ref(true); const password = ref(''); const error = ref(''); const unlocking = ref(false); const unlockPasswordVisible = ref(false)
 const query = ref(''); const searchFields = ref(['title', 'username', 'url', 'notes']); const showSearchOptions = ref(false)
 const selectedGroup = ref(''); const selectedTag = ref(''); const selectedUntagged = ref(false); const selectedRecycle = ref(false); const selectedEntryId = ref(''); const selectedEntryIds = ref(new Set<string>()); const draft = ref<KdbxEntryDetail | null>(null); const editDraft = ref<KdbxEntryDetail | null>(null); const passwordField = ref(''); const totpField = ref(''); const savingEntry = ref(false); const exportingEntries = ref(false); const editing = ref(false); const newEntry = ref(false); const showPassword = ref(false)
-const editEntryType = ref<'Normal' | 'SSH' | 'Telnet' | 'Series' | 'RawRocket'>('Normal')
+const editEntryType = ref<'Normal' | 'SSH' | 'Telnet' | 'Serial' | 'RawSocket'>('Normal')
 const expandedGroups = ref(new Set<string>()); const allItemsExpanded = ref(true); const groupMenu = ref<GroupMenuState | null>(null); const entryMenu = ref<EntryMenuState | null>(null); const attachmentInput = ref<HTMLInputElement | null>(null); const qrScanDialogRef = ref<InstanceType<typeof QrScanDialog> | null>(null); const batchImportDialogRef = ref<InstanceType<typeof BatchImportTotpDialog> | null>(null); const historyDialogVisible = ref(false); const historyPreview = ref<KdbxEntryRevision | null>(null); const attachmentPreviewVisible = ref(false); const attachmentPreviewUrl = ref(''); const attachmentPreviewName = ref('')
 const moveDialogVisible = ref(false); const moveTargetGroupId = ref(''); const moveGroupSourceId = ref(''); const moveEntryIds = ref<string[]>([]); const moving = ref(false)
 const resetPasswordVisible = ref(false); const resettingPassword = ref(false); const resetAttempted = ref(false); const currentPasswordIncorrect = ref(false); const resetCurrentPassword = ref(''); const resetNewPassword = ref(''); const resetConfirmPassword = ref('')
@@ -346,10 +346,43 @@ const getEntryUrlType = (entry: KdbxEntrySummary | KdbxEntryDetail | null | unde
   const norm = val.trim().toLowerCase()
   if (norm === 'ssh') return 'SSH'
   if (norm === 'telnet') return 'Telnet'
-  if (norm === 'series' || norm === 'serial') return 'Series'
-  if (norm === 'rawrocket' || norm === 'rawsocket' || norm === 'raw_rocket' || norm === 'socket') return 'RawRocket'
+  if (norm === 'series' || norm === 'serial') return 'Serial'
+  if (norm === 'rawrocket' || norm === 'rawsocket' || norm === 'raw_rocket' || norm === 'socket') return 'RawSocket'
   return val.trim()
 }
+
+const getEntryUrlTypeBadge = (entry: KdbxEntrySummary | KdbxEntryDetail | null | undefined): string => {
+  const proto = getEntryUrlType(entry)
+  if (!proto) return ''
+  if (proto === 'RawSocket') return 'RAW SOCKET'
+  return proto.toUpperCase()
+}
+
+const getUrlLabel = computed(() => {
+  if (!editEntryType.value || editEntryType.value === 'Normal') {
+    return t('kdbx.url')
+  }
+  if (editEntryType.value === 'Serial') {
+    return t('kdbx.serialDeviceUrlLabel')
+  }
+  return t('kdbx.hostPortLabel')
+})
+
+const getUrlPlaceholder = computed(() => {
+  if (editEntryType.value === 'SSH') {
+    return t('kdbx.placeholders.ssh')
+  }
+  if (editEntryType.value === 'Serial') {
+    return t('kdbx.placeholders.serial')
+  }
+  if (editEntryType.value === 'Telnet') {
+    return t('kdbx.placeholders.telnet')
+  }
+  if (editEntryType.value === 'RawSocket') {
+    return t('kdbx.placeholders.rawSocket')
+  }
+  return ''
+})
 
 const viewTotpList = computed<ViewTotpItem[]>(() => {
   if (!draft.value) return []
@@ -528,7 +561,7 @@ function parseEntryToTerminalConfig(entry: KdbxEntryDetail | KdbxEntrySummary, f
 
   return {
     id: `kdbx_${entry.id}_${Date.now()}`,
-    name: entry.title || host || serialPort || 'KDBX 终端连接',
+    name: entry.title || host || serialPort || t('kdbx.terminalConnection'),
     type,
     host: host || '127.0.0.1',
     port,
@@ -562,12 +595,12 @@ const connectTerminalFromEntry = async(entry: KdbxVaultSnapshot['entries'][numbe
     const proto = (session?.type || config?.type || 'ssh').toUpperCase()
     editorStore.OPEN_TERMINAL_TAB({
       sessionId: session.id,
-      title: session.title ? `${proto}: ${session.title}` : `${proto}: ${config.name || config.host || '终端'}`,
+      title: session.title ? `${proto}: ${session.title}` : `${proto}: ${config.name || config.host || t('terminal.title')}`,
       config: JSON.parse(JSON.stringify(config)),
       kdbxEntryId: detail.id
     })
   } catch (err: any) {
-    ElMessage.error(`终端直连失败: ${err?.message || err}`)
+    ElMessage.error(`${t('kdbx.connectTerminalFailed')}: ${err?.message || err}`)
   }
 }
 
@@ -579,12 +612,12 @@ const connectTerminalFromDraft = async(): Promise<void> => {
     const proto = (session?.type || config?.type || 'ssh').toUpperCase()
     editorStore.OPEN_TERMINAL_TAB({
       sessionId: session.id,
-      title: session.title ? `${proto}: ${session.title}` : `${proto}: ${config.name || config.host || '终端'}`,
+      title: session.title ? `${proto}: ${session.title}` : `${proto}: ${config.name || config.host || t('terminal.title')}`,
       config: JSON.parse(JSON.stringify(config)),
       kdbxEntryId: draft.value.id
     })
   } catch (err: any) {
-    ElMessage.error(`终端直连失败: ${err?.message || err}`)
+    ElMessage.error(`${t('kdbx.connectTerminalFailed')}: ${err?.message || err}`)
   }
 }
 

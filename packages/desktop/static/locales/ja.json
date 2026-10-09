@@ -1074,7 +1074,27 @@
     "importTotpBtn": "Batch Import 2FA",
     "totpAuthCodes": "2FA One-Time Passwords",
     "filterTotp": "Filter 2FA...",
-    "totpParsed": "2FA QR code parsed successfully"
+    "totpParsed": "2FA QR code parsed successfully",
+    "connectTerminal": "端末に直接接続",
+    "connectTerminalFailed": "端末への直接接続に失敗しました",
+    "terminalConnection": "KDBX ターミナル接続",
+    "entryType": "エントリの種類",
+    "selectEntryType": "エントリの種類を選択",
+    "entryTypes": {
+      "normal": "通常エントリ (Normal)",
+      "ssh": "SSH セッション (SSH)",
+      "telnet": "Telnet セッション (Telnet)",
+      "serial": "シリアルポート (Serial)",
+      "rawSocket": "未加工ソケット (Raw Socket)"
+    },
+    "hostPortLabel": "ホストURL / ポート (URL、例: 192.168.1.1:22)",
+    "serialDeviceUrlLabel": "シリアルポート / デバイス (例: COM3 または /dev/ttyUSB0:115200)",
+    "placeholders": {
+      "ssh": "例: 192.168.1.1:22 または ssh://root@192.168.1.1:22",
+      "serial": "例: COM3 または /dev/ttyUSB0:115200",
+      "telnet": "例: 192.168.1.1:23",
+      "rawSocket": "例: 192.168.1.1:9000"
+    }
   },
   "dialog": {
     "cancel": "キャンセル",
