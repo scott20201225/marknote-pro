@@ -262,6 +262,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowDown, ArrowRight, Delete, DeleteFilled, Document, DocumentAdd, DocumentCopy, Download, Edit, Filter, Folder, FolderAdd, FolderOpened, FullScreen, Hide, Key, Loading, Lock, Monitor, MoreFilled, Paperclip, Plus, PriceTag, RefreshRight, Search, Tickets, Upload, View } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import { useEditorStore } from '@/store/editor'
+import { useTerminalStore } from '@/store/terminal'
 import type { KdbxEntryDetail, KdbxEntryInput, KdbxEntryRevision, KdbxEntrySummary, KdbxField, KdbxGroupSummary, KdbxVaultSnapshot } from '@shared/types/kdbx'
 import type { ITerminalConnectionConfig, TerminalProtocolType } from '@shared/types/terminal'
 import { isKdbxPasswordValid, KDBX_PASSWORD_PATTERN } from '@shared/kdbxPassword'
@@ -292,6 +293,7 @@ const errorMessage = (reason: unknown, fallback: string): string => {
   return message.replace(/^Error invoking remote method '[^']+':\s*(?:Error:\s*)?/, '').replace(/^Error:\s*/, '') || fallback
 }
 const { currentFile } = storeToRefs(useEditorStore())
+const terminalStore = useTerminalStore()
 const vault = ref<KdbxVaultSnapshot | null>(null)
 const locked = ref(true); const password = ref(''); const error = ref(''); const unlocking = ref(false); const unlockPasswordVisible = ref(false)
 const query = ref(''); const searchFields = ref(['title', 'username', 'url', 'notes']); const showSearchOptions = ref(false)
@@ -551,22 +553,26 @@ function parseEntryToTerminalConfig(entry: KdbxEntryDetail | KdbxEntrySummary, f
 
 const connectTerminalFromEntry = async(entry: KdbxVaultSnapshot['entries'][number]): Promise<void> => {
   if (!filePath.value) return
-  const detail = await window.electron.ipcRenderer.invoke('mt::kdbx::entry', filePath.value, entry.id)
-  if (!detail) return
-  const config = parseEntryToTerminalConfig(detail)
-  window.dispatchEvent(new CustomEvent('marknotepro:switch-workbench', { detail: 'terminal' }))
-  setTimeout(() => {
-    window.dispatchEvent(new CustomEvent('marknotepro:terminal-direct-connect', { detail: config }))
-  }, 120)
+  try {
+    const detail = await window.electron.ipcRenderer.invoke('mt::kdbx::entry', filePath.value, entry.id)
+    if (!detail) return
+    const config = parseEntryToTerminalConfig(detail)
+    window.dispatchEvent(new CustomEvent('marknotepro:switch-workbench', { detail: 'terminal' }))
+    await terminalStore.connect(config)
+  } catch (err: any) {
+    ElMessage.error(`终端直连失败: ${err?.message || err}`)
+  }
 }
 
-const connectTerminalFromDraft = (): void => {
+const connectTerminalFromDraft = async(): Promise<void> => {
   if (!draft.value) return
-  const config = parseEntryToTerminalConfig(draft.value)
-  window.dispatchEvent(new CustomEvent('marknotepro:switch-workbench', { detail: 'terminal' }))
-  setTimeout(() => {
-    window.dispatchEvent(new CustomEvent('marknotepro:terminal-direct-connect', { detail: config }))
-  }, 120)
+  try {
+    const config = parseEntryToTerminalConfig(draft.value)
+    window.dispatchEvent(new CustomEvent('marknotepro:switch-workbench', { detail: 'terminal' }))
+    await terminalStore.connect(config)
+  } catch (err: any) {
+    ElMessage.error(`终端直连失败: ${err?.message || err}`)
+  }
 }
 
 const runEntryMenuAction = async(action: 'edit' | 'copy' | 'export' | 'move' | 'delete' | 'restore' | 'connect-terminal'): Promise<void> => {
