@@ -149,7 +149,8 @@
     "webfontloader": "^1.6.28",
     "which": "^5.0.0",
     "winston": "^3.19.0",
-    "write-file-atomic": "^7.0.1"
+    "write-file-atomic": "^7.0.1",
+    "zmodem.js": "^0.1.10"
   },
   "optionalDependencies": {
     "@vscode/ripgrep-darwin-arm64": "1.18.0",
