@@ -183,15 +183,6 @@ const handleLeftBottomClick = (name: string): void => {
     window.dispatchEvent(new CustomEvent('marknotepro:switch-workbench', { detail: 'git' }))
     return
   }
-  if (name === 'terminal') {
-    const termTab = editorStore.tabs.find((t) => t.isTerminal)
-    if (termTab && editorStore.currentFile?.id !== termTab.id) {
-      editorStore.UPDATE_CURRENT_FILE(termTab)
-    } else {
-      bus.emit('open-terminal-dialog')
-    }
-    return
-  }
   if (name === 'settings') {
     projectStore.OPEN_SETTING_WINDOW()
   }
