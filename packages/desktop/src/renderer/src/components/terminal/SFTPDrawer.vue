@@ -1277,6 +1277,10 @@ watch(
   border-bottom: 1px solid var(--itemBgColor, #2a2a2a);
 }
 
+.sftp-path-bar :deep(.el-input) {
+  flex: 1;
+}
+
 .sftp-file-list {
   flex: 1;
   overflow-y: auto;
