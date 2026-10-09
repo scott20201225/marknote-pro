@@ -117,7 +117,8 @@ export const useTerminalStore = defineStore('terminal', () => {
   }
 
   async function saveServer(config: ITerminalConnectionConfig): Promise<ITerminalConnectionConfig> {
-    const saved = await window.electron.ipcRenderer.invoke('mt::terminal:save-stored-server', config)
+    const cleanConfig = JSON.parse(JSON.stringify(config))
+    const saved = await window.electron.ipcRenderer.invoke('mt::terminal:save-stored-server', cleanConfig)
     await loadSavedServers()
     return saved
   }
@@ -131,12 +132,30 @@ export const useTerminalStore = defineStore('terminal', () => {
     return window.electron.ipcRenderer.invoke('mt::terminal:test-latency', host, port)
   }
 
-  async function connect(config: ITerminalConnectionConfig, cols = 80, rows = 24): Promise<ITerminalSessionInfo> {
+  async function connect(config: ITerminalConnectionConfig, cols = 80, rows = 24, existingSessionId?: string): Promise<ITerminalSessionInfo> {
     initIpcListeners()
-    const sessionInfo = await window.electron.ipcRenderer.invoke('mt::terminal:connect', config, cols, rows)
-    sessions.value.push(sessionInfo)
-    activeSessionId.value = sessionInfo.id
+    const cleanConfig = JSON.parse(JSON.stringify(config))
+    const sessionInfo = await window.electron.ipcRenderer.invoke('mt::terminal:connect', cleanConfig, cols, rows, existingSessionId)
+    if (existingSessionId) {
+      const idx = sessions.value.findIndex((s) => s.id === existingSessionId)
+      if (idx >= 0) {
+        sessions.value[idx] = { ...sessions.value[idx], ...sessionInfo, status: 'connecting', error: undefined }
+      } else {
+        sessions.value.push(sessionInfo)
+      }
+    } else {
+      sessions.value.push(sessionInfo)
+      activeSessionId.value = sessionInfo.id
+    }
     return sessionInfo
+  }
+
+  async function reconnect(sessionId: string): Promise<ITerminalSessionInfo | void> {
+    const session = sessions.value.find((s) => s.id === sessionId)
+    if (!session) return
+    session.status = 'connecting'
+    session.error = undefined
+    return connect(session.config, 80, 24, sessionId)
   }
 
   function write(sessionId: string, data: string): void {
@@ -220,6 +239,7 @@ export const useTerminalStore = defineStore('terminal', () => {
     deleteServer,
     testLatency,
     connect,
+    reconnect,
     write,
     resize,
     disconnect,

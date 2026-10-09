@@ -271,7 +271,8 @@ async function handleConnectNew(config: ITerminalConnectionConfig): Promise<void
     const proto = (session?.type || config?.type || 'ssh').toUpperCase()
     editorStore.OPEN_TERMINAL_TAB({
       sessionId: session.id,
-      title: session.title ? `${proto}: ${session.title}` : `${proto}: ${config.name || config.host || '终端'}`
+      title: session.title ? `${proto}: ${session.title}` : `${proto}: ${config.name || config.host || '终端'}`,
+      config: JSON.parse(JSON.stringify(config))
     })
   } catch (err: any) {
     ElMessage.error(`连接失败: ${err?.message || err}`)
@@ -280,14 +281,17 @@ async function handleConnectNew(config: ITerminalConnectionConfig): Promise<void
 
 async function reconnectSession(session: ITerminalSessionInfo): Promise<void> {
   try {
-    await terminalStore.connect(session.config)
+    if (!session.config && props.file?.terminalConfig) {
+      session.config = props.file.terminalConfig
+    }
+    await terminalStore.reconnect(session.id)
   } catch (err: any) {
     ElMessage.error(`重连失败: ${err?.message || err}`)
   }
 }
 
 onMounted(() => {
-  terminalStore.init()
+  terminalStore.initIpcListeners()
   bus.on('open-terminal-dialog', openNewConnectionDialog)
 })
 

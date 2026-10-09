@@ -101,6 +101,8 @@ export interface IFileState {
   // Terminal tabs rendered by native Tabby xterm view.
   isTerminal?: boolean
   terminalSessionId?: string
+  terminalConfig?: any
+  terminalKdbxEntryId?: string
   // Per-tab display options. These are never written into the Markdown file.
   showHeadingNumbers: boolean
   headingNumberingIncludesTopLevel: boolean

@@ -562,7 +562,9 @@ const connectTerminalFromEntry = async(entry: KdbxVaultSnapshot['entries'][numbe
     const proto = (session?.type || config?.type || 'ssh').toUpperCase()
     editorStore.OPEN_TERMINAL_TAB({
       sessionId: session.id,
-      title: session.title ? `${proto}: ${session.title}` : `${proto}: ${config.name || config.host || '终端'}`
+      title: session.title ? `${proto}: ${session.title}` : `${proto}: ${config.name || config.host || '终端'}`,
+      config: JSON.parse(JSON.stringify(config)),
+      kdbxEntryId: detail.id
     })
   } catch (err: any) {
     ElMessage.error(`终端直连失败: ${err?.message || err}`)
@@ -577,7 +579,9 @@ const connectTerminalFromDraft = async(): Promise<void> => {
     const proto = (session?.type || config?.type || 'ssh').toUpperCase()
     editorStore.OPEN_TERMINAL_TAB({
       sessionId: session.id,
-      title: session.title ? `${proto}: ${session.title}` : `${proto}: ${config.name || config.host || '终端'}`
+      title: session.title ? `${proto}: ${session.title}` : `${proto}: ${config.name || config.host || '终端'}`,
+      config: JSON.parse(JSON.stringify(config)),
+      kdbxEntryId: draft.value.id
     })
   } catch (err: any) {
     ElMessage.error(`终端直连失败: ${err?.message || err}`)
