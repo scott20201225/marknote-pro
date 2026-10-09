@@ -1112,8 +1112,27 @@
     "primaryTotp": "主 2FA 口令",
     "importTotpBtn": "批量导入 2FA",
     "totpAuthCodes": "2FA 动态口令",
-    "filterTotp": "搜索 2FA...",
-    "totpParsed": "2FA 二维码已成功解析"
+    "totpParsed": "2FA 二维码已成功解析",
+    "connectTerminal": "直连终端",
+    "connectTerminalFailed": "终端直连失败",
+    "terminalConnection": "KDBX 终端连接",
+    "entryType": "条目类型",
+    "selectEntryType": "选择条目类型",
+    "entryTypes": {
+      "normal": "普通条目 (Normal)",
+      "ssh": "SSH 会话 (SSH)",
+      "telnet": "Telnet 会话 (Telnet)",
+      "serial": "物理串口 (Serial)",
+      "rawSocket": "原始套接字 (Raw Socket)"
+    },
+    "hostPortLabel": "主机网址 / 端口 (URL，如 192.168.1.1:22)",
+    "serialDeviceUrlLabel": "串口设备 / 网址 (如 COM3 或 /dev/ttyUSB0:115200)",
+    "placeholders": {
+      "ssh": "如 192.168.1.1:22 或 ssh://root@192.168.1.1:22",
+      "serial": "如 COM3 或 /dev/ttyUSB0:115200",
+      "telnet": "如 192.168.1.1:23",
+      "rawSocket": "如 192.168.1.1:9000"
+    }
   },
   "dialog": {
     "cancel": "取消",
