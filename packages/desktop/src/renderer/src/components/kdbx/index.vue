@@ -542,7 +542,7 @@ function parseEntryToTerminalConfig(entry: KdbxEntryDetail | KdbxEntrySummary, f
     jumpPort: Number(jumpPortField) || 22,
     jumpUsername: jumpUserField,
     jumpPassword: jumpPassField,
-    keepaliveInterval: 15,
+    keepaliveInterval: 0,
     serialPort: serialPort || host,
     baudRate,
     dataBits: 8,

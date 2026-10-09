@@ -35,6 +35,14 @@ export class TerminalManager {
         const sessionId = existingSessionId || `term_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`
         const win = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0]
 
+        console.log(`[Terminal/Manager] mt::terminal:connect requested:`, {
+          sessionId,
+          type: config.type,
+          host: config.host,
+          port: config.port,
+          existingSessionId
+        })
+
         // Cleanup old engine session if reconnecting an existing session
         const oldSession = this.sessions.get(sessionId)
         if (oldSession) {
