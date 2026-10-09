@@ -1,6 +1,5 @@
 <template>
   <git-desktop v-if="workbench === 'git'" />
-  <terminal-workbench v-else-if="workbench === 'terminal'" />
   <div
     v-else
     class="editor-container"
@@ -8,7 +7,8 @@
       'drawio-open': currentFile?.isDrawing === true,
       'geogebra-open': currentFile?.isGeoGebra === true,
       'mindmap-open': currentFile?.isMindMap === true,
-      'kdbx-open': currentFile?.isKdbx === true
+      'kdbx-open': currentFile?.isKdbx === true,
+      'terminal-open': currentFile?.isTerminal === true
     }"
   >
     <side-bar v-if="init" />
@@ -19,7 +19,7 @@
         :pathname="pathname"
         :filename="filename"
         :active="windowActive"
-        :word-count="drawioFile || geogebraFile || mindMapFile || currentFile?.isKdbx ? null : wordCount"
+        :word-count="drawioFile || geogebraFile || mindMapFile || currentFile?.isKdbx || currentFile?.isTerminal ? null : wordCount"
         :platform="platform"
         :is-saved="isSaved"
       />
@@ -55,10 +55,10 @@
         </button>
       </div>
       <recent
-        v-if="!hasCurrentFile && init && !currentFile?.isDrawing && !currentFile?.isGeoGebra && !currentFile?.isMindMap && !currentFile?.isKdbx"
+        v-if="!hasCurrentFile && init && !currentFile?.isDrawing && !currentFile?.isGeoGebra && !currentFile?.isMindMap && !currentFile?.isKdbx && !currentFile?.isTerminal"
       />
       <editor-with-tabs
-        v-if="hasCurrentFile && init && !currentFile?.isDrawing && !currentFile?.isGeoGebra && !currentFile?.isMindMap && !currentFile?.isKdbx"
+        v-if="hasCurrentFile && init && !currentFile?.isDrawing && !currentFile?.isGeoGebra && !currentFile?.isMindMap && !currentFile?.isKdbx && !currentFile?.isTerminal"
         :markdown="markdown"
         :cursor="cursor"
         :muya-index-cursor="muyaIndexCursor"
@@ -72,6 +72,7 @@
       <geogebra v-if="init" v-show="currentFile?.isGeoGebra === true" />
       <mind-map v-if="init" v-show="currentFile?.isMindMap === true" />
       <kdbx v-if="init && currentFile?.isKdbx === true" />
+      <terminal-view v-if="init" v-show="currentFile?.isTerminal === true" :file="currentFile" />
       <kdbx-create-dialog />
       <command-palette />
       <export-setting-dialog />
@@ -102,7 +103,7 @@ import MoveNodeDialog from '@/components/moveNode/index.vue'
 import Rename from '@/components/rename/index.vue'
 import ImportModal from '@/components/import/index.vue'
 import GitDesktop from '@/components/gitDesktop/index.vue'
-import TerminalWorkbench from '@/components/terminal/index.vue'
+import TerminalView from '@/components/terminal/index.vue'
 import Drawio from '@/components/drawio/index.vue'
 import Geogebra from '@/components/geogebra/index.vue'
 import MindMap from '@/components/mindmap/index.vue'
@@ -143,7 +144,7 @@ const tabScrollState = ref({
   canLeft: false,
   canRight: false
 })
-const workbench = ref<'note' | 'git' | 'terminal'>('note')
+const workbench = ref<'note' | 'git'>('note')
 const drawioFile = ref<{ filePath: string; title: string } | null>(null)
 const geogebraFile = ref<{ filePath: string; title: string; mode: GeoGebraMode } | null>(null)
 const mindMapFile = ref<{ filePath: string; title: string } | null>(null)
@@ -177,7 +178,8 @@ const hasCurrentFile = computed<boolean>(() => {
     !currentFile.value?.isDrawing &&
     !currentFile.value?.isGeoGebra &&
     !currentFile.value?.isMindMap &&
-    !currentFile.value?.isKdbx
+    !currentFile.value?.isKdbx &&
+    !currentFile.value?.isTerminal
   )
 })
 
@@ -231,7 +233,7 @@ const handleWindowZoomGestureChange = (event: Event): void => {
 
 const handleWorkbenchSwitch = (event: Event): void => {
   const target = (event as CustomEvent).detail
-  if (target === 'note' || target === 'git' || target === 'terminal') {
+  if (target === 'note' || target === 'git') {
     workbench.value = target
     if (target !== 'note') {
       drawioFile.value = null
