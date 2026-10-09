@@ -1,0 +1,213 @@
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
+import type {
+  ITerminalConnectionConfig,
+  ITerminalSessionInfo,
+  IHardwareStats,
+  ISftpTransferProgress
+} from '@shared/types/terminal'
+
+export interface ITwoFactorPrompt {
+  sessionId: string
+  promptId: string
+  prompt: string
+  instruction?: string
+}
+
+export const useTerminalStore = defineStore('terminal', () => {
+  const sessions = ref<ITerminalSessionInfo[]>([])
+  const activeSessionId = ref<string>('')
+  const savedServers = ref<ITerminalConnectionConfig[]>([])
+  const sessionStats = ref<Record<string, IHardwareStats>>({})
+  const pending2fa = ref<ITwoFactorPrompt | null>(null)
+  const is2faDialogOpen = ref(false)
+
+  // Settings
+  const fontFamily = ref(localStorage.getItem('mt::term:fontFamily') || 'Menlo, Monaco, Consolas, "Courier New", monospace')
+  const fontSize = ref(Number(localStorage.getItem('mt::term:fontSize')) || 13)
+  const cursorBlink = ref(localStorage.getItem('mt::term:cursorBlink') !== 'false')
+  const scrollback = ref(Number(localStorage.getItem('mt::term:scrollback')) || 5000)
+  const selectedThemeName = ref(localStorage.getItem('mt::term:theme') || 'auto')
+
+  // SFTP Drawer state
+  const sftpDrawerVisible = ref(false)
+  const activeSftpSessionId = ref<string | null>(null)
+  const sftpTransfers = ref<ISftpTransferProgress[]>([])
+
+  // Data event listeners map: sessionId -> Set<(data: string) => void>
+  const dataListeners = new Map<string, Set<(data: string) => void>>()
+
+  let isInitialized = false
+
+  function initIpcListeners(): void {
+    if (isInitialized) return
+    isInitialized = true
+
+    // Listen for terminal data
+    window.electron.ipcRenderer.on('mt::terminal:data', (_event, { sessionId, data }: { sessionId: string; data: string }) => {
+      const listeners = dataListeners.get(sessionId)
+      if (listeners) {
+        listeners.forEach((fn) => fn(data))
+      }
+    })
+
+    // Listen for session status updates
+    window.electron.ipcRenderer.on('mt::terminal:status', (_event, info: ITerminalSessionInfo) => {
+      const index = sessions.value.findIndex((s) => s.id === info.id)
+      if (index >= 0) {
+        sessions.value[index] = { ...sessions.value[index], ...info }
+      }
+    })
+
+    // Listen for hardware stats
+    window.electron.ipcRenderer.on('mt::terminal:stats', (_event, { sessionId, stats }: { sessionId: string; stats: IHardwareStats }) => {
+      sessionStats.value[sessionId] = stats
+    })
+
+    // Listen for 2FA prompt
+    window.electron.ipcRenderer.on('mt::terminal:2fa-prompt', (_event, promptPayload: ITwoFactorPrompt) => {
+      pending2fa.value = promptPayload
+      is2faDialogOpen.value = true
+    })
+
+    // Listen for SFTP progress
+    window.electron.ipcRenderer.on('mt::terminal:sftp-progress', (_event, { progress }: { sessionId: string; progress: ISftpTransferProgress }) => {
+      const existingIdx = sftpTransfers.value.findIndex((t) => t.id === progress.id)
+      if (existingIdx >= 0) {
+        sftpTransfers.value[existingIdx] = progress
+      } else {
+        sftpTransfers.value.push(progress)
+      }
+    })
+  }
+
+  function registerDataListener(sessionId: string, fn: (data: string) => void): () => void {
+    if (!dataListeners.has(sessionId)) {
+      dataListeners.set(sessionId, new Set())
+    }
+    dataListeners.get(sessionId)!.add(fn)
+    return () => {
+      dataListeners.get(sessionId)?.delete(fn)
+    }
+  }
+
+  async function loadSavedServers(): Promise<void> {
+    try {
+      const list = await window.electron.ipcRenderer.invoke('mt::terminal:get-stored-servers')
+      savedServers.value = list || []
+    } catch (e) {
+      console.error('Failed to load saved servers:', e)
+    }
+  }
+
+  async function saveServer(config: ITerminalConnectionConfig): Promise<ITerminalConnectionConfig> {
+    const saved = await window.electron.ipcRenderer.invoke('mt::terminal:save-stored-server', config)
+    await loadSavedServers()
+    return saved
+  }
+
+  async function deleteServer(id: string): Promise<void> {
+    await window.electron.ipcRenderer.invoke('mt::terminal:delete-stored-server', id)
+    await loadSavedServers()
+  }
+
+  async function testLatency(host: string, port = 22): Promise<number> {
+    return window.electron.ipcRenderer.invoke('mt::terminal:test-latency', host, port)
+  }
+
+  async function connect(config: ITerminalConnectionConfig, cols = 80, rows = 24): Promise<ITerminalSessionInfo> {
+    initIpcListeners()
+    const sessionInfo = await window.electron.ipcRenderer.invoke('mt::terminal:connect', config, cols, rows)
+    sessions.value.push(sessionInfo)
+    activeSessionId.value = sessionInfo.id
+    return sessionInfo
+  }
+
+  function write(sessionId: string, data: string): void {
+    window.electron.ipcRenderer.send('mt::terminal:write', { sessionId, data })
+  }
+
+  function resize(sessionId: string, cols: number, rows: number): void {
+    window.electron.ipcRenderer.send('mt::terminal:resize', { sessionId, cols, rows })
+  }
+
+  async function disconnect(sessionId: string): Promise<void> {
+    try {
+      await window.electron.ipcRenderer.invoke('mt::terminal:disconnect', sessionId)
+    } finally {
+      const index = sessions.value.findIndex((s) => s.id === sessionId)
+      if (index >= 0) {
+        sessions.value.splice(index, 1)
+      }
+      delete sessionStats.value[sessionId]
+      dataListeners.delete(sessionId)
+
+      if (activeSessionId.value === sessionId) {
+        activeSessionId.value = sessions.value.length > 0 ? sessions.value[sessions.value.length - 1].id : ''
+      }
+      if (activeSftpSessionId.value === sessionId) {
+        activeSftpSessionId.value = null
+        sftpDrawerVisible.value = false
+      }
+    }
+  }
+
+  function send2faAnswer(promptId: string, code: string): void {
+    window.electron.ipcRenderer.send('mt::terminal:2fa-answer', { promptId, code })
+    is2faDialogOpen.value = false
+    pending2fa.value = null
+  }
+
+  function setPreference(key: 'fontFamily' | 'fontSize' | 'cursorBlink' | 'scrollback' | 'theme', val: any): void {
+    if (key === 'fontFamily') {
+      fontFamily.value = val
+      localStorage.setItem('mt::term:fontFamily', val)
+    } else if (key === 'fontSize') {
+      fontSize.value = Number(val)
+      localStorage.setItem('mt::term:fontSize', String(val))
+    } else if (key === 'cursorBlink') {
+      cursorBlink.value = !!val
+      localStorage.setItem('mt::term:cursorBlink', String(val))
+    } else if (key === 'scrollback') {
+      scrollback.value = Number(val)
+      localStorage.setItem('mt::term:scrollback', String(val))
+    } else if (key === 'theme') {
+      selectedThemeName.value = val
+      localStorage.setItem('mt::term:theme', val)
+    }
+  }
+
+  const activeSession = computed(() => {
+    return sessions.value.find((s) => s.id === activeSessionId.value) || null
+  })
+
+  return {
+    sessions,
+    activeSessionId,
+    activeSession,
+    savedServers,
+    sessionStats,
+    pending2fa,
+    is2faDialogOpen,
+    fontFamily,
+    fontSize,
+    cursorBlink,
+    scrollback,
+    selectedThemeName,
+    sftpDrawerVisible,
+    activeSftpSessionId,
+    sftpTransfers,
+    initIpcListeners,
+    registerDataListener,
+    loadSavedServers,
+    saveServer,
+    deleteServer,
+    testLatency,
+    connect,
+    write,
+    resize,
+    disconnect,
+    send2faAnswer,
+    setPreference
+  }
+})

@@ -182,6 +182,10 @@ const handleLeftBottomClick = (name: string): void => {
     window.dispatchEvent(new CustomEvent('marknotepro:switch-workbench', { detail: 'git' }))
     return
   }
+  if (name === 'terminal') {
+    window.dispatchEvent(new CustomEvent('marknotepro:switch-workbench', { detail: 'terminal' }))
+    return
+  }
   if (name === 'settings') {
     projectStore.OPEN_SETTING_WINDOW()
   }

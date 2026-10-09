@@ -1,5 +1,6 @@
 <template>
   <git-desktop v-if="workbench === 'git'" />
+  <terminal-workbench v-else-if="workbench === 'terminal'" />
   <div
     v-else
     class="editor-container"
@@ -101,6 +102,7 @@ import MoveNodeDialog from '@/components/moveNode/index.vue'
 import Rename from '@/components/rename/index.vue'
 import ImportModal from '@/components/import/index.vue'
 import GitDesktop from '@/components/gitDesktop/index.vue'
+import TerminalWorkbench from '@/components/terminal/index.vue'
 import Drawio from '@/components/drawio/index.vue'
 import Geogebra from '@/components/geogebra/index.vue'
 import MindMap from '@/components/mindmap/index.vue'
@@ -141,7 +143,7 @@ const tabScrollState = ref({
   canLeft: false,
   canRight: false
 })
-const workbench = ref<'note' | 'git'>('note')
+const workbench = ref<'note' | 'git' | 'terminal'>('note')
 const drawioFile = ref<{ filePath: string; title: string } | null>(null)
 const geogebraFile = ref<{ filePath: string; title: string; mode: GeoGebraMode } | null>(null)
 const mindMapFile = ref<{ filePath: string; title: string } | null>(null)
@@ -229,7 +231,7 @@ const handleWindowZoomGestureChange = (event: Event): void => {
 
 const handleWorkbenchSwitch = (event: Event): void => {
   const target = (event as CustomEvent).detail
-  if (target === 'note' || target === 'git') {
+  if (target === 'note' || target === 'git' || target === 'terminal') {
     workbench.value = target
     if (target !== 'note') {
       drawioFile.value = null
