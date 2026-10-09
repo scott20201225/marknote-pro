@@ -1,3 +1,4 @@
+import { BrowserWindow } from 'electron'
 import { Client, type ClientChannel, type ConnectConfig } from 'ssh2'
 import { generateTotp } from '../../shared/totp'
 import type {
@@ -8,6 +9,7 @@ import type {
   ISftpTransferProgress
 } from '../../shared/types/terminal'
 import { LinuxHardwareProbe } from './probeEngine'
+import { ZModemSessionHandler } from './zmodemEngine'
 
 export class SshEngineSession {
   public id: string
@@ -18,6 +20,7 @@ export class SshEngineSession {
   public probe: LinuxHardwareProbe | null = null
   public status: ITerminalSessionInfo['status'] = 'connecting'
   public has2fa = false
+  public zmodemHandler: ZModemSessionHandler | null = null
 
   private onDataCallback: (data: string) => void
   private onStatusCallback: (info: ITerminalSessionInfo) => void
@@ -142,12 +145,27 @@ export class SshEngineSession {
 
           this.shellStream = stream
 
+          this.zmodemHandler = new ZModemSessionHandler({
+            onTerminalData: (text) => this.onDataCallback(text),
+            sendToSession: (data) => {
+              if (this.shellStream && this.shellStream.writable) {
+                this.shellStream.write(data)
+              }
+            },
+            getWindow: () => BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0]
+          })
+
           stream.on('data', (chunk: Buffer) => {
-            this.onDataCallback(chunk.toString('utf-8'))
+            if (this.zmodemHandler) {
+              this.zmodemHandler.consume(chunk)
+            } else {
+              this.onDataCallback(chunk.toString('utf-8'))
+            }
           })
 
           stream.on('close', () => {
             console.log('[Terminal/SSH] Shell stream closed')
+            this.zmodemHandler?.abort()
             this.status = 'disconnected'
             this.onStatusCallback(this.getSessionInfo())
           })
@@ -197,6 +215,9 @@ export class SshEngineSession {
   }
 
   public write(data: string): void {
+    if (data === '\x03') {
+      this.zmodemHandler?.abort()
+    }
     if (this.shellStream && this.shellStream.writable) {
       this.shellStream.write(data)
     }
@@ -225,6 +246,10 @@ export class SshEngineSession {
   }
 
   public cleanup(): void {
+    if (this.zmodemHandler) {
+      this.zmodemHandler.abort()
+      this.zmodemHandler = null
+    }
     if (this.probe) {
       this.probe.stop()
       this.probe = null
