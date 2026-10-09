@@ -193,8 +193,10 @@
             <el-option :label="t('kdbx.entryTypes.normal')" value="Normal" />
             <el-option :label="t('kdbx.entryTypes.ssh')" value="SSH" />
             <el-option :label="t('kdbx.entryTypes.telnet')" value="Telnet" />
+            <!-- Serial 与 RawSocket 暂不暴露选项（后期按需启用），底层实现与解析代码完整保留
             <el-option :label="t('kdbx.entryTypes.serial')" value="Serial" />
             <el-option :label="t('kdbx.entryTypes.rawSocket')" value="RawSocket" />
+            -->
           </el-select>
         </label>
         <label>{{ t('kdbx.title') }}<el-input v-model="editDraft.title" /></label>
