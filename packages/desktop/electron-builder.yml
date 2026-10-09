@@ -1,5 +1,6 @@
 appId: com.scott20201225.marknotepro
 productName: MarkNotePro
+afterPack: build/afterPack.cjs
 directories:
   buildResources: build
   output: ../../dist
@@ -212,11 +213,13 @@ nsis:
   include: windows/installer.nsh
 mac:
   artifactName: 'marknotepro-mac-${arch}-${version}.${ext}'
+  entitlements: build/mac/entitlements.mac.plist
   entitlementsInherit: build/mac/entitlements.mac.plist
   extendInfo:
-    - NSCameraUsageDescription: Application requests access to the device's camera.
-    - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
-    - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
+    NSCameraUsageDescription: "Application requests access to the device's camera."
+    NSDocumentsFolderUsageDescription: "Application requests access to the user's Documents folder."
+    NSDownloadsFolderUsageDescription: "Application requests access to the user's Downloads folder."
+    NSLocalNetworkUsageDescription: "MarkNotePro 需要访问本地网络以连接 SSH/SFTP 终端服务器及本地网络服务。"
   icon: static/icon.icns
   notarize: false
   target:

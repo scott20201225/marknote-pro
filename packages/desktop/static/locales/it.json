@@ -1074,7 +1074,27 @@
     "importTotpBtn": "Batch Import 2FA",
     "totpAuthCodes": "2FA One-Time Passwords",
     "filterTotp": "Filter 2FA...",
-    "totpParsed": "2FA QR code parsed successfully"
+    "totpParsed": "2FA QR code parsed successfully",
+    "connectTerminal": "Direct Terminal",
+    "connectTerminalFailed": "Direct terminal connection failed",
+    "terminalConnection": "KDBX Terminal Connection",
+    "entryType": "Entry Type",
+    "selectEntryType": "Select Entry Type",
+    "entryTypes": {
+      "normal": "Normal Entry (Normal)",
+      "ssh": "SSH Session (SSH)",
+      "telnet": "Telnet Session (Telnet)",
+      "serial": "Serial Port (Serial)",
+      "rawSocket": "Raw Socket (Raw Socket)"
+    },
+    "hostPortLabel": "Host URL / Port (URL, e.g. 192.168.1.1:22)",
+    "serialDeviceUrlLabel": "Serial Port / Device (e.g. COM3 or /dev/ttyUSB0:115200)",
+    "placeholders": {
+      "ssh": "e.g. 192.168.1.1:22 or ssh://root@192.168.1.1:22",
+      "serial": "e.g. COM3 or /dev/ttyUSB0:115200",
+      "telnet": "e.g. 192.168.1.1:23",
+      "rawSocket": "e.g. 192.168.1.1:9000"
+    }
   },
   "dialog": {
     "cancel": "Cancel",

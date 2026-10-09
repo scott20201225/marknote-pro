@@ -232,6 +232,7 @@
       "newDrawing": "新增繪圖",
       "newGeoGebra": "新建 GeoGebra",
       "newMindMap": "新建心智圖",
+      "newKdbx": "新建密碼庫",
       "expandAll": "全部展開",
       "collapseAll": "全部折疊",
       "copy": "複製",
@@ -1105,7 +1106,27 @@
     "importTotpBtn": "批次匯入 2FA",
     "totpAuthCodes": "2FA 動態口令",
     "filterTotp": "搜尋 2FA...",
-    "totpParsed": "2FA 二維碼已成功解析"
+    "totpParsed": "2FA 二維碼已成功解析",
+    "connectTerminal": "直連終端",
+    "connectTerminalFailed": "終端直連失敗",
+    "terminalConnection": "KDBX 終端連線",
+    "entryType": "條目類型",
+    "selectEntryType": "選擇條目類型",
+    "entryTypes": {
+      "normal": "普通條目 (Normal)",
+      "ssh": "SSH 會話 (SSH)",
+      "telnet": "Telnet 會話 (Telnet)",
+      "serial": "物理串口 (Serial)",
+      "rawSocket": "原始通訊端 (Raw Socket)"
+    },
+    "hostPortLabel": "主機網址 / 連接埠 (URL，如 192.168.1.1:22)",
+    "serialDeviceUrlLabel": "序列埠裝置 / 網址 (如 COM3 或 /dev/ttyUSB0:115200)",
+    "placeholders": {
+      "ssh": "如 192.168.1.1:22 或 ssh://root@192.168.1.1:22",
+      "serial": "如 COM3 或 /dev/ttyUSB0:115200",
+      "telnet": "如 192.168.1.1:23",
+      "rawSocket": "如 192.168.1.1:9000"
+    }
   },
   "dialog": {
     "cancel": "取消",

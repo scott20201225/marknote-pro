@@ -61,10 +61,10 @@ export const showContextMenu = (
 
   if (kind === 'root') {
     contextItems = [
-      getNewDrawing(),
-      getNewKdbx(),
-      getNewGeoGebraMenu(),
       getNewMindMapMenu(),
+      getNewDrawing(),
+      getNewGeoGebraMenu(),
+      getNewKdbx(),
       getNewGroup(),
       getRENAME(),
       SEPARATOR,
@@ -96,11 +96,11 @@ export const showContextMenu = (
     ]
   } else if (kind === 'area') {
     contextItems = [
-      getNewDrawing(),
-      getNewKdbx(),
-      getNewGeoGebraMenu(),
-      getNewMindMapMenu(),
       getNewDocument(),
+      getNewMindMapMenu(),
+      getNewDrawing(),
+      getNewGeoGebraMenu(),
+      getNewKdbx(),
       SEPARATOR,
       getExpandAll(),
       getCollapseAll(),
@@ -117,10 +117,10 @@ export const showContextMenu = (
   } else if (kind === 'document') {
     contextItems = [
       getNewDocument(),
-      getNewDrawing(),
-      getNewKdbx(),
-      getNewGeoGebraMenu(),
       getNewMindMapMenu(),
+      getNewDrawing(),
+      getNewGeoGebraMenu(),
+      getNewKdbx(),
       SEPARATOR,
       getCOPY(),
       getMOVE_TO(),
@@ -135,10 +135,10 @@ export const showContextMenu = (
   } else {
     contextItems = [
       getNewFile(),
-      getNewDrawing(),
-      getNewKdbx(),
-      getNewGeoGebraMenu(),
       getNewMindMapMenu(),
+      getNewDrawing(),
+      getNewGeoGebraMenu(),
+      getNewKdbx(),
       getNewDirectory(),
       SEPARATOR,
       getCOPY(),
@@ -176,10 +176,10 @@ export const showNoteListContextMenu = (
 
   if (kind === 'root') {
     contextItems = [
-      getNewDrawing(),
-      getNewKdbx(),
-      getNewGeoGebraMenu(),
       getNewMindMapMenu(),
+      getNewDrawing(),
+      getNewGeoGebraMenu(),
+      getNewKdbx(),
       getNewGroup(),
       SEPARATOR,
       getRENAME(),
@@ -203,11 +203,11 @@ export const showNoteListContextMenu = (
     ]
   } else if (kind === 'area') {
     contextItems = [
-      getNewDrawing(),
-      getNewKdbx(),
-      getNewGeoGebraMenu(),
-      getNewMindMapMenu(),
       getNewDocument(),
+      getNewMindMapMenu(),
+      getNewDrawing(),
+      getNewGeoGebraMenu(),
+      getNewKdbx(),
       SEPARATOR,
       getMOVE_TO(),
       SEPARATOR,
@@ -221,10 +221,10 @@ export const showNoteListContextMenu = (
   } else if (kind === 'document') {
     contextItems = [
       getNewDocument(),
-      getNewDrawing(),
-      getNewKdbx(),
-      getNewGeoGebraMenu(),
       getNewMindMapMenu(),
+      getNewDrawing(),
+      getNewGeoGebraMenu(),
+      getNewKdbx(),
       SEPARATOR,
       getMOVE_TO(),
       SEPARATOR,
@@ -236,7 +236,16 @@ export const showNoteListContextMenu = (
       getShowInFolder()
     ]
   } else {
-    contextItems = [getNewDocument(), getNewKdbx(), getNewMindMapMenu(), SEPARATOR, getPASTE(), getCopyPath()]
+    contextItems = [
+      getNewDocument(),
+      getNewMindMapMenu(),
+      getNewDrawing(),
+      getNewGeoGebraMenu(),
+      getNewKdbx(),
+      SEPARATOR,
+      getPASTE(),
+      getCopyPath()
+    ]
   }
 
   const items = normalizeContextItems(contextItems, hasPathCache)

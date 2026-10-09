@@ -1074,7 +1074,27 @@
     "importTotpBtn": "Batch Import 2FA",
     "totpAuthCodes": "2FA One-Time Passwords",
     "filterTotp": "Filter 2FA...",
-    "totpParsed": "2FA QR code parsed successfully"
+    "totpParsed": "2FA QR code parsed successfully",
+    "connectTerminal": "터미널 직접 연결",
+    "connectTerminalFailed": "터미널 직접 연결 실패",
+    "terminalConnection": "KDBX 터미널 연결",
+    "entryType": "항목 유형",
+    "selectEntryType": "항목 유형 선택",
+    "entryTypes": {
+      "normal": "일반 항목 (Normal)",
+      "ssh": "SSH 세션 (SSH)",
+      "telnet": "Telnet 세션 (Telnet)",
+      "serial": "직렬 포트 (Serial)",
+      "rawSocket": "원시 소켓 (Raw Socket)"
+    },
+    "hostPortLabel": "호스트 URL / 포트 (URL, 예: 192.168.1.1:22)",
+    "serialDeviceUrlLabel": "직렬 장치 / URL (예: COM3 또는 /dev/ttyUSB0:115200)",
+    "placeholders": {
+      "ssh": "예: 192.168.1.1:22 또는 ssh://root@192.168.1.1:22",
+      "serial": "예: COM3 또는 /dev/ttyUSB0:115200",
+      "telnet": "예: 192.168.1.1:23",
+      "rawSocket": "예: 192.168.1.1:9000"
+    }
   },
   "dialog": {
     "cancel": "취소",

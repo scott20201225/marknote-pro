@@ -39,6 +39,7 @@ export interface KdbxEntrySummary {
   updatedAt: string | null
   groupPath: string[]
   isRecycleBin: boolean
+  urlType?: string | null
 }
 
 export interface KdbxEntryHistoryItem {

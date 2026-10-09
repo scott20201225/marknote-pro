@@ -49,8 +49,18 @@ export default function (
     geogebraMode?: boolean
     mindmapMode?: boolean
     kdbxMode?: boolean
+    terminalMode?: boolean
   } = {}
 ): MenuItemConstructorOptions[] {
+  if (options.terminalMode) {
+    return [
+      ...(process.platform === 'darwin' ? [marknotepro(keybindings)] : []),
+      theme(preferences),
+      language(preferences),
+      help()
+    ]
+  }
+
   if (options.drawioMode) {
     return [
       // macOS reserves the first top-level entry for the application menu.
