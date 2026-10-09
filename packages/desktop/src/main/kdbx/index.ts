@@ -163,7 +163,8 @@ const toEntrySummary = (entry: KdbxEntry, recycleBinId = ''): KdbxEntrySummary =
   tags: entry.tags || [],
   updatedAt: entry.times.lastModTime?.toISOString() ?? null,
   groupPath: groupPath(entry),
-  isRecycleBin: recycleBinId ? isInRecycleBin(entry, recycleBinId) : false
+  isRecycleBin: recycleBinId ? isInRecycleBin(entry, recycleBinId) : false,
+  urlType: getFieldValue(entry, 'key_url_type') || null
 })
 
 const toEntryDetail = (entry: KdbxEntry, recycleBinId = ''): KdbxEntryDetail => ({
