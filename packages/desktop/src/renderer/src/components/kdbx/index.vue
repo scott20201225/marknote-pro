@@ -292,7 +292,8 @@ const errorMessage = (reason: unknown, fallback: string): string => {
   const message = reason instanceof Error ? reason.message : typeof reason === 'string' ? reason : ''
   return message.replace(/^Error invoking remote method '[^']+':\s*(?:Error:\s*)?/, '').replace(/^Error:\s*/, '') || fallback
 }
-const { currentFile } = storeToRefs(useEditorStore())
+const editorStore = useEditorStore()
+const { currentFile } = storeToRefs(editorStore)
 const terminalStore = useTerminalStore()
 const vault = ref<KdbxVaultSnapshot | null>(null)
 const locked = ref(true); const password = ref(''); const error = ref(''); const unlocking = ref(false); const unlockPasswordVisible = ref(false)
@@ -557,8 +558,11 @@ const connectTerminalFromEntry = async(entry: KdbxVaultSnapshot['entries'][numbe
     const detail = await window.electron.ipcRenderer.invoke('mt::kdbx::entry', filePath.value, entry.id)
     if (!detail) return
     const config = parseEntryToTerminalConfig(detail)
-    window.dispatchEvent(new CustomEvent('marknotepro:switch-workbench', { detail: 'terminal' }))
-    await terminalStore.connect(config)
+    const session = await terminalStore.connect(config)
+    editorStore.OPEN_TERMINAL_TAB({
+      sessionId: session.id,
+      title: `${session.protocol.toUpperCase()}: ${session.title}`
+    })
   } catch (err: any) {
     ElMessage.error(`终端直连失败: ${err?.message || err}`)
   }
@@ -568,8 +572,11 @@ const connectTerminalFromDraft = async(): Promise<void> => {
   if (!draft.value) return
   try {
     const config = parseEntryToTerminalConfig(draft.value)
-    window.dispatchEvent(new CustomEvent('marknotepro:switch-workbench', { detail: 'terminal' }))
-    await terminalStore.connect(config)
+    const session = await terminalStore.connect(config)
+    editorStore.OPEN_TERMINAL_TAB({
+      sessionId: session.id,
+      title: `${session.protocol.toUpperCase()}: ${session.title}`
+    })
   } catch (err: any) {
     ElMessage.error(`终端直连失败: ${err?.message || err}`)
   }

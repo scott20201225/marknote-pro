@@ -59,6 +59,7 @@ import { sideBarIcons, sideBarBottomIcons } from './help'
 import Tree from './tree.vue'
 import SideBarSearch from './search.vue'
 import { storeToRefs } from 'pinia'
+import bus from '@/bus'
 import type { TabDescriptor } from './types'
 
 const TREE_MODE_MIN_WIDTH = 220
@@ -183,7 +184,12 @@ const handleLeftBottomClick = (name: string): void => {
     return
   }
   if (name === 'terminal') {
-    window.dispatchEvent(new CustomEvent('marknotepro:switch-workbench', { detail: 'terminal' }))
+    const termTab = editorStore.tabs.find((t) => t.isTerminal)
+    if (termTab && editorStore.currentFile?.id !== termTab.id) {
+      editorStore.UPDATE_CURRENT_FILE(termTab)
+    } else {
+      bus.emit('open-terminal-dialog')
+    }
     return
   }
   if (name === 'settings') {

@@ -12,7 +12,11 @@
           @click.middle="closeTab(file.id)"
           @contextmenu.prevent="handleContextMenu($event, file)"
         >
+          <el-icon v-if="file.isTerminal" class="tab-save-status tab-terminal-icon" :size="13">
+            <Monitor />
+          </el-icon>
           <el-tooltip
+            v-else
             :content="file.isSaved ? t('contextMenu.tabs.saved') : t('contextMenu.tabs.unsaved')"
             placement="right"
             :fallback-placements="['left']"
@@ -49,7 +53,7 @@ import { useLayoutStore } from '@/store/layout'
 import { storeToRefs } from 'pinia'
 import autoScroll from 'dom-autoscroller'
 import dragula from 'dragula'
-import { CircleCheckFilled, Close, WarningFilled } from '@element-plus/icons-vue'
+import { CircleCheckFilled, Close, WarningFilled, Monitor } from '@element-plus/icons-vue'
 import { showContextMenu } from '../../contextMenu/tabs'
 import bus from '../../bus'
 import type { IFileState } from '@shared/types/files'

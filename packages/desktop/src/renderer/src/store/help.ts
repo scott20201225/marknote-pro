@@ -90,7 +90,8 @@ const documentStateKeys = [
   'isGeoGebra',
   'isMindMap',
   'isKdbx',
-  'isKdbx',
+  'isTerminal',
+  'terminalSessionId',
   'geoGebraMode',
   'showHeadingNumbers',
   'headingNumberingIncludesTopLevel'
