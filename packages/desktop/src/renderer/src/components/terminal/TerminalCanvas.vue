@@ -5,7 +5,7 @@
       <el-input
         v-model="searchQuery"
         size="small"
-        placeholder="搜索终端内容..."
+        :placeholder="t('terminal.searchPlaceholder')"
         clearable
         @input="onSearchChange"
         @keyup.enter="findNext"
@@ -16,10 +16,10 @@
         </template>
       </el-input>
       <el-button-group size="small">
-        <el-button :icon="ArrowUp" @click="findPrev" />
-        <el-button :icon="ArrowDown" @click="findNext" />
+        <el-button :icon="ArrowUp" :title="t('terminal.findPrev')" @click="findPrev" />
+        <el-button :icon="ArrowDown" :title="t('terminal.findNext')" @click="findNext" />
       </el-button-group>
-      <el-button size="small" :icon="Close" circle @click="closeSearch" />
+      <el-button size="small" :icon="Close" :title="t('terminal.closeSearch')" circle @click="closeSearch" />
     </div>
 
     <!-- xterm Canvas Element -->
@@ -29,9 +29,9 @@
     <div v-if="session.status === 'disconnected' || session.status === 'error'" class="terminal-disconnected-overlay">
       <div class="disconnected-card">
         <div class="status-dot error" />
-        <span class="status-msg">连接已断开 {{ session.error ? `(${session.error})` : '' }}</span>
+        <span class="status-msg">{{ t('terminal.disconnected') }} {{ session.error ? `(${session.error})` : '' }}</span>
         <el-button type="primary" size="small" @click="$emit('reconnect', session)">
-          重新连接
+          {{ t('terminal.reconnect') }}
         </el-button>
       </div>
     </div>
@@ -40,6 +40,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
+import { t } from '@/i18n'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebglAddon } from '@xterm/addon-webgl'
@@ -75,13 +76,8 @@ let resizeObserver: ResizeObserver | null = null
 const showSearch = ref(false)
 const searchQuery = ref('')
 
-function applyTheme(): void {
-  if (!term) return
-  const appTheme = preferencesStore.theme || 'dark'
-  const customTheme = terminalStore.selectedThemeName === 'auto' ? undefined : terminalStore.selectedThemeName
-  const themeColors = getAdaptiveTerminalTheme(appTheme, customTheme)
-
-  term.options.theme = {
+function buildXtermTheme(themeColors: ReturnType<typeof getAdaptiveTerminalTheme>) {
+  return {
     background: themeColors.background,
     foreground: themeColors.foreground,
     cursor: themeColors.cursor || themeColors.foreground,
@@ -105,14 +101,28 @@ function applyTheme(): void {
     brightCyan: themeColors.brightCyan,
     brightWhite: themeColors.brightWhite
   }
+}
+
+function applyTheme(): void {
+  const appTheme = preferencesStore.theme || 'light'
+  const themeColors = getAdaptiveTerminalTheme(appTheme)
 
   if (containerRef.value) {
     containerRef.value.style.backgroundColor = themeColors.background
+  }
+
+  if (term) {
+    term.options.theme = buildXtermTheme(themeColors)
   }
 }
 
 function initTerminal(): void {
   if (!xtermRef.value) return
+
+  const initialTheme = getAdaptiveTerminalTheme(preferencesStore.theme || 'light')
+  if (containerRef.value) {
+    containerRef.value.style.backgroundColor = initialTheme.background
+  }
 
   term = new Terminal({
     fontFamily: terminalStore.fontFamily,
@@ -121,7 +131,8 @@ function initTerminal(): void {
     scrollback: terminalStore.scrollback,
     allowProposedApi: true,
     convertEol: true,
-    cursorStyle: 'block'
+    cursorStyle: 'block',
+    theme: buildXtermTheme(initialTheme)
   })
 
   fitAddon = new FitAddon()
@@ -148,6 +159,33 @@ function initTerminal(): void {
   // Handle user input
   term.onData((data) => {
     terminalStore.write(props.session.id, data)
+  })
+
+  // Support copy & paste shortcuts directly in xterm
+  term.attachCustomKeyEventHandler((event: KeyboardEvent) => {
+    const isCopy =
+      (event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey && event.key === 'c') ||
+      (event.ctrlKey && event.shiftKey && !event.metaKey && !event.altKey && (event.key === 'C' || event.key === 'c'))
+    if (isCopy && event.type === 'keydown') {
+      const selection = term?.getSelection()
+      if (selection) {
+        window.electron.clipboard.writeText(selection)
+        return false
+      }
+    }
+
+    const isPaste =
+      (event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey && event.key === 'v') ||
+      (event.ctrlKey && event.shiftKey && !event.metaKey && !event.altKey && (event.key === 'V' || event.key === 'v'))
+    if (isPaste && event.type === 'keydown') {
+      const text = window.electron.clipboard.readText()
+      if (text) {
+        terminalStore.write(props.session.id, text)
+        return false
+      }
+    }
+
+    return true
   })
 
   // Handle resize
@@ -245,14 +283,6 @@ watch(
   }
 )
 
-// Watch user selected theme changes
-watch(
-  () => terminalStore.selectedThemeName,
-  () => {
-    applyTheme()
-  }
-)
-
 // Watch font & preferences changes
 watch(
   () => [terminalStore.fontFamily, terminalStore.fontSize, terminalStore.cursorBlink, terminalStore.scrollback],
@@ -266,11 +296,26 @@ watch(
   }
 )
 
+let themeObserver: MutationObserver | null = null
+
 onMounted(() => {
   initTerminal()
+
+  // Also observe stylesheet mutations so any dynamic theme switch triggers applyTheme
+  const agTheme = document.querySelector('#ag-theme')
+  if (agTheme) {
+    themeObserver = new MutationObserver(() => {
+      applyTheme()
+    })
+    themeObserver.observe(agTheme, { childList: true, characterData: true, subtree: true })
+  }
 })
 
 onBeforeUnmount(() => {
+  if (themeObserver) {
+    themeObserver.disconnect()
+    themeObserver = null
+  }
   if (unregisterDataListener) {
     unregisterDataListener()
     unregisterDataListener = null
@@ -303,6 +348,7 @@ defineExpose({
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  background-color: var(--editorBgColor, #1e1e1e);
 }
 
 .terminal-xterm-host {
@@ -311,6 +357,7 @@ defineExpose({
   height: 100%;
   padding: 6px 10px;
   box-sizing: border-box;
+  background-color: transparent;
 }
 
 .terminal-search-bar {

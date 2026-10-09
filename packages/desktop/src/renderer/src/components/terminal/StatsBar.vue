@@ -1,7 +1,7 @@
 <template>
   <div v-if="stats" class="terminal-stats-bar">
     <!-- CPU -->
-    <div class="stat-item" :title="`CPU 使用率: ${stats.cpuUsage.toFixed(1)}%`">
+    <div class="stat-item" :title="t('terminal.stats.cpu', { val: stats.cpuUsage.toFixed(1) })">
       <span class="stat-label">CPU</span>
       <el-progress
         :percentage="Math.min(100, Math.max(0, Math.round(stats.cpuUsage)))"
@@ -16,7 +16,7 @@
     <!-- RAM -->
     <div
       class="stat-item"
-      :title="`内存: ${formatBytes(stats.memoryUsed)} / ${formatBytes(stats.memoryTotal)} (${stats.memoryPercent.toFixed(1)}%)`"
+      :title="t('terminal.stats.memory', { used: formatBytes(stats.memoryUsed), total: formatBytes(stats.memoryTotal), percent: stats.memoryPercent.toFixed(1) })"
     >
       <span class="stat-label">RAM</span>
       <el-progress
@@ -31,13 +31,13 @@
     </div>
 
     <!-- Load Average -->
-    <div v-if="stats.loadAvg" class="stat-item stat-load" :title="`系统负载: ${stats.loadAvg.join(', ')}`">
+    <div v-if="stats.loadAvg" class="stat-item stat-load" :title="t('terminal.stats.load', { load: stats.loadAvg.join(', ') })">
       <span class="stat-label">LOAD</span>
       <span class="stat-value">{{ stats.loadAvg[0] }}</span>
     </div>
 
     <!-- Network Speed -->
-    <div class="stat-item stat-net" :title="`网络实时速率: ↑ ${formatSpeed(stats.networkTx)} / ↓ ${formatSpeed(stats.networkRx)}`">
+    <div class="stat-item stat-net" :title="t('terminal.stats.netSpeed', { tx: formatSpeed(stats.networkTx), rx: formatSpeed(stats.networkRx) })">
       <span class="stat-label">NET</span>
       <span class="stat-net-val">
         <span class="net-arrow down">↓</span> {{ formatSpeed(stats.networkRx) }}
@@ -46,7 +46,7 @@
     </div>
 
     <!-- Uptime -->
-    <div v-if="stats.uptime" class="stat-item stat-uptime" :title="`运行时长: ${stats.uptime}`">
+    <div v-if="stats.uptime" class="stat-item stat-uptime" :title="t('terminal.stats.uptime', { uptime: stats.uptime })">
       <span class="stat-label">UP</span>
       <span class="stat-sub">{{ stats.uptime }}</span>
     </div>
@@ -54,6 +54,7 @@
 </template>
 
 <script setup lang="ts">
+import { t } from '@/i18n'
 import type { IHardwareStats } from '@shared/types/terminal'
 
 defineProps<{

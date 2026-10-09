@@ -1,10 +1,13 @@
-import { ipcMain, BrowserWindow } from 'electron'
+import { ipcMain, BrowserWindow, dialog } from 'electron'
+import * as path from 'path'
+import * as fs from 'fs'
 import { SshEngineSession } from './sshEngine'
 import { TelnetEngineSession } from './telnetEngine'
 import { SerialEngineSession } from './serialEngine'
 import { RawSocketEngineSession } from './rawSocketEngine'
 import { SftpManager } from './sftpEngine'
 import { TerminalServerStore } from './serverStore'
+import { t } from '../i18n'
 import type {
   ITerminalConnectionConfig,
   ITerminalSessionInfo,
@@ -114,7 +117,7 @@ export class TerminalManager {
             return session.connect()
           }
         }).catch((err) => {
-          callbacks.onData(`\r\n\x1b[31;1m[连接失败] ${err?.message || err}\x1b[0m\r\n`)
+          callbacks.onData(`\r\n\x1b[31;1m${t('terminal.connectionFailed', { error: err?.message || err })}\x1b[0m\r\n`)
           callbacks.onStatus({ ...session.getSessionInfo(), status: 'error', error: err?.message || String(err) })
         })
 
@@ -155,48 +158,106 @@ export class TerminalManager {
     // 5. SFTP Operations
     ipcMain.handle('mt::terminal:sftp-list', async (_event, sessionId: string, dirPath: string) => {
       const s = this.sessions.get(sessionId) as SshEngineSession | undefined
-      if (!s || !s.sftpClient) throw new Error('SFTP client not available')
-      return SftpManager.listDir(s.sftpClient, dirPath)
+      if (!s) throw new Error(t('terminal.sessionNotFound'))
+      const sftp = await s.getSftpClient()
+      return SftpManager.listDir(sftp, dirPath)
     })
 
     ipcMain.handle('mt::terminal:sftp-upload', async (_event, sessionId: string, localPath: string, remotePath: string) => {
       const s = this.sessions.get(sessionId) as SshEngineSession | undefined
-      if (!s || !s.sftpClient) throw new Error('SFTP client not available')
+      if (!s) throw new Error(t('terminal.sessionNotFound'))
+      const sftp = await s.getSftpClient()
       const win = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0]
-      return SftpManager.uploadFile(s.sftpClient, localPath, remotePath, (progress) => {
+      return SftpManager.uploadFile(sftp, localPath, remotePath, (progress) => {
         if (win && !win.isDestroyed()) {
           win.webContents.send('mt::terminal:sftp-progress', { sessionId, progress })
         }
       })
     })
 
-    ipcMain.handle('mt::terminal:sftp-download', async (_event, sessionId: string, remotePath: string, localPath: string) => {
+    ipcMain.handle('mt::terminal:sftp-download', async (_event, sessionId: string, remotePath: string, targetLocalPath?: string) => {
       const s = this.sessions.get(sessionId) as SshEngineSession | undefined
-      if (!s || !s.sftpClient) throw new Error('SFTP client not available')
+      if (!s) throw new Error(t('terminal.sessionNotFound'))
+
+      let localPath = targetLocalPath
+      if (!localPath) {
+        const defaultFileName = path.posix.basename(remotePath)
+        let defaultPath: string | undefined
+        if (process.env.HOME) {
+          const downloadDir = path.join(process.env.HOME, 'Downloads')
+          if (fs.existsSync(downloadDir)) {
+            defaultPath = path.join(downloadDir, defaultFileName)
+          }
+        }
+
+        const win = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0]
+        if (win && !win.isDestroyed()) {
+          try {
+            win.focus()
+          } catch {
+            // ignore
+          }
+        }
+
+        const dialogOpts = {
+          title: t('terminal.sftp.downloadDialogTitle', { name: defaultFileName }),
+          defaultPath,
+          buttonLabel: t('terminal.sftp.save')
+        }
+
+        const { canceled, filePath } = win && !win.isDestroyed()
+          ? await dialog.showSaveDialog(win, dialogOpts)
+          : await dialog.showSaveDialog(dialogOpts)
+
+        if (canceled || !filePath) {
+          return { canceled: true }
+        }
+        localPath = filePath
+      }
+
+      const sftp = await s.getSftpClient()
       const win = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0]
-      return SftpManager.downloadFile(s.sftpClient, remotePath, localPath, (progress) => {
+      await SftpManager.downloadFile(sftp, remotePath, localPath, (progress) => {
         if (win && !win.isDestroyed()) {
           win.webContents.send('mt::terminal:sftp-progress', { sessionId, progress })
         }
       })
+      return { canceled: false, localPath }
     })
 
     ipcMain.handle('mt::terminal:sftp-mkdir', async (_event, sessionId: string, remotePath: string) => {
       const s = this.sessions.get(sessionId) as SshEngineSession | undefined
-      if (!s || !s.sftpClient) throw new Error('SFTP client not available')
-      return SftpManager.mkdir(s.sftpClient, remotePath)
+      if (!s) throw new Error(t('terminal.sessionNotFound'))
+      const sftp = await s.getSftpClient()
+      return SftpManager.mkdir(sftp, remotePath)
     })
 
     ipcMain.handle('mt::terminal:sftp-delete', async (_event, sessionId: string, remotePath: string, isDirectory: boolean) => {
       const s = this.sessions.get(sessionId) as SshEngineSession | undefined
-      if (!s || !s.sftpClient) throw new Error('SFTP client not available')
-      return SftpManager.deleteItem(s.sftpClient, remotePath, isDirectory)
+      if (!s) throw new Error(t('terminal.sessionNotFound'))
+      const sftp = await s.getSftpClient()
+      return SftpManager.deleteItem(sftp, remotePath, isDirectory)
     })
 
     ipcMain.handle('mt::terminal:sftp-rename', async (_event, sessionId: string, oldPath: string, newPath: string) => {
       const s = this.sessions.get(sessionId) as SshEngineSession | undefined
-      if (!s || !s.sftpClient) throw new Error('SFTP client not available')
-      return SftpManager.rename(s.sftpClient, oldPath, newPath)
+      if (!s) throw new Error(t('terminal.sessionNotFound'))
+      const sftp = await s.getSftpClient()
+      return SftpManager.rename(sftp, oldPath, newPath)
+    })
+
+    ipcMain.handle('mt::terminal:sftp-read', async (_event, sessionId: string, remotePath: string) => {
+      const s = this.sessions.get(sessionId) as SshEngineSession | undefined
+      if (!s) throw new Error(t('terminal.sessionNotFound'))
+      const sftp = await s.getSftpClient()
+      return SftpManager.readFile(sftp, remotePath)
+    })
+
+    ipcMain.handle('mt::terminal:sftp-write', async (_event, sessionId: string, remotePath: string, content: string) => {
+      const s = this.sessions.get(sessionId) as SshEngineSession | undefined
+      if (!s) throw new Error(t('terminal.sessionNotFound'))
+      const sftp = await s.getSftpClient()
+      return SftpManager.writeFile(sftp, remotePath, content)
     })
 
     // 6. Serial Port Enumeration

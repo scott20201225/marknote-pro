@@ -4,8 +4,16 @@ import type { ISftpItem, ISftpTransferProgress } from '../../shared/types/termin
 
 export class SftpManager {
   public static async listDir(sftp: any, dirPath: string): Promise<ISftpItem[]> {
+    const rawPath = (!dirPath || dirPath === '.') ? '.' : dirPath
+    const resolvedPath = await new Promise<string>((resolve) => {
+      sftp.realpath(rawPath, (err: any, target: string) => {
+        if (err || !target) resolve(rawPath === '.' ? '/' : rawPath)
+        else resolve(target)
+      })
+    })
+
     return new Promise((resolve, reject) => {
-      sftp.readdir(dirPath, (err: any, list: any[]) => {
+      sftp.readdir(resolvedPath, (err: any, list: any[]) => {
         if (err) return reject(err)
 
         const items: ISftpItem[] = (list || []).map((file) => {
@@ -16,7 +24,7 @@ export class SftpManager {
 
           return {
             name: file.filename,
-            path: path.posix.join(dirPath, file.filename),
+            path: path.posix.join(resolvedPath, file.filename),
             isDirectory: isDir,
             isSymlink,
             size,
@@ -33,6 +41,7 @@ export class SftpManager {
           return a.name.localeCompare(b.name)
         })
 
+        ;(items as any).currentPath = resolvedPath
         resolve(items)
       })
     })
@@ -237,6 +246,35 @@ export class SftpManager {
   public static async rename(sftp: any, oldPath: string, newPath: string): Promise<void> {
     return new Promise((resolve, reject) => {
       sftp.rename(oldPath, newPath, (err: any) => {
+        if (err) return reject(err)
+        resolve()
+      })
+    })
+  }
+
+  public static async readFile(sftp: any, remotePath: string, maxBytes = 2 * 1024 * 1024): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const stream = sftp.createReadStream(remotePath)
+      const chunks: Buffer[] = []
+      let total = 0
+      stream.on('data', (chunk: Buffer) => {
+        chunks.push(chunk)
+        total += chunk.length
+        if (total > maxBytes) {
+          stream.destroy()
+          reject(new Error('File exceeds editable size limit (2MB)'))
+        }
+      })
+      stream.on('error', (err: any) => reject(err))
+      stream.on('end', () => {
+        resolve(Buffer.concat(chunks).toString('utf-8'))
+      })
+    })
+  }
+
+  public static async writeFile(sftp: any, remotePath: string, content: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      sftp.writeFile(remotePath, content || '', 'utf8', (err: any) => {
         if (err) return reject(err)
         resolve()
       })

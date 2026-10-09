@@ -29,10 +29,49 @@ export const useTerminalStore = defineStore('terminal', () => {
   const scrollback = ref(Number(localStorage.getItem('mt::term:scrollback')) || 5000)
   const selectedThemeName = ref(localStorage.getItem('mt::term:theme') || 'auto')
 
-  // SFTP Drawer state
-  const sftpDrawerVisible = ref(false)
-  const activeSftpSessionId = ref<string | null>(null)
+  // SFTP Drawer state: session-isolated map (sessionId -> boolean)
+  const sftpDrawerOpenMap = ref<Record<string, boolean>>({})
+  const sftpEverOpenedMap = ref<Record<string, boolean>>({})
   const sftpTransfers = ref<ISftpTransferProgress[]>([])
+
+  function isSftpOpen(sessionId: string): boolean {
+    if (!sessionId) return false
+    return Boolean(sftpDrawerOpenMap.value[sessionId])
+  }
+
+  function hasEverOpenedSftp(sessionId: string): boolean {
+    if (!sessionId) return false
+    return Boolean(sftpEverOpenedMap.value[sessionId])
+  }
+
+  function toggleSftp(sessionId: string): void {
+    if (!sessionId) return
+    const next = !sftpDrawerOpenMap.value[sessionId]
+    sftpDrawerOpenMap.value = {
+      ...sftpDrawerOpenMap.value,
+      [sessionId]: next
+    }
+    if (next) {
+      sftpEverOpenedMap.value = {
+        ...sftpEverOpenedMap.value,
+        [sessionId]: true
+      }
+    }
+  }
+
+  function setSftpOpen(sessionId: string, open: boolean): void {
+    if (!sessionId) return
+    sftpDrawerOpenMap.value = {
+      ...sftpDrawerOpenMap.value,
+      [sessionId]: open
+    }
+    if (open) {
+      sftpEverOpenedMap.value = {
+        ...sftpEverOpenedMap.value,
+        [sessionId]: true
+      }
+    }
+  }
 
   // Data event listeners map: sessionId -> Set<(data: string) => void>
   const dataListeners = new Map<string, Set<(data: string) => void>>()
@@ -180,10 +219,8 @@ export const useTerminalStore = defineStore('terminal', () => {
       if (activeSessionId.value === sessionId) {
         activeSessionId.value = sessions.value.length > 0 ? sessions.value[sessions.value.length - 1].id : ''
       }
-      if (activeSftpSessionId.value === sessionId) {
-        activeSftpSessionId.value = null
-        sftpDrawerVisible.value = false
-      }
+      delete sftpDrawerOpenMap.value[sessionId]
+      delete sftpEverOpenedMap.value[sessionId]
     }
   }
 
@@ -229,8 +266,11 @@ export const useTerminalStore = defineStore('terminal', () => {
     cursorBlink,
     scrollback,
     selectedThemeName,
-    sftpDrawerVisible,
-    activeSftpSessionId,
+    sftpDrawerOpenMap,
+    isSftpOpen,
+    hasEverOpenedSftp,
+    toggleSftp,
+    setSftpOpen,
     sftpTransfers,
     initIpcListeners,
     registerDataListener,

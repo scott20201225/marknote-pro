@@ -17,9 +17,11 @@ export class LinuxHardwareProbe {
     this.onStatsCallback = onStats
   }
 
-  public start(intervalMs = 2500): void {
+  private consecutiveErrors = 0
+
+  public start(intervalMs = 5000): void {
     this.stop()
-    this.poll()
+    this.consecutiveErrors = 0
     this.timer = setInterval(() => {
       this.poll()
     }, intervalMs)
@@ -36,17 +38,27 @@ export class LinuxHardwareProbe {
     const cmd = "cat /proc/stat /proc/meminfo /proc/loadavg /proc/net/dev 2>/dev/null; echo '---PROBE_END---'"
     try {
       this.client.exec(cmd, (err, stream) => {
-        if (err || !stream) return
+        if (err || !stream) {
+          this.consecutiveErrors++
+          if (this.consecutiveErrors >= 3) {
+            this.stop()
+          }
+          return
+        }
 
         let output = ''
         stream.on('data', (data: Buffer) => {
           output += data.toString()
         })
         stream.on('error', () => {
-          // ignore probe stream errors
+          this.consecutiveErrors++
+          if (this.consecutiveErrors >= 3) {
+            this.stop()
+          }
         })
 
         stream.on('close', () => {
+          this.consecutiveErrors = 0
           if (output.includes('---PROBE_END---')) {
             const stats = this.parseOutput(output)
             if (stats) {
@@ -56,7 +68,7 @@ export class LinuxHardwareProbe {
         })
       })
     } catch {
-      // ignore
+      this.stop()
     }
   }
 

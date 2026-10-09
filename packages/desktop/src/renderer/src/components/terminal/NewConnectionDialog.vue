@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     v-model="visible"
-    :title="isEdit ? '编辑连接配置' : '新建终端连接'"
+    :title="isEdit ? t('terminal.dialog.editTitle') : t('terminal.dialog.newTitle')"
     width="580px"
     :close-on-click-modal="false"
     @closed="handleClosed"
@@ -18,9 +18,9 @@
           <span class="tab-label"><el-icon><Connection /></el-icon> Telnet</span>
         </template>
       </el-tab-pane>
-      <el-tab-pane label="Serial (物理串口)" name="serial">
+      <el-tab-pane :label="t('terminal.dialog.serial')" name="serial">
         <template #label>
-          <span class="tab-label"><el-icon><Cpu /></el-icon> Serial 串口</span>
+          <span class="tab-label"><el-icon><Cpu /></el-icon> {{ t('terminal.dialog.serialTab') }}</span>
         </template>
       </el-tab-pane>
       <el-tab-pane label="Raw Socket" name="rawSocket">
@@ -33,79 +33,79 @@
     <el-form label-position="top" class="connection-form">
       <!-- Name & Group -->
       <div class="form-row">
-        <el-form-item label="会话名称" class="flex-1">
-          <el-input v-model="form.name" placeholder="例如: 生产服务器-01" />
+        <el-form-item :label="t('terminal.dialog.sessionName')" class="flex-1">
+          <el-input v-model="form.name" :placeholder="t('terminal.dialog.sessionNamePlaceholder')" />
         </el-form-item>
-        <el-form-item label="分组 / 标签" class="flex-1">
-          <el-input v-model="form.group" placeholder="例如: 生产环境 / 阿里云" />
+        <el-form-item :label="t('terminal.dialog.group')" class="flex-1">
+          <el-input v-model="form.group" :placeholder="t('terminal.dialog.groupPlaceholder')" />
         </el-form-item>
       </div>
 
       <!-- SSH Specific Fields -->
       <template v-if="form.type === 'ssh'">
         <div class="form-row">
-          <el-form-item label="主机地址 (Host / IP)" class="flex-2" required>
-            <el-input v-model="form.host" placeholder="192.168.1.100 或 example.com" />
+          <el-form-item :label="t('terminal.dialog.host')" class="flex-2" required>
+            <el-input v-model="form.host" :placeholder="t('terminal.dialog.hostPlaceholder')" />
           </el-form-item>
-          <el-form-item label="端口" class="flex-1">
+          <el-form-item :label="t('terminal.dialog.port')" class="flex-1">
             <el-input-number v-model="form.port" :min="1" :max="65535" class="w-100" />
           </el-form-item>
         </div>
 
         <div class="form-row">
-          <el-form-item label="用户名 (User)" class="flex-1" required>
+          <el-form-item :label="t('terminal.dialog.username')" class="flex-1" required>
             <el-input v-model="form.username" placeholder="root" />
           </el-form-item>
-          <el-form-item label="认证方式" class="flex-1">
+          <el-form-item :label="t('terminal.dialog.authType')" class="flex-1">
             <el-select v-model="form.authType" class="w-100">
-              <el-option label="密码认证 (Password)" value="password" />
-              <el-option label="私钥认证 (Private Key)" value="privateKey" />
-              <el-option label="交互式认证 (Interactive)" value="interactive" />
+              <el-option :label="t('terminal.dialog.authPassword')" value="password" />
+              <el-option :label="t('terminal.dialog.authPrivateKey')" value="privateKey" />
+              <el-option :label="t('terminal.dialog.authInteractive')" value="interactive" />
             </el-select>
           </el-form-item>
         </div>
 
-        <el-form-item v-if="form.authType === 'password'" label="密码">
-          <el-input v-model="form.password" type="password" show-password placeholder="输入主机密码" />
+        <el-form-item v-if="form.authType === 'password'" :label="t('terminal.dialog.password')">
+          <el-input v-model="form.password" type="password" show-password :placeholder="t('terminal.dialog.passwordPlaceholder')" />
         </el-form-item>
 
         <template v-if="form.authType === 'privateKey'">
-          <el-form-item label="私钥路径或私钥内容">
+          <el-form-item :label="t('terminal.dialog.privateKey')">
             <el-input
               v-model="form.privateKey"
               type="textarea"
               :rows="3"
-              placeholder="~/.ssh/id_rsa 或直接粘贴私钥内容 (-----BEGIN OPENSSH PRIVATE KEY-----)"
+              :placeholder="t('terminal.dialog.privateKeyPlaceholder')"
             />
           </el-form-item>
-          <el-form-item label="私钥口令 (Passphrase)">
-            <el-input v-model="form.passphrase" type="password" show-password placeholder="私钥密码 (无口令可留空)" />
+          <el-form-item :label="t('terminal.dialog.passphrase')">
+            <el-input v-model="form.passphrase" type="password" show-password :placeholder="t('terminal.dialog.passphrasePlaceholder')" />
           </el-form-item>
         </template>
 
         <!-- Advanced SSH Options Toggle -->
         <el-collapse class="advanced-collapse">
-          <el-collapse-item title="高级选项 (2FA TOTP / 跳板机 JumpHost / Keepalive)">
-            <el-form-item label="2FA TOTP 密钥 (自动计算6位动态码)">
-              <el-input v-model="form.totpSecret" placeholder="Base32 密钥或 otpauth:// 链接" />
+          <el-collapse-item :title="t('terminal.dialog.advanced')">
+            <el-form-item :label="t('terminal.dialog.totpSecret')">
+              <el-input v-model="form.totpSecret" :placeholder="t('terminal.dialog.totpSecretPlaceholder')" />
             </el-form-item>
             <div class="form-row">
-              <el-form-item label="跳板机地址" class="flex-2">
-                <el-input v-model="form.jumpHost" placeholder="jump.example.com (可选)" />
+              <el-form-item :label="t('terminal.dialog.jumpHost')" class="flex-2">
+                <el-input v-model="form.jumpHost" :placeholder="t('terminal.dialog.jumpHostPlaceholder')" />
               </el-form-item>
-              <el-form-item label="跳板机端口" class="flex-1">
+              <el-form-item :label="t('terminal.dialog.jumpPort')" class="flex-1">
                 <el-input-number v-model="form.jumpPort" :min="1" :max="65535" class="w-100" />
               </el-form-item>
             </div>
             <div class="form-row">
-              <el-form-item label="跳板机用户名" class="flex-1">
-                <el-input v-model="form.jumpUsername" placeholder="跳板机用户名" />
+              <el-form-item :label="t('terminal.dialog.jumpUsername')" class="flex-1">
+                <el-input v-model="form.jumpUsername" :placeholder="t('terminal.dialog.jumpUsername')" />
               </el-form-item>
-              <el-form-item label="跳板机密码" class="flex-1">
-                <el-input v-model="form.jumpPassword" type="password" show-password placeholder="跳板机密码" />
+              <el-form-item :label="t('terminal.dialog.jumpPassword')" class="flex-1">
+                <el-input v-model="form.jumpPassword" type="password" show-password :placeholder="t('terminal.dialog.jumpPassword')" />
               </el-form-item>
             </div>
-            <el-form-item label="心跳包间隔 (Keepalive 秒)">
+            <el-form-item :label="t('terminal.dialog.keepalive')">
               <el-input-number v-model="form.keepaliveInterval" :min="0" :max="300" />
             </el-form-item>
           </el-collapse-item>
@@ -115,18 +115,18 @@
       <!-- Telnet Specific Fields -->
       <template v-if="form.type === 'telnet'">
         <div class="form-row">
-          <el-form-item label="主机地址 (Host / IP)" class="flex-2" required>
+          <el-form-item :label="t('terminal.dialog.host')" class="flex-2" required>
             <el-input v-model="form.host" placeholder="192.168.1.1" />
           </el-form-item>
-          <el-form-item label="端口" class="flex-1">
+          <el-form-item :label="t('terminal.dialog.port')" class="flex-1">
             <el-input-number v-model="form.port" :min="1" :max="65535" class="w-100" />
           </el-form-item>
         </div>
         <div class="form-row">
-          <el-form-item label="用户名 (可选)" class="flex-1">
+          <el-form-item :label="t('terminal.dialog.username')" class="flex-1">
             <el-input v-model="form.username" placeholder="admin" />
           </el-form-item>
-          <el-form-item label="密码 (可选)" class="flex-1">
+          <el-form-item :label="t('terminal.dialog.password')" class="flex-1">
             <el-input v-model="form.password" type="password" show-password />
           </el-form-item>
         </div>
@@ -135,12 +135,12 @@
       <!-- Serial Specific Fields -->
       <template v-if="form.type === 'serial'">
         <div class="form-row">
-          <el-form-item label="串口设备 (Serial Port)" class="flex-2" required>
+          <el-form-item :label="t('terminal.dialog.serialPort')" class="flex-2" required>
             <el-select
               v-model="form.serialPort"
               filterable
               allow-create
-              placeholder="选择或输入串口路径 (例如 /dev/tty.usbserial-10)"
+              :placeholder="t('terminal.dialog.serialPortPlaceholder')"
               class="w-100"
             >
               <el-option
@@ -152,17 +152,17 @@
             </el-select>
           </el-form-item>
           <el-form-item label=" " class="flex-0-auto">
-            <el-button :icon="Refresh" circle title="扫描串口设备" @click="scanSerialPorts" />
+            <el-button :icon="Refresh" circle :title="t('terminal.dialog.scanSerialPorts')" @click="scanSerialPorts" />
           </el-form-item>
         </div>
 
         <div class="form-row">
-          <el-form-item label="波特率 (Baud Rate)" class="flex-1">
+          <el-form-item :label="t('terminal.dialog.baudRate')" class="flex-1">
             <el-select v-model="form.baudRate" class="w-100">
               <el-option v-for="b in baudRates" :key="b" :label="String(b)" :value="b" />
             </el-select>
           </el-form-item>
-          <el-form-item label="数据位 (Data Bits)" class="flex-1">
+          <el-form-item :label="t('terminal.dialog.dataBits')" class="flex-1">
             <el-select v-model="form.dataBits" class="w-100">
               <el-option :label="'8'" :value="8" />
               <el-option :label="'7'" :value="7" />
@@ -173,17 +173,17 @@
         </div>
 
         <div class="form-row">
-          <el-form-item label="停止位 (Stop Bits)" class="flex-1">
+          <el-form-item :label="t('terminal.dialog.stopBits')" class="flex-1">
             <el-select v-model="form.stopBits" class="w-100">
               <el-option :label="'1'" :value="1" />
               <el-option :label="'2'" :value="2" />
             </el-select>
           </el-form-item>
-          <el-form-item label="校验位 (Parity)" class="flex-1">
+          <el-form-item :label="t('terminal.dialog.parity')" class="flex-1">
             <el-select v-model="form.parity" class="w-100">
-              <el-option label="None (无校验)" value="none" />
-              <el-option label="Even (偶校验)" value="even" />
-              <el-option label="Odd (奇校验)" value="odd" />
+              <el-option :label="t('terminal.dialog.parityNone')" value="none" />
+              <el-option :label="t('terminal.dialog.parityEven')" value="even" />
+              <el-option :label="t('terminal.dialog.parityOdd')" value="odd" />
             </el-select>
           </el-form-item>
         </div>
@@ -192,18 +192,18 @@
       <!-- Raw Socket Specific Fields -->
       <template v-if="form.type === 'rawSocket'">
         <div class="form-row">
-          <el-form-item label="协议类型" class="flex-1">
+          <el-form-item :label="t('terminal.dialog.socketProtocol')" class="flex-1">
             <el-select v-model="form.socketProtocol" class="w-100">
-              <el-option label="TCP 原始套接字" value="tcp" />
-              <el-option label="UDP 数据报套接字" value="udp" />
+              <el-option :label="t('terminal.dialog.tcpSocket')" value="tcp" />
+              <el-option :label="t('terminal.dialog.udpSocket')" value="udp" />
             </el-select>
           </el-form-item>
-          <el-form-item label="端口" class="flex-1" required>
+          <el-form-item :label="t('terminal.dialog.port')" class="flex-1" required>
             <el-input-number v-model="form.port" :min="1" :max="65535" class="w-100" />
           </el-form-item>
         </div>
-        <el-form-item label="目标主机 / IP" required>
-          <el-input v-model="form.host" placeholder="127.0.0.1 或目标服务地址" />
+        <el-form-item :label="t('terminal.dialog.targetHost')" required>
+          <el-input v-model="form.host" :placeholder="t('terminal.dialog.targetHostPlaceholder')" />
         </el-form-item>
       </template>
     </el-form>
@@ -216,14 +216,14 @@
             :loading="testingLatency"
             @click="testPing"
           >
-            {{ latencyResult !== null ? `延迟: ${latencyResult}ms` : '测试延迟' }}
+            {{ latencyResult !== null ? t('terminal.dialog.latency', { ms: latencyResult }) : t('terminal.dialog.testLatency') }}
           </el-button>
         </div>
         <div class="footer-right">
-          <el-button @click="visible = false">取消</el-button>
-          <el-button @click="handleSaveOnly">仅保存</el-button>
+          <el-button @click="visible = false">{{ t('common.cancel') }}</el-button>
+          <el-button @click="handleSaveOnly">{{ t('terminal.dialog.saveOnly') }}</el-button>
           <el-button type="primary" :loading="connecting" @click="handleSaveAndConnect">
-            保存并连接
+            {{ t('terminal.dialog.saveAndConnect') }}
           </el-button>
         </div>
       </div>
@@ -235,6 +235,7 @@
 import { ref, reactive, watch } from 'vue'
 import { Monitor, Connection, Cpu, Share, Refresh } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { t } from '@/i18n'
 import { useTerminalStore } from '@/store/terminal'
 import type { ITerminalConnectionConfig, TerminalProtocolType } from '@shared/types/terminal'
 
@@ -302,7 +303,7 @@ async function scanSerialPorts(): Promise<void> {
 
 async function testPing(): Promise<void> {
   if (!form.host) {
-    ElMessage.warning('请先输入主机地址')
+    ElMessage.warning(t('terminal.dialog.enterHostFirst'))
     return
   }
   testingLatency.value = true
@@ -310,9 +311,9 @@ async function testPing(): Promise<void> {
   try {
     const ms = await terminalStore.testLatency(form.host, form.port || 22)
     latencyResult.value = ms
-    ElMessage.success(`连接成功，网络延迟: ${ms} ms`)
+    ElMessage.success(t('terminal.dialog.testSuccess', { ms }))
   } catch (err: any) {
-    ElMessage.error(`连接测试失败: ${err.message || '超时'}`)
+    ElMessage.error(t('terminal.dialog.testFailed', { error: err.message || 'timeout' }))
   } finally {
     testingLatency.value = false
   }
@@ -336,7 +337,7 @@ function buildConfig(): ITerminalConnectionConfig {
 async function handleSaveOnly(): Promise<void> {
   const config = buildConfig()
   await terminalStore.saveServer(config)
-  ElMessage.success('已保存连接配置')
+  ElMessage.success(t('terminal.dialog.saveSuccess'))
   visible.value = false
 }
 

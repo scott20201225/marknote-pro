@@ -322,11 +322,12 @@ watch(
   }
 )
 
-watch([currentFile, () => preferencesStore.preferenceLoaded], ([file, preferenceLoaded]) => {
+watch([currentFile, () => preferencesStore.preferenceLoaded, workbench], ([file, preferenceLoaded, currentWorkbench]) => {
   window.electron.ipcRenderer.send('mt::drawio-menu-mode', !!file?.isDrawing)
   window.electron.ipcRenderer.send('mt::geogebra-menu-mode', !!file?.isGeoGebra)
   window.electron.ipcRenderer.send('mt::mindmap-menu-mode', !!file?.isMindMap)
   window.electron.ipcRenderer.send('mt::kdbx-menu-mode', !!file?.isKdbx)
+  window.electron.ipcRenderer.send('mt::terminal-menu-mode', currentWorkbench === 'note' && !!file?.isTerminal)
   if (file?.isDrawing) {
     // Both editors use independent native BrowserViews. Remove GeoGebra
     // before attaching Draw.io so it can never cover the sidebar or canvas.
@@ -559,6 +560,7 @@ onMounted(() => {
   window.electron.ipcRenderer.send('mt::geogebra-menu-mode', !!currentFile.value?.isGeoGebra)
   window.electron.ipcRenderer.send('mt::mindmap-menu-mode', !!currentFile.value?.isMindMap)
   window.electron.ipcRenderer.send('mt::kdbx-menu-mode', !!currentFile.value?.isKdbx)
+  window.electron.ipcRenderer.send('mt::terminal-menu-mode', workbench.value === 'note' && !!currentFile.value?.isTerminal)
   window.addEventListener('wheel', handleWindowZoomWheel, { capture: true, passive: false })
   window.addEventListener('gesturestart', handleWindowZoomGestureStart)
   window.addEventListener('gesturechange', handleWindowZoomGestureChange)
