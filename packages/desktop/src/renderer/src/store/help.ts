@@ -1,5 +1,6 @@
 import type { IFileState } from '@shared/types/files'
 import { getUniqueId, deepClone } from '../util'
+import { isCodeOrTextFilePath, getCodeLanguageFromPath } from '../util/noteWorkspace'
 
 // Helper module (NOT a Pinia store): defaults and factories for the editor
 // document state objects.
@@ -94,7 +95,10 @@ const documentStateKeys = [
   'terminalSessionId',
   'geoGebraMode',
   'showHeadingNumbers',
-  'headingNumberingIncludesTopLevel'
+  'headingNumberingIncludesTopLevel',
+  'isCodeFile',
+  'codeLanguage',
+  'codeMirrorState'
 ] as const satisfies ReadonlyArray<keyof IFileState>
 
 export const getBlankFileState = (
@@ -157,12 +161,41 @@ export const createDocumentState = (
     }
   }
 
-  return Object.assign(docState, {
+  const result = Object.assign(docState, {
     id,
     // See `getBlankFileState`: the loaded document is its own clean baseline and
     // the engine's baseline undo-stack depth (the synthetic id) is 0.
     lastSavedHistoryId: 0
   }) as IFileState
+
+  const isCode =
+    Boolean(result.isCodeFile) ||
+    (typeof result.pathname === 'string' && isCodeOrTextFilePath(result.pathname))
+
+  if (isCode) {
+    result.isCodeFile = true
+    if (!result.codeLanguage) {
+      result.codeLanguage = getCodeLanguageFromPath(result.pathname)
+    }
+    if (!result.codeMirrorState) {
+      result.codeMirrorState = {
+        id,
+        filename: result.filename,
+        pathname: result.pathname,
+        text: result.markdown ?? '',
+        isSaved: result.isSaved,
+        encoding: result.encoding,
+        lineEnding: result.lineEnding,
+        trimTrailingNewline: result.trimTrailingNewline,
+        cursor: result.cursor,
+        scrollTop: result.scrollTop,
+        codeLanguage: result.codeLanguage,
+        lastSavedHistoryId: 0
+      }
+    }
+  }
+
+  return result
 }
 
 export const getFileStateFromData = (

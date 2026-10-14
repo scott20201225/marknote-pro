@@ -46,6 +46,65 @@ const isNoteGroupName = (name: string): boolean => name.startsWith(NOTE_GROUP_PR
 
 export const isNoteAreaName = (name: string): boolean => name.startsWith(NOTE_AREA_PREFIX)
 
+export const CODE_AND_TEXT_EXTENSIONS_MAP: Readonly<Record<string, string>> = Object.freeze({
+  // 文本
+  txt: 'text',
+  text: 'text',
+
+  // 配置与数据
+  json: 'json',
+  jsonc: 'json',
+  yaml: 'yaml',
+  yml: 'yaml',
+  xml: 'xml',
+  toml: 'toml',
+  ini: 'ini',
+  conf: 'ini',
+  cfg: 'ini',
+  properties: 'ini',
+  env: 'shell',
+
+  // 脚本代码
+  sql: 'sql',
+  sh: 'shell',
+  bash: 'shell',
+  bat: 'bat',
+  ps1: 'powershell',
+  html: 'html',
+  htm: 'html',
+  css: 'css',
+  py: 'python',
+  js: 'javascript',
+  ts: 'typescript'
+})
+
+export const isCodeOrTextFileName = (name: string): boolean => {
+  if (!name || typeof name !== 'string') return false
+  const lower = name.toLowerCase()
+  if (lower === '.env' || lower.endsWith('.env')) return true
+  const dotIndex = lower.lastIndexOf('.')
+  if (dotIndex === -1) return false
+  const ext = lower.slice(dotIndex + 1)
+  return ext in CODE_AND_TEXT_EXTENSIONS_MAP
+}
+
+export const isCodeOrTextFilePath = (pathname: string | null | undefined): boolean => {
+  if (!pathname || typeof pathname !== 'string') return false
+  const basename = pathname.split(/[/\\]/).pop() || ''
+  return isCodeOrTextFileName(basename)
+}
+
+export const getCodeLanguageFromPath = (pathname?: string): string => {
+  if (!pathname) return 'text'
+  const base = pathname.split(/[/\\]/).pop() || ''
+  const lower = base.toLowerCase()
+  if (lower === '.env') return 'shell'
+  const dotIndex = lower.lastIndexOf('.')
+  if (dotIndex === -1) return 'text'
+  const ext = lower.slice(dotIndex + 1)
+  return CODE_AND_TEXT_EXTENSIONS_MAP[ext] || 'text'
+}
+
 const isMarkdownFileName = (name: string): boolean => /\.md$/i.test(name)
 const isDrawingFileName = (name: string): boolean => /\.drawio$/i.test(name)
 const isGeoGebraFileName = (name: string): boolean => /\.ggb$/i.test(name)
@@ -62,6 +121,17 @@ const stripMarkdownExtension = (name: string): string => {
   return name.replace(/\.md$/i, '')
 }
 
+export const stripCodeOrTextExtension = (name: string): string => {
+  if (!name || typeof name !== 'string') return ''
+  if (name.toLowerCase() === '.env') return name
+  const match = name.match(/\.([a-z0-9_-]+)$/i)
+  if (match && match[1].toLowerCase() in CODE_AND_TEXT_EXTENSIONS_MAP) {
+    const stripped = name.slice(0, match.index)
+    return stripped || name
+  }
+  return name
+}
+
 const stripDrawingExtension = (name: string): string => {
   return name.replace(/\.drawio$/i, '')
 }
@@ -70,8 +140,22 @@ const stripGeoGebraExtension = (name: string): string => name.replace(/\.ggb$/i,
 const stripMindMapExtension = (name: string): string => name.replace(/\.smm$/i, '')
 const stripKdbxExtension = (name: string): string => name.replace(/\.kdbx$/i, '')
 
+export const stripDocumentExtension = (name: string): string => {
+  return stripCodeOrTextExtension(
+    stripKdbxExtension(
+      stripMindMapExtension(
+        stripGeoGebraExtension(
+          stripDrawingExtension(
+            stripMarkdownExtension(name)
+          )
+        )
+      )
+    )
+  )
+}
+
 const normalizeNotePathPart = (part: string): string => {
-  return stripKdbxExtension(stripMindMapExtension(stripGeoGebraExtension(stripDrawingExtension(stripMarkdownExtension(stripNotePrefix(part))))))
+  return stripDocumentExtension(stripNotePrefix(part))
 }
 
 const getRelativeParts = (rootPath: string, pathname: string): string[] => {
@@ -129,7 +213,8 @@ export const isValidNoteFilePath = (
   const isGeoGebra = isGeoGebraFileName(name)
   const isMindMap = isMindMapFileName(name)
   const isKdbx = isKdbxFileName(name)
-  if (!isMarkdownFileName(name) && !isDrawing && !isGeoGebra && !isMindMap && !isKdbx) return false
+  const isDocument = isMarkdownFileName(name) || isCodeOrTextFileName(name)
+  if (!isDocument && !isDrawing && !isGeoGebra && !isMindMap && !isKdbx) return false
 
   const parentPath = window.path.dirname(pathname)
   const parentName = window.path.basename(parentPath)
@@ -177,7 +262,7 @@ export const getNoteDisplayName = (
     case 'area':
       return stripNotePrefix(node.name)
     case 'document':
-      return stripKdbxExtension(stripMindMapExtension(stripGeoGebraExtension(stripDrawingExtension(stripMarkdownExtension(node.name)))))
+      return stripDocumentExtension(node.name)
     default:
       return node.name
   }
@@ -203,7 +288,13 @@ export const toStoredNoteName = (
   const trimmedName = rawName.trim()
   if (!trimmedName) return ''
 
-  const cleanName = stripMarkdownExtension(stripNotePrefix(trimmedName))
+  if (kind === 'document') {
+    if (isCodeOrTextFileName(trimmedName)) {
+      return stripNotePrefix(trimmedName)
+    }
+  }
+
+  const cleanName = stripDocumentExtension(stripNotePrefix(trimmedName))
 
   switch (kind) {
     case 'group':

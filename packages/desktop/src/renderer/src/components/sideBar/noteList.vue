@@ -353,6 +353,9 @@ onBeforeUnmount(() => {
 <style scoped>
 .note-list {
   min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   border-left: 1px solid var(--itemBgColor);
@@ -386,6 +389,10 @@ onBeforeUnmount(() => {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+}
+
+.note-list-body::-webkit-scrollbar:vertical {
+  width: 8px;
 }
 
 .note-list-create-input {

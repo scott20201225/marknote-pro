@@ -5,7 +5,7 @@
     class="side-bar-file"
     :style="{
       'padding-left': `${depth * 6 + 10}px`,
-      opacity: file.isMarkdown || file.isDrawing || file.isGeoGebra || file.isMindMap ? 1 : 0.75
+      opacity: isSupportedFile ? 1 : 0.75
     }"
     :class="[
       {
@@ -50,7 +50,7 @@ import { useI18n } from 'vue-i18n'
 import FileIcon from './icon.vue'
 import { showContextMenu } from '../../contextMenu/sideBar'
 import bus from '../../bus'
-import { getNoteDisplayName } from '../../util/noteWorkspace'
+import { getNoteDisplayName, isCodeOrTextFileName } from '../../util/noteWorkspace'
 import type { TreeFileNode } from './types'
 import { getDrawioConfiguration } from '@/util/drawioConfiguration'
 import { getMindMapConfiguration } from '@/util/mindmapConfiguration'
@@ -75,11 +75,26 @@ const { currentFile, tabs } = storeToRefs(editorStore)
 let skipNextBlur = false
 const rootPath = computed<string | null>(() => projectStore.projectTree?.pathname ?? null)
 const displayName = computed<string>(() => getNoteDisplayName(props.file, rootPath.value))
+const isEditableDocument = computed<boolean>(() => {
+  return (
+    !!props.file.isMarkdown ||
+    /\.md$/i.test(props.file.pathname) ||
+    isCodeOrTextFileName(props.file.pathname)
+  )
+})
+const isSupportedFile = computed<boolean>(() => {
+  return (
+    isEditableDocument.value ||
+    !!props.file.isDrawing ||
+    !!props.file.isGeoGebra ||
+    !!props.file.isMindMap ||
+    !!props.file.isKdbx
+  )
+})
 
 // from fileMixins
 const handleFileClick = (): void => {
-  const { isMarkdown, isDrawing, pathname } = props.file
-  const isMarkdownFile = isMarkdown || /\.md$/i.test(pathname)
+  const { isDrawing, pathname } = props.file
 
   projectStore.SELECT_NOTE_PATH(window.path.dirname(pathname))
   projectStore.CHANGE_ACTIVE_ITEM(props.file)
@@ -108,7 +123,7 @@ const handleFileClick = (): void => {
     void window.electron.ipcRenderer.invoke('mt::kdbx::open', pathname)
     return
   }
-  if (!isMarkdownFile) return
+  if (!isEditableDocument.value) return
   const openedTab = tabs.value.find((f) => window.fileUtils.isSamePathSync(f.pathname, pathname))
   if (openedTab) {
     if (currentFile.value?.pathname === openedTab.pathname) {

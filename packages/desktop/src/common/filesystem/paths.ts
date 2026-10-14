@@ -19,6 +19,60 @@ export const MARKDOWN_EXTENSIONS: readonly string[] = Object.freeze([
   'txt'
 ])
 
+export const CODE_AND_TEXT_EXTENSIONS_MAP: Readonly<Record<string, string>> = Object.freeze({
+  // 文本
+  txt: 'text',
+  text: 'text',
+
+  // 配置与数据
+  json: 'json',
+  jsonc: 'json',
+  yaml: 'yaml',
+  yml: 'yaml',
+  xml: 'xml',
+  toml: 'toml',
+  ini: 'ini',
+  conf: 'ini',
+  cfg: 'ini',
+  properties: 'ini',
+  env: 'shell',
+
+  // 脚本代码
+  sql: 'sql',
+  sh: 'shell',
+  bash: 'shell',
+  bat: 'bat',
+  ps1: 'powershell',
+  html: 'html',
+  htm: 'html',
+  css: 'css',
+  py: 'python',
+  js: 'javascript',
+  ts: 'typescript'
+})
+
+export const CODE_AND_TEXT_EXTENSIONS: readonly string[] = Object.freeze(
+  Object.keys(CODE_AND_TEXT_EXTENSIONS_MAP)
+)
+
+export const hasCodeOrTextExtension = (filename: string): boolean => {
+  if (!filename || typeof filename !== 'string') return false
+  const lower = filename.toLowerCase()
+  const basename = lower.split(/[/\\]/).pop() || ''
+  if (basename === '.env' || basename.endsWith('.env')) {
+    return true
+  }
+  const dotIndex = basename.lastIndexOf('.')
+  if (dotIndex === -1) return false
+  const ext = basename.slice(dotIndex + 1)
+  return ext in CODE_AND_TEXT_EXTENSIONS_MAP
+}
+
+export const isCodeOrTextFile = (filepath: string): boolean => {
+  if (!isFile2(filepath)) return false
+  return hasCodeOrTextExtension(filepath)
+}
+
 export const MARKDOWN_INCLUSIONS: readonly string[] = Object.freeze(
   MARKDOWN_EXTENSIONS.map((x) => '*.' + x)
 )

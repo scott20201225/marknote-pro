@@ -15,7 +15,7 @@ import {
 } from 'electron'
 import log from 'electron-log'
 import { isDirectory, isFile, exists } from 'common/filesystem'
-import { MARKDOWN_EXTENSIONS, isMarkdownFile, isChildOfDirectory } from 'common/filesystem/paths'
+import { MARKDOWN_EXTENSIONS, CODE_AND_TEXT_EXTENSIONS, isMarkdownFile, isChildOfDirectory } from 'common/filesystem/paths'
 import { checkUpdates, userSetting } from './marknotepro'
 import { COMMANDS } from '../../commands'
 import type { CommandManager } from '../../commands'
@@ -1062,8 +1062,16 @@ export const openFile = async (win: BrowserWindow | null): Promise<void> => {
     properties: ['openFile', 'multiSelections'],
     filters: [
       {
+        name: 'Supported Documents & Code',
+        extensions: [...MARKDOWN_EXTENSIONS, ...CODE_AND_TEXT_EXTENSIONS]
+      },
+      {
         name: 'Markdown document',
         extensions: [...MARKDOWN_EXTENSIONS]
+      },
+      {
+        name: 'Code & Text files',
+        extensions: [...CODE_AND_TEXT_EXTENSIONS]
       }
     ]
   })

@@ -58,12 +58,33 @@ describe('note workspace visibility', () => {
           name: 'notes.txt',
           isFile: true,
           isMarkdown: false
+        },
+        {
+          pathname: `${rootPath}/GROUP_Work/AREA_Project/archive.zip`,
+          name: 'archive.zip',
+          isFile: true,
+          isMarkdown: false
         }
       ]
     }
 
     const visible = getVisibleNoteFiles(area, rootPath)
-    expect(visible).toHaveLength(1)
+    expect(visible).toHaveLength(2)
     expect(visible[0].name).toBe('Doc.md')
+    expect(visible[1].name).toBe('notes.txt')
+  })
+
+  it('strips extensions correctly for display while preserving base names', async () => {
+    const { stripDocumentExtension, isCodeOrTextFileName } = await import('@/util/noteWorkspace')
+    expect(stripDocumentExtension('test.md')).toBe('test')
+    expect(stripDocumentExtension('config.json')).toBe('config')
+    expect(stripDocumentExtension('.env')).toBe('.env')
+    expect(stripDocumentExtension('script.py')).toBe('script')
+    expect(stripDocumentExtension('plain')).toBe('plain')
+
+    expect(isCodeOrTextFileName('.env')).toBe(true)
+    expect(isCodeOrTextFileName('config.json')).toBe(true)
+    expect(isCodeOrTextFileName('server.ts')).toBe(true)
+    expect(isCodeOrTextFileName('unknown.xyz')).toBe(false)
   })
 })

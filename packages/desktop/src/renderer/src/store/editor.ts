@@ -452,8 +452,8 @@ export const useEditorStore = defineStore('editor', {
       const oldShowHeadingNumbers = tab.showHeadingNumbers
       const oldHeadingNumberingIncludesTopLevel = tab.headingNumberingIncludesTopLevel
       let oldHistory: IFileState['history'] | null = null
-      const histIndex = tab.history.index
-      if (histIndex >= 0 && tab.history.stack.length >= 1) {
+      const histIndex = tab.history?.index ?? -1
+      if (tab.history && histIndex >= 0 && tab.history.stack.length >= 1) {
         const entry = tab.history.stack[histIndex]
         if (entry) {
           // Allow to restore the old document.
@@ -496,20 +496,22 @@ export const useEditorStore = defineStore('editor', {
       if (currentFile && pathname === currentFile.pathname) {
         // save current state first
         this.currentFile = tab
-        const { id, cursor, history, scrollTop, muyaIndexCursor } = tab // Should not use blocks history as this is loaded from disk
-        bus.emit('file-changed', {
-          id,
-          markdown,
-          muyaIndexCursor,
-          cursor,
-          renderCursor: true,
-          history,
-          scrollTop,
-          // External disk reload: the engine handler records the new content as a
-          // single invertible undo boundary (replaceContent) instead of clearing
-          // history (setContent), so the first undo restores the pre-reload doc.
-          isReload: true
-        })
+        if (!tab.isCodeFile) {
+          const { id, cursor, history, scrollTop, muyaIndexCursor } = tab // Should not use blocks history as this is loaded from disk
+          bus.emit('file-changed', {
+            id,
+            markdown,
+            muyaIndexCursor,
+            cursor,
+            renderCursor: true,
+            history,
+            scrollTop,
+            // External disk reload: the engine handler records the new content as a
+            // single invertible undo boundary (replaceContent) instead of clearing
+            // history (setContent), so the first undo restores the pre-reload doc.
+            isReload: true
+          })
+        }
       }
       debouncedSendBufferedState()
     },
@@ -658,7 +660,9 @@ export const useEditorStore = defineStore('editor', {
       if (this.currentFile.isTerminal) {
         return
       }
-      this.flushActiveEditor()
+      if (!this.currentFile.isCodeFile) {
+        this.flushActiveEditor()
+      }
       const projectStore = useProjectStore()
       const { id, filename, pathname, markdown } = this.currentFile
       const options = getOptionsFromState(this.currentFile)
@@ -750,6 +754,9 @@ export const useEditorStore = defineStore('editor', {
       window.electron.ipcRenderer.on('mt::tab-saved', (_, tabId) => {
         const tab = this.tabs.find((f) => f.id === tabId)
         if (tab) {
+          if (tab.isCodeFile && tab.codeMirrorState) {
+            tab.codeMirrorState.isSaved = true
+          }
           const lastEditIndex = tab.history.lastEditIndex
           if (
             typeof lastEditIndex === 'number' &&
@@ -1266,7 +1273,8 @@ export const useEditorStore = defineStore('editor', {
           !oldCurrentFile.isGeoGebra &&
           !oldCurrentFile.isMindMap &&
           !oldCurrentFile.isKdbx &&
-          !oldCurrentFile.isTerminal
+          !oldCurrentFile.isTerminal &&
+          !oldCurrentFile.isCodeFile
         ) {
           this.flushActiveEditor()
         }
@@ -1284,7 +1292,8 @@ export const useEditorStore = defineStore('editor', {
           !currentFile.isGeoGebra &&
           !currentFile.isMindMap &&
           !currentFile.isKdbx &&
-          !currentFile.isTerminal
+          !currentFile.isTerminal &&
+          !currentFile.isCodeFile
         ) {
           bus.emit('file-changed', {
             id,
@@ -2173,7 +2182,9 @@ export const useEditorStore = defineStore('editor', {
 
       if (selected) {
         this.UPDATE_CURRENT_FILE(docState)
-        bus.emit('file-loaded', { id, markdown, cursor })
+        if (!docState.isCodeFile) {
+          bus.emit('file-loaded', { id, markdown, cursor })
+        }
       } else {
         this.tabs.push(docState)
         this.updateTabIdToIndex()
@@ -2443,9 +2454,9 @@ export const useEditorStore = defineStore('editor', {
           window.electron.ipcRenderer.send(
             'mt::response-file-save',
             id,
-            filename,
-            pathname,
-            markdown,
+            tab.filename || filename,
+            tab.pathname || pathname,
+            tab.markdown !== undefined ? tab.markdown : markdown,
             deepClone(options),
             defaultPath
           )

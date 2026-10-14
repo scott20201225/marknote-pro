@@ -8,7 +8,8 @@
       'geogebra-open': currentFile?.isGeoGebra === true,
       'mindmap-open': currentFile?.isMindMap === true,
       'kdbx-open': currentFile?.isKdbx === true,
-      'terminal-open': currentFile?.isTerminal === true
+      'terminal-open': currentFile?.isTerminal === true,
+      'code-file-open': currentFile?.isCodeFile === true
     }"
   >
     <side-bar v-if="init" />
@@ -55,16 +56,21 @@
         </button>
       </div>
       <recent
-        v-if="!hasCurrentFile && init && !currentFile?.isDrawing && !currentFile?.isGeoGebra && !currentFile?.isMindMap && !currentFile?.isKdbx && !currentFile?.isTerminal"
+        v-if="!hasCurrentFile && init && !currentFile?.isDrawing && !currentFile?.isGeoGebra && !currentFile?.isMindMap && !currentFile?.isKdbx && !currentFile?.isTerminal && !currentFile?.isCodeFile"
       />
       <editor-with-tabs
-        v-if="hasCurrentFile && init && !currentFile?.isDrawing && !currentFile?.isGeoGebra && !currentFile?.isMindMap && !currentFile?.isKdbx && !currentFile?.isTerminal"
+        v-if="hasMarkdownFile && init"
         :markdown="markdown"
         :cursor="cursor"
         :muya-index-cursor="muyaIndexCursor"
         :source-code="sourceCode"
         :text-direction="textDirection"
         :platform="platform"
+      />
+      <normal-code
+        v-if="init && currentFile?.isCodeFile === true"
+        :key="currentFile.id"
+        :file="currentFile"
       />
       <!-- Keep Drawio mounted so its BrowserViews survive tab switches, but
            never let its absolute surface cover the Markdown editor. -->
@@ -93,6 +99,7 @@ import { addStyles, addThemeStyle, addCustomStyle, type AddStylesOptions } from 
 import { getGeoGebraConfiguration } from '@/util/geogebraConfiguration'
 import Recent from '@/components/recent/index.vue'
 import EditorWithTabs from '@/components/editorWithTabs/index.vue'
+import NormalCode from '@/components/editorWithTabs/normalCode.vue'
 import Tabs from '@/components/editorWithTabs/tabs.vue'
 import TitleBar from '@/components/titleBar/index.vue'
 import SideBar from '@/components/sideBar/index.vue'
@@ -181,6 +188,10 @@ const hasCurrentFile = computed<boolean>(() => {
     !currentFile.value?.isKdbx &&
     !currentFile.value?.isTerminal
   )
+})
+
+const hasMarkdownFile = computed<boolean>(() => {
+  return hasCurrentFile.value && !currentFile.value?.isCodeFile
 })
 
 const workspaceSelectionRequired = computed<boolean>(() => {

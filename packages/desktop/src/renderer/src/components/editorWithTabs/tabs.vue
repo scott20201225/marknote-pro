@@ -58,6 +58,7 @@ import { showContextMenu } from '../../contextMenu/tabs'
 import bus from '../../bus'
 import type { IFileState } from '@shared/types/files'
 import { useI18n } from 'vue-i18n'
+import { stripDocumentExtension } from '@/util/noteWorkspace'
 
 const editorStore = useEditorStore()
 const layoutStore = useLayoutStore()
@@ -89,7 +90,7 @@ let autoScroller: AutoScroller | null = null
 let drake: dragula.Drake | null = null
 let tabResizeObserver: ResizeObserver | null = null
 
-const getDisplayFilename = (filename: string) => filename.replace(/\.(?:md|drawio|ggb|smm|kdbx)$/i, '')
+const getDisplayFilename = (filename: string) => stripDocumentExtension(filename)
 
 const selectFile = (file: IFileState) => {
   if (file.id !== currentFile.value?.id) {

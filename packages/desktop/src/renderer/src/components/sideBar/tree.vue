@@ -656,12 +656,15 @@ watch(
     minmax(180px, var(--tree-panel-width, 235px))
     4px
     minmax(220px, var(--note-list-width, 300px));
+  grid-template-rows: minmax(0, 1fr);
+  height: 100%;
   overflow: hidden;
 }
 
 .tree-panel {
   min-width: 0;
   min-height: 0;
+  height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
 }
@@ -679,9 +682,14 @@ watch(
 
 .note-list-panel {
   min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
-.project-tree > .tree-wrapper::-webkit-scrollbar:vertical {
+.project-tree > .tree-wrapper::-webkit-scrollbar:vertical,
+.tree-panel::-webkit-scrollbar:vertical,
+.note-list-panel .note-list-body::-webkit-scrollbar:vertical {
   width: 8px;
 }
 .project-tree div.title:hover > a {

@@ -2273,6 +2273,27 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 
+body:has(.editor-wrapper.source) .mu-front-button-wrapper,
+body:has(.editor-wrapper.source) .mu-front-button,
+body:has(.editor-wrapper.source) .mu-front-menu,
+body:has(.editor-wrapper.source) .mu-float-wrapper,
+body:has(.source-code) .mu-front-button-wrapper,
+body:has(.source-code) .mu-front-button,
+body:has(.source-code) .mu-front-menu,
+body:has(.source-code) .mu-float-wrapper,
+body:has(.normal-code-editor) .mu-front-button-wrapper,
+body:has(.normal-code-editor) .mu-front-button,
+body:has(.normal-code-editor) .mu-front-menu,
+body:has(.normal-code-editor) .mu-float-wrapper,
+body:has(.code-file-open) .mu-front-button-wrapper,
+body:has(.code-file-open) .mu-front-button,
+body:has(.code-file-open) .mu-front-menu,
+body:has(.code-file-open) .mu-float-wrapper {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 .editor-component {
   height: 100%;
   overflow: auto;

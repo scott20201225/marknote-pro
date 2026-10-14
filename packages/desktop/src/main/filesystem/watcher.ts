@@ -3,7 +3,7 @@ import fsPromises from 'fs/promises'
 import log from 'electron-log'
 import chokidar, { type FSWatcher } from 'chokidar'
 import { exists } from 'common/filesystem'
-import { hasMarkdownExtension, checkPathExcludePattern } from 'common/filesystem/paths'
+import { hasMarkdownExtension, hasCodeOrTextExtension, checkPathExcludePattern } from 'common/filesystem/paths'
 import { getUniqueId } from '../utils'
 import { loadMarkdownFile } from '../filesystem/markdown'
 import { isLinux, isOsx } from '../config'
@@ -59,10 +59,12 @@ const add = async (
   const birthTime = stats.birthtime
   const mtimeMs = stats.mtimeMs
   const isMarkdown = hasMarkdownExtension(pathname)
+  const isCodeOrText = hasCodeOrTextExtension(pathname)
   const isDrawing = isDrawioFile(pathname)
   const isGeoGebra = isGeoGebraFile(pathname)
   const isMindMap = isMindMapFile(pathname)
   const isKdbx = isKdbxFile(pathname)
+  const isDocument = isMarkdown || isCodeOrText
   const file: {
     pathname: string
     name: string
@@ -71,6 +73,7 @@ const add = async (
     birthTime: Date
     mtimeMs: number
     isMarkdown: boolean
+    isCodeOrText: boolean
     isDrawing: boolean
     isGeoGebra: boolean
     isMindMap: boolean
@@ -83,13 +86,14 @@ const add = async (
     isDirectory: false,
     birthTime,
     mtimeMs,
-    isMarkdown,
+    isMarkdown: isDocument,
+    isCodeOrText,
     isDrawing,
     isGeoGebra,
-    isMindMap
-    ,isKdbx
+    isMindMap,
+    isKdbx
   }
-  if (isMarkdown) {
+  if (isDocument) {
     // HACK: But this should be removed completely in #1034/#1035.
     try {
       const data = await loadMarkdownFile(
@@ -112,7 +116,7 @@ const add = async (
       }
     }
   }
-  if (isMarkdown || isDrawing || isGeoGebra || isMindMap || isKdbx) {
+  if (isDocument || isDrawing || isGeoGebra || isMindMap || isKdbx) {
     win.webContents.send(EVENT_NAME[type], { type: 'add', change: file })
   }
 }
@@ -149,11 +153,13 @@ const change = async (
   }
 
   const isMarkdown = hasMarkdownExtension(pathname)
+  const isCodeOrText = hasCodeOrTextExtension(pathname)
   const isDrawing = isDrawioFile(pathname)
   const isGeoGebra = isGeoGebraFile(pathname)
   const isMindMap = isMindMapFile(pathname)
   const isKdbx = isKdbxFile(pathname)
-  if (isMarkdown) {
+  const isDocument = isMarkdown || isCodeOrText
+  if (isDocument) {
     try {
       const [data, stats] = await Promise.all([
         loadMarkdownFile(
@@ -263,10 +269,11 @@ class Watcher {
         // 必须让它们通过初始扫描和后续文件事件，才能在树与列表中建立节点。
         return (
           !hasMarkdownExtension(pathname) &&
+          !hasCodeOrTextExtension(pathname) &&
           !isDrawioFile(pathname) &&
           !isGeoGebraFile(pathname) &&
-          !isMindMapFile(pathname)
-          && !isKdbxFile(pathname)
+          !isMindMapFile(pathname) &&
+          !isKdbxFile(pathname)
         )
       },
       ignoreInitial: type === 'file',

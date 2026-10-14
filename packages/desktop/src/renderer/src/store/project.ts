@@ -25,6 +25,9 @@ import {
   isValidNoteDirectoryPath,
   isValidNoteFilePath,
   toStoredNoteName,
+  isCodeOrTextFileName,
+  isCodeOrTextFilePath,
+  stripCodeOrTextExtension,
   type NoteNodeKind
 } from '../util/noteWorkspace'
 import type { TreeFileNode, TreeNode } from '../components/sideBar/types'
@@ -317,6 +320,23 @@ const normalizeComparableNoteName = (
   return getNoteDisplayName(item, rootPath).trim().toLocaleLowerCase()
 }
 
+const getCodeOrTextFileRenameDestination = (src: string, newName: string): string => {
+  const trimmed = newName.trim()
+  if (!trimmed) return ''
+  if (isCodeOrTextFileName(trimmed) || window.fileUtils.hasMarkdownExtension(trimmed)) {
+    return trimmed
+  }
+  const srcBase = getBasename(src)
+  if (srcBase.toLowerCase() === '.env') {
+    return trimmed.startsWith('.') ? trimmed : `.${trimmed}`
+  }
+  const match = srcBase.match(/\.([a-z0-9_-]+)$/i)
+  if (match) {
+    return `${trimmed}.${match[1]}`
+  }
+  return trimmed
+}
+
 const createComparableNoteCandidate = (
   rawName: string,
   kind: Extract<NoteNodeKind, 'group' | 'area' | 'document'>
@@ -330,7 +350,7 @@ const createComparableNoteCandidate = (
       name: storedName,
       isDirectory: false,
       isFile: true,
-      isMarkdown: true
+      isMarkdown: !isCodeOrTextFileName(storedName)
     }
   }
 
@@ -363,7 +383,9 @@ const hasNoteDisplayNameConflict = (
 
   return (
     getFolders(parent).some((folder) => matches(folder)) ||
-    getFiles(parent).some((file) => file.isMarkdown && matches(file))
+    getFiles(parent).some(
+      (file) => (file.isMarkdown || isCodeOrTextFileName(file.name)) && matches(file)
+    )
   )
 }
 
@@ -800,7 +822,11 @@ export const useProjectStore = defineStore('project', () => {
           String(preferencesStore.fileSortBy),
           String(preferencesStore.fileSortOrder)
         )
-        if (isMarkdown && newFileNameCache.value && pathname === newFileNameCache.value) {
+        if (
+          (isMarkdown || isCodeOrTextFileName(pathname)) &&
+          newFileNameCache.value &&
+          pathname === newFileNameCache.value
+        ) {
           const fileState = getFileStateFromData(data as Record<string, unknown>)
           editorStore.UPDATE_CURRENT_FILE(fileState)
           newFileNameCache.value = ''
@@ -1086,7 +1112,7 @@ export const useProjectStore = defineStore('project', () => {
     } else if (type === 'file') {
       fileType = 'file'
       storedName = name.trim()
-      if (!window.fileUtils.hasMarkdownExtension(storedName)) {
+      if (!window.fileUtils.hasMarkdownExtension(storedName) && !isCodeOrTextFileName(storedName)) {
         storedName += '.md'
       }
     } else if (type === 'drawing') {
@@ -1194,7 +1220,16 @@ export const useProjectStore = defineStore('project', () => {
     const kind = getNoteNodeKind(activeItem.value, rootPath)
     let storedName = name.trim()
     if (kind === 'group' || kind === 'area' || kind === 'document') {
-      const candidate = createComparableNoteCandidate(name, kind)
+      const isCodeText = isCodeOrTextFilePath(src)
+      const candidate: NoteLikeNameCandidate | null = isCodeText
+        ? {
+            pathname: getCodeOrTextFileRenameDestination(src, name),
+            name: getCodeOrTextFileRenameDestination(src, name),
+            isDirectory: false,
+            isFile: true,
+            isMarkdown: false
+          }
+        : createComparableNoteCandidate(name, kind)
       if (candidate && hasNoteDisplayNameConflict(parentNode, candidate, rootPath, src)) {
         notice.notify({
           title: 'Rename Forbidden',
@@ -1211,7 +1246,9 @@ export const useProjectStore = defineStore('project', () => {
             ? `${name.trim().replace(/\.smm$/i, '')}.smm`
             : isKdbxPath(src)
               ? `${name.trim().replace(/\.kdbx$/i, '')}.kdbx`
-            : toStoredNoteName(name, kind)
+              : isCodeText
+                ? getCodeOrTextFileRenameDestination(src, name)
+                : toStoredNoteName(name, kind)
     }
     if (!storedName) return
     const dest = dirname + PATH_SEPARATOR + storedName

@@ -112,6 +112,17 @@ export class ParagraphFrontButton {
         resizeObserver.observe(container);
     }
 
+    private _isInSourceMode(): boolean {
+        return Boolean(
+            this.muya.domNode?.closest('.editor-wrapper')?.classList.contains('source')
+            || (typeof document !== 'undefined' && (
+                document.querySelector('.editor-wrapper.source')
+                || document.querySelector('.source-code')
+                || document.querySelector('.normal-code-editor')
+            ))
+        );
+    }
+
     listen() {
         const { _container: container } = this;
         const { eventCenter } = this.muya;
@@ -125,6 +136,10 @@ export class ParagraphFrontButton {
                 return;
             if (!isMouseEvent(event))
                 return;
+            if (this._isInSourceMode()) {
+                this.hide();
+                return;
+            }
 
             const { x, y } = event;
             const els = [
@@ -146,6 +161,10 @@ export class ParagraphFrontButton {
         }, 300);
 
         const clickHandler = () => {
+            if (this._isInSourceMode()) {
+                this.hide();
+                return;
+            }
             eventCenter.emit('muya-front-menu', {
                 reference: {
                     getBoundingClientRect: () => container.getBoundingClientRect(),
@@ -442,6 +461,10 @@ export class ParagraphFrontButton {
     }
 
     show(block: Parent) {
+        if (this._isInSourceMode()) {
+            this.hide();
+            return;
+        }
         if (this._block && this._block === block)
             return;
 
