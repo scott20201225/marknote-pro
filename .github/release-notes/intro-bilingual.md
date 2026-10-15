@@ -28,6 +28,12 @@ MarkNotePro 和 MarkTextPro 是两个相互独立、但能力互补的产品：
 | --- | --- |
 | ![MarkNotePro 结构化笔记视图](https://raw.githubusercontent.com/scott20201225/marknote-pro/main/docs/assets/screenshots/product-compare-note.png) | ![MarkTextPro 真实文件系统视图](https://raw.githubusercontent.com/scott20201225/marknote-pro/main/docs/assets/screenshots/product-compare-text.png) |
 
+## 🔒 数据安全与 Git 使用建议
+
+- **强烈建议使用私有仓库（Private Repository）**：知识工作区通常包含大量个人笔记、生活备忘、内部技术资料与服务器配置。请务必将远程 Git 仓库（如 GitHub、Gitee、GitLab 等）设为**私有项目**，从源头防止个人或团队敏感资料被公开发布或被搜索引擎收录。
+- **严禁将 KDBX 密码库暴露到公有仓库**：即便 KDBX 文件拥有工业级强加密和独立主密码保护，**切勿将其推送到任何公开仓库（Public Repository）**！公开发布密码库会使其面临无限期离线字典与暴力破解的风险。如果项目为开源公有仓库，请务必在 `.gitignore` 中加入 `*.kdbx` 排除密码库。
+- **设置高强度主密码**：KDBX 密码库的安全防线完全取决于主密码强度。请尽量设置 16 位以上、混合大小写字母、数字与符号的高强度密码，杜绝弱密码与重复密码。
+
 相关地址：
 
 - MarkNotePro GitHub：https://github.com/scott20201225/marknote-pro
