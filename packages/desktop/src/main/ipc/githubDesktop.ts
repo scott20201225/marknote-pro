@@ -887,6 +887,15 @@ const showGitHubDesktop = async (
   } else {
     replayGitHubDesktopState(entry)
   }
+
+  if (!entry.view.webContents.isDestroyed()) {
+    entry.view.webContents.send('marknotepro-view-activated')
+    setTimeout(() => {
+      if (!entry.view.webContents.isDestroyed()) {
+        entry.view.webContents.send('marknotepro-view-activated')
+      }
+    }, 120)
+  }
 }
 
 const hideGitHubDesktop = (win: BrowserWindow): void => {

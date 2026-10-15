@@ -396,6 +396,28 @@ body.marknotepro-theme-adapted #app-menu-bar .menu-pane hr {
   border-bottom: 1px solid ${border};
 }
 
+body.marknotepro-theme-adapted #app-menu-bar,
+body.marknotepro-theme-adapted #app-menu-bar .toolbar-dropdown,
+body.marknotepro-theme-adapted #app-menu-bar .toolbar-button,
+body.marknotepro-theme-adapted #app-menu-bar .toolbar-button > button,
+body.marknotepro-theme-adapted #app-menu-bar .toolbar-button > button *,
+body.marknotepro-theme-adapted .marknotepro-desktop-actions,
+body.marknotepro-theme-adapted .marknotepro-desktop-action,
+body.marknotepro-theme-adapted .marknotepro-desktop-action * {
+  cursor: pointer !important;
+  -webkit-app-region: no-drag !important;
+}
+
+body.marknotepro-theme-adapted #app-menu-bar .toolbar-button > button svg,
+body.marknotepro-theme-adapted #app-menu-bar .toolbar-button > button svg *,
+body.marknotepro-theme-adapted .marknotepro-menu-button-icon,
+body.marknotepro-theme-adapted .marknotepro-menu-button-icon *,
+body.marknotepro-theme-adapted .marknotepro-desktop-action svg,
+body.marknotepro-theme-adapted .marknotepro-desktop-action svg * {
+  pointer-events: none !important;
+  cursor: pointer !important;
+}
+
 .marknotepro-desktop-actions {
   position: fixed;
   left: 10px;
@@ -407,6 +429,16 @@ body.marknotepro-theme-adapted #app-menu-bar .menu-pane hr {
   pointer-events: auto;
 }
 
+.marknotepro-desktop-actions::before {
+  content: "";
+  display: block;
+  width: 22px;
+  height: 1px;
+  margin: 0 auto 3px auto;
+  background: ${border};
+  opacity: 0.75;
+}
+
 .marknotepro-desktop-action {
   width: 34px;
   height: 34px;
@@ -414,21 +446,38 @@ body.marknotepro-theme-adapted #app-menu-bar .menu-pane hr {
   align-items: center;
   justify-content: center;
   padding: 0;
-  border: 0;
+  border: 1px solid transparent;
   border-radius: 6px;
   color: ${textSecondary};
   background: transparent;
-  cursor: pointer;
-  -webkit-app-region: no-drag;
+  cursor: pointer !important;
+  -webkit-app-region: no-drag !important;
+  transition: all 0.15s ease;
 }
 
 .marknotepro-desktop-action:hover {
   color: ${accent};
   background: ${hover};
+  border-color: ${border};
 }
 
-.marknotepro-desktop-action:disabled {
-  cursor: wait;
+.marknotepro-desktop-action[data-locale-key="note"] {
+  color: ${accent};
+  background: ${accentSofter};
+  border-color: ${accentSoft};
+  position: relative;
+}
+
+.marknotepro-desktop-action[data-locale-key="note"]:hover {
+  color: #ffffff !important;
+  background: ${accent} !important;
+  border-color: ${accent} !important;
+  box-shadow: 0 2px 8px ${accentSoft};
+}
+
+.marknotepro-desktop-action:disabled,
+.marknotepro-desktop-action:disabled * {
+  cursor: wait !important;
   opacity: 0.55;
 }
 
@@ -437,14 +486,66 @@ body.marknotepro-theme-adapted #app-menu-bar .menu-pane hr {
   height: 19px;
   stroke: currentColor;
 }
+
+.marknotepro-global-tooltip {
+  position: fixed;
+  z-index: 999999;
+  display: inline-flex;
+  align-items: center;
+  pointer-events: none !important;
+  padding: 5px 9px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-size: 12px;
+  line-height: 1.25;
+  font-weight: 500;
+  color: #ffffff;
+  background: rgba(22, 27, 34, 0.94);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.2);
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-3px, -50%);
+  transform-origin: left center;
+  transition: opacity 0.08s ease, transform 0.08s ease, visibility 0.08s ease;
+  -webkit-app-region: no-drag;
+}
+
+.marknotepro-global-tooltip.is-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(0, -50%);
+}
+
+.marknotepro-global-tooltip-arrow {
+  position: absolute;
+  left: -4px;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  background: rgba(22, 27, 34, 0.94);
+  border-left: 1px solid rgba(255, 255, 255, 0.15);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  transform: translateY(-50%) rotate(45deg);
+  border-bottom-left-radius: 1px;
+}
+
+.marknotepro-global-tooltip-text {
+  position: relative;
+  z-index: 1;
+}
 `.trim()
 }
 
 const noteIcon = `
-<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-  <path d="M4 19.5V5.75A2.75 2.75 0 0 1 6.75 3H20v16H6.75A2.75 2.75 0 0 0 4 21.75" />
-  <path d="M8 7h8" />
-  <path d="M8 11h6" />
+<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <path d="M8 12H2.5m0 0 3-3m-3 3 3 3" />
+  <path d="M8 4.75A2 2 0 0 1 9.75 3h9.5A1.75 1.75 0 0 1 21 4.75v14.5A1.75 1.75 0 0 1 19.25 21H9.75A1.75 1.75 0 0 1 8 19.25" />
+  <path d="M12 8h5" stroke-width="1.8" />
+  <path d="M12 12h3.5" stroke-width="1.8" />
 </svg>
 `
 
@@ -513,14 +614,18 @@ const syncAppMenuButtons = (): void => {
   updateAppMenuFoldoutPosition(menuBar)
 
   menuBar.querySelectorAll<HTMLButtonElement>('.toolbar-button > button').forEach(button => {
-    const label =
+    const rawLabel =
       button.querySelector<HTMLElement>('.label')?.innerText?.trim() ||
       button.getAttribute('aria-label') ||
+      button.dataset.actionTooltip ||
       ''
+    const label = translateInternalValue(rawLabel) || rawLabel
     if (label) {
-      button.title = label
+      button.dataset.actionTooltip = label
       button.setAttribute('aria-label', label)
+      button.removeAttribute('title')
     }
+    button.style.cursor = 'pointer'
 
     let icon = button.querySelector<HTMLSpanElement>('.marknotepro-menu-button-icon')
     if (!icon) {
@@ -585,7 +690,10 @@ const shouldSkipInternalAttributeI18n = (element: Element | null): boolean => {
     '.diff',
     '.diff-line-code',
     '.blob-code',
-    '.cm-editor'
+    '.cm-editor',
+    '#app-menu-bar',
+    '#marknotepro-github-desktop-actions',
+    '#marknotepro-global-tooltip'
   ].join(','))
 }
 
@@ -1207,6 +1315,164 @@ const ensureInternalI18nObserver = (): void => {
   applyInternalI18n()
 }
 
+const TOOLTIP_ID = 'marknotepro-global-tooltip'
+let globalTooltipEl: HTMLDivElement | null = null
+let globalTooltipTextEl: HTMLSpanElement | null = null
+let activeTooltipTarget: HTMLElement | null = null
+
+const getOrCreateTooltip = (): HTMLDivElement => {
+  if (!globalTooltipEl) {
+    globalTooltipEl = document.getElementById(TOOLTIP_ID) as HTMLDivElement | null
+  }
+  if (!globalTooltipEl) {
+    globalTooltipEl = document.createElement('div')
+    globalTooltipEl.id = TOOLTIP_ID
+    globalTooltipEl.className = 'marknotepro-global-tooltip'
+    globalTooltipEl.innerHTML = `
+      <span class="marknotepro-global-tooltip-arrow"></span>
+      <span class="marknotepro-global-tooltip-text"></span>
+    `
+    document.body.appendChild(globalTooltipEl)
+  }
+  globalTooltipTextEl = globalTooltipEl.querySelector('.marknotepro-global-tooltip-text')
+  return globalTooltipEl
+}
+
+const hideGlobalTooltip = (): void => {
+  activeTooltipTarget = null
+  if (globalTooltipEl) {
+    globalTooltipEl.classList.remove('is-visible')
+  }
+}
+
+const showGlobalTooltip = (target: HTMLElement, text: string): void => {
+  if (!text) {
+    hideGlobalTooltip()
+    return
+  }
+  const tooltip = getOrCreateTooltip()
+  if (globalTooltipTextEl) {
+    globalTooltipTextEl.textContent = text
+  }
+  activeTooltipTarget = target
+
+  const rect = target.getBoundingClientRect()
+  if (rect.width === 0 || rect.height === 0) return
+
+  const top = Math.round(rect.top + rect.height / 2)
+  const left = Math.round(rect.right + 9)
+
+  tooltip.style.top = `${top}px`
+  tooltip.style.left = `${left}px`
+  tooltip.classList.add('is-visible')
+}
+
+const triggerReturnWorkspaceTooltipOnActivation = (): void => {
+  const noteBtn = document.querySelector<HTMLButtonElement>(
+    '.marknotepro-desktop-action[data-locale-key="note"]'
+  )
+  if (!noteBtn) return
+
+  const tooltipText = getActionTooltipText('note', t('note'))
+  showGlobalTooltip(noteBtn, tooltipText)
+}
+
+const ensureInstantTooltipObserver = (): void => {
+  if (document.documentElement.getAttribute('data-marknotepro-tooltip-installed')) return
+  document.documentElement.setAttribute('data-marknotepro-tooltip-installed', 'true')
+
+  // 移上去立刻显示
+  document.addEventListener('mouseover', (event) => {
+    const target = (event.target as HTMLElement | null)?.closest<HTMLElement>(
+      '#app-menu-bar .toolbar-button > button, .marknotepro-desktop-action, [data-action-tooltip]'
+    )
+    if (!target) return
+
+    if (target.hasAttribute('title')) {
+      const rawTitle = target.getAttribute('title') || ''
+      if (rawTitle && !target.dataset.actionTooltip) {
+        target.dataset.actionTooltip = rawTitle
+      }
+      target.removeAttribute('title')
+    }
+
+    const tooltipText = target.dataset.actionTooltip
+    if (tooltipText) {
+      showGlobalTooltip(target, tooltipText)
+    }
+  }, true)
+
+  // 鼠标移动时检测：如果处于激活提示状态且鼠标已移出目标区域，则隐藏
+  document.addEventListener('mousemove', (event) => {
+    if (activeTooltipTarget && activeTooltipTarget.dataset.localeKey === 'note') {
+      const rect = activeTooltipTarget.getBoundingClientRect()
+      if (
+        event.clientX < rect.left ||
+        event.clientX > rect.right ||
+        event.clientY < rect.top ||
+        event.clientY > rect.bottom
+      ) {
+        hideGlobalTooltip()
+      }
+    }
+  }, { passive: true })
+
+  // 鼠标离开才消失
+  document.addEventListener('mouseout', (event) => {
+    const related = (event as MouseEvent).relatedTarget as HTMLElement | null
+    const currentTarget = (event.target as HTMLElement | null)?.closest<HTMLElement>(
+      '#app-menu-bar .toolbar-button > button, .marknotepro-desktop-action, [data-action-tooltip]'
+    )
+    if (currentTarget && (!related || !currentTarget.contains(related))) {
+      if (activeTooltipTarget === currentTarget) {
+        hideGlobalTooltip()
+      }
+    }
+  }, true)
+
+  document.addEventListener('click', () => {
+    hideGlobalTooltip()
+  }, true)
+
+  window.addEventListener('blur', () => {
+    hideGlobalTooltip()
+  })
+
+  window.addEventListener('focus', () => {
+    window.setTimeout(() => {
+      triggerReturnWorkspaceTooltipOnActivation()
+    }, 60)
+  })
+
+  window.addEventListener('resize', () => {
+    hideGlobalTooltip()
+  })
+}
+
+const ensureKeyboardShortcutObserver = (): void => {
+  if (document.documentElement.getAttribute('data-marknotepro-shortcuts-installed')) return
+  document.documentElement.setAttribute('data-marknotepro-shortcuts-installed', 'true')
+
+  window.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' || event.code === 'Escape') {
+      const hasOpenFlyout = !!document.querySelector(
+        '.toolbar-dropdown.open, #foldout-container .foldout .menu-pane, .dialog-container, .modal-backdrop'
+      )
+      if (!hasOpenFlyout) {
+        event.preventDefault()
+        ipcRenderer.send('mt::github-desktop::switch-to-note')
+      }
+    }
+  }, true)
+}
+
+const getActionTooltipText = (key: ActionKey, text: string): string => {
+  if (key === 'note') {
+    return `${text} (Esc)`
+  }
+  return text
+}
+
 const createActionButton = (
   key: ActionKey,
   title: string,
@@ -1217,8 +1483,11 @@ const createActionButton = (
   button.type = 'button'
   button.className = 'marknotepro-desktop-action'
   button.dataset.localeKey = String(key)
-  button.title = title
-  button.setAttribute('aria-label', title)
+  const tooltipText = getActionTooltipText(key, title)
+  button.dataset.actionTooltip = tooltipText
+  button.setAttribute('aria-label', tooltipText)
+  button.removeAttribute('title')
+  button.style.cursor = 'pointer'
   button.innerHTML = icon
   button.addEventListener('click', () => {
     void onClick(button)
@@ -1234,9 +1503,11 @@ const updateActionButtonLocales = (): void => {
     const key = button.dataset.localeKey as ActionKey | undefined
     if (!key) return
 
-    const title = t(key)
-    button.title = title
-    button.setAttribute('aria-label', title)
+    const tooltipText = getActionTooltipText(key, t(key))
+    button.dataset.actionTooltip = tooltipText
+    button.setAttribute('aria-label', tooltipText)
+    button.removeAttribute('title')
+    button.style.cursor = 'pointer'
   })
 }
 
@@ -1270,6 +1541,8 @@ const applyMarkNoteProTheme = (payload: MarkNoteProThemePayload): void => {
   ensureMarkNoteProActions()
   ensureAppMenuButtonObserver()
   ensureInternalI18nObserver()
+  ensureInstantTooltipObserver()
+  ensureKeyboardShortcutObserver()
   document.body.classList.add('marknotepro-theme-adapted')
   document.body.classList.toggle('marknotepro-theme-dark', payload.isDark)
   document.body.classList.toggle('marknotepro-theme-light', !payload.isDark)
@@ -1319,5 +1592,11 @@ export const installMarkNoteProThemeAdapter = (): void => {
 
   ipcRenderer.on('marknotepro-locale-updated', (_event, payload: MarkNoteProLocalePayload) => {
     applyMarkNoteProLocale(payload)
+  })
+
+  ipcRenderer.on('marknotepro-view-activated', () => {
+    triggerReturnWorkspaceTooltipOnActivation()
+    window.setTimeout(triggerReturnWorkspaceTooltipOnActivation, 80)
+    window.setTimeout(triggerReturnWorkspaceTooltipOnActivation, 200)
   })
 }

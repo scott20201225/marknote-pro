@@ -10,8 +10,9 @@
           v-for="(c, index) of sideBarIcons"
           :key="index"
           :class="{ active: c.id === rightColumn }"
-          :title="c.name()"
           :aria-label="c.name()"
+          @mouseenter="showSidebarTooltip($event, c.name(), c.id)"
+          @mouseleave="hideSidebarTooltip"
           @click="handleLeftIconClick(c.id)"
         >
           <component :is="c.icon" />
@@ -21,14 +22,26 @@
         <li
           v-for="(c, index) of sideBarBottomIcons"
           :key="index"
-          :title="c.name()"
+          :data-sidebar-id="c.id"
           :aria-label="c.name()"
+          @mouseenter="showSidebarTooltip($event, c.name(), c.id)"
+          @mouseleave="hideSidebarTooltip"
           @click="handleLeftBottomClick(c.id)"
         >
           <component :is="c.icon" />
         </li>
       </ul>
     </div>
+    <teleport to="body">
+      <div
+        v-show="tooltipVisible"
+        class="sidebar-instant-tooltip"
+        :style="{ top: `${tooltipTop}px`, left: `${tooltipLeft}px` }"
+      >
+        <span class="sidebar-instant-tooltip-arrow" />
+        <span class="sidebar-instant-tooltip-text">{{ tooltipText }}</span>
+      </div>
+    </teleport>
     <div
       v-show="rightColumn"
       class="right-column"
@@ -50,7 +63,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useLayoutStore } from '@/store/layout'
 import { useProjectStore } from '@/store/project'
 import { useEditorStore } from '@/store/editor'
@@ -166,7 +179,79 @@ onMounted(() => {
   })
 })
 
+const tooltipVisible = ref(false)
+const tooltipText = ref('')
+const tooltipTop = ref(0)
+const tooltipLeft = ref(0)
+const activeIconId = ref('')
+
+const showSidebarTooltip = (event: MouseEvent, text: string, id = ''): void => {
+  if (!text) {
+    tooltipVisible.value = false
+    return
+  }
+  const target = event.currentTarget as HTMLElement | null
+  if (!target) return
+  const rect = target.getBoundingClientRect()
+  tooltipTop.value = Math.round(rect.top + rect.height / 2)
+  tooltipLeft.value = Math.round(rect.right + 8)
+  tooltipText.value = text
+  activeIconId.value = id
+  tooltipVisible.value = true
+}
+
+const hideSidebarTooltip = (): void => {
+  tooltipVisible.value = false
+  activeIconId.value = ''
+}
+
+const handleWorkbenchSwitch = (event: Event): void => {
+  const detail = (event as CustomEvent).detail
+  if (detail === 'note') {
+    nextTick(() => {
+      const gitBtn = sideBar.value?.querySelector<HTMLElement>('li[data-sidebar-id="git"]')
+      if (gitBtn) {
+        const rect = gitBtn.getBoundingClientRect()
+        tooltipTop.value = Math.round(rect.top + rect.height / 2)
+        tooltipLeft.value = Math.round(rect.right + 8)
+        const gitIcon = sideBarBottomIcons.find(item => item.id === 'git')
+        tooltipText.value = gitIcon ? gitIcon.name() : 'Git管理'
+        activeIconId.value = 'git'
+        tooltipVisible.value = true
+      }
+    })
+  }
+}
+
+const handleGlobalMouseMove = (event: MouseEvent): void => {
+  if (tooltipVisible.value && activeIconId.value === 'git') {
+    const gitBtn = sideBar.value?.querySelector<HTMLElement>('li[data-sidebar-id="git"]')
+    if (gitBtn) {
+      const rect = gitBtn.getBoundingClientRect()
+      if (
+        event.clientX < rect.left ||
+        event.clientX > rect.right ||
+        event.clientY < rect.top ||
+        event.clientY > rect.bottom
+      ) {
+        hideSidebarTooltip()
+      }
+    }
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('marknotepro:switch-workbench', handleWorkbenchSwitch)
+  window.addEventListener('mousemove', handleGlobalMouseMove)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('marknotepro:switch-workbench', handleWorkbenchSwitch)
+  window.removeEventListener('mousemove', handleGlobalMouseMove)
+})
+
 const handleLeftIconClick = (name: string): void => {
+  hideSidebarTooltip()
   if (rightColumn.value === name) {
     const widthToPersist = sideBarViewWidth.value
     layoutStore.SET_LAYOUT({ rightColumn: '' })
@@ -179,6 +264,7 @@ const handleLeftIconClick = (name: string): void => {
 }
 
 const handleLeftBottomClick = (name: string): void => {
+  hideSidebarTooltip()
   if (name === 'git') {
     window.dispatchEvent(new CustomEvent('marknotepro:switch-workbench', { detail: 'git' }))
     return
@@ -238,7 +324,13 @@ const handleLeftBottomClick = (name: string): void => {
   display: flex;
   justify-content: space-around;
   align-items: center;
-  cursor: pointer;
+  cursor: pointer !important;
+  position: relative;
+}
+
+.left-column ul > li * {
+  cursor: pointer !important;
+  pointer-events: none !important;
 }
 
 .left-column ul > li > svg {
@@ -275,5 +367,47 @@ const handleLeftBottomClick = (name: string): void => {
 
 .drag-bar:hover {
   border-right: 2px solid var(--iconColor);
+}
+
+.sidebar-instant-tooltip {
+  position: fixed;
+  z-index: 999999;
+  display: inline-flex;
+  align-items: center;
+  pointer-events: none !important;
+  padding: 5px 9px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-size: 12px;
+  line-height: 1.25;
+  font-weight: 500;
+  color: #ffffff;
+  background: rgba(22, 27, 34, 0.94);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.2);
+  white-space: nowrap;
+  transform: translateY(-50%);
+  user-select: none;
+  -webkit-app-region: no-drag;
+}
+
+.sidebar-instant-tooltip-arrow {
+  position: absolute;
+  left: -4px;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  background: rgba(22, 27, 34, 0.94);
+  border-left: 1px solid rgba(255, 255, 255, 0.15);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  transform: translateY(-50%) rotate(45deg);
+  border-bottom-left-radius: 1px;
+}
+
+.sidebar-instant-tooltip-text {
+  position: relative;
+  z-index: 1;
 }
 </style>
