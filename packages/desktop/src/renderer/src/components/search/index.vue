@@ -92,6 +92,7 @@
             v-model="replaceValue"
             type="text"
             :placeholder="t('search.replacementPlaceholder')"
+            @keydown.enter="replace(true)"
           >
         </div>
         <div class="button-group">
@@ -189,14 +190,62 @@ watch(searchMatches, (newValue, oldValue) => {
 })
 
 // Seed the find input from the current selection synchronously, before the bar
-// opens and steals focus. Relying on the reactive `searchMatches` watch alone
-// races with the focus-steal selection-change and can drop the prefill.
+// opens and steals focus.
 const prefillFromSelection = () => {
-  const selected = searchMatches.value?.value
+  let selected = ''
+  const cmElements = document.querySelectorAll('.CodeMirror')
+  // 1. Try focused CodeMirror first
+  for (const cmEl of cmElements) {
+    const cm = (cmEl as any).CodeMirror
+    if (cm && typeof cm.getSelection === 'function' && typeof cm.hasFocus === 'function' && cm.hasFocus()) {
+      const sel = cm.getSelection()
+      if (sel && !sel.includes('\n')) {
+        selected = sel
+        break
+      }
+    }
+  }
+  // 2. Try any CodeMirror selection
+  if (!selected) {
+    for (const cmEl of cmElements) {
+      const cm = (cmEl as any).CodeMirror
+      if (cm && typeof cm.getSelection === 'function') {
+        const sel = cm.getSelection()
+        if (sel && !sel.includes('\n')) {
+          selected = sel
+          break
+        }
+      }
+    }
+  }
+  // 3. Try window.getSelection() (Muya)
+  if (!selected) {
+    const winSel = window.getSelection()?.toString()
+    if (winSel && !winSel.includes('\n')) {
+      selected = winSel
+    }
+  }
   if (selected) {
     searchValue.value = selected
+    return
+  }
+  // 4. Fallback to existing search matches value
+  const prevTerm = searchMatches.value?.value
+  if (prevTerm) {
+    searchValue.value = prevTerm
   }
 }
+
+watch(
+  () => currentFile.value?.id,
+  () => {
+    if (showSearch.value && searchValue.value) {
+      nextTick(() => {
+        searchFn()
+      })
+    }
+  }
+)
 
 const highlightIndex = computed(() => {
   if (searchMatches.value) {
@@ -348,7 +397,11 @@ const find = (action: 'previous' | 'next') => {
 
 const handleEnterKey = (event: KeyboardEvent) => {
   if (event.key === 'Enter') {
-    find('next')
+    if (event.shiftKey) {
+      find('previous')
+    } else {
+      find('next')
+    }
   }
 }
 
@@ -418,6 +471,7 @@ const noop = () => {}
   background: var(--floatBgColor);
   display: flex;
   flex-direction: row;
+  z-index: 1000;
 }
 .search-bar .left-arrow {
   width: 20px;

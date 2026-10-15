@@ -15,3 +15,12 @@
 .source-code .CodeMirror div.CodeMirror-selected {
   background: var(--selection-color, rgb(45 170 219 / 30%)) !important;
 }
+
+.cm-search-match {
+  background-color: var(--selection-color, rgb(45 170 219 / 30%));
+}
+
+.cm-search-match-active {
+  background-color: var(--highlight-color, #ffeb3b) !important;
+  color: #000000;
+}

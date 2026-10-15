@@ -16,6 +16,7 @@ import { wordCount as getWordCount } from '@muyajs/core'
 import { adjustCursor } from '../../util'
 import bus from '../../bus'
 import { oneDarkThemes, railscastsThemes } from '@/config'
+import { CodeMirrorSearchManager } from '../../codeMirror/cmSearch'
 
 // CodeMirror 5 ships no first-party types; the wrapper in src/renderer/src/
 // codeMirror/index.ts also keeps the surface intentionally loose.
@@ -42,6 +43,27 @@ const editor = ref<CMInstance>(null)
 const commitTimer = ref<ReturnType<typeof setTimeout> | null>(null)
 const viewDestroyed = ref(false)
 const tabId = ref<string | null>(null)
+const searchManager = ref<CodeMirrorSearchManager | null>(null)
+
+const handleSearchValue = (payload: unknown) => {
+  if (!sourceCode.value || !searchManager.value) return
+  const { value, opt } = payload as { value: string; opt: any }
+  searchManager.value.search(value, opt)
+}
+
+const handleReplaceValue = (payload: unknown) => {
+  if (!sourceCode.value || !searchManager.value) return
+  const { value, opt } = payload as { value: string; opt: any }
+  searchManager.value.replace(value, opt)
+}
+
+const handleFindAction = (action: unknown) => {
+  if (!sourceCode.value || !searchManager.value) return
+  const normalizedAction =
+    action === 'next' ? 'next' : action === 'prev' || action === 'previous' ? 'previous' : null
+  if (!normalizedAction) return
+  searchManager.value.find(normalizedAction)
+}
 
 const { theme, sourceCode } = storeToRefs(preferencesStore)
 const { currentFile: currentTab } = storeToRefs(editorStore)
@@ -161,6 +183,7 @@ const handleFileChange = (payload: unknown) => {
 
   if (typeof newMarkdown === 'string') {
     editor.value.setValue(newMarkdown)
+    searchManager.value?.refresh()
   }
 
   // t('editor.sourceCode.cursorNullComment')
@@ -347,6 +370,22 @@ onMounted(() => {
       } else {
         return ''
       }
+    },
+    extraKeys: {
+      'Cmd-F': () => bus.emit('find', 'find'),
+      'Ctrl-F': () => bus.emit('find', 'find'),
+      'Cmd-Alt-F': () => bus.emit('replace', 'replace'),
+      'Ctrl-H': () => bus.emit('replace', 'replace'),
+      'Shift-Cmd-F': () => bus.emit('findInFolder', 'findInFolder'),
+      'Shift-Ctrl-F': () => bus.emit('findInFolder', 'findInFolder'),
+      'Cmd-G': () => bus.emit('findNext', 'findNext'),
+      'Ctrl-G': () => bus.emit('findNext', 'findNext'),
+      'Shift-Cmd-G': () => bus.emit('findPrev', 'findPrev'),
+      'Shift-Ctrl-G': () => bus.emit('findPrev', 'findPrev'),
+      Esc: (cm: any) => {
+        bus.emit('search-blur')
+        cm.focus()
+      }
     }
   }
 
@@ -364,6 +403,9 @@ onMounted(() => {
   bus.on('redo', handleRedo)
   bus.on('image-action', handleImageAction)
   bus.on('scroll-to-header', handleScrollToHeader)
+  bus.on('searchValue', handleSearchValue)
+  bus.on('replaceValue', handleReplaceValue)
+  bus.on('find-action', handleFindAction)
 
   // CodeMirror's line tree relies on object identity and must not be proxied by Vue.
   const codeMirrorInstance = markRaw(codeMirror(container, codeMirrorConfig))
@@ -387,6 +429,7 @@ onMounted(() => {
 
   editor.value = codeMirrorInstance
   tabId.value = id
+  searchManager.value = new CodeMirrorSearchManager(codeMirrorInstance, editorStore)
 
   listenChange()
 })
@@ -403,6 +446,12 @@ onBeforeUnmount(() => {
   bus.off('redo', handleRedo)
   bus.off('image-action', handleImageAction)
   bus.off('scroll-to-header', handleScrollToHeader)
+  bus.off('searchValue', handleSearchValue)
+  bus.off('replaceValue', handleReplaceValue)
+  bus.off('find-action', handleFindAction)
+
+  searchManager.value?.destroy()
+  searchManager.value = null
 
   const { cursor, markdown: newMarkdown } = getMarkdownAndCursor(editor.value)
   bus.emit('file-changed', {

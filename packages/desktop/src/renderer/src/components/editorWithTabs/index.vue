@@ -38,6 +38,7 @@
           :muya-index-cursor="muyaIndexCursor"
           :text-direction="textDirection"
         />
+        <editor-search />
       </div>
     </div>
     <tab-notifications />
@@ -53,6 +54,7 @@ import { Memo } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import Editor from './editor.vue'
 import SourceCode from './sourceCode.vue'
+import EditorSearch from '../search/index.vue'
 import TabNotifications from './notifications.vue'
 import Toc from '../sideBar/toc.vue'
 import HeadingNumberingControls from './headingNumberingControls.vue'

@@ -1,5 +1,8 @@
 <template>
-  <div ref="containerRef" class="normal-code-editor" />
+  <div class="normal-code-container">
+    <div ref="containerRef" class="normal-code-editor" />
+    <editor-search />
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -8,6 +11,8 @@ import { storeToRefs } from 'pinia'
 import { useEditorStore } from '@/store/editor'
 import { usePreferencesStore } from '@/store/preferences'
 import codeMirror from '../../codeMirror'
+import EditorSearch from '../search/index.vue'
+import { CodeMirrorSearchManager } from '../../codeMirror/cmSearch'
 import { wordCount as getWordCount } from '@muyajs/core'
 import bus from '../../bus'
 import { oneDarkThemes, railscastsThemes } from '@/config'
@@ -27,9 +32,30 @@ const preferencesStore = usePreferencesStore()
 
 const containerRef = ref<HTMLDivElement | null>(null)
 const editor = ref<CMInstance>(null)
+const searchManager = ref<CodeMirrorSearchManager | null>(null)
 let resizeObserver: ResizeObserver | null = null
 let isInitialized = false
 let cleanGeneration: number | undefined = undefined
+
+const handleSearchValue = (payload: unknown) => {
+  if (editorStore.currentFile?.id !== props.file.id || !searchManager.value) return
+  const { value, opt } = payload as { value: string; opt: any }
+  searchManager.value.search(value, opt)
+}
+
+const handleReplaceValue = (payload: unknown) => {
+  if (editorStore.currentFile?.id !== props.file.id || !searchManager.value) return
+  const { value, opt } = payload as { value: string; opt: any }
+  searchManager.value.replace(value, opt)
+}
+
+const handleFindAction = (action: unknown) => {
+  if (editorStore.currentFile?.id !== props.file.id || !searchManager.value) return
+  const normalizedAction =
+    action === 'next' ? 'next' : action === 'prev' || action === 'previous' ? 'previous' : null
+  if (!normalizedAction) return
+  searchManager.value.find(normalizedAction)
+}
 
 const { theme } = storeToRefs(preferencesStore)
 const { currentFile } = storeToRefs(editorStore)
@@ -110,6 +136,16 @@ const handleSelectAll = () => {
   }
 }
 
+watch(
+  () => props.file.markdown,
+  (newMarkdown) => {
+    if (editor.value && typeof newMarkdown === 'string' && newMarkdown !== editor.value.getValue()) {
+      editor.value.setValue(newMarkdown)
+      searchManager.value?.refresh()
+    }
+  }
+)
+
 onMounted(() => {
   const container = containerRef.value
   if (!container || !props.file) return
@@ -126,7 +162,23 @@ onMounted(() => {
     viewportMargin: 50,
     indentUnit: 2,
     tabSize: 2,
-    theme: getThemeName(theme.value)
+    theme: getThemeName(theme.value),
+    extraKeys: {
+      'Cmd-F': () => bus.emit('find', 'find'),
+      'Ctrl-F': () => bus.emit('find', 'find'),
+      'Cmd-Alt-F': () => bus.emit('replace', 'replace'),
+      'Ctrl-H': () => bus.emit('replace', 'replace'),
+      'Shift-Cmd-F': () => bus.emit('findInFolder', 'findInFolder'),
+      'Shift-Ctrl-F': () => bus.emit('findInFolder', 'findInFolder'),
+      'Cmd-G': () => bus.emit('findNext', 'findNext'),
+      'Ctrl-G': () => bus.emit('findNext', 'findNext'),
+      'Shift-Cmd-G': () => bus.emit('findPrev', 'findPrev'),
+      'Shift-Ctrl-G': () => bus.emit('findPrev', 'findPrev'),
+      Esc: (cm: any) => {
+        bus.emit('search-blur')
+        cm.focus()
+      }
+    }
   }
 
   const cm = markRaw(codeMirror(container, codeMirrorConfig))
@@ -269,9 +321,14 @@ onMounted(() => {
     }
   )
 
+  searchManager.value = new CodeMirrorSearchManager(cm, editorStore)
+
   bus.on('undo', handleUndo)
   bus.on('redo', handleRedo)
   bus.on('selectAll', handleSelectAll)
+  bus.on('searchValue', handleSearchValue)
+  bus.on('replaceValue', handleReplaceValue)
+  bus.on('find-action', handleFindAction)
 
   // Auto refresh on container resize
   if (window.ResizeObserver) {
@@ -294,6 +351,12 @@ onBeforeUnmount(() => {
   bus.off('undo', handleUndo)
   bus.off('redo', handleRedo)
   bus.off('selectAll', handleSelectAll)
+  bus.off('searchValue', handleSearchValue)
+  bus.off('replaceValue', handleReplaceValue)
+  bus.off('find-action', handleFindAction)
+
+  searchManager.value?.destroy()
+  searchManager.value = null
 
   if (resizeObserver) {
     resizeObserver.disconnect()
@@ -326,8 +389,21 @@ onBeforeUnmount(() => {
 </script>
 
 <style>
-.normal-code-editor {
+.normal-code-container {
+  position: relative;
+  width: 100%;
   height: calc(100vh - var(--titleBarHeight));
+  box-sizing: border-box;
+  overflow: hidden;
+  background: var(--editorBgColor);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.normal-code-editor {
+  height: 100%;
+  width: 100%;
   box-sizing: border-box;
   overflow: hidden;
   background: var(--editorBgColor);
