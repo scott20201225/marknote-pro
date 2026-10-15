@@ -380,17 +380,24 @@ const handleLeftBottomClick = (name: string): void => {
   font-size: 12px;
   line-height: 1.25;
   font-weight: 500;
-  color: #ffffff;
-  background: rgba(22, 27, 34, 0.94);
+  color: #1f2328;
+  background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: 6px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08);
   white-space: nowrap;
   transform: translateY(-50%);
   user-select: none;
   -webkit-app-region: no-drag;
+}
+
+body.dark .sidebar-instant-tooltip {
+  color: #f0f3f6;
+  background: rgba(30, 35, 42, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .sidebar-instant-tooltip-arrow {
@@ -399,11 +406,17 @@ const handleLeftBottomClick = (name: string): void => {
   top: 50%;
   width: 7px;
   height: 7px;
-  background: rgba(22, 27, 34, 0.94);
-  border-left: 1px solid rgba(255, 255, 255, 0.15);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.96);
+  border-left: 1px solid rgba(0, 0, 0, 0.12);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
   transform: translateY(-50%) rotate(45deg);
   border-bottom-left-radius: 1px;
+}
+
+body.dark .sidebar-instant-tooltip-arrow {
+  background: rgba(30, 35, 42, 0.96);
+  border-left: 1px solid rgba(255, 255, 255, 0.15);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .sidebar-instant-tooltip-text {

@@ -498,13 +498,13 @@ body.marknotepro-theme-adapted .marknotepro-desktop-action svg * {
   font-size: 12px;
   line-height: 1.25;
   font-weight: 500;
-  color: #ffffff;
-  background: rgba(22, 27, 34, 0.94);
+  color: ${payload.isDark ? '#f0f3f6' : '#1f2328'};
+  background: ${payload.isDark ? 'rgba(30, 35, 42, 0.96)' : 'rgba(255, 255, 255, 0.96)'};
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid ${payload.isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)'};
   border-radius: 6px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: ${payload.isDark ? '0 4px 14px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.2)' : '0 4px 14px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08)'};
   white-space: nowrap;
   opacity: 0;
   visibility: hidden;
@@ -526,9 +526,9 @@ body.marknotepro-theme-adapted .marknotepro-desktop-action svg * {
   top: 50%;
   width: 7px;
   height: 7px;
-  background: rgba(22, 27, 34, 0.94);
-  border-left: 1px solid rgba(255, 255, 255, 0.15);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  background: ${payload.isDark ? 'rgba(30, 35, 42, 0.96)' : 'rgba(255, 255, 255, 0.96)'};
+  border-left: 1px solid ${payload.isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)'};
+  border-bottom: 1px solid ${payload.isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)'};
   transform: translateY(-50%) rotate(45deg);
   border-bottom-left-radius: 1px;
 }
