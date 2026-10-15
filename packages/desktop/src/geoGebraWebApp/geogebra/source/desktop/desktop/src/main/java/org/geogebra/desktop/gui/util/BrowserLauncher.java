@@ -74,7 +74,10 @@ public class BrowserLauncher {
 					fixedURL = "file:///" + fixedURL; // put "file:///" back in
 				}
 
-				Runtime.getRuntime().exec("rundll32.exe url.dll,FileProtocolHandler " + fixedURL);
+				// Pass fixedURL as a single, separate process argument (not
+				// concatenated into a shell command string) to prevent
+				// shell metacharacter / argument injection.
+				new ProcessBuilder("rundll32.exe", "url.dll,FileProtocolHandler", fixedURL).start();
 			} else { // assume Unix or Linux
 				String[] browsers = {
 					"xdg-open",
