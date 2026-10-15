@@ -9,7 +9,8 @@
       'mindmap-open': currentFile?.isMindMap === true,
       'kdbx-open': currentFile?.isKdbx === true,
       'terminal-open': currentFile?.isTerminal === true,
-      'code-file-open': currentFile?.isCodeFile === true
+      'code-file-open': currentFile?.isCodeFile === true,
+      'pdf-open': currentFile?.isPdf === true
     }"
   >
     <side-bar v-if="init" />
@@ -20,7 +21,7 @@
         :pathname="pathname"
         :filename="filename"
         :active="windowActive"
-        :word-count="drawioFile || geogebraFile || mindMapFile || currentFile?.isKdbx || currentFile?.isTerminal ? null : wordCount"
+        :word-count="drawioFile || geogebraFile || mindMapFile || pdfFile || currentFile?.isKdbx || currentFile?.isTerminal || currentFile?.isPdf ? null : wordCount"
         :platform="platform"
         :is-saved="isSaved"
       />
@@ -56,7 +57,7 @@
         </button>
       </div>
       <recent
-        v-if="!hasCurrentFile && init && !currentFile?.isDrawing && !currentFile?.isGeoGebra && !currentFile?.isMindMap && !currentFile?.isKdbx && !currentFile?.isTerminal && !currentFile?.isCodeFile"
+        v-if="!hasCurrentFile && init && !currentFile?.isDrawing && !currentFile?.isGeoGebra && !currentFile?.isMindMap && !currentFile?.isKdbx && !currentFile?.isTerminal && !currentFile?.isCodeFile && !currentFile?.isPdf"
       />
       <editor-with-tabs
         v-if="hasMarkdownFile && init"
@@ -77,6 +78,7 @@
       <drawio v-if="init" v-show="currentFile?.isDrawing === true" />
       <geogebra v-if="init" v-show="currentFile?.isGeoGebra === true" />
       <mind-map v-if="init" v-show="currentFile?.isMindMap === true" />
+      <pdf-view v-if="init" v-show="currentFile?.isPdf === true" />
       <kdbx v-if="init && currentFile?.isKdbx === true" />
       <terminal-view v-if="init" v-show="currentFile?.isTerminal === true" :file="currentFile" />
       <kdbx-create-dialog />
@@ -114,6 +116,7 @@ import TerminalView from '@/components/terminal/index.vue'
 import Drawio from '@/components/drawio/index.vue'
 import Geogebra from '@/components/geogebra/index.vue'
 import MindMap from '@/components/mindmap/index.vue'
+import PdfView from '@/components/pdf/index.vue'
 import Kdbx from '@/components/kdbx/index.vue'
 import KdbxCreateDialog from '@/components/kdbx/createDialog.vue'
 import bus from '@/bus'
@@ -129,6 +132,7 @@ import { useNotificationStore } from '@/store/notification'
 import { useHostOverlayStore } from '@/store/overlay'
 import { getDrawioConfiguration } from '@/util/drawioConfiguration'
 import { getMindMapConfiguration } from '@/util/mindmapConfiguration'
+import { getPdfConfiguration } from '@/util/pdfConfiguration'
 import { isNoteAreaName, findNoteFolderByPath, getNoteNodeKind } from '@/util/noteWorkspace'
 import type { GeoGebraMode } from '@shared/types/files'
 
@@ -155,6 +159,7 @@ const workbench = ref<'note' | 'git'>('note')
 const drawioFile = ref<{ filePath: string; title: string } | null>(null)
 const geogebraFile = ref<{ filePath: string; title: string; mode: GeoGebraMode } | null>(null)
 const mindMapFile = ref<{ filePath: string; title: string } | null>(null)
+const pdfFile = ref<{ filePath: string; title: string } | null>(null)
 const lastGestureScale = ref(1)
 
 const { windowActive, platform, init } = storeToRefs(mainStore)
@@ -186,7 +191,8 @@ const hasCurrentFile = computed<boolean>(() => {
     !currentFile.value?.isGeoGebra &&
     !currentFile.value?.isMindMap &&
     !currentFile.value?.isKdbx &&
-    !currentFile.value?.isTerminal
+    !currentFile.value?.isTerminal &&
+    !currentFile.value?.isPdf
   )
 })
 
@@ -307,6 +313,20 @@ const closeMindMap = (_event: unknown, payload?: { filePath?: string }): void =>
   }
 }
 
+const openPdf = (_event: unknown, payload: { filePath: string; title: string }): void => {
+  editorStore.OPEN_PDF_TAB(payload)
+  pdfFile.value = payload
+  if (payload.filePath) projectStore.SELECT_NOTE_PATH(window.path.dirname(payload.filePath))
+}
+
+const closePdf = (_event: unknown, payload?: { filePath?: string }): void => {
+  if (payload?.filePath && payload.filePath !== currentFile.value?.pathname) return
+  pdfFile.value = null
+  if (currentFile.value?.isPdf) {
+    editorStore.FORCE_CLOSE_TAB(currentFile.value)
+  }
+}
+
 // Watchers
 watch(theme, (value, oldValue) => {
   if (value !== oldValue) {
@@ -329,6 +349,7 @@ watch(
     nextTick(() => {
       void window.electron.ipcRenderer.invoke('mt::geogebra::configure', getGeoGebraConfiguration())
       void window.electron.ipcRenderer.invoke('mt::mindmap::configure', getMindMapConfiguration())
+      void window.electron.ipcRenderer.invoke('mt::pdf::configure', getPdfConfiguration())
     })
   }
 )
@@ -337,6 +358,7 @@ watch([currentFile, () => preferencesStore.preferenceLoaded, workbench], ([file,
   window.electron.ipcRenderer.send('mt::drawio-menu-mode', !!file?.isDrawing)
   window.electron.ipcRenderer.send('mt::geogebra-menu-mode', !!file?.isGeoGebra)
   window.electron.ipcRenderer.send('mt::mindmap-menu-mode', !!file?.isMindMap)
+  window.electron.ipcRenderer.send('mt::pdf-menu-mode', !!file?.isPdf)
   window.electron.ipcRenderer.send('mt::kdbx-menu-mode', !!file?.isKdbx)
   window.electron.ipcRenderer.send('mt::terminal-menu-mode', currentWorkbench === 'note' && !!file?.isTerminal)
   if (file?.isDrawing) {
@@ -346,6 +368,8 @@ watch([currentFile, () => preferencesStore.preferenceLoaded, workbench], ([file,
     window.electron.ipcRenderer.send('mt::geogebra::hide')
     mindMapFile.value = null
     window.electron.ipcRenderer.send('mt::mindmap::hide')
+    pdfFile.value = null
+    window.electron.ipcRenderer.send('mt::pdf::hide')
     // A restored drawing tab can become current before persisted preferences
     // finish loading. Wait for them so the first frame URL is never built from
     // the default language/theme.
@@ -367,6 +391,8 @@ watch([currentFile, () => preferencesStore.preferenceLoaded, workbench], ([file,
     window.electron.ipcRenderer.send('mt::drawio::hide')
     mindMapFile.value = null
     window.electron.ipcRenderer.send('mt::mindmap::hide')
+    pdfFile.value = null
+    window.electron.ipcRenderer.send('mt::pdf::hide')
     if (!preferenceLoaded) return
     if (geogebraFile.value?.filePath !== file.pathname) {
       const openRequest = file.geoGebraMode
@@ -392,6 +418,8 @@ watch([currentFile, () => preferencesStore.preferenceLoaded, workbench], ([file,
     window.electron.ipcRenderer.send('mt::drawio::hide')
     geogebraFile.value = null
     window.electron.ipcRenderer.send('mt::geogebra::hide')
+    pdfFile.value = null
+    window.electron.ipcRenderer.send('mt::pdf::hide')
     if (!preferenceLoaded) return
     if (mindMapFile.value?.filePath !== file.pathname) {
       void window.electron.ipcRenderer.invoke(
@@ -403,18 +431,39 @@ watch([currentFile, () => preferencesStore.preferenceLoaded, workbench], ([file,
     return
   }
 
+  if (file?.isPdf) {
+    drawioFile.value = null
+    window.electron.ipcRenderer.send('mt::drawio::hide')
+    geogebraFile.value = null
+    window.electron.ipcRenderer.send('mt::geogebra::hide')
+    mindMapFile.value = null
+    window.electron.ipcRenderer.send('mt::mindmap::hide')
+    if (!preferenceLoaded) return
+    void window.electron.ipcRenderer.invoke('mt::pdf::configure', getPdfConfiguration())
+    if (pdfFile.value?.filePath !== file.pathname) {
+      void window.electron.ipcRenderer.invoke(
+        'mt::pdf::open',
+        file.pathname,
+        getPdfConfiguration()
+      )
+    }
+    return
+  }
+
   if (file?.isKdbx) {
     drawioFile.value = null
     geogebraFile.value = null
     mindMapFile.value = null
+    pdfFile.value = null
     window.electron.ipcRenderer.send('mt::drawio::hide')
     window.electron.ipcRenderer.send('mt::geogebra::hide')
     window.electron.ipcRenderer.send('mt::mindmap::hide')
+    window.electron.ipcRenderer.send('mt::pdf::hide')
     void window.electron.ipcRenderer.invoke('mt::kdbx::open', file.pathname)
     return
   }
 
-  // Native Draw.io/GeoGebra/MindMap BrowserViews are independent of v-show. Always
+  // Native Draw.io/GeoGebra/MindMap/PDF BrowserViews are independent of v-show. Always
   // hide all overlays when the active tab becomes Markdown or empty.
   drawioFile.value = null
   window.electron.ipcRenderer.send('mt::drawio::hide')
@@ -422,6 +471,8 @@ watch([currentFile, () => preferencesStore.preferenceLoaded, workbench], ([file,
   window.electron.ipcRenderer.send('mt::geogebra::hide')
   mindMapFile.value = null
   window.electron.ipcRenderer.send('mt::mindmap::hide')
+  pdfFile.value = null
+  window.electron.ipcRenderer.send('mt::pdf::hide')
 })
 
 // Native BrowserViews always sit above the renderer's DOM. Temporarily remove
@@ -464,6 +515,11 @@ watch(hasOverlay, async (visible, wasVisible) => {
       snapshot = await window.electron.ipcRenderer
         .invoke('mt::drawio::capture-snapshot')
         .catch(() => null)
+    } else if (currentFile.value?.isPdf) {
+      surfaceSelector = '.pdf-surface'
+      snapshot = await window.electron.ipcRenderer
+        .invoke('mt::pdf::capture-snapshot')
+        .catch(() => null)
     }
 
     if (currentToken !== overlaySnapshotToken || !hostOverlayStore.hasOverlay) {
@@ -483,6 +539,7 @@ watch(hasOverlay, async (visible, wasVisible) => {
     window.electron.ipcRenderer.send('mt::drawio::hide')
     window.electron.ipcRenderer.send('mt::geogebra::hide')
     window.electron.ipcRenderer.send('mt::mindmap::hide')
+    window.electron.ipcRenderer.send('mt::pdf::hide')
     window.electron.ipcRenderer.send('mt::github-desktop::hide')
     return
   }
@@ -492,7 +549,7 @@ watch(hasOverlay, async (visible, wasVisible) => {
       window.dispatchEvent(new Event('marktextpro:resume-native-editor'))
       window.requestAnimationFrame(() => {
         const surfaces = document.querySelectorAll<HTMLElement>(
-          '.mindmap-surface, .geogebra-surface, .drawio-surface, .github-desktop-surface'
+          '.mindmap-surface, .geogebra-surface, .drawio-surface, .pdf-surface, .github-desktop-surface'
         )
         surfaces.forEach((el) => {
           el.style.backgroundImage = ''
@@ -562,14 +619,17 @@ onMounted(() => {
   window.electron.ipcRenderer.on('mt::geogebra::opened', openGeoGebra)
   window.electron.ipcRenderer.on('mt::geogebra::closed', closeGeoGebra)
   window.electron.ipcRenderer.on('mt::mindmap::opened', openMindMap)
-  window.electron.ipcRenderer.on('mt::kdbx::opened', openKdbx)
   window.electron.ipcRenderer.on('mt::mindmap::closed', closeMindMap)
+  window.electron.ipcRenderer.on('mt::kdbx::opened', openKdbx)
+  window.electron.ipcRenderer.on('mt::pdf::opened', openPdf)
+  window.electron.ipcRenderer.on('mt::pdf::closed', closePdf)
   window.electron.ipcRenderer.on('mt::drawio::autosave-changed', (_event, enabled) => {
     window.electron.ipcRenderer.send('mt::drawio-autosave-changed', enabled)
   })
   window.electron.ipcRenderer.send('mt::drawio-menu-mode', !!currentFile.value?.isDrawing)
   window.electron.ipcRenderer.send('mt::geogebra-menu-mode', !!currentFile.value?.isGeoGebra)
   window.electron.ipcRenderer.send('mt::mindmap-menu-mode', !!currentFile.value?.isMindMap)
+  window.electron.ipcRenderer.send('mt::pdf-menu-mode', !!currentFile.value?.isPdf)
   window.electron.ipcRenderer.send('mt::kdbx-menu-mode', !!currentFile.value?.isKdbx)
   window.electron.ipcRenderer.send('mt::terminal-menu-mode', workbench.value === 'note' && !!currentFile.value?.isTerminal)
   window.addEventListener('wheel', handleWindowZoomWheel, { capture: true, passive: false })
@@ -657,6 +717,7 @@ onMounted(() => {
   editorStore.LISTEN_FOR_GEOGEBRA_STATE()
   editorStore.LISTEN_FOR_MINDMAP_STATE()
   editorStore.LISTEN_FOR_KDBX_STATE()
+  editorStore.LISTEN_FOR_PDF_STATE()
   editorStore.LISTEN_FOR_SAVE_AS()
   editorStore.LISTEN_FOR_MOVE_TO()
   editorStore.LISTEN_FOR_SAVE()
@@ -747,12 +808,15 @@ onBeforeUnmount(() => {
   window.electron.ipcRenderer.removeAllListeners('mt::geogebra::closed')
   window.electron.ipcRenderer.removeAllListeners('mt::mindmap::opened')
   window.electron.ipcRenderer.removeAllListeners('mt::kdbx::opened')
+  window.electron.ipcRenderer.removeAllListeners('mt::pdf::opened')
+  window.electron.ipcRenderer.removeAllListeners('mt::pdf::closed')
   window.electron.ipcRenderer.removeAllListeners('mt::mindmap::closed')
   window.electron.ipcRenderer.removeAllListeners('mt::drawio::autosave-changed')
   window.electron.ipcRenderer.removeAllListeners('mt::drawio::state')
   window.electron.ipcRenderer.removeAllListeners('mt::geogebra::state')
   window.electron.ipcRenderer.removeAllListeners('mt::mindmap::state')
   window.electron.ipcRenderer.removeAllListeners('mt::kdbx::state')
+  window.electron.ipcRenderer.removeAllListeners('mt::pdf::state')
   window.removeEventListener('wheel', handleWindowZoomWheel, true)
   window.removeEventListener('gesturestart', handleWindowZoomGestureStart)
   window.removeEventListener('gesturechange', handleWindowZoomGestureChange)
@@ -813,7 +877,8 @@ onBeforeUnmount(() => {
 /* BrowserView cannot paint behind the native title row. */
 .editor-container.drawio-open .editor-middle,
 .editor-container.geogebra-open .editor-middle,
-.editor-container.mindmap-open .editor-middle {
+.editor-container.mindmap-open .editor-middle,
+.editor-container.pdf-open .editor-middle {
   background: var(--editorBgColor);
 }
 

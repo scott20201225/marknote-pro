@@ -15,7 +15,7 @@ import {
 } from 'electron'
 import log from 'electron-log'
 import { isDirectory, isFile, exists } from 'common/filesystem'
-import { MARKDOWN_EXTENSIONS, CODE_AND_TEXT_EXTENSIONS, isMarkdownFile, isChildOfDirectory } from 'common/filesystem/paths'
+import { MARKDOWN_EXTENSIONS, CODE_AND_TEXT_EXTENSIONS, isMarkdownFile, isChildOfDirectory, isCodeOrTextFilePath } from 'common/filesystem/paths'
 import { checkUpdates, userSetting } from './marknotepro'
 import { COMMANDS } from '../../commands'
 import type { CommandManager } from '../../commands'
@@ -23,8 +23,10 @@ import { EXTENSION_HASN, PANDOC_EXTENSIONS, URL_REG, isOsx } from '../../config'
 import { normalizeAndResolvePath, writeFile } from '../../filesystem'
 import { writeMarkdownFile } from '../../filesystem/markdown'
 import { createDrawioFile, isDrawioFile, openDrawioFile, saveDrawioDocuments } from '../../drawio'
+import { isGeoGebraFile, openGeoGebraFile } from '../../geogebra'
 import { createMindMapFile, isMindMapFile, openMindMapFile, saveMindMapDocuments } from '../../mindmap'
-import { saveKdbxDocuments } from '../../kdbx'
+import { isKdbxFile, openKdbxFile, saveKdbxDocuments } from '../../kdbx'
+import { isPdfFile, openPdfFile } from '../../pdf'
 import { getPath, getRecommendTitleFromMarkdownString } from '../../utils'
 import {
   normalizeLinkUrlCandidate,
@@ -777,7 +779,15 @@ ipcMain.on('mt::window::drop', async (e, fileList: string[]) => {
     return
   }
   for (const file of fileList) {
-    if (isMarkdownFile(file)) {
+    if (
+      isMarkdownFile(file) ||
+      isDrawioFile(file) ||
+      isGeoGebraFile(file) ||
+      isMindMapFile(file) ||
+      isKdbxFile(file) ||
+      isPdfFile(file) ||
+      isCodeOrTextFilePath(file)
+    ) {
       openFileOrFolder(win, file)
       continue
     }
@@ -949,24 +959,44 @@ ipcMain.on('mt::format-link-click', async (e, { data, dirname }: FormatLinkPaylo
     const isWorkspaceDocument =
       !!workspaceRoot &&
       isChildOfDirectory(workspaceRoot, pathname) &&
-      (isMarkdownFile(pathname) || isDrawioFile(pathname) || isMindMapFile(pathname))
+      (isMarkdownFile(pathname) ||
+        isDrawioFile(pathname) ||
+        isGeoGebraFile(pathname) ||
+        isMindMapFile(pathname) ||
+        isKdbxFile(pathname) ||
+        isPdfFile(pathname) ||
+        isCodeOrTextFilePath(pathname))
 
     // Workspace documents always stay in the current MarkNotePro window.
-    // `openFileOrFolder` dispatches Markdown to an editor tab and Drawio/MindMap to
-    // the embedded drawing view, so inline and reference-style links share
+    // `openFileOrFolder` dispatches Markdown to an editor tab and Drawio/MindMap/PDF to
+    // the embedded views, so inline and reference-style links share
     // exactly the same application-internal navigation path.
     if (isWorkspaceDocument) {
       openFileOrFolder(win, pathname)
       return
     }
 
-    if (isMarkdownFile(pathname)) {
+    if (isMarkdownFile(pathname) || isCodeOrTextFilePath(pathname)) {
       const innerWin = BrowserWindow.fromWebContents(e.sender)
       if (innerWin) {
         openFileOrFolder(innerWin, pathname)
       }
-    } else if (isDrawioFile(pathname) || isMindMapFile(pathname)) {
-      // 绘图/思维导图文件位于工作区之外时，保持原有外部打开逻辑。
+    } else if (
+      isDrawioFile(pathname) ||
+      isGeoGebraFile(pathname) ||
+      isMindMapFile(pathname) ||
+      isKdbxFile(pathname) ||
+      isPdfFile(pathname)
+    ) {
+      const innerWin = BrowserWindow.fromWebContents(e.sender)
+      if (innerWin) {
+        openFileOrFolder(innerWin, pathname)
+      } else {
+        const openedWithApplication = localTarget
+          ? await openLocalLinkWithApplication(win, localTarget)
+          : false
+        if (!openedWithApplication) shell.openPath(pathname)
+      }
       const openedWithApplication = localTarget
         ? await openLocalLinkWithApplication(win, localTarget)
         : false
@@ -1062,8 +1092,16 @@ export const openFile = async (win: BrowserWindow | null): Promise<void> => {
     properties: ['openFile', 'multiSelections'],
     filters: [
       {
-        name: 'Supported Documents & Code',
-        extensions: [...MARKDOWN_EXTENSIONS, ...CODE_AND_TEXT_EXTENSIONS]
+        name: 'Supported Documents & Files',
+        extensions: [
+          ...MARKDOWN_EXTENSIONS,
+          ...CODE_AND_TEXT_EXTENSIONS,
+          'drawio',
+          'ggb',
+          'smm',
+          'kdbx',
+          'pdf'
+        ]
       },
       {
         name: 'Markdown document',
@@ -1072,20 +1110,42 @@ export const openFile = async (win: BrowserWindow | null): Promise<void> => {
       {
         name: 'Code & Text files',
         extensions: [...CODE_AND_TEXT_EXTENSIONS]
+      },
+      {
+        name: 'PDF document',
+        extensions: ['pdf']
+      },
+      {
+        name: 'All Files',
+        extensions: ['*']
       }
     ]
   })
 
   if (Array.isArray(filePaths) && filePaths.length > 0) {
     const markdownFiles = filePaths.filter(
-      (filePath) => !isDrawioFile(filePath) && !isMindMapFile(filePath)
+      (filePath) =>
+        !isDrawioFile(filePath) &&
+        !isGeoGebraFile(filePath) &&
+        !isMindMapFile(filePath) &&
+        !isKdbxFile(filePath) &&
+        !isPdfFile(filePath)
     )
     if (markdownFiles.length) ipcMain.emit('app-open-files-by-id', win.id, markdownFiles)
     for (const filePath of filePaths.filter(isDrawioFile)) {
       void openDrawioFile(filePath, win)
     }
+    for (const filePath of filePaths.filter(isGeoGebraFile)) {
+      void openGeoGebraFile(filePath, win)
+    }
     for (const filePath of filePaths.filter(isMindMapFile)) {
       void openMindMapFile(filePath, win)
+    }
+    for (const filePath of filePaths.filter(isKdbxFile)) {
+      void openKdbxFile(filePath, win)
+    }
+    for (const filePath of filePaths.filter(isPdfFile)) {
+      void openPdfFile(filePath, win)
     }
   }
 }
@@ -1115,8 +1175,14 @@ export const openFileOrFolder = (win: BrowserWindow, pathname: string): void => 
   const resolvedPath = normalizeAndResolvePath(pathname)
   if (isDrawioFile(resolvedPath)) {
     void openDrawioFile(resolvedPath, win)
+  } else if (isGeoGebraFile(resolvedPath)) {
+    void openGeoGebraFile(resolvedPath, win)
   } else if (isMindMapFile(resolvedPath)) {
     void openMindMapFile(resolvedPath, win)
+  } else if (isKdbxFile(resolvedPath)) {
+    void openKdbxFile(resolvedPath, win)
+  } else if (isPdfFile(resolvedPath)) {
+    void openPdfFile(resolvedPath, win)
   } else if (isFile(resolvedPath)) {
     ipcMain.emit('app-open-file-by-id', win.id, resolvedPath)
   } else if (isDirectory(resolvedPath)) {

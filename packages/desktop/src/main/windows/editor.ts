@@ -22,6 +22,7 @@ import { isDrawioFile, openDrawioFile } from '../drawio'
 import { isGeoGebraFile, openGeoGebraFile } from '../geogebra'
 import { isMindMapFile, openMindMapFile } from '../mindmap'
 import { isKdbxFile, openKdbxFile } from '../kdbx'
+import { isPdfFile, openPdfFile } from '../pdf'
 import fs from 'fs'
 
 type RawMarkdownDocument = Awaited<ReturnType<typeof loadMarkdownFile>>
@@ -415,6 +416,16 @@ class EditorWindow extends BaseWindow {
         }
         continue
       }
+      if (isPdfFile(filePath)) {
+        if (this.lifecycle === WindowLifecycle.READY) {
+          this.addToOpenedFiles(filePath)
+          this._accessor.menu.addRecentlyUsedDocument(filePath)
+          void openPdfFile(filePath, browserWindow)
+        } else {
+          this._filesToOpen!.push({ filePath, options, selected })
+        }
+        continue
+      }
       loadMarkdownFile(
         filePath,
         eol,
@@ -676,6 +687,10 @@ class EditorWindow extends BaseWindow {
         this.addToOpenedFiles(filePath)
         this._accessor.menu.addRecentlyUsedDocument(filePath)
         void openKdbxFile(filePath, this.browserWindow)
+      } else if (isPdfFile(filePath)) {
+        this.addToOpenedFiles(filePath)
+        this._accessor.menu.addRecentlyUsedDocument(filePath)
+        void openPdfFile(filePath, this.browserWindow)
       } else if (doc) {
         this._doOpenTab(doc, options, selected)
       }
@@ -713,6 +728,37 @@ class EditorWindow extends BaseWindow {
       const fileOpenRequests: Promise<void>[] = []
       for (const tab of bufferState.tabs) {
         if (!tab.pathname) {
+          continue
+        }
+
+        const isDrawing = isDrawioFile(tab.pathname)
+        const isGeoGebra = isGeoGebraFile(tab.pathname)
+        const isMindMap = isMindMapFile(tab.pathname)
+        const isKdbx = isKdbxFile(tab.pathname)
+        const isPdf = isPdfFile(tab.pathname)
+
+        if (isDrawing || isGeoGebra || isMindMap || isKdbx || isPdf) {
+          if (isKdbx) tab.isKdbx = true
+          if (isPdf) tab.isPdf = true
+          fileOpenRequests.push(
+            fs.promises
+              .access(tab.pathname)
+              .then(() => {
+                if (!this._openedFiles!.includes(tab.pathname)) {
+                  this.addToOpenedFiles(tab.pathname)
+                  appMenu.addRecentlyUsedDocument(tab.pathname)
+                }
+              })
+              .catch((err: Error) => {
+                tab.isSaved = false
+                log.error(`[ERROR] Non-markdown file not found: ${err.message}`)
+                browserWindow!.webContents.send('mt::show-notification', {
+                  title: `Could not find file ${tab.filename} on disk, please save your work.`,
+                  type: 'error',
+                  message: err.message
+                })
+              })
+          )
           continue
         }
 

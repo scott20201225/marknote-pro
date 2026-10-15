@@ -14,6 +14,7 @@ import drawioFile from './drawioFile'
 import geogebraFile from './geogebraFile'
 import mindmapFile from './mindmapFile'
 import kdbxFile from './kdbxFile'
+import pdfFile from './pdfFile'
 import type Keybindings from '../../keyboard/shortcutHandler'
 import type Preference from '../../preferences'
 
@@ -50,8 +51,19 @@ export default function (
     mindmapMode?: boolean
     kdbxMode?: boolean
     terminalMode?: boolean
+    pdfMode?: boolean
   } = {}
 ): MenuItemConstructorOptions[] {
+  if (options.pdfMode) {
+    return [
+      ...(process.platform === 'darwin' ? [marknotepro(keybindings)] : []),
+      pdfFile(keybindings),
+      theme(preferences),
+      language(preferences),
+      help()
+    ]
+  }
+
   if (options.terminalMode) {
     return [
       ...(process.platform === 'darwin' ? [marknotepro(keybindings)] : []),

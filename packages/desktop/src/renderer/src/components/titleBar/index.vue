@@ -82,7 +82,7 @@ import { isOsx as isOsxPlatform } from '@/util'
 import { shouldShowInAppTitleBar } from './visibility'
 import { useEditorStore } from '@/store/editor'
 import { useI18n } from 'vue-i18n'
-import { getNotePathDisplay } from '@/util/noteWorkspace'
+import { getNotePathDisplay, stripDocumentExtension } from '@/util/noteWorkspace'
 import type { FileWordCount } from '@shared/types/files'
 
 interface ProjectInfo {
@@ -163,9 +163,10 @@ watch(
     // Set filename when hover on dock
     const hasOpenFolder = !!(props.project && props.project.name)
     const projectName = props.project?.name ?? ''
+    const displayName = value ? stripDocumentExtension(value) : ''
     let title = ''
-    if (value) {
-      title = hasOpenFolder ? `${value} - ${projectName}` : `${value}`
+    if (displayName) {
+      title = hasOpenFolder ? `${displayName} - ${projectName}` : `${displayName}`
     } else {
       title = hasOpenFolder ? projectName : ''
     }

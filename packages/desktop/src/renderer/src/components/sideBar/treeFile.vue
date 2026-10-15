@@ -54,6 +54,7 @@ import { getNoteDisplayName, isCodeOrTextFileName } from '../../util/noteWorkspa
 import type { TreeFileNode } from './types'
 import { getDrawioConfiguration } from '@/util/drawioConfiguration'
 import { getMindMapConfiguration } from '@/util/mindmapConfiguration'
+import { getPdfConfiguration } from '@/util/pdfConfiguration'
 
 const props = defineProps<{
   file: TreeFileNode
@@ -88,7 +89,9 @@ const isSupportedFile = computed<boolean>(() => {
     !!props.file.isDrawing ||
     !!props.file.isGeoGebra ||
     !!props.file.isMindMap ||
-    !!props.file.isKdbx
+    !!props.file.isKdbx ||
+    !!props.file.isPdf ||
+    /\.pdf$/i.test(props.file.pathname)
   )
 })
 
@@ -121,6 +124,14 @@ const handleFileClick = (): void => {
   }
   if (props.file.isKdbx || /\.kdbx$/i.test(pathname)) {
     void window.electron.ipcRenderer.invoke('mt::kdbx::open', pathname)
+    return
+  }
+  if (props.file.isPdf || /\.pdf$/i.test(pathname)) {
+    void window.electron.ipcRenderer.invoke(
+      'mt::pdf::open',
+      pathname,
+      getPdfConfiguration()
+    )
     return
   }
   if (!isEditableDocument.value) return

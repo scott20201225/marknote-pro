@@ -501,7 +501,13 @@ export const registerKdbxHandlers = (): void => {
     const win = BrowserWindow.fromWebContents(event.sender)
     if (!win) return
     const session = getWindowSessions(win).get(filePath)
-    if (session) await saveSession(win, session)
+    if (session) {
+      try {
+        await saveSession(win, session)
+      } catch (err) {
+        console.warn(`[kdbx] Failed to save session before lock for ${filePath}:`, err)
+      }
+    }
     getWindowSessions(win).delete(filePath)
     win.webContents.send('mt::kdbx::state', {
       filePath,
@@ -556,8 +562,10 @@ export const registerKdbxHandlers = (): void => {
 
   ipcMain.handle('mt::kdbx::save', async (event, filePath: string) => {
     const win = BrowserWindow.fromWebContents(event.sender)
-    if (!win) throw new Error('找不到编辑窗口')
-    await saveSession(win, getSession(win, filePath))
+    if (!win) return
+    const session = getWindowSessions(win).get(filePath)
+    if (!session) return
+    await saveSession(win, session)
   })
 
   ipcMain.handle('mt::kdbx::create-group', async(event, filePath: string, parentId: string, name: string) => {

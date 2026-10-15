@@ -48,7 +48,12 @@ const defaultFileStateWithoutId = {
   muyaIndexCursor: null,
   notifications: [],
   showHeadingNumbers: false,
-  headingNumberingIncludesTopLevel: false
+  headingNumberingIncludesTopLevel: false,
+  isCodeFile: false,
+  codeLanguage: '',
+  codeMirrorState: undefined,
+  isPdf: false,
+  pdfState: undefined
 } satisfies Omit<IFileState, 'id'>
 
 /**
@@ -98,7 +103,9 @@ const documentStateKeys = [
   'headingNumberingIncludesTopLevel',
   'isCodeFile',
   'codeLanguage',
-  'codeMirrorState'
+  'codeMirrorState',
+  'isPdf',
+  'pdfState'
 ] as const satisfies ReadonlyArray<keyof IFileState>
 
 export const getBlankFileState = (
@@ -191,6 +198,27 @@ export const createDocumentState = (
         scrollTop: result.scrollTop,
         codeLanguage: result.codeLanguage,
         lastSavedHistoryId: 0
+      }
+    }
+  }
+
+  const isPdf =
+    Boolean(result.isPdf) ||
+    (typeof result.pathname === 'string' && /\.pdf$/i.test(result.pathname))
+
+  if (isPdf) {
+    result.isPdf = true
+    if (!result.pdfState) {
+      result.pdfState = {
+        id,
+        filename: result.filename || '',
+        pathname: result.pathname || '',
+        modified: false,
+        isSaved: result.isSaved !== false,
+        isSaving: false,
+        page: 1,
+        scale: 'auto',
+        rotation: 0
       }
     }
   }

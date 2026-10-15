@@ -28,6 +28,7 @@ const isGeoGebraFile = (pathname: string): boolean => path.extname(pathname).toL
 
 const isMindMapFile = (pathname: string): boolean => path.extname(pathname).toLowerCase() === '.smm'
 const isKdbxFile = (pathname: string): boolean => path.extname(pathname).toLowerCase() === '.kdbx'
+const isPdfFile = (pathname: string): boolean => path.extname(pathname).toLowerCase() === '.pdf'
 
 type WatchType = 'dir' | 'file'
 
@@ -64,6 +65,7 @@ const add = async (
   const isGeoGebra = isGeoGebraFile(pathname)
   const isMindMap = isMindMapFile(pathname)
   const isKdbx = isKdbxFile(pathname)
+  const isPdf = isPdfFile(pathname)
   const isDocument = isMarkdown || isCodeOrText
   const file: {
     pathname: string
@@ -78,6 +80,7 @@ const add = async (
     isGeoGebra: boolean
     isMindMap: boolean
     isKdbx: boolean
+    isPdf: boolean
     data?: Awaited<ReturnType<typeof loadMarkdownFile>>
   } = {
     pathname,
@@ -91,7 +94,8 @@ const add = async (
     isDrawing,
     isGeoGebra,
     isMindMap,
-    isKdbx
+    isKdbx,
+    isPdf
   }
   if (isDocument) {
     // HACK: But this should be removed completely in #1034/#1035.
@@ -116,7 +120,7 @@ const add = async (
       }
     }
   }
-  if (isDocument || isDrawing || isGeoGebra || isMindMap || isKdbx) {
+  if (isDocument || isDrawing || isGeoGebra || isMindMap || isKdbx || isPdf) {
     win.webContents.send(EVENT_NAME[type], { type: 'add', change: file })
   }
 }
@@ -158,6 +162,7 @@ const change = async (
   const isGeoGebra = isGeoGebraFile(pathname)
   const isMindMap = isMindMapFile(pathname)
   const isKdbx = isKdbxFile(pathname)
+  const isPdf = isPdfFile(pathname)
   const isDocument = isMarkdown || isCodeOrText
   if (isDocument) {
     try {
@@ -185,7 +190,7 @@ const change = async (
         })
       }
     }
-  } else if (isDrawing || isGeoGebra || isMindMap || isKdbx) {
+  } else if (isDrawing || isGeoGebra || isMindMap || isKdbx || isPdf) {
     try {
       const stats = await fsPromises.stat(pathname)
       win.webContents.send('mt::update-object-tree', {
@@ -273,7 +278,8 @@ class Watcher {
           !isDrawioFile(pathname) &&
           !isGeoGebraFile(pathname) &&
           !isMindMapFile(pathname) &&
-          !isKdbxFile(pathname)
+          !isKdbxFile(pathname) &&
+          !isPdfFile(pathname)
         )
       },
       ignoreInitial: type === 'file',

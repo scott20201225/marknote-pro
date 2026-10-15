@@ -1,0 +1,326 @@
+/**
+ * MarkTextPro Theme Adaptation for PDF.js Viewer
+ *
+ * Requirements:
+ * 1. Surrounding chrome (toolbar, sidebar, viewsManager, secondaryToolbar, menus, dialogs) matches MarkTextPro theme.
+ * 2. PDF Document pages STRICTLY remain white background with black text (never inverted/modified).
+ */
+
+:root {
+  --mt-theme-color: #409eff;
+  --mt-editor-bg: #f8f9fa;
+  --mt-sidebar-bg: #f3f4f6;
+  --mt-sidebar-hover-bg: rgba(0, 0, 0, 0.05);
+  --mt-float-bg: #ffffff;
+  --mt-float-hover-bg: rgba(0, 0, 0, 0.06);
+  --mt-input-bg: #ffffff;
+  --mt-text-color: #333333;
+  --mt-border-color: #e5e7eb;
+
+  /* Map to native PDF.js variables */
+  --main-color: var(--mt-text-color);
+  --body-bg-color: var(--mt-editor-bg);
+  --toolbar-bg-color: var(--mt-sidebar-bg);
+  --toolbar-border-color: var(--mt-border-color);
+  --toolbar-icon-bg-color: var(--mt-text-color);
+  --toolbar-icon-hover-bg-color: var(--mt-theme-color);
+  --sidebar-narrow-bg-color: var(--mt-sidebar-bg);
+  --sidebar-toolbar-bg-color: var(--mt-sidebar-bg);
+  --doorhanger-bg-color: var(--mt-float-bg);
+  --doorhanger-border-color: var(--mt-border-color);
+  --doorhanger-hover-color: var(--mt-text-color);
+  --doorhanger-separator-color: var(--mt-border-color);
+  --field-bg-color: var(--mt-input-bg);
+  --field-color: var(--mt-text-color);
+  --field-border-color: var(--mt-border-color);
+  --dropdown-btn-bg-color: var(--mt-input-bg);
+  --button-hover-color: var(--mt-sidebar-hover-bg);
+  --toggled-btn-color: var(--mt-theme-color);
+  --toggled-btn-bg-color: rgba(64, 158, 255, 0.2);
+}
+
+/* Outer layout and background */
+#outerContainer,
+#viewerContainer {
+  background-color: var(--mt-editor-bg, #f8f9fa) !important;
+}
+
+/* Toolbar styling */
+.toolbar,
+#toolbarContainer,
+#toolbarViewer {
+  background-color: var(--mt-sidebar-bg, #ffffff) !important;
+  border-bottom: 1px solid var(--mt-border-color, #e5e7eb) !important;
+  color: var(--mt-text-color, #333333) !important;
+  box-shadow: none !important;
+}
+
+/* Left Sidebar / Views Manager (Pages, Outline, Attachments, Layers) */
+#viewsManager,
+.menuContainer.sidebar {
+  --sidebar-bg-color: var(--mt-sidebar-bg) !important;
+  --header-bg: var(--mt-sidebar-bg) !important;
+  --views-text-color: var(--mt-text-color) !important;
+  --button-fg: var(--mt-text-color) !important;
+  --button-bg: transparent !important;
+  --views-button-border-color: var(--mt-border-color) !important;
+  --button-hover-bg: var(--mt-sidebar-hover-bg) !important;
+  --button-hover-fg: var(--mt-text-color) !important;
+  --button-active-bg: var(--mt-sidebar-hover-bg) !important;
+  --button-active-fg: var(--mt-theme-color) !important;
+  --button-focus-outline-color: var(--mt-theme-color) !important;
+  --indicator-color: var(--mt-theme-color) !important;
+  --image-current-border-color: var(--mt-theme-color) !important;
+  --image-hover-border-color: rgba(64, 158, 255, 0.5) !important;
+  --image-border-color: var(--mt-border-color) !important;
+  --image-page-number-bg: var(--mt-input-bg) !important;
+  --image-page-number-fg: var(--mt-text-color) !important;
+  --image-current-page-number-bg: var(--mt-theme-color) !important;
+  --image-current-page-number-fg: #ffffff !important;
+  background-color: var(--mt-sidebar-bg) !important;
+  border-right: 1px solid var(--mt-border-color) !important;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.12) !important;
+}
+
+#viewsManagerHeader {
+  background-color: var(--mt-sidebar-bg) !important;
+  border-bottom: 1px solid var(--mt-border-color) !important;
+  color: var(--mt-text-color) !important;
+}
+
+#viewsManagerSelectorButton {
+  background-color: var(--mt-input-bg) !important;
+  border: 1px solid var(--mt-border-color) !important;
+  color: var(--mt-text-color) !important;
+}
+
+#sidebarContainer,
+#sidebarContent,
+#toolbarSidebar {
+  background-color: var(--mt-sidebar-bg) !important;
+  border-right: 1px solid var(--mt-border-color) !important;
+  color: var(--mt-text-color) !important;
+}
+
+/* Outline Tree styling */
+#outlineView,
+#outlinesView {
+  background-color: var(--mt-sidebar-bg) !important;
+  color: var(--mt-text-color) !important;
+}
+
+.treeItem > a {
+  color: var(--mt-text-color) !important;
+  border-radius: 4px !important;
+  padding: 3px 6px !important;
+}
+
+.treeItem > a:hover {
+  background-color: var(--mt-sidebar-hover-bg) !important;
+  color: var(--mt-text-color) !important;
+}
+
+.treeItem.selected > a {
+  background-color: rgba(64, 158, 255, 0.16) !important;
+  color: var(--mt-theme-color) !important;
+  font-weight: 500 !important;
+}
+
+.treeItemToggler {
+  color: var(--mt-text-color) !important;
+}
+
+/* Popup menus (Views selector, dropdowns) */
+.popupMenu,
+#viewsManagerSelectorOptions {
+  background-color: var(--mt-float-bg) !important;
+  border: 1px solid var(--mt-border-color) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25) !important;
+  border-radius: 6px !important;
+  color: var(--mt-text-color) !important;
+}
+
+.popupMenu button {
+  color: var(--mt-text-color) !important;
+}
+
+.popupMenu button:hover {
+  background-color: var(--mt-float-hover-bg) !important;
+  color: var(--mt-theme-color) !important;
+}
+
+.popupMenu button.checked {
+  background-color: rgba(64, 158, 255, 0.15) !important;
+  color: var(--mt-theme-color) !important;
+}
+
+/* Secondary Toolbar (Right-side popup menu) & Annotation Toolbars */
+#secondaryToolbar,
+.editorParamsToolbar,
+.doorHanger,
+.doorHangerRight {
+  background-color: var(--mt-float-bg) !important;
+  border: 1px solid var(--mt-border-color) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28) !important;
+  color: var(--mt-text-color) !important;
+}
+
+.doorHanger::before,
+.doorHangerRight::before {
+  border-bottom-color: var(--mt-border-color) !important;
+}
+
+.doorHanger::after,
+.doorHangerRight::after {
+  border-bottom-color: var(--mt-float-bg) !important;
+}
+
+#secondaryToolbar .secondaryToolbarButton,
+.editorParamsToolbar .toolbarButton {
+  color: var(--mt-text-color) !important;
+}
+
+#secondaryToolbar .secondaryToolbarButton:hover,
+.editorParamsToolbar .toolbarButton:hover {
+  background-color: var(--mt-float-hover-bg) !important;
+  color: var(--mt-text-color) !important;
+}
+
+#secondaryToolbar .secondaryToolbarButton.toggled {
+  background-color: rgba(64, 158, 255, 0.18) !important;
+  color: var(--mt-theme-color) !important;
+}
+
+.editorParamsToolbar .editorParamsLabel {
+  color: var(--mt-text-color) !important;
+}
+
+.editorParamsToolbar .editorParamsSlider {
+  accent-color: var(--mt-theme-color) !important;
+}
+
+.horizontalToolbarSeparator,
+.verticalToolbarSeparator,
+.splitToolbarButtonSeparator {
+  background-color: var(--mt-border-color) !important;
+}
+
+/* Page number input & labels */
+.toolbarField,
+#pageNumber {
+  background-color: var(--mt-input-bg) !important;
+  color: var(--mt-text-color) !important;
+  border: 1px solid var(--mt-border-color) !important;
+  border-radius: 4px !important;
+  padding: 2px 6px !important;
+  outline: none !important;
+}
+
+.toolbarField:focus,
+#pageNumber:focus {
+  border-color: var(--mt-theme-color) !important;
+  box-shadow: 0 0 0 1px var(--mt-theme-color) !important;
+}
+
+.toolbarLabel,
+#numPages {
+  color: var(--mt-text-color) !important;
+}
+
+/* Scale / Zoom select dropdown */
+#scaleSelectContainer {
+  background-color: var(--mt-input-bg) !important;
+  border: 1px solid var(--mt-border-color) !important;
+  border-radius: 4px !important;
+  height: 28px !important;
+}
+
+#scaleSelectContainer:hover {
+  border-color: var(--mt-theme-color) !important;
+}
+
+#scaleSelect {
+  background-color: var(--mt-input-bg) !important;
+  color: var(--mt-text-color) !important;
+  border: none !important;
+  border-radius: 4px !important;
+  height: 100% !important;
+  outline: none !important;
+}
+
+#scaleSelect option {
+  background-color: var(--mt-float-bg) !important;
+  color: var(--mt-text-color) !important;
+}
+
+/* Findbar */
+.findbar,
+#findbar {
+  background-color: var(--mt-float-bg) !important;
+  border: 1px solid var(--mt-border-color) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25) !important;
+  border-radius: 6px !important;
+  color: var(--mt-text-color) !important;
+}
+
+.findbar input {
+  background-color: var(--mt-input-bg) !important;
+  color: var(--mt-text-color) !important;
+  border: 1px solid var(--mt-border-color) !important;
+  border-radius: 4px !important;
+}
+
+/* Buttons and Controls */
+.toolbarButton,
+.secondaryToolbarButton {
+  border-radius: 4px !important;
+  color: var(--mt-text-color) !important;
+}
+
+.toolbarButton:hover,
+.secondaryToolbarButton:hover {
+  background-color: var(--mt-sidebar-hover-bg) !important;
+  color: var(--mt-text-color) !important;
+}
+
+.toolbarButton.toggled,
+.splitToolbarButton.toggled > .toolbarButton {
+  background-color: rgba(64, 158, 255, 0.2) !important;
+  color: var(--mt-theme-color) !important;
+}
+
+/* =========================================================================
+   STRICT DOCUMENT PRESERVATION (User Requirement):
+   文档所有内容不要去改动所谓的主题，因为PDF一般都是白色背景黑色字体，不能因为主题变动，改了pdf文档的显示。
+   ========================================================================= */
+.pdfViewer .page {
+  background-color: #ffffff !important;
+  color-scheme: light !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+  border-radius: 2px !important;
+  margin: 14px auto !important;
+}
+
+.pdfViewer .page .canvasWrapper,
+.pdfViewer .page .textLayer,
+.pdfViewer .page .annotationLayer,
+.pdfViewer .page .annotationEditorLayer {
+  background-color: transparent !important;
+}
+
+.pdfViewer .page canvas {
+  filter: none !important;
+  -webkit-filter: none !important;
+}
+
+/* Hide redundant buttons per user request: download/save-as button and secondary open-file button */
+#downloadButton,
+#secondaryDownload,
+#secondaryOpenFile {
+  display: none !important;
+}
+
+#secondaryToolbarButtonContainer > .visibleMediumView + .horizontalToolbarSeparator {
+  display: none !important;
+}

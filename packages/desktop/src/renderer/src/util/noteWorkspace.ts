@@ -14,6 +14,7 @@ interface NoteNodeLike {
   isGeoGebra?: boolean
   isMindMap?: boolean
   isKdbx?: boolean
+  isPdf?: boolean
   folders?: NoteNodeLike[]
   files?: NoteNodeLike[]
 }
@@ -110,6 +111,7 @@ const isDrawingFileName = (name: string): boolean => /\.drawio$/i.test(name)
 const isGeoGebraFileName = (name: string): boolean => /\.ggb$/i.test(name)
 const isMindMapFileName = (name: string): boolean => /\.smm$/i.test(name)
 const isKdbxFileName = (name: string): boolean => /\.kdbx$/i.test(name)
+const isPdfFileName = (name: string): boolean => /\.pdf$/i.test(name)
 
 const stripNotePrefix = (name: string): string => {
   if (isNoteGroupName(name)) return name.slice(NOTE_GROUP_PREFIX.length)
@@ -139,14 +141,17 @@ const stripDrawingExtension = (name: string): string => {
 const stripGeoGebraExtension = (name: string): string => name.replace(/\.ggb$/i, '')
 const stripMindMapExtension = (name: string): string => name.replace(/\.smm$/i, '')
 const stripKdbxExtension = (name: string): string => name.replace(/\.kdbx$/i, '')
+const stripPdfExtension = (name: string): string => name.replace(/\.pdf$/i, '')
 
 export const stripDocumentExtension = (name: string): string => {
-  return stripCodeOrTextExtension(
-    stripKdbxExtension(
-      stripMindMapExtension(
-        stripGeoGebraExtension(
-          stripDrawingExtension(
-            stripMarkdownExtension(name)
+  return stripPdfExtension(
+    stripCodeOrTextExtension(
+      stripKdbxExtension(
+        stripMindMapExtension(
+          stripGeoGebraExtension(
+            stripDrawingExtension(
+              stripMarkdownExtension(name)
+            )
           )
         )
       )
@@ -213,13 +218,14 @@ export const isValidNoteFilePath = (
   const isGeoGebra = isGeoGebraFileName(name)
   const isMindMap = isMindMapFileName(name)
   const isKdbx = isKdbxFileName(name)
+  const isPdf = isPdfFileName(name)
   const isDocument = isMarkdownFileName(name) || isCodeOrTextFileName(name)
-  if (!isDocument && !isDrawing && !isGeoGebra && !isMindMap && !isKdbx) return false
+  if (!isDocument && !isDrawing && !isGeoGebra && !isMindMap && !isKdbx && !isPdf) return false
 
   const parentPath = window.path.dirname(pathname)
   const parentName = window.path.basename(parentPath)
   if (!isValidNoteDirectoryPath(parentPath, rootPath)) return false
-  return isDrawing || isGeoGebra || isMindMap || isKdbx || isNoteAreaName(parentName)
+  return isDrawing || isGeoGebra || isMindMap || isKdbx || isPdf || isNoteAreaName(parentName)
 }
 
 export const getNoteNodeKind = (

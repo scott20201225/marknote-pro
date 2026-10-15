@@ -73,7 +73,12 @@ MarkNotePro 集成了以下优秀的开源与第三方项目，各组件原始�
    - License: MIT License (https://github.com/Eugeny/tabby/blob/master/LICENSE)
    - Notice: MarkNotePro 内置的终端会话管理与色盘体系参考并集成了 Tabby 开源项目的终端协议与主题调色板实现，遵循 MIT 许可证。
 
-7. MarkText & Muya (Upstream Base)
+7. PDF.js (PDF Reader & Annotation Engine)
+   - Copyright: Copyright 2024 Mozilla Foundation (https://github.com/mozilla/pdf.js)
+   - License: Apache License, Version 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+   - Notice: MarkNotePro 内置的 PDF 阅读、文本高亮、画笔涂鸦、文本编辑、图章图片与签名批注引擎基于 Mozilla PDF.js 构建，遵循 Apache License 2.0。其完整许可证文本保留在 `packages/desktop/src/pdfWebApp/pdfjs/LICENSE`。
+
+8. MarkText & Muya (Upstream Base)
    - Copyright (c) 2017-present Luo Ran
    - Copyright (c) 2018-present MarkText Contributors
    - License: MIT License

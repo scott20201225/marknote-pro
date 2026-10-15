@@ -113,6 +113,7 @@ import type { TreeFileNode, TreeNode } from './types'
 import type { GeoGebraMode, MindMapStructure } from '@shared/types/files'
 import { GEO_GEBRA_MODES } from '../../util/geogebra'
 import { MIND_MAP_STRUCTURES } from '../../util/mindmap'
+import { getPdfConfiguration } from '../../util/pdfConfiguration'
 
 const props = defineProps<{
   projectTree: TreeNode | null
@@ -296,6 +297,10 @@ const handleFileClick = (file: TreeFileNode): void => {
   }
   if (file.isKdbx || /\.kdbx$/i.test(pathname)) {
     void window.electron.ipcRenderer.invoke('mt::kdbx::open', pathname)
+    return
+  }
+  if (file.isPdf || /\.pdf$/i.test(pathname)) {
+    void window.electron.ipcRenderer.invoke('mt::pdf::open', pathname, getPdfConfiguration())
     return
   }
   const openedTab = tabs.value.find((tab) =>

@@ -73,6 +73,15 @@ export const isCodeOrTextFile = (filepath: string): boolean => {
   return hasCodeOrTextExtension(filepath)
 }
 
+export const isCodeOrTextFilePath = (pathname?: string): boolean => {
+  if (!pathname || typeof pathname !== 'string') return false
+  return hasCodeOrTextExtension(pathname)
+}
+
+export const isCodeOrTextFileName = (filename?: string): boolean => {
+  return hasCodeOrTextExtension(filename || '')
+}
+
 export const MARKDOWN_INCLUSIONS: readonly string[] = Object.freeze(
   MARKDOWN_EXTENSIONS.map((x) => '*.' + x)
 )
