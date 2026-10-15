@@ -497,8 +497,8 @@ body.marknotepro-theme-adapted .marknotepro-desktop-action svg * {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   font-size: 12px;
   line-height: 1.25;
-  font-weight: 500;
-  color: ${payload.isDark ? '#f0f3f6' : '#1f2328'};
+  font-weight: ${payload.isDark ? '500' : '450'};
+  color: ${payload.isDark ? '#f0f3f6' : '#4b5563'};
   background: ${payload.isDark ? 'rgba(30, 35, 42, 0.96)' : 'rgba(255, 255, 255, 0.96)'};
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -614,17 +614,8 @@ const syncAppMenuButtons = (): void => {
   updateAppMenuFoldoutPosition(menuBar)
 
   menuBar.querySelectorAll<HTMLButtonElement>('.toolbar-button > button').forEach(button => {
-    const rawLabel =
-      button.querySelector<HTMLElement>('.label')?.innerText?.trim() ||
-      button.getAttribute('aria-label') ||
-      button.dataset.actionTooltip ||
-      ''
-    const label = translateInternalValue(rawLabel) || rawLabel
-    if (label) {
-      button.dataset.actionTooltip = label
-      button.setAttribute('aria-label', label)
-      button.removeAttribute('title')
-    }
+    delete button.dataset.actionTooltip
+    button.removeAttribute('title')
     button.style.cursor = 'pointer'
 
     let icon = button.querySelector<HTMLSpanElement>('.marknotepro-menu-button-icon')
@@ -1383,8 +1374,20 @@ const ensureInstantTooltipObserver = (): void => {
 
   // 移上去立刻显示
   document.addEventListener('mouseover', (event) => {
-    const target = (event.target as HTMLElement | null)?.closest<HTMLElement>(
-      '#app-menu-bar .toolbar-button > button, .marknotepro-desktop-action, [data-action-tooltip]'
+    const rawTarget = event.target as HTMLElement | null
+    if (rawTarget?.closest('#app-menu-bar')) {
+      const button = rawTarget.closest('button, .toolbar-button')
+      if (button) {
+        button.removeAttribute('title')
+        if (button instanceof HTMLElement) {
+          delete button.dataset.actionTooltip
+        }
+      }
+      return
+    }
+
+    const target = rawTarget?.closest<HTMLElement>(
+      '.marknotepro-desktop-action, [data-action-tooltip]'
     )
     if (!target) return
 
@@ -1421,7 +1424,7 @@ const ensureInstantTooltipObserver = (): void => {
   document.addEventListener('mouseout', (event) => {
     const related = (event as MouseEvent).relatedTarget as HTMLElement | null
     const currentTarget = (event.target as HTMLElement | null)?.closest<HTMLElement>(
-      '#app-menu-bar .toolbar-button > button, .marknotepro-desktop-action, [data-action-tooltip]'
+      '.marknotepro-desktop-action, [data-action-tooltip]'
     )
     if (currentTarget && (!related || !currentTarget.contains(related))) {
       if (activeTooltipTarget === currentTarget) {
