@@ -326,7 +326,7 @@
       "headingNumbering": "顯示標題編號",
       "headingNumberingIncludeTopLevel": "最高層標題參與編號",
       "settings": "設定",
-      "git": "Git"
+      "git": "Git管理"
     }
   },
   "commandPalette": {
@@ -1219,7 +1219,7 @@
   "githubDesktop": {
     "ui": {
       "actions": {
-        "note": "筆記",
+        "note": "返回工作區",
         "setWorkspace": "設為筆記工作區"
       },
       "internalText": {

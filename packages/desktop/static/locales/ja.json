@@ -298,7 +298,7 @@
       "headingNumbering": "見出し番号を表示",
       "headingNumberingIncludeTopLevel": "最上位の見出しを番号付け",
       "settings": "設定",
-      "git": "Git"
+      "git": "Git管理"
     }
   },
   "commandPalette": {
@@ -1187,7 +1187,7 @@
   "githubDesktop": {
     "ui": {
       "actions": {
-        "note": "ノート",
+        "note": "ワークスペースに戻る",
         "setWorkspace": "現在のリポジトリをノート作業領域に設定"
       },
       "internalText": {

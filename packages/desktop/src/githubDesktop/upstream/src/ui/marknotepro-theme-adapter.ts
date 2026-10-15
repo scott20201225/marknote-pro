@@ -55,7 +55,7 @@ const TRANSLATABLE_ATTRIBUTES = ['title', 'aria-label', 'placeholder'] as const
 
 let currentLanguage: SupportedLanguage = 'zh-CN'
 let currentActions: MarkNoteProActionTranslations = {
-  note: 'Notes',
+  note: 'Return to Workspace',
   setWorkspace: 'Set current repository as notes workspace'
 }
 let currentInternalText: Record<string, string> = {}

@@ -333,7 +333,7 @@
       "toc": "Table of Contents",
       "headingNumbering": "Show heading numbering",
       "headingNumberingIncludeTopLevel": "Number the top-level heading",
-      "git": "Git",
+      "git": "Git Management",
       "settings": "Settings"
     }
   },
@@ -1226,7 +1226,7 @@
   "githubDesktop": {
     "ui": {
       "actions": {
-        "note": "Notes",
+        "note": "Return to Workspace",
         "setWorkspace": "Set current repository as notes workspace"
       },
       "internalText": {

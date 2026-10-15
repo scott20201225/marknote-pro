@@ -333,7 +333,7 @@
       "toc": "目录",
       "headingNumbering": "显示标题序号",
       "headingNumberingIncludeTopLevel": "最高级标题参与编号",
-      "git": "Git",
+      "git": "Git管理",
       "settings": "设置"
     }
   },
@@ -1225,7 +1225,7 @@
   "githubDesktop": {
     "ui": {
       "actions": {
-        "note": "笔记",
+        "note": "返回工作区",
         "setWorkspace": "设为笔记工作区"
       },
       "internalText": {
