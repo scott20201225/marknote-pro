@@ -50,10 +50,10 @@ jobs:
           # Push current ref
           GIT_SSH_COMMAND="ssh -i ~/.ssh/id_gitee" git push --force "${TARGET_REPO}" "${GITHUB_REF}"
 
-          # If pushing a branch, also ensure all tags are in sync
-          if [[ "${GITHUB_REF}" == refs/heads/* ]]; then
-            echo "Pushing all tags to Gitee..."
-            GIT_SSH_COMMAND="ssh -i ~/.ssh/id_gitee" git push --tags "${TARGET_REPO}" || true
-          fi
+          # Always ensure main branch commits and all tags are synchronized
+          echo "Ensuring main branch and tags are fully synchronized on Gitee..."
+          git fetch origin main || true
+          GIT_SSH_COMMAND="ssh -i ~/.ssh/id_gitee" git push --force "${TARGET_REPO}" refs/remotes/origin/main:refs/heads/main || true
+          GIT_SSH_COMMAND="ssh -i ~/.ssh/id_gitee" git push --tags "${TARGET_REPO}" || true
 
           echo "Synchronization to Gitee completed successfully."

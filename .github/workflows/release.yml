@@ -280,14 +280,30 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release edit "${RELEASE_TAG}" --draft=false --repo "${GITHUB_REPOSITORY}"
 
-      - name: Sync Release to Gitee
-        if: env.GITEE_TOKEN != ''
+      - name: Sync main branch and release to Gitee
+        if: env.GITEE_TOKEN != '' && env.GITEE_PRIVATE_KEY != ''
         env:
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+          GITEE_PRIVATE_KEY: ${{ secrets.GITEE_PRIVATE_KEY }}
           GITEE_USER: ${{ secrets.GITEE_USER || 'cmflovekm' }}
           GITEE_REPO: ${{ github.event.repository.name }}
           RELEASE_TAG: ${{ needs.resolve.outputs.release_tag }}
           RELEASE_BODY_PATH: release_body.md
           DIST_DIR: dist
-        run: python3 .github/scripts/sync-release-to-gitee.py
+        run: |
+          mkdir -p ~/.ssh
+          echo "${GITEE_PRIVATE_KEY}" > ~/.ssh/id_gitee
+          chmod 600 ~/.ssh/id_gitee
+          ssh-keyscan -t ed25519,rsa gitee.com >> ~/.ssh/known_hosts
+
+          TARGET_REPO="git@gitee.com:${GITEE_USER}/${GITEE_REPO}.git"
+
+          echo "Syncing main branch and release tags to Gitee..."
+          git fetch origin main:refs/remotes/origin/main || true
+          GIT_SSH_COMMAND="ssh -i ~/.ssh/id_gitee" git push --force "${TARGET_REPO}" refs/remotes/origin/main:refs/heads/main || true
+          GIT_SSH_COMMAND="ssh -i ~/.ssh/id_gitee" git push --tags "${TARGET_REPO}" || true
+
+          echo "Syncing release assets to Gitee..."
+          python3 .github/scripts/sync-release-to-gitee.py
+
 
