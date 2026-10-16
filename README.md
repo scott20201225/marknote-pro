@@ -8,6 +8,12 @@
   <sub>支持 Linux、macOS、Windows。</sub>
 </div>
 
+<div align="center">
+  <strong>简体中文</strong>
+  <span> | </span>
+  <a href="README_en.md">English</a>
+</div>
+
 <br>
 
 <div align="center">
