@@ -306,13 +306,20 @@ Package Formats:
 
 ## Community & Feedback
 
-MarkNotePro is under active development and rapid iteration. We have set up a community QQ group for early users to discuss workflows, report bugs, and suggest features (shared with sibling project MarkTextPro):
+We've just created a brand-new QQ feedback group (shared with sibling project MarkTextPro). **Currently, it's in an ultra-minimalist state with just the author talking to themselves (Members: 1/2000)** 🐧.
 
-- **QQ Group**: `871505001`
-- **Scan QR Code**:
+Joining now instantly grants you "Founding Member" status with 1-on-1 author attention:
+- 💡 **Pitch Ideas & Wishlists**: Have an awesome feature in mind or UX improvements? Share your thoughts, and let's bring them to life!
+- 🛠️ **Bug Reports & Feedback**: Hit a glitch or rough edge? Drop a screenshot and we'll fix it promptly.
+- 🤝 **Grow Together**: Exchange Markdown workflows, diagramming setups, and note-taking tricks to make the editor better every day.
+
+Feel free to hop in and rescue the lonely author from an empty group!
+
+- **QQ Feedback Group**: `871505001`
+- **Scan QR Code (Rescue the Author)**:
 
 <p align="left">
-  <img src="docs/assets/qq-group.jpg" alt="QQ Group" width="220">
+  <img src="docs/assets/qq-group.png" alt="QQ Feedback Group" width="220">
 </p>
 
 ## Development
