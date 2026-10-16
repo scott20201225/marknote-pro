@@ -1,0 +1,59 @@
+name: Sync to Gitee
+
+on:
+  push:
+    branches:
+      - '**'
+    tags:
+      - '**'
+  workflow_dispatch:
+
+concurrency:
+  group: sync-gitee-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    name: Mirror Repository to Gitee
+    runs-on: ubuntu-latest
+    if: github.repository_owner == 'scott20201225'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push to Gitee
+        env:
+          GITEE_PRIVATE_KEY: ${{ secrets.GITEE_PRIVATE_KEY }}
+          GITEE_USER: ${{ secrets.GITEE_USER || 'cmflovekm' }}
+          REPO_NAME: ${{ github.event.repository.name }}
+        run: |
+          if [ -z "${GITEE_PRIVATE_KEY}" ]; then
+            echo "::warning::GITEE_PRIVATE_KEY secret is not set, skipping sync."
+            exit 0
+          fi
+
+          mkdir -p ~/.ssh
+          echo "${GITEE_PRIVATE_KEY}" > ~/.ssh/id_gitee
+          chmod 600 ~/.ssh/id_gitee
+          ssh-keyscan -t ed25519,rsa gitee.com >> ~/.ssh/known_hosts
+
+          TARGET_REPO="git@gitee.com:${GITEE_USER}/${REPO_NAME}.git"
+
+          echo "Target Gitee Repo: ${TARGET_REPO}"
+          echo "Current Ref: ${GITHUB_REF}"
+
+          # Push current ref
+          GIT_SSH_COMMAND="ssh -i ~/.ssh/id_gitee" git push --force "${TARGET_REPO}" "${GITHUB_REF}"
+
+          # If pushing a branch, also ensure all tags are in sync
+          if [[ "${GITHUB_REF}" == refs/heads/* ]]; then
+            echo "Pushing all tags to Gitee..."
+            GIT_SSH_COMMAND="ssh -i ~/.ssh/id_gitee" git push --tags "${TARGET_REPO}" || true
+          fi
+
+          echo "Synchronization to Gitee completed successfully."

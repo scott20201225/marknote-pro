@@ -279,3 +279,15 @@ jobs:
           RELEASE_TAG: ${{ needs.resolve.outputs.release_tag }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release edit "${RELEASE_TAG}" --draft=false --repo "${GITHUB_REPOSITORY}"
+
+      - name: Sync Release to Gitee
+        if: env.GITEE_TOKEN != ''
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+          GITEE_USER: ${{ secrets.GITEE_USER || 'cmflovekm' }}
+          GITEE_REPO: ${{ github.event.repository.name }}
+          RELEASE_TAG: ${{ needs.resolve.outputs.release_tag }}
+          RELEASE_BODY_PATH: release_body.md
+          DIST_DIR: dist
+        run: python3 .github/scripts/sync-release-to-gitee.py
+
