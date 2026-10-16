@@ -334,7 +334,9 @@
       "headingNumbering": "Show heading numbering",
       "headingNumberingIncludeTopLevel": "Number the top-level heading",
       "git": "Git Management",
-      "settings": "Settings"
+      "settings": "Settings",
+      "expandWorkspace": "Expand Workspace",
+      "collapseWorkspace": "Collapse Workspace"
     }
   },
   "commandPalette": {

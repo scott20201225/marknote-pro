@@ -9,8 +9,11 @@
         <li
           v-for="(c, index) of sideBarIcons"
           :key="index"
+          :data-sidebar-id="c.id"
           :class="{ active: c.id === rightColumn }"
-          :aria-label="c.name()"
+          :aria-label="getIconTooltip(c)"
+          @mouseenter="showSidebarTooltip($event, getIconTooltip(c), c.id)"
+          @mouseleave="hideSidebarTooltip"
           @click="handleLeftIconClick(c.id)"
         >
           <component :is="c.icon" />
@@ -62,11 +65,12 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
+import { t } from '@/i18n'
 import { useLayoutStore } from '@/store/layout'
 import { useProjectStore } from '@/store/project'
 import { useEditorStore } from '@/store/editor'
 
-import { sideBarIcons, sideBarBottomIcons } from './help'
+import { sideBarIcons, sideBarBottomIcons, type SideBarIconEntry } from './help'
 import Tree from './tree.vue'
 import SideBarSearch from './search.vue'
 import { storeToRefs } from 'pinia'
@@ -183,6 +187,24 @@ const tooltipTop = ref(0)
 const tooltipLeft = ref(0)
 const activeIconId = ref('')
 
+const getIconTooltip = (icon: SideBarIconEntry): string => {
+  if (icon.id === 'files') {
+    return rightColumn.value === 'files'
+      ? t('sideBar.icons.collapseWorkspace')
+      : t('sideBar.icons.expandWorkspace')
+  }
+  return icon.name()
+}
+
+watch(rightColumn, () => {
+  if (tooltipVisible.value && activeIconId.value === 'files') {
+    const filesIcon = sideBarIcons.find(item => item.id === 'files')
+    if (filesIcon) {
+      tooltipText.value = getIconTooltip(filesIcon)
+    }
+  }
+})
+
 const showSidebarTooltip = (event: MouseEvent, text: string, id = ''): void => {
   if (!text) {
     tooltipVisible.value = false
@@ -249,7 +271,6 @@ onBeforeUnmount(() => {
 })
 
 const handleLeftIconClick = (name: string): void => {
-  hideSidebarTooltip()
   if (rightColumn.value === name) {
     const widthToPersist = sideBarViewWidth.value
     layoutStore.SET_LAYOUT({ rightColumn: '' })
@@ -258,6 +279,15 @@ const handleLeftIconClick = (name: string): void => {
     layoutStore.SET_LAYOUT({ rightColumn: name })
     sideBarViewWidth.value = +sideBarWidth.value
     noteListViewWidth.value = +noteListWidth.value
+  }
+
+  if (tooltipVisible.value && activeIconId.value === name) {
+    const icon = sideBarIcons.find(item => item.id === name)
+    if (icon) {
+      tooltipText.value = getIconTooltip(icon)
+    }
+  } else {
+    hideSidebarTooltip()
   }
 }
 

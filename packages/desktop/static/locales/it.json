@@ -298,7 +298,9 @@
       "headingNumbering": "Mostra numerazione titoli",
       "headingNumberingIncludeTopLevel": "Numera il titolo di livello superiore",
       "settings": "Impostazioni",
-      "git": "Gestione Git"
+      "git": "Gestione Git",
+      "expandWorkspace": "Espandi area di lavoro",
+      "collapseWorkspace": "Comprimi area di lavoro"
     }
   },
   "commandPalette": {

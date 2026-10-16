@@ -298,7 +298,9 @@
       "headingNumbering": "見出し番号を表示",
       "headingNumberingIncludeTopLevel": "最上位の見出しを番号付け",
       "settings": "設定",
-      "git": "Git管理"
+      "git": "Git管理",
+      "expandWorkspace": "ワークスペースを展開",
+      "collapseWorkspace": "ワークスペースを折りたたむ"
     }
   },
   "commandPalette": {

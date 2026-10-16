@@ -298,7 +298,9 @@
       "headingNumbering": "Başlık numaralarını göster",
       "headingNumberingIncludeTopLevel": "En üst düzey başlığı numaralandır",
       "settings": "Ayarlar",
-      "git": "Git Yönetimi"
+      "git": "Git Yönetimi",
+      "expandWorkspace": "Çalışma alanını genişlet",
+      "collapseWorkspace": "Çalışma alanını daralt"
     }
   },
   "commandPalette": {

@@ -298,7 +298,9 @@
       "headingNumbering": "제목 번호 표시",
       "headingNumberingIncludeTopLevel": "최상위 제목 번호 매기기",
       "settings": "설정",
-      "git": "Git 관리"
+      "git": "Git 관리",
+      "expandWorkspace": "작업 영역 확장",
+      "collapseWorkspace": "작업 영역 축소"
     }
   },
   "commandPalette": {

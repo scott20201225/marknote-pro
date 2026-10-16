@@ -298,7 +298,9 @@
       "headingNumbering": "Überschriftennummerierung anzeigen",
       "headingNumberingIncludeTopLevel": "Höchste Überschrift nummerieren",
       "settings": "Einstellungen",
-      "git": "Git-Verwaltung"
+      "git": "Git-Verwaltung",
+      "expandWorkspace": "Arbeitsbereich erweitern",
+      "collapseWorkspace": "Arbeitsbereich einklappen"
     }
   },
   "commandPalette": {

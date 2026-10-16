@@ -334,7 +334,9 @@
       "headingNumbering": "显示标题序号",
       "headingNumberingIncludeTopLevel": "最高级标题参与编号",
       "git": "Git管理",
-      "settings": "设置"
+      "settings": "设置",
+      "expandWorkspace": "展开工作区",
+      "collapseWorkspace": "折叠工作区"
     }
   },
   "commandPalette": {
