@@ -26,7 +26,20 @@ def main():
         with open(body_file, "r", encoding="utf-8") as f:
             body = f.read()
 
-    body += f"\n\n---\n**GitHub 官方 Release 地址与完整安装包**: https://github.com/scott20201225/{repo}/releases/tag/{tag}\n"
+    sibling_repo = "marktext-pro" if "marknote" in repo.lower() else "marknote-pro"
+    sibling_title = "MarkTextPro（自由文件与项目工作区）" if "marknote" in repo.lower() else "MarkNotePro（结构化本地笔记工作台）"
+    current_title = "MarkNotePro（结构化本地笔记工作台）" if "marknote" in repo.lower() else "MarkTextPro（自由文件与项目工作区）"
+
+    body += (
+        f"\n\n---\n"
+        f"### 🔗 项目地址与兄弟项目导航\n\n"
+        f"- **当前项目 {current_title} Gitee 仓库**: https://gitee.com/{user}/{repo}\n"
+        f"- **当前项目 {current_title} Gitee 发行版下载**: https://gitee.com/{user}/{repo}/releases\n"
+        f"- **当前项目 {current_title} GitHub 官方 Release**: https://github.com/scott20201225/{repo}/releases/tag/{tag}\n"
+        f"- **兄弟项目 {sibling_title} Gitee 仓库**: https://gitee.com/{user}/{sibling_repo}\n"
+        f"- **兄弟项目 {sibling_title} Gitee 发行版下载**: https://gitee.com/{user}/{sibling_repo}/releases\n"
+        f"- **兄弟项目 {sibling_title} GitHub 仓库**: https://github.com/scott20201225/{sibling_repo}\n"
+    )
 
     # 1. Check if release exists on Gitee
     check_url = f"https://gitee.com/api/v5/repos/{user}/{repo}/releases/tags/{tag}?access_token={token}"

@@ -36,7 +36,13 @@ MarkNotePro 和 MarkTextPro 是两个相互独立、但能力互补的产品：
 
 相关地址：
 
-- MarkNotePro GitHub：https://github.com/scott20201225/marknote-pro
-- MarkNotePro 下载：https://github.com/scott20201225/marknote-pro/releases/latest
-- MarkTextPro GitHub：https://github.com/scott20201225/marktext-pro
-- MarkTextPro 下载：https://github.com/scott20201225/marktext-pro/releases/latest
+- **MarkNotePro**（结构化本地笔记与多模态知识工作台）：
+  - GitHub 仓库：https://github.com/scott20201225/marknote-pro
+  - Gitee 镜像仓库（国内推荐）：https://gitee.com/cmflovekm/marknote-pro
+  - GitHub Releases 下载：https://github.com/scott20201225/marknote-pro/releases/latest
+  - Gitee 发行版下载（国内高速）：https://gitee.com/cmflovekm/marknote-pro/releases
+- **MarkTextPro**（自由文件与项目多模态工作区）：
+  - GitHub 仓库：https://github.com/scott20201225/marktext-pro
+  - Gitee 镜像仓库（国内推荐）：https://gitee.com/cmflovekm/marktext-pro
+  - GitHub Releases 下载：https://github.com/scott20201225/marktext-pro/releases/latest
+  - Gitee 发行版下载（国内高速）：https://gitee.com/cmflovekm/marktext-pro/releases
