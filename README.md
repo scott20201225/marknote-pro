@@ -79,13 +79,13 @@ MarkNotePro 和 MarkTextPro 是两个相互独立、但能力互补的产品：
 - **MarkNotePro**（结构化本地笔记与多模态知识工作台）：
   - GitHub 仓库：[https://github.com/scott20201225/marknote-pro](https://github.com/scott20201225/marknote-pro)
   - Gitee 镜像仓库（国内推荐）：[https://gitee.com/cmflovekm/marknote-pro](https://gitee.com/cmflovekm/marknote-pro)
-  - GitHub Releases 下载：[https://github.com/scott20201225/marknote-pro/releases/latest](https://github.com/scott20201225/marknote-pro/releases/latest)
-  - Gitee 发行版下载（国内高速）：[https://gitee.com/cmflovekm/marknote-pro/releases](https://gitee.com/cmflovekm/marknote-pro/releases)
+  - 国内高速免翻墙下载（加速直链）：[https://ghfast.top/https://github.com/scott20201225/marknote-pro/releases/latest](https://ghfast.top/https://github.com/scott20201225/marknote-pro/releases/latest)
+  - GitHub Releases 官方下载：[https://github.com/scott20201225/marknote-pro/releases/latest](https://github.com/scott20201225/marknote-pro/releases/latest)
 - **MarkTextPro**（自由文件与项目多模态工作区）：
   - GitHub 仓库：[https://github.com/scott20201225/marktext-pro](https://github.com/scott20201225/marktext-pro)
   - Gitee 镜像仓库（国内推荐）：[https://gitee.com/cmflovekm/marktext-pro](https://gitee.com/cmflovekm/marktext-pro)
-  - GitHub Releases 下载：[https://github.com/scott20201225/marktext-pro/releases/latest](https://github.com/scott20201225/marktext-pro/releases/latest)
-  - Gitee 发行版下载（国内高速）：[https://gitee.com/cmflovekm/marktext-pro/releases](https://gitee.com/cmflovekm/marktext-pro/releases)
+  - 国内高速免翻墙下载（加速直链）：[https://ghfast.top/https://github.com/scott20201225/marktext-pro/releases/latest](https://ghfast.top/https://github.com/scott20201225/marktext-pro/releases/latest)
+  - GitHub Releases 官方下载：[https://github.com/scott20201225/marktext-pro/releases/latest](https://github.com/scott20201225/marktext-pro/releases/latest)
 
 两者均内置 **Markdown、Draw.io、GeoGebra、MindMap、KDBX 加密密码库（含 2FA & SSH 终端直连）与 PDF 专业阅读批注**等本地核心能力，并都深度集成 Git 工作区版本管理；这些能力与 Git 是二者的共同底座。选择时更应该看你需要“结构化多模态笔记工作台”还是“自由多模态项目文件管理器”。
 
@@ -319,12 +319,24 @@ MarkNotePro 将 Git 作为知识工作区的核心版本控制与跨设备同步
 
 ![platform](https://img.shields.io/static/v1.svg?label=Platform&message=Linux%20x64%20|%20macOS%20x64%2Farm64%20|%20Windows%20x64%2Farm64&style=for-the-badge)
 
-国内用户推荐使用 Gitee 发行版下载安装包，下载速度更快；海外用户可使用 GitHub Releases：
+国内用户推荐使用免翻墙高速加速直链下载安装包（速度可达 10~30MB/s）；海外用户可使用 GitHub Releases：
 
-- **Gitee 发行版下载（国内高速推荐）**：[https://gitee.com/cmflovekm/marknote-pro/releases](https://gitee.com/cmflovekm/marknote-pro/releases)
+- **国内高速免翻墙下载（加速镜像）**：[https://ghfast.top/https://github.com/scott20201225/marknote-pro/releases/latest](https://ghfast.top/https://github.com/scott20201225/marknote-pro/releases/latest)
 - **GitHub 官方 Releases 下载**：[https://github.com/scott20201225/marknote-pro/releases/latest](https://github.com/scott20201225/marknote-pro/releases/latest)
+- **Gitee 镜像仓库**：[https://gitee.com/cmflovekm/marknote-pro](https://gitee.com/cmflovekm/marknote-pro)
 
-> 💡 **兄弟项目**：如果您需要管理真实自由文件夹、代码仓库与外部技术文档，请前往 [MarkTextPro Gitee 镜像](https://gitee.com/cmflovekm/marktext-pro) 或 [MarkTextPro Gitee 发行版下载](https://gitee.com/cmflovekm/marktext-pro/releases)（GitHub 对应页面：[MarkTextPro Releases](https://github.com/scott20201225/marktext-pro/releases/latest)）。
+### 常用平台极速直链下载（v1.2.2）
+
+| 操作系统 / 架构 | 安装包类型 | 国内高速直链（免翻墙直下） | GitHub 官方源 |
+| :--- | :--- | :--- | :--- |
+| **macOS (Apple Silicon M系列)** | `.dmg` | [高速下载](https://ghfast.top/https://github.com/scott20201225/marknote-pro/releases/download/v1.2.2/marknotepro-mac-arm64-1.2.2.dmg) | [官方下载](https://github.com/scott20201225/marknote-pro/releases/download/v1.2.2/marknotepro-mac-arm64-1.2.2.dmg) |
+| **macOS (Intel x64)** | `.dmg` | [高速下载](https://ghfast.top/https://github.com/scott20201225/marknote-pro/releases/download/v1.2.2/marknotepro-mac-x64-1.2.2.dmg) | [官方下载](https://github.com/scott20201225/marknote-pro/releases/download/v1.2.2/marknotepro-mac-x64-1.2.2.dmg) |
+| **Windows 64位 (x64)** | `.exe` 安装包 | [高速下载](https://ghfast.top/https://github.com/scott20201225/marknote-pro/releases/download/v1.2.2/marknotepro-win-x64-1.2.2-setup.exe) | [官方下载](https://github.com/scott20201225/marknote-pro/releases/download/v1.2.2/marknotepro-win-x64-1.2.2-setup.exe) |
+| **Windows 便携版** | `.zip` 免安装 | [高速下载](https://ghfast.top/https://github.com/scott20201225/marknote-pro/releases/download/v1.2.2/marknotepro-win-x64-1.2.2.zip) | [官方下载](https://github.com/scott20201225/marknote-pro/releases/download/v1.2.2/marknotepro-win-x64-1.2.2.zip) |
+| **Linux (Ubuntu/Debian)** | `.deb` | [高速下载](https://ghfast.top/https://github.com/scott20201225/marknote-pro/releases/download/v1.2.2/marknotepro-linux-amd64-1.2.2.deb) | [官方下载](https://github.com/scott20201225/marknote-pro/releases/download/v1.2.2/marknotepro-linux-amd64-1.2.2.deb) |
+| **Linux (Fedora/CentOS)** | `.rpm` | [高速下载](https://ghfast.top/https://github.com/scott20201225/marknote-pro/releases/download/v1.2.2/marknotepro-linux-x86_64-1.2.2.rpm) | [官方下载](https://github.com/scott20201225/marknote-pro/releases/download/v1.2.2/marknotepro-linux-x86_64-1.2.2.rpm) |
+
+> 💡 **兄弟项目**：如果您需要管理真实自由文件夹、代码仓库与外部技术文档，请前往 [MarkTextPro Gitee 镜像](https://gitee.com/cmflovekm/marktext-pro) 或 [MarkTextPro 国内高速下载](https://ghfast.top/https://github.com/scott20201225/marktext-pro/releases/latest)（GitHub 对应页面：[MarkTextPro Releases](https://github.com/scott20201225/marktext-pro/releases/latest)）。
 
 安装包格式对应：
 
