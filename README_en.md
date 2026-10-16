@@ -304,6 +304,17 @@ Package Formats:
 - Windows: `marknotepro-win-(x64|arm64)-%version%-setup.exe`
 - Linux: `deb`, `rpm`, `snap`, `tar.gz` packages (see Baidu Netdisk or Release page).
 
+## Community & Feedback
+
+MarkNotePro is under active development and rapid iteration. We have set up a community QQ group for early users to discuss workflows, report bugs, and suggest features (shared with sibling project MarkTextPro):
+
+- **QQ Group**: `871505001`
+- **Scan QR Code**:
+
+<p align="left">
+  <img src="docs/assets/qq-group.jpg" alt="QQ Group" width="220">
+</p>
+
 ## Development
 
 ```bash
