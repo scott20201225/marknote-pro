@@ -70,12 +70,12 @@ MarkNotePro and MarkTextPro are two independent, complementary products:
 ## 🔗 相关地址与下载 / Official Links & Downloads
 
 - **MarkNotePro**（结构化本地笔记与多模态知识工作台 / Structured Local Notes Workbench）:
-  - 🚀 国内免翻墙高速直下 / Fast Mirror Download: [https://ghfast.top/https://github.com/scott20201225/marknote-pro/releases/latest](https://ghfast.top/https://github.com/scott20201225/marknote-pro/releases/latest)
-  - GitHub 官方 Releases 下载 / Official Download: [https://github.com/scott20201225/marknote-pro/releases/latest](https://github.com/scott20201225/marknote-pro/releases/latest)
-  - Gitee 镜像仓库 / Mirror (China): [https://gitee.com/cmflovekm/marknote-pro](https://gitee.com/cmflovekm/marknote-pro)
-  - GitHub 仓库 / Official Repo: [https://github.com/scott20201225/marknote-pro](https://github.com/scott20201225/marknote-pro)
+  - 百度网盘下载 / Baidu Netdisk: https://pan.baidu.com/s/17s0JYmzCbqhq2AHpKa2YAA?pwd=dec2
+  - GitHub 官方 Releases 下载 / Official Download: https://github.com/scott20201225/marknote-pro/releases/latest
+  - Gitee 镜像仓库 / Mirror (China): https://gitee.com/cmflovekm/marknote-pro
+  - GitHub 仓库 / Official Repo: https://github.com/scott20201225/marknote-pro
 - **MarkTextPro**（自由文件与项目多模态工作区 / Free File & Project Workspace）:
-  - 🚀 国内免翻墙高速直下 / Fast Mirror Download: [https://ghfast.top/https://github.com/scott20201225/marktext-pro/releases/latest](https://ghfast.top/https://github.com/scott20201225/marktext-pro/releases/latest)
-  - GitHub 官方 Releases 下载 / Official Download: [https://github.com/scott20201225/marktext-pro/releases/latest](https://github.com/scott20201225/marktext-pro/releases/latest)
-  - Gitee 镜像仓库 / Mirror (China): [https://gitee.com/cmflovekm/marktext-pro](https://gitee.com/cmflovekm/marktext-pro)
-  - GitHub 仓库 / Official Repo: [https://github.com/scott20201225/marktext-pro](https://github.com/scott20201225/marktext-pro)
+  - 百度网盘下载 / Baidu Netdisk: https://pan.baidu.com/s/1UVWciYMIAZmI6y-H9KUuNQ?pwd=ddun
+  - GitHub 官方 Releases 下载 / Official Download: https://github.com/scott20201225/marktext-pro/releases/latest
+  - Gitee 镜像仓库 / Mirror (China): https://gitee.com/cmflovekm/marktext-pro
+  - GitHub 仓库 / Official Repo: https://github.com/scott20201225/marktext-pro

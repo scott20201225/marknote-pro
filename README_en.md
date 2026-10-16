@@ -77,15 +77,15 @@ MarkNotePro and MarkTextPro are two independent, complementary products:
 Related Addresses:
 
 - **MarkNotePro** (Structured local notes & multimodal knowledge workbench):
+  - Baidu Netdisk Download (Recommended in China): [https://pan.baidu.com/s/17s0JYmzCbqhq2AHpKa2YAA?pwd=dec2](https://pan.baidu.com/s/17s0JYmzCbqhq2AHpKa2YAA?pwd=dec2)
+  - GitHub Official Releases: [https://github.com/scott20201225/marknote-pro/releases/latest](https://github.com/scott20201225/marknote-pro/releases/latest)
   - GitHub Repository: [https://github.com/scott20201225/marknote-pro](https://github.com/scott20201225/marknote-pro)
   - Gitee Mirror (Recommended for China): [https://gitee.com/cmflovekm/marknote-pro](https://gitee.com/cmflovekm/marknote-pro)
-  - Fast Mirror Download (Mainland China / No VPN): [https://ghfast.top/https://github.com/scott20201225/marknote-pro/releases/latest](https://ghfast.top/https://github.com/scott20201225/marknote-pro/releases/latest)
-  - GitHub Official Releases: [https://github.com/scott20201225/marknote-pro/releases/latest](https://github.com/scott20201225/marknote-pro/releases/latest)
 - **MarkTextPro** (Free file & project multimodal workspace):
+  - Baidu Netdisk Download (Recommended in China): [https://pan.baidu.com/s/1UVWciYMIAZmI6y-H9KUuNQ?pwd=ddun](https://pan.baidu.com/s/1UVWciYMIAZmI6y-H9KUuNQ?pwd=ddun)
+  - GitHub Official Releases: [https://github.com/scott20201225/marktext-pro/releases/latest](https://github.com/scott20201225/marktext-pro/releases/latest)
   - GitHub Repository: [https://github.com/scott20201225/marktext-pro](https://github.com/scott20201225/marktext-pro)
   - Gitee Mirror (Recommended for China): [https://gitee.com/cmflovekm/marktext-pro](https://gitee.com/cmflovekm/marktext-pro)
-  - Fast Mirror Download (Mainland China / No VPN): [https://ghfast.top/https://github.com/scott20201225/marktext-pro/releases/latest](https://ghfast.top/https://github.com/scott20201225/marktext-pro/releases/latest)
-  - GitHub Official Releases: [https://github.com/scott20201225/marktext-pro/releases/latest](https://github.com/scott20201225/marktext-pro/releases/latest)
 
 Both integrate a Git workspace for version management, remote synchronization, and multi-device collaboration. Your choice depends on whether you need a **"structured multimodal note workbench"** or a **"free multimodal project file manager"**.
 
@@ -290,30 +290,19 @@ flowchart LR
 
 ![platform](https://img.shields.io/static/v1.svg?label=Platform&message=Linux%20x64%20|%20macOS%20x64%2Farm64%20|%20Windows%20x64%2Farm64&style=for-the-badge)
 
-Users in mainland China can use high-speed accelerated mirror links (up to 10~30MB/s without VPN); international users can download directly from GitHub Releases:
+Users in mainland China can download installers via Baidu Netdisk; international users can download directly from GitHub Releases:
 
-- **High-speed Direct Mirror Download (China Mainland)**: [https://ghfast.top/https://github.com/scott20201225/marknote-pro/releases/latest](https://ghfast.top/https://github.com/scott20201225/marknote-pro/releases/latest)
+- **Baidu Netdisk Download (Recommended in China)**: [https://pan.baidu.com/s/17s0JYmzCbqhq2AHpKa2YAA?pwd=dec2](https://pan.baidu.com/s/17s0JYmzCbqhq2AHpKa2YAA?pwd=dec2)
 - **GitHub Official Releases Download**: [https://github.com/scott20201225/marknote-pro/releases/latest](https://github.com/scott20201225/marknote-pro/releases/latest)
 - **Gitee Mirror Repository**: [https://gitee.com/cmflovekm/marknote-pro](https://gitee.com/cmflovekm/marknote-pro)
 
-### Direct High-Speed Download Links (v1.2.2)
-
-| OS / Architecture | Package Type | High-Speed Mirror Link (China) | GitHub Official Source |
-| :--- | :--- | :--- | :--- |
-| **macOS (Apple Silicon M-Series)** | `.dmg` | [Fast Download](https://ghfast.top/https://github.com/scott20201225/marknote-pro/releases/download/v1.2.2/marknotepro-mac-arm64-1.2.2.dmg) | [Official](https://github.com/scott20201225/marknote-pro/releases/download/v1.2.2/marknotepro-mac-arm64-1.2.2.dmg) |
-| **macOS (Intel x64)** | `.dmg` | [Fast Download](https://ghfast.top/https://github.com/scott20201225/marknote-pro/releases/download/v1.2.2/marknotepro-mac-x64-1.2.2.dmg) | [Official](https://github.com/scott20201225/marknote-pro/releases/download/v1.2.2/marknotepro-mac-x64-1.2.2.dmg) |
-| **Windows 64-bit (x64)** | `.exe` Setup | [Fast Download](https://ghfast.top/https://github.com/scott20201225/marknote-pro/releases/download/v1.2.2/marknotepro-win-x64-1.2.2-setup.exe) | [Official](https://github.com/scott20201225/marknote-pro/releases/download/v1.2.2/marknotepro-win-x64-1.2.2-setup.exe) |
-| **Windows Portable** | `.zip` Portable | [Fast Download](https://ghfast.top/https://github.com/scott20201225/marknote-pro/releases/download/v1.2.2/marknotepro-win-x64-1.2.2.zip) | [Official](https://github.com/scott20201225/marknote-pro/releases/download/v1.2.2/marknotepro-win-x64-1.2.2.zip) |
-| **Linux (Ubuntu/Debian)** | `.deb` | [Fast Download](https://ghfast.top/https://github.com/scott20201225/marknote-pro/releases/download/v1.2.2/marknotepro-linux-amd64-1.2.2.deb) | [Official](https://github.com/scott20201225/marknote-pro/releases/download/v1.2.2/marknotepro-linux-amd64-1.2.2.deb) |
-| **Linux (Fedora/CentOS)** | `.rpm` | [Fast Download](https://ghfast.top/https://github.com/scott20201225/marknote-pro/releases/download/v1.2.2/marknotepro-linux-x86_64-1.2.2.rpm) | [Official](https://github.com/scott20201225/marknote-pro/releases/download/v1.2.2/marknotepro-linux-x86_64-1.2.2.rpm) |
-
-> 💡 **Sibling Project**: If you need to manage authentic local folders, code repositories, and external tech documents, visit [MarkTextPro Gitee Mirror](https://gitee.com/cmflovekm/marktext-pro) or [MarkTextPro Fast Download](https://ghfast.top/https://github.com/scott20201225/marktext-pro/releases/latest) (GitHub page: [MarkTextPro Releases](https://github.com/scott20201225/marktext-pro/releases/latest)).
+> 💡 **Sibling Project**: If you need to manage authentic local folders, code repositories, and external tech documents, visit [MarkTextPro Baidu Netdisk Download](https://pan.baidu.com/s/1UVWciYMIAZmI6y-H9KUuNQ?pwd=ddun) or [MarkTextPro Gitee Mirror](https://gitee.com/cmflovekm/marktext-pro) (GitHub page: [MarkTextPro Releases](https://github.com/scott20201225/marktext-pro/releases/latest)).
 
 Package Formats:
 
 - macOS: `marknotepro-mac-(arm64|x64)-%version%.dmg`
 - Windows: `marknotepro-win-(x64|arm64)-%version%-setup.exe`
-- Linux: `deb`, `rpm`, `snap`, `tar.gz` packages (see Release page).
+- Linux: `deb`, `rpm`, `snap`, `tar.gz` packages (see Baidu Netdisk or Release page).
 
 ## Development
 
