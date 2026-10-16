@@ -1,5 +1,3 @@
-## 🇨🇳 中文说明
-
 ### 产品定位
 
 MarkNotePro 是一款集成 Git、Draw.io、GeoGebra、MindMap 思维导图、KDBX 加密密码库（含 2FA & SSH 终端直连）与 PDF 专业阅读批注的本地结构化笔记与多模态知识工作台。它面向长期笔记、个人知识库、工程绘图、数学建模、思维导图、密钥管理、专业资料管理以及 PDF 批注阅读，使用“笔记工作区 + 分区组 + 分区 + 多模态文档（Markdown / Draw.io / GeoGebra / MindMap / KDBX / PDF）”的结构组织内容，所有模块均可本地离线使用，并通过内置 Git 工作区完成版本管理、远程同步和多设备协作。
@@ -36,9 +34,25 @@ MarkNotePro 和 MarkTextPro 是两个相互独立、但能力互补的产品：
 - **严禁将 KDBX 密码库暴露到公有仓库**：即便 KDBX 文件拥有工业级强加密和独立主密码保护，**切勿将其推送到任何公开仓库（Public Repository）**！公开发布密码库会使其面临无限期离线字典与暴力破解的风险。如果项目为开源公有仓库，请务必在 `.gitignore` 中加入 `*.kdbx` 排除密码库。
 - **设置高强度主密码**：KDBX 密码库的安全防线完全取决于主密码强度。软件支持 8-16 位大小写字母及数字，强烈建议设置满 16 位混合大小写字母与数字的高强度密码，杜绝弱密码与重复密码。
 
----
+### 交流与反馈
 
-## 🇬🇧 English Description
+刚顺手建了一个 QQ 交流反馈群（与兄弟项目 MarkTextPro 共享），**目前群里正处于极简的“群主与自己面面相觑”阶段（成员：1/2000）** 🐧。
+
+现在进群不仅妥妥是**元老级元勋**，还能享受“作者 1 对 1 秒回级催更与答疑”的专属 VIP 待遇：
+- 💡 **提想法与脑洞**：想要什么新功能、期待什么样的知识库/笔记交互、哪怕再天马行空的想法，随时来提，没准下一个版本就做出来了；
+- 🛠️ **捉虫与吐槽反馈**：遇到 Bug、偶发卡顿、排版不顺手，随时发截图，作者第一时间跟进修复；
+- 🤝 **交流与共同进步**：探讨 Markdown 写作流、思维导图、学术笔记体系，一起把工具打磨得越来越好用！
+
+随时欢迎进群打破沉默，拯救独自对着屏幕沉思的群主～
+
+- **QQ 交流反馈群**：`871505001`
+- **扫码加入（拯救群主）**：
+
+<p align="left">
+  <img src="https://raw.githubusercontent.com/scott20201225/marknote-pro/main/docs/assets/qq-group.png" alt="QQ 交流反馈群" width="220">
+</p>
+
+---
 
 ### Overview
 
@@ -65,6 +79,24 @@ MarkNotePro and MarkTextPro are two independent, complementary products:
 - **Never Expose KDBX Keystores to Public Repositories**: Even with strong encryption, never push `.kdbx` files to public repositories. Add `*.kdbx` to `.gitignore`.
 - **Use Strong Master Passwords**: We strongly recommend setting a full 16-character mixed-case alphanumeric master password.
 
+### Community & Feedback
+
+We've just created a brand-new QQ feedback group (shared with sibling project MarkTextPro). **Currently, it's in an ultra-minimalist state with just the author talking to themselves (Members: 1/2000)** 🐧.
+
+Joining now instantly grants you "Founding Member" status with 1-on-1 author attention:
+- 💡 **Pitch Ideas & Wishlists**: Have an awesome feature in mind or UX improvements? Share your thoughts, and let's bring them to life!
+- 🛠️ **Bug Reports & Feedback**: Hit a glitch or rough edge? Drop a screenshot and we'll fix it promptly.
+- 🤝 **Grow Together**: Exchange Markdown workflows, diagramming setups, and note-taking tricks to make the editor better every day.
+
+Feel free to hop in and rescue the lonely author from an empty group!
+
+- **QQ Feedback Group**: `871505001`
+- **Scan QR Code (Rescue the Author)**:
+
+<p align="left">
+  <img src="https://raw.githubusercontent.com/scott20201225/marknote-pro/main/docs/assets/qq-group.png" alt="QQ Feedback Group" width="220">
+</p>
+
 ---
 
 ## 🔗 相关地址与下载 / Official Links & Downloads
@@ -72,10 +104,10 @@ MarkNotePro and MarkTextPro are two independent, complementary products:
 - **MarkNotePro**（结构化本地笔记与多模态知识工作台 / Structured Local Notes Workbench）:
   - 百度网盘下载 / Baidu Netdisk: https://pan.baidu.com/s/17s0JYmzCbqhq2AHpKa2YAA?pwd=dec2
   - GitHub 官方 Releases 下载 / Official Download: https://github.com/scott20201225/marknote-pro/releases/latest
-  - Gitee 镜像仓库 / Mirror (China): https://gitee.com/cmflovekm/marknote-pro
+  - Gitee 镜像仓库 / Mirror: https://gitee.com/cmflovekm/marknote-pro
   - GitHub 仓库 / Official Repo: https://github.com/scott20201225/marknote-pro
 - **MarkTextPro**（自由文件与项目多模态工作区 / Free File & Project Workspace）:
   - 百度网盘下载 / Baidu Netdisk: https://pan.baidu.com/s/1UVWciYMIAZmI6y-H9KUuNQ?pwd=ddun
   - GitHub 官方 Releases 下载 / Official Download: https://github.com/scott20201225/marktext-pro/releases/latest
-  - Gitee 镜像仓库 / Mirror (China): https://gitee.com/cmflovekm/marktext-pro
+  - Gitee 镜像仓库 / Mirror: https://gitee.com/cmflovekm/marktext-pro
   - GitHub 仓库 / Official Repo: https://github.com/scott20201225/marktext-pro
