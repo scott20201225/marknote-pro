@@ -34,24 +34,6 @@ MarkNotePro 和 MarkTextPro 是两个相互独立、但能力互补的产品：
 - **严禁将 KDBX 密码库暴露到公有仓库**：即便 KDBX 文件拥有工业级强加密和独立主密码保护，**切勿将其推送到任何公开仓库（Public Repository）**！公开发布密码库会使其面临无限期离线字典与暴力破解的风险。如果项目为开源公有仓库，请务必在 `.gitignore` 中加入 `*.kdbx` 排除密码库。
 - **设置高强度主密码**：KDBX 密码库的安全防线完全取决于主密码强度。软件支持 8-16 位大小写字母及数字，强烈建议设置满 16 位混合大小写字母与数字的高强度密码，杜绝弱密码与重复密码。
 
-### 交流与反馈
-
-刚顺手建了一个 QQ 交流反馈群（与兄弟项目 MarkTextPro 共享），**目前群里正处于极简的“群主与自己面面相觑”阶段（成员：1/2000）** 🐧。
-
-现在进群不仅妥妥是**元老级元勋**，还能享受“作者 1 对 1 秒回级催更与答疑”的专属 VIP 待遇：
-- 💡 **提想法与脑洞**：想要什么新功能、期待什么样的知识库/笔记交互、哪怕再天马行空的想法，随时来提，没准下一个版本就做出来了；
-- 🛠️ **捉虫与吐槽反馈**：遇到 Bug、偶发卡顿、排版不顺手，随时发截图，作者第一时间跟进修复；
-- 🤝 **交流与共同进步**：探讨 Markdown 写作流、思维导图、学术笔记体系，一起把工具打磨得越来越好用！
-
-随时欢迎进群打破沉默，拯救独自对着屏幕沉思的群主～
-
-- **QQ 交流反馈群**：`871505001`
-- **扫码加入（拯救群主）**：
-
-<p align="left">
-  <img src="https://raw.githubusercontent.com/scott20201225/marknote-pro/main/docs/assets/qq-group.png" alt="QQ 交流反馈群" width="220">
-</p>
-
 ---
 
 ### Overview
@@ -78,24 +60,6 @@ MarkNotePro and MarkTextPro are two independent, complementary products:
 - **Strongly Recommend Private Repositories**: Please set remote Git repositories (GitHub, Gitee, GitLab) to **Private** to prevent personal notes, tech assets, and server credentials from being publicly indexed.
 - **Never Expose KDBX Keystores to Public Repositories**: Even with strong encryption, never push `.kdbx` files to public repositories. Add `*.kdbx` to `.gitignore`.
 - **Use Strong Master Passwords**: We strongly recommend setting a full 16-character mixed-case alphanumeric master password.
-
-### Community & Feedback
-
-We've just created a brand-new QQ feedback group (shared with sibling project MarkTextPro). **Currently, it's in an ultra-minimalist state with just the author talking to themselves (Members: 1/2000)** 🐧.
-
-Joining now instantly grants you "Founding Member" status with 1-on-1 author attention:
-- 💡 **Pitch Ideas & Wishlists**: Have an awesome feature in mind or UX improvements? Share your thoughts, and let's bring them to life!
-- 🛠️ **Bug Reports & Feedback**: Hit a glitch or rough edge? Drop a screenshot and we'll fix it promptly.
-- 🤝 **Grow Together**: Exchange Markdown workflows, diagramming setups, and note-taking tricks to make the editor better every day.
-
-Feel free to hop in and rescue the lonely author from an empty group!
-
-- **QQ Feedback Group**: `871505001`
-- **Scan QR Code (Rescue the Author)**:
-
-<p align="left">
-  <img src="https://raw.githubusercontent.com/scott20201225/marknote-pro/main/docs/assets/qq-group.png" alt="QQ Feedback Group" width="220">
-</p>
 
 ---
 
