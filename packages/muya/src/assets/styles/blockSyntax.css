@@ -805,6 +805,93 @@ figure.mu-diagram-block .mu-diagram-preview > svg {
     height: auto;
 }
 
+/* Diagram interactive viewer (Mermaid zoom, pan & controls) */
+figure.mu-diagram-block .mu-diagram-preview.mu-diagram-interactive {
+    position: relative;
+    overflow: hidden;
+    user-select: none;
+    cursor: grab;
+}
+
+figure.mu-diagram-block .mu-diagram-preview.mu-diagram-interactive:active {
+    cursor: grabbing;
+}
+
+figure.mu-diagram-block .mu-diagram-preview.mu-diagram-interactive > svg {
+    transform-origin: center center;
+    display: block;
+    margin: 0 auto;
+    overflow: visible;
+}
+
+.mermaid-viewer-control-panel {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    z-index: 20;
+    display: grid;
+    grid-template-columns: repeat(3, 28px);
+    grid-template-rows: repeat(3, 28px);
+    gap: 4px;
+    pointer-events: auto;
+    opacity: 0.85;
+    transition: opacity 0.2s ease-in-out;
+}
+
+figure.mu-diagram-block:hover .mermaid-viewer-control-panel {
+    opacity: 1;
+}
+
+.mermaid-viewer-control-panel button {
+    box-sizing: border-box !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px !important;
+    height: 28px !important;
+    margin: 0 !important;
+    padding: 0;
+    border: 1px solid var(--editor-color-10, rgba(128, 128, 128, 0.25));
+    border-radius: 6px;
+    background: var(--editor-bg-color, #ffffff);
+    color: var(--editor-color, #24292e);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+.mermaid-viewer-control-panel button:hover {
+    background: var(--editor-color-04, rgba(128, 128, 128, 0.12));
+    border-color: var(--editor-color-30, rgba(128, 128, 128, 0.4));
+}
+
+.mermaid-viewer-control-panel button:active {
+    transform: scale(0.92);
+}
+
+.mermaid-viewer-control-panel button.active {
+    background: var(--editor-color-10, rgba(128, 128, 128, 0.25));
+    border-color: var(--editor-color-50, rgba(128, 128, 128, 0.6));
+}
+
+.mermaid-viewer-control-panel button svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+    pointer-events: none;
+}
+
+.mermaid-viewer-control-panel .fit-width { grid-area: 1 / 1; }
+.mermaid-viewer-control-panel .up { grid-area: 1 / 2; }
+.mermaid-viewer-control-panel .zoom-in { grid-area: 1 / 3; }
+.mermaid-viewer-control-panel .left { grid-area: 2 / 1; }
+.mermaid-viewer-control-panel .reset { grid-area: 2 / 2; }
+.mermaid-viewer-control-panel .right { grid-area: 2 / 3; }
+.mermaid-viewer-control-panel .down { grid-area: 3 / 2; }
+.mermaid-viewer-control-panel .zoom-out { grid-area: 3 / 3; }
+
+
 figure.mu-html-block .mu-html-preview > pre {
     padding: 0 1rem;
 
@@ -885,20 +972,22 @@ figure.mu-diagram-block .mu-diagram-preview svg.sequence path[fill='#fff'] {
 
 figure.mu-active.mu-math-block > div.mu-math-preview,
 figure.mu-active.mu-diagram-block > div.mu-diagram-preview {
-    position: absolute;
-    top: calc(100% + 20px);
-    left: 50%;
+    position: absolute !important;
+    top: calc(100% + 20px) !important;
+    left: 50% !important;
     z-index: 10000;
 
-    box-sizing: border-box;
-    width: 100%;
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
     padding: 0.5rem;
 
     background: var(--float-bg-color);
     border: 1px solid var(--float-border-color);
     border-radius: 4px;
     box-shadow: 0 2px 12px 0 rgb(0 0 0 / 10%);
-    transform: translateX(-50%);
+    transform: translateX(-50%) !important;
 }
 
 figure.mu-math-block span.mu-codeblock-content:first-of-type:empty::after {

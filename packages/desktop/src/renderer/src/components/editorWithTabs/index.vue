@@ -5,14 +5,18 @@
   >
     <div class="container">
       <toc
-        v-if="showDocumentToc"
+        v-if="showDocumentToc && hasMarkdownFile"
         class="document-toc-panel"
         @close="layoutStore.TOGGLE_DOCUMENT_TOC()"
       />
-      <div class="editor-content">
+      <div
+        ref="editorContentRef"
+        class="editor-content"
+        :style="adaptiveEditorStyle"
+      >
         <div class="document-editor-controls">
           <button
-            v-if="!showDocumentToc"
+            v-if="!showDocumentToc && hasMarkdownFile"
             class="document-editor-control"
             type="button"
             :title="t('sideBar.icons.toc')"
@@ -46,9 +50,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useLayoutStore } from '@/store/layout'
 import { useEditorStore } from '@/store/editor'
+import { usePreferencesStore } from '@/store/preferences'
 import { storeToRefs } from 'pinia'
 import { Memo } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
@@ -58,6 +63,7 @@ import EditorSearch from '../search/index.vue'
 import TabNotifications from './notifications.vue'
 import Toc from '../sideBar/toc.vue'
 import HeadingNumberingControls from './headingNumberingControls.vue'
+import { setEditorWidth } from '@/util/theme'
 
 defineProps<{
   markdown: string
@@ -74,17 +80,117 @@ defineProps<{
 const { t } = useI18n()
 const layoutStore = useLayoutStore()
 const editorStore = useEditorStore()
+const preferencesStore = usePreferencesStore()
 const { effectiveSideBarWidth, showDocumentToc } = storeToRefs(layoutStore)
 const { currentFile } = storeToRefs(editorStore)
+const { editorLineWidth } = storeToRefs(preferencesStore)
+
+const editorContentRef = ref<HTMLElement | null>(null)
+const contentWidth = ref<number>(0)
+let contentResizeObserver: ResizeObserver | null = null
+
+const updateContentWidth = () => {
+  if (editorContentRef.value) {
+    contentWidth.value = editorContentRef.value.clientWidth
+  }
+}
+
 const hasMarkdownFile = computed(
   () =>
     !!currentFile.value &&
     !currentFile.value.isDrawing &&
     !currentFile.value.isGeoGebra &&
-    !currentFile.value.isMindMap
-    && !currentFile.value.isKdbx
+    !currentFile.value.isMindMap &&
+    !currentFile.value.isKdbx
 )
 
+const adaptiveEditorStyle = computed(() => {
+  if (editorLineWidth.value && editorLineWidth.value.trim() !== '') {
+    return {}
+  }
+
+  const width = contentWidth.value
+  if (!width || width <= 0) {
+    return {}
+  }
+
+  const isTocExpanded = showDocumentToc.value && hasMarkdownFile.value
+  let targetAreaWidth: number
+
+  if (isTocExpanded) {
+    // When TOC is open: reserve generous side margins (~14% on each side, min 80px, max 180px)
+    const sideMargin = Math.max(80, Math.min(180, Math.floor(width * 0.14)))
+    targetAreaWidth = Math.max(320, width - sideMargin * 2)
+  } else {
+    // When TOC is closed: reserve larger side margins (~16% on each side, min 100px, max 220px)
+    const sideMargin = Math.max(100, Math.min(220, Math.floor(width * 0.16)))
+    targetAreaWidth = Math.max(360, width - sideMargin * 2)
+  }
+
+  targetAreaWidth = Math.min(targetAreaWidth, width)
+
+  return {
+    '--editor-area-width': `${targetAreaWidth}px`,
+    '--editorAreaWidth': `${targetAreaWidth}px`
+  }
+})
+
+// Keep root variables in sync for floating elements / global tools when adaptive
+watch(
+  adaptiveEditorStyle,
+  (style) => {
+    if (editorLineWidth.value && editorLineWidth.value.trim() !== '') {
+      return
+    }
+    const widthStr = (style as Record<string, string>)['--editor-area-width']
+    if (widthStr) {
+      document.documentElement.style.setProperty('--editor-area-width', widthStr)
+      document.documentElement.style.setProperty('--editorAreaWidth', widthStr)
+    }
+  },
+  { immediate: true }
+)
+
+watch(editorLineWidth, (val) => {
+  if (val && val.trim() !== '') {
+    document.documentElement.style.removeProperty('--editor-area-width')
+    document.documentElement.style.removeProperty('--editorAreaWidth')
+    setEditorWidth(val)
+  } else {
+    updateContentWidth()
+  }
+})
+
+watch([showDocumentToc, hasMarkdownFile], () => {
+  nextTick(() => {
+    updateContentWidth()
+  })
+})
+
+onMounted(() => {
+  updateContentWidth()
+  if (editorContentRef.value) {
+    contentResizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.contentBoxSize && entry.contentBoxSize[0]) {
+          contentWidth.value = entry.contentBoxSize[0].inlineSize
+        } else {
+          contentWidth.value = entry.contentRect.width
+        }
+      }
+    })
+    contentResizeObserver.observe(editorContentRef.value)
+  }
+})
+
+onBeforeUnmount(() => {
+  if (contentResizeObserver) {
+    contentResizeObserver.disconnect()
+    contentResizeObserver = null
+  }
+  document.documentElement.style.removeProperty('--editor-area-width')
+  document.documentElement.style.removeProperty('--editorAreaWidth')
+})
 </script>
 
 <style scoped>

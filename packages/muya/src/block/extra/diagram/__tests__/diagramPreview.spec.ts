@@ -220,3 +220,98 @@ describe('diagramPreview — renderer theme pass-through', () => {
         });
     });
 });
+
+describe('diagramPreview — interactive diagram viewer', () => {
+    it('mounts the control panel and attaches controls when an SVG is rendered', async () => {
+        loadRendererMock.mockResolvedValue({
+            initialize: vi.fn(),
+            parse: vi.fn().mockResolvedValue(true),
+            run: vi.fn().mockImplementation(async ({ nodes }) => {
+                for (const node of nodes) {
+                    node.innerHTML = '<svg id="test-svg" width="100" height="50"><rect/></svg>';
+                }
+            }),
+        });
+
+        const { preview } = makePreview('graph TD; A-->B', 'mermaid');
+        await preview.update('graph TD; A-->B');
+
+        const panel = preview.domNode!.querySelector('.mermaid-viewer-control-panel');
+        expect(panel).not.toBeNull();
+        expect(preview.domNode!.classList.contains('mu-diagram-interactive')).toBe(true);
+
+        const zoomInBtn = panel!.querySelector('.zoom-in') as HTMLButtonElement;
+        const zoomOutBtn = panel!.querySelector('.zoom-out') as HTMLButtonElement;
+        const resetBtn = panel!.querySelector('.reset') as HTMLButtonElement;
+        const upBtn = panel!.querySelector('.up') as HTMLButtonElement;
+        const downBtn = panel!.querySelector('.down') as HTMLButtonElement;
+        const leftBtn = panel!.querySelector('.left') as HTMLButtonElement;
+        const rightBtn = panel!.querySelector('.right') as HTMLButtonElement;
+        const fitBtn = panel!.querySelector('.fit-width') as HTMLButtonElement;
+        const copyBtn = panel!.querySelector('.copy-diagram');
+
+        expect(zoomInBtn).not.toBeNull();
+        expect(zoomOutBtn).not.toBeNull();
+        expect(resetBtn).not.toBeNull();
+        expect(upBtn).not.toBeNull();
+        expect(downBtn).not.toBeNull();
+        expect(leftBtn).not.toBeNull();
+        expect(rightBtn).not.toBeNull();
+        expect(fitBtn).not.toBeNull();
+        expect(copyBtn).toBeNull();
+
+        const svg = preview.domNode!.querySelector('svg')!;
+
+        // Test zoom in
+        zoomInBtn.click();
+        expect(svg.style.transform).toBe('translate(0px, 0px) scale(1.2)');
+
+        // Test pan up
+        upBtn.click();
+        expect(svg.style.transform).toBe('translate(0px, 100px) scale(1.2)');
+
+        // Test pan right
+        rightBtn.click();
+        expect(svg.style.transform).toBe('translate(-100px, 100px) scale(1.2)');
+
+        // Test reset
+        resetBtn.click();
+        expect(svg.style.transform).toBe('translate(0px, 0px) scale(1)');
+
+        // Test fit width toggle
+        fitBtn.click();
+        expect(fitBtn.classList.contains('active')).toBe(true);
+        fitBtn.click();
+        expect(fitBtn.classList.contains('active')).toBe(false);
+
+        // Teardown
+        preview.remove();
+        expect(preview.domNode!.querySelector('.mermaid-viewer-control-panel')).toBeNull();
+    });
+
+    it('bypasses clickHandler to prevent editing when in read-only mode', async () => {
+        const { preview } = makePreview('');
+        preview.domNode!.classList.add('mu-read-only');
+
+        const mockSetCursor = vi.fn();
+        const parent = {
+            firstContentInDescendant: vi.fn(() => ({
+                setCursor: mockSetCursor,
+            })),
+        };
+        preview.parent = parent as unknown as DiagramPreview['parent'];
+
+        const event = {
+            preventDefault: vi.fn(),
+            stopPropagation: vi.fn(),
+        } as unknown as Event;
+
+        preview.clickHandler(event);
+
+        expect(event.preventDefault).toHaveBeenCalledTimes(1);
+        expect(event.stopPropagation).toHaveBeenCalledTimes(1);
+        expect(parent.firstContentInDescendant).not.toHaveBeenCalled();
+        expect(mockSetCursor).not.toHaveBeenCalled();
+    });
+});
+
