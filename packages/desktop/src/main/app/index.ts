@@ -16,6 +16,9 @@ import { normalizeAndResolvePath } from '../filesystem'
 import { normalizeIpcPath } from '../ipc/fs'
 import { normalizeMarkdownPath } from '../filesystem/markdown'
 import { registerKeyboardListeners } from '../keyboard'
+import { registerGlobalShortcuts } from '../keyboard/globalShortcuts'
+import { getCaptureWindowManager } from '../windows/captureWindow'
+import { getClipboardModalWindow } from '../windows/clipboardModal'
 import { selectTheme } from '../menu/actions/theme'
 import { dockMenu } from '../menu/templates'
 import registerSpellcheckerListeners from '../spellchecker'
@@ -425,6 +428,14 @@ class App {
       createWindow()
     }
 
+    // Register global shortcuts (Ctrl+Shift+F1 & Ctrl+Shift+F3) and warm up clipboard modal
+    try {
+      registerGlobalShortcuts()
+      getClipboardModalWindow()
+    } catch (e) {
+      log.error('[App] Failed to register global shortcuts or clipboard modal:', e)
+    }
+
     // this.shortcutCapture = new ShortcutCapture()
     // if (process.env.NODE_ENV === 'development') {
     //   this.shortcutCapture.dirname = path.resolve(path.join(__dirname, '../../../node_modules/shortcut-capture'))
@@ -774,40 +785,9 @@ class App {
       this._createEditorWindow()
     })
 
-    onInternalChannel('screen-capture', async (win: BrowserWindow) => {
-      if (isOsx) {
-        // Use macOs `screencapture` command line when in macOs system.
-        const screenshotFileName = await this.getScreenshotFileName()
-        exec('screencapture -i -c', async (err) => {
-          if (err) {
-            log.error(err)
-            return
-          }
-          // The renderer can no longer paste the clipboard bitmap via the
-          // removed `document.execCommand('paste')`, so persist the capture to a
-          // PNG and hand the path to the renderer to insert at the cursor.
-          let savedPath = ''
-          try {
-            const image = clipboard.readImage()
-            // `screencapture` leaves the clipboard untouched when the user
-            // cancels (Esc); skip so we don't insert a stale/empty image.
-            if (!image.isEmpty()) {
-              const bufferImage = image.toPNG()
-              await fsPromises.writeFile(screenshotFileName, bufferImage)
-              savedPath = screenshotFileName
-            }
-          } catch (writeErr) {
-            log.error(writeErr)
-          }
-          win.webContents.send('mt::screenshot-captured', savedPath)
-        })
-      } else {
-        // TODO: Do nothing, maybe we'll add screenCapture later on Linux and Windows.
-        // if (this.shortcutCapture) {
-        //   this.launchScreenshotWin = win
-        //   this.shortcutCapture.shortcutCapture()
-        // }
-      }
+    onInternalChannel('screen-capture', async (_win?: BrowserWindow) => {
+      const captureManager = getCaptureWindowManager()
+      await captureManager.startCapture()
     })
 
     onInternalChannel('app-create-settings-window', (category?: string) => {

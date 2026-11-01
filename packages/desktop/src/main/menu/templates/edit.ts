@@ -151,19 +151,25 @@ export default function(keybindings: Keybindings): MenuItemConstructorOptions {
         type: 'separator'
       },
       {
-        label: t('menu.edit.screenshot'),
+        label: '屏幕截图标注 (Ctrl+Shift+F1)',
         id: 'screenshot',
-        visible: isOsx,
-        accelerator: keybindings.getAccelerator(COMMANDS.EDIT_SCREENSHOT) ?? undefined,
-        click(_menuItem, browserWindow) {
-          actions.screenshot(browserWindow as BrowserWindow | undefined)
+        visible: true,
+        accelerator: 'Control+Shift+F1',
+        click() {
+          actions.screenshot()
         }
       },
       {
-        // Screenshot is macOS-only; hide its trailing separator too so
-        // Windows/Linux don't show a doubled divider here (#2997).
-        type: 'separator',
-        visible: isOsx
+        label: '剪贴板历史 (Ctrl+Shift+F3)',
+        id: 'clipboardHistory',
+        visible: true,
+        accelerator: 'Control+Shift+F3',
+        click() {
+          actions.clipboardHistory()
+        }
+      },
+      {
+        type: 'separator'
       },
       {
         // TODO: Remove this menu entry and add it to the command palette (#1408).

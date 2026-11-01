@@ -13,6 +13,7 @@ import { registerGeoGebraHandlers } from '../geogebra'
 import { registerMindMapHandlers } from '../mindmap'
 import { registerKdbxHandlers } from '../kdbx'
 import { registerTerminalHandlers } from '../terminal'
+import { registerClipboardIpcHandlers } from './clipboard'
 
 export const registerSandboxIpcHandlers = (): void => {
   registerBootInfo()
@@ -30,5 +31,6 @@ export const registerSandboxIpcHandlers = (): void => {
   registerMindMapHandlers()
   registerKdbxHandlers()
   registerTerminalHandlers()
+  registerClipboardIpcHandlers()
 }
 

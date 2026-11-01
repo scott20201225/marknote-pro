@@ -11,6 +11,8 @@ import { getKeyboardInfo, keyboardLayoutMonitor, type KeyboardInfo } from '../ke
 import keybindingsDarwin from './keybindingsDarwin'
 import keybindingsLinux from './keybindingsLinux'
 import keybindingsWindows from './keybindingsWindows'
+import { COMMANDS } from '../commands'
+import { clipboardHistory } from '../menu/actions/edit'
 import type { CommandManager } from '../commands'
 import type { AppEnvironment } from '../app/env'
 
@@ -82,6 +84,29 @@ class Keybindings {
         this.registerAccelerator(win, accelerator, () => {
           this.commandManager.execute(id, win)
         })
+      }
+    }
+
+    // Direct registration for screenshot and clipboard modal inside editor windows
+    const screenshotKeys = ['Control+Shift+F1', 'Command+Shift+F1', 'Control+Shift+1', 'Command+Shift+1']
+    for (const acc of screenshotKeys) {
+      try {
+        this.registerAccelerator(win, acc, () => {
+          this.commandManager.execute(COMMANDS.EDIT_SCREENSHOT, win)
+        })
+      } catch (e) {
+        // Ignore duplicate registration
+      }
+    }
+
+    const clipboardKeys = ['Control+Shift+F3', 'Command+Shift+F3', 'Control+Shift+3']
+    for (const acc of clipboardKeys) {
+      try {
+        this.registerAccelerator(win, acc, () => {
+          clipboardHistory()
+        })
+      } catch (e) {
+        // Ignore duplicate registration
       }
     }
   }

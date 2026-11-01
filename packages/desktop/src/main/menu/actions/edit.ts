@@ -121,8 +121,17 @@ export const nativePaste = (win: Win): void => {
   }
 }
 
-export const screenshot = (win: Win): void => {
-  ipcMain.emit('screen-capture', win)
+import { getClipboardModalWindow } from '../../windows/clipboardModal'
+import { getCaptureWindowManager } from '../../windows/captureWindow'
+
+export const screenshot = (_win?: Win): void => {
+  const captureManager = getCaptureWindowManager()
+  captureManager.startCapture()
+}
+
+export const clipboardHistory = (): void => {
+  const clipboardModal = getClipboardModalWindow()
+  clipboardModal.toggle()
 }
 
 export const lineEnding = (win: Win, lineEnding: string): void => {
