@@ -17,7 +17,7 @@ export interface ClipboardServiceEvents {
 }
 
 const MAX_HISTORY_ITEMS = 500
-const POLL_INTERVAL_MS = 400
+const POLL_INTERVAL_MS = 800
 
 export class ClipboardService extends TypedEmitter<ClipboardServiceEvents> {
   private _storageDir: string
@@ -25,6 +25,8 @@ export class ClipboardService extends TypedEmitter<ClipboardServiceEvents> {
   private _historyFilePath: string
   private _history: ClipboardItemRecord[] = []
   private _lastHash: string = ''
+  private _lastImageFingerprint: string = ''
+  private _lastTextSummary: string = ''
   private _pollTimer: NodeJS.Timeout | null = null
   private _fileWatcher: fs.FSWatcher | null = null
   private _isWritingFile: boolean = false
@@ -112,7 +114,7 @@ export class ClipboardService extends TypedEmitter<ClipboardServiceEvents> {
       }
       this._fileWatcher = fs.watch(this._historyFilePath, (eventType) => {
         if (this._isWritingFile) return
-        if (eventType === 'change' || eventType === 'rename') {
+        if (eventType === 'change') {
           setTimeout(() => {
             if (this._isWritingFile) return
             this._loadHistoryFromDisk()
@@ -128,10 +130,8 @@ export class ClipboardService extends TypedEmitter<ClipboardServiceEvents> {
   private async _saveHistoryToDisk(): Promise<void> {
     this._isWritingFile = true
     try {
-      const tmpPath = `${this._historyFilePath}.${Date.now()}.tmp`
       const data = JSON.stringify(this._history, null, 2)
-      await fsPromises.writeFile(tmpPath, data, 'utf-8')
-      await fsPromises.rename(tmpPath, this._historyFilePath)
+      await fsPromises.writeFile(this._historyFilePath, data, 'utf-8')
     } catch (err) {
       log.error('[ClipboardService] Failed to write history.json:', err)
     } finally {
@@ -178,27 +178,9 @@ export class ClipboardService extends TypedEmitter<ClipboardServiceEvents> {
         }
       }
 
-      // Check if text is a file URL or points directly to existing local files/directories
-      const text = clipboard.readText().trim()
+      const text = clipboard.readText()
       if (text.startsWith('file://')) {
         return true
-      }
-
-      const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
-      if (lines.length > 0 && lines.length <= 20) {
-        const allFiles = lines.every((line) => {
-          if ((line.startsWith('/') || /^[a-zA-Z]:[\\/]/.test(line)) && line.length < 500) {
-            try {
-              return fs.existsSync(line)
-            } catch {
-              return false
-            }
-          }
-          return false
-        })
-        if (allFiles) {
-          return true
-        }
       }
     } catch (err) {
       log.warn('[ClipboardService] Error detecting file formats:', err)
@@ -211,44 +193,82 @@ export class ClipboardService extends TypedEmitter<ClipboardServiceEvents> {
   }
 
   private async _checkClipboard(): Promise<void> {
-    // Priority 1: Check image if not empty (Lark screenshot, WeChat screenshot, macOS screenshot, browser copy image, etc.)
-    const img = clipboard.readImage()
-    if (!img.isEmpty()) {
-      const size = img.getSize()
-      if (size.width > 0 && size.height > 0) {
-        const buffer = img.toPNG()
-        const hash = crypto.createHash('md5').update(buffer).digest('hex')
-        if (hash === this._lastHash) {
+    const formats = clipboard.availableFormats()
+
+    // Priority 1: Check image if not empty
+    const hasImageFormat = formats.some((fmt) =>
+      fmt.startsWith('image/') ||
+      fmt === 'public.tiff' ||
+      fmt === 'public.png' ||
+      fmt === 'public.jpeg' ||
+      fmt === 'CF_DIB' ||
+      fmt === 'CF_BITMAP' ||
+      fmt === 'image'
+    )
+
+    if (hasImageFormat) {
+      const img = clipboard.readImage()
+      if (!img.isEmpty()) {
+        const size = img.getSize()
+        if (size.width > 0 && size.height > 0) {
+          // Zero-CPU Fast Fingerprint:
+          // Sample a tiny 8x8 corner and center patch without running full-resolution PNG encoding!
+          const sampleW = Math.min(8, size.width)
+          const sampleH = Math.min(8, size.height)
+          const sample1 = img.crop({ x: 0, y: 0, width: sampleW, height: sampleH }).getBitmap()
+          const sample2 = img.crop({
+            x: Math.floor((size.width - sampleW) / 2),
+            y: Math.floor((size.height - sampleH) / 2),
+            width: sampleW,
+            height: sampleH
+          }).getBitmap()
+
+          const fingerprint = `${size.width}x${size.height}_${crypto
+            .createHash('md5')
+            .update(sample1)
+            .update(sample2)
+            .digest('hex')}`
+
+          if (fingerprint === this._lastImageFingerprint) {
+            return
+          }
+          this._lastImageFingerprint = fingerprint
+
+          // Only when a genuine new image is confirmed, encode PNG once for persistent storage
+          const buffer = img.toPNG()
+          const hash = crypto.createHash('md5').update(buffer).digest('hex')
+          if (hash === this._lastHash) {
+            return
+          }
+
+          this._lastHash = hash
+          const fileName = `img_${Date.now()}_${hash.slice(0, 8)}.png`
+          const filePath = path.join(this._imagesDir, fileName)
+
+          try {
+            await fsPromises.writeFile(filePath, buffer)
+          } catch (err) {
+            log.error('[ClipboardService] Failed to save clipboard image file:', err)
+          }
+
+          const thumbnail = img.resize({ width: Math.min(300, size.width) }).toDataURL()
+
+          const item: ClipboardItemRecord = {
+            id: `item_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+            type: 'image',
+            content: `[Image: ${size.width}x${size.height}]`,
+            previewText: `截图 (${size.width} × ${size.height})`,
+            imagePath: filePath,
+            imageDataUrl: thumbnail,
+            width: size.width,
+            height: size.height,
+            timestamp: Date.now(),
+            hash
+          }
+
+          this._addItem(item)
           return
         }
-
-        this._lastHash = hash
-        const fileName = `img_${Date.now()}_${hash.slice(0, 8)}.png`
-        const filePath = path.join(this._imagesDir, fileName)
-
-        try {
-          await fsPromises.writeFile(filePath, buffer)
-        } catch (err) {
-          log.error('[ClipboardService] Failed to save clipboard image file:', err)
-        }
-
-        const thumbnail = img.resize({ width: Math.min(300, size.width) }).toDataURL()
-
-        const item: ClipboardItemRecord = {
-          id: `item_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-          type: 'image',
-          content: `[Image: ${size.width}x${size.height}]`,
-          previewText: `截图 (${size.width} × ${size.height})`,
-          imagePath: filePath,
-          imageDataUrl: thumbnail,
-          width: size.width,
-          height: size.height,
-          timestamp: Date.now(),
-          hash
-        }
-
-        this._addItem(item)
-        return
       }
     }
 
@@ -258,17 +278,27 @@ export class ClipboardService extends TypedEmitter<ClipboardServiceEvents> {
     }
 
     const text = clipboard.readText()
-    const html = clipboard.readHTML()
-    const rtf = clipboard.readRTF()
 
     // Priority 3: Check text / code / html
     if (text && text.trim().length > 0) {
+      // Fast summary check: length + head + tail sample avoids unnecessary full text hashing
+      const summary = `${text.length}_${text.slice(0, 40)}_${text.slice(-40)}`
+      if (summary === this._lastTextSummary) {
+        return
+      }
+
       const hash = crypto.createHash('md5').update(text).digest('hex')
       if (hash === this._lastHash) {
+        this._lastTextSummary = summary
         return
       }
 
       this._lastHash = hash
+      this._lastTextSummary = summary
+      this._lastImageFingerprint = ''
+
+      const html = clipboard.readHTML()
+      const rtf = clipboard.readRTF()
       const trimmed = text.trim()
       let type: ClipboardContentType = 'text'
 
