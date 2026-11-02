@@ -34,12 +34,21 @@ int main(int argc, char *argv[]) {
         }
         usleep(15000); // 15ms
 
-        // 4. Create and post scroll wheel event at targetPt
+        // 4. Create and post scroll wheel events at targetPt
+        // A. Post line scroll event (for standard Cocoa, Terminal, NSTableView, Finder)
         CGEventRef scrollEvent = CGEventCreateScrollWheelEvent2(NULL, kCGScrollEventUnitLine, 1, lines, 0, 0);
         if (scrollEvent) {
             CGEventSetLocation(scrollEvent, targetPt);
             CGEventPost(kCGHIDEventTap, scrollEvent);
             CFRelease(scrollEvent);
+        }
+
+        // B. Also post pixel scroll event (for modern apps like Lark, Chrome, Electron, web views)
+        CGEventRef scrollPixelEvent = CGEventCreateScrollWheelEvent2(NULL, kCGScrollEventUnitPixel, 1, lines * 15, 0, 0);
+        if (scrollPixelEvent) {
+            CGEventSetLocation(scrollPixelEvent, targetPt);
+            CGEventPost(kCGHIDEventTap, scrollPixelEvent);
+            CFRelease(scrollPixelEvent);
         }
 
         usleep(40000); // 40ms to let target window process event before restoring cursor

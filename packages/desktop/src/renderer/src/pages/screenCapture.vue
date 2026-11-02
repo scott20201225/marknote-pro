@@ -1629,28 +1629,47 @@ const currentCursor = computed(() => {
   return 'crosshair'
 })
 
-// Lark Toolbar Position Style (Right-aligned to Selection Bottom)
+// Lark Toolbar Position Style (Smart collision with Dock, Menubar, and Screen Edges)
 const toolbarPositionStyle = computed(() => {
   const sel = normSelection.value
   const toolbarWidth = 650
-  const toolbarHeight = activeTool.value === 'none' ? 48 : 96
-
-  // Lark docks toolbar to the bottom-right of selection
-  let left = sel.x + sel.width - toolbarWidth
-  let top = sel.y + sel.height + 12
+  const toolbarHeight = activeTool.value === 'none' ? 52 : 100
 
   const screenH = window.innerHeight
   const screenW = window.innerWidth
+  const DOCK_MARGIN_BOTTOM = 85 // Safe margin to avoid macOS Dock at screen bottom
+  const MENU_MARGIN_TOP = 32    // Safe margin to avoid macOS Menu Bar at screen top
 
-  // If overflowing bottom, flip to above selection
-  if (top + toolbarHeight > screenH) {
-    top = Math.max(10, sel.y - toolbarHeight - 12)
+  let left = sel.x + sel.width - toolbarWidth
+  // 1. Default: place toolbar below selection
+  let top = sel.y + sel.height + 12
+
+  // 2. If it collides with bottom edge or macOS Dock:
+  if (top + toolbarHeight > screenH - DOCK_MARGIN_BOTTOM) {
+    // Try placing ABOVE selection
+    top = sel.y - toolbarHeight - 12
+    // If it also collides with the top menu bar / screen top:
+    if (top < MENU_MARGIN_TOP) {
+      // Both top and bottom outside are cramped: place INSIDE the selection at the bottom
+      if (sel.height >= toolbarHeight + 40) {
+        top = sel.y + sel.height - toolbarHeight - 16
+      } else {
+        // Selection is short: place inside selection at top
+        top = Math.max(MENU_MARGIN_TOP + 8, sel.y + 8)
+      }
+    }
   }
 
-  // Constrain horizontally within screen
-  if (left < 10) left = 10
-  if (left + toolbarWidth > screenW - 10) {
-    left = screenW - toolbarWidth - 10
+  // 3. Constrain horizontally within screen with 12px padding
+  if (left < 12) left = 12
+  if (left + toolbarWidth > screenW - 12) {
+    left = screenW - toolbarWidth - 12
+  }
+
+  // 4. Hard safety clamp vertically
+  if (top < MENU_MARGIN_TOP) top = MENU_MARGIN_TOP
+  if (top + toolbarHeight > screenH - DOCK_MARGIN_BOTTOM) {
+    top = Math.max(MENU_MARGIN_TOP, screenH - DOCK_MARGIN_BOTTOM - toolbarHeight)
   }
 
   return {
@@ -1659,20 +1678,36 @@ const toolbarPositionStyle = computed(() => {
   }
 })
 
-// Lark Scrolling Dock Position Style
+// Lark Scrolling Dock Position Style (Smart collision with Dock, Menubar, and Screen Edges)
 const scrollingDockPositionStyle = computed(() => {
   const sel = normSelection.value
-  let left = sel.x + sel.width + 16
-  let top = sel.y
+  const dockWidth = 240
+  const dockHeight = 420
 
   const screenW = window.innerWidth
   const screenH = window.innerHeight
+  const DOCK_MARGIN_BOTTOM = 85 // Safe area for macOS Dock
+  const MENU_MARGIN_TOP = 35    // Safe area for macOS Menu Bar
 
-  if (left + 240 > screenW) {
-    left = Math.max(10, sel.x - 250)
+  // 1. Horizontal placement: try right first, then left, then inside selection
+  let left = sel.x + sel.width + 16
+  if (left + dockWidth > screenW - 12) {
+    // Try placing on left side of selection
+    left = sel.x - dockWidth - 16
+    if (left < 12) {
+      // Both sides cramped: place inside the selection on the right
+      left = Math.max(12, sel.x + sel.width - dockWidth - 16)
+    }
   }
-  if (top + 340 > screenH) {
-    top = Math.max(10, screenH - 350)
+
+  // 2. Vertical placement: align with top of selection
+  let top = sel.y
+  // If colliding with macOS Dock or bottom of screen, pull UP so all buttons remain 100% visible!
+  if (top + dockHeight > screenH - DOCK_MARGIN_BOTTOM) {
+    top = Math.max(MENU_MARGIN_TOP, screenH - DOCK_MARGIN_BOTTOM - dockHeight)
+  }
+  if (top < MENU_MARGIN_TOP) {
+    top = MENU_MARGIN_TOP
   }
 
   return {
@@ -2788,7 +2823,7 @@ onUnmounted(() => {
   overflow: hidden;
   user-select: none;
   outline: none;
-  background: #000000;
+  background: transparent !important;
 }
 
 .main-canvas {
@@ -3573,6 +3608,8 @@ onUnmounted(() => {
 .lark-scrolling-dock {
   position: absolute;
   width: 230px;
+  max-height: calc(100vh - 110px);
+  overflow-y: auto;
   background: #ffffff;
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 8px;

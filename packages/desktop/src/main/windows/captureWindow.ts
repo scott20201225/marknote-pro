@@ -132,8 +132,10 @@ export class CaptureWindowManager {
         alwaysOnTop: true,
         skipTaskbar: true,
         enableLargerThanScreen: true,
+        transparent: true,
+        hasShadow: false,
+        backgroundColor: '#00000000',
         show: false,
-        backgroundColor: '#000000',
         webPreferences: {
           preload: path.join(__dirname, '../preload/index.js'),
           sandbox: true,
