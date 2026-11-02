@@ -101,14 +101,13 @@ export class CaptureWindowManager {
 
       if (!dataUrl) {
         try {
-          const reqW = Math.max(1, Math.round(bounds.width * scaleFactor))
-          const reqH = Math.max(1, Math.round(bounds.height * scaleFactor))
-
+          // Native hardware resolution capture: pass 8192 to prevent Chromium from fractional downscaling
+          const maxDim = 8192
           const sources = await desktopCapturer.getSources({
             types: ['screen'],
             thumbnailSize: {
-              width: reqW,
-              height: reqH
+              width: maxDim,
+              height: maxDim
             }
           })
 
@@ -174,8 +173,8 @@ export class CaptureWindowManager {
         alwaysOnTop: true,
         skipTaskbar: true,
         enableLargerThanScreen: true,
-        fullscreen: false,
-        fullscreenable: false,
+        fullscreen: !isOsx, // Windows / Linux: Native fullscreen covers 100% of the screen including taskbars!
+        fullscreenable: true,
         transparent: false, // 实体不透明全屏窗口，杜绝任何透底与 DWM 混合导致的重影/双任务栏
         backgroundColor: '#000000',
         hasShadow: false,
@@ -272,18 +271,18 @@ export class CaptureWindowManager {
         app.focus({ steal: true })
       } else {
         // Windows / Linux:
-        // Explicitly set exact display bounds to cover full screen including taskbar without native fullscreen side-effects
-        const currentDisplay = this._currentPayload
-          ? { bounds: this._currentPayload.bounds }
-          : screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
-        this._win.setBounds({
-          x: currentDisplay.bounds.x,
-          y: currentDisplay.bounds.y,
-          width: currentDisplay.bounds.width,
-          height: currentDisplay.bounds.height
-        })
+        // Position window onto target display before entering native full screen to cover taskbars and bezels
+        if (this._currentPayload?.bounds) {
+          this._win.setBounds({
+            x: this._currentPayload.bounds.x,
+            y: this._currentPayload.bounds.y,
+            width: this._currentPayload.bounds.width,
+            height: this._currentPayload.bounds.height
+          })
+        }
         this._win.setAlwaysOnTop(true, 'screen-saver')
         this._win.setVisibleOnAllWorkspaces(true)
+        this._win.setFullScreen(true)
       }
     } catch (e) {
       log.warn('[CaptureWindowManager] setAlwaysOnTop error:', e)

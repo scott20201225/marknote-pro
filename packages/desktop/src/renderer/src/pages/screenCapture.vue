@@ -1869,14 +1869,15 @@ const renderAll = (): void => {
   const img = screenshotImage.value
   const physicalW = img.naturalWidth || Math.round(window.innerWidth * dpr)
   const physicalH = img.naturalHeight || Math.round(window.innerHeight * dpr)
-  const width = Math.round(physicalW / dpr)
-  const height = Math.round(physicalH / dpr)
+  const width = Math.round(window.innerWidth)
+  const height = Math.round(window.innerHeight)
+  // Generous overscan boundary for dark overlay to eliminate subpixel rounding gaps at edge bezels
+  const overlayW = width + 50
+  const overlayH = height + 50
 
   if (canvas.width !== physicalW || canvas.height !== physicalH) {
     canvas.width = physicalW
     canvas.height = physicalH
-    canvas.style.width = `${width}px`
-    canvas.style.height = `${height}px`
   }
 
   // 1. Raw screenshot background: 1:1 direct pixel-to-pixel mapping without scaling interpolation!
@@ -1896,13 +1897,13 @@ const renderAll = (): void => {
 
     ctx.fillStyle = 'rgba(0, 0, 0, 0.45)'
     // Top
-    ctx.fillRect(0, 0, width, sel.y)
+    ctx.fillRect(0, 0, overlayW, sel.y)
     // Bottom
-    ctx.fillRect(0, sel.y + sel.height, width, height - (sel.y + sel.height))
+    ctx.fillRect(0, sel.y + sel.height, overlayW, overlayH - (sel.y + sel.height))
     // Left
     ctx.fillRect(0, sel.y, sel.x, sel.height)
     // Right
-    ctx.fillRect(sel.x + sel.width, sel.y, width - (sel.x + sel.width), sel.height)
+    ctx.fillRect(sel.x + sel.width, sel.y, overlayW - (sel.x + sel.width), sel.height)
 
     // Selection border (Lark signature blue #336df4)
     ctx.strokeStyle = '#336df4'
@@ -1948,9 +1949,9 @@ const renderAll = (): void => {
     // 4. Draw Lark Corner Handles & Edge Grips
     drawSelectionHandles(ctx, sel, hoveredHandle.value)
   } else {
-    // Dim the screen before selection
+    // Dim the screen before selection (using overscan width/height to avoid bezel gaps)
     ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'
-    ctx.fillRect(0, 0, width, height)
+    ctx.fillRect(0, 0, overlayW, overlayH)
 
     // Smart Auto-Selection Highlight (Lark / CleanShot signature smart selection)
     if (smartHoverRect.value && !isSelecting.value) {
@@ -3064,8 +3065,8 @@ onUnmounted(() => {
 .capture-fullscreen-container {
   position: fixed;
   inset: 0;
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
   margin: 0;
   padding: 0;
   overflow: hidden;
@@ -3078,6 +3079,8 @@ onUnmounted(() => {
   position: absolute;
   top: 0;
   left: 0;
+  width: 100vw;
+  height: 100vh;
   display: block;
 }
 
