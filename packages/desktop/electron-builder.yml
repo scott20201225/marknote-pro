@@ -246,6 +246,8 @@ mac:
   entitlementsInherit: build/mac/entitlements.mac.plist
   extendInfo:
     NSCameraUsageDescription: "Application requests access to the device's camera."
+    NSMicrophoneUsageDescription: "MarkNotePro 需要访问麦克风以支持语音与音频录制功能。"
+    NSAudioCaptureUsageDescription: "MarkNotePro 需要访问音频捕获以支持录屏与音频录制功能。"
     NSDocumentsFolderUsageDescription: "Application requests access to the user's Documents folder."
     NSDownloadsFolderUsageDescription: "Application requests access to the user's Downloads folder."
     NSLocalNetworkUsageDescription: "MarkNotePro 需要访问本地网络以连接 SSH/SFTP 终端服务器及本地网络服务。"

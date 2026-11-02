@@ -44,6 +44,16 @@ export class CaptureWindowManager {
       if (isOsx) {
         const accessStatus = systemPreferences.getMediaAccessStatus('screen')
         log.info('[CaptureWindowManager] macOS screen mediaAccessStatus:', accessStatus)
+
+        try {
+          const micStatus = systemPreferences.getMediaAccessStatus('microphone')
+          log.info('[CaptureWindowManager] macOS mic mediaAccessStatus:', micStatus)
+          if (micStatus === 'not-determined') {
+            await systemPreferences.askForMediaAccess('microphone')
+          }
+        } catch (mErr) {
+          log.warn('[CaptureWindowManager] askForMediaAccess microphone error:', mErr)
+        }
         try {
           const tmpCapturePath = path.join('/tmp', `marknotepro_cap_${Date.now()}.png`)
           await execAsync(`/usr/sbin/screencapture -x "${tmpCapturePath}"`)
