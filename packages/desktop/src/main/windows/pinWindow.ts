@@ -1,5 +1,5 @@
 import path from 'path'
-import { BrowserWindow, dialog, nativeImage, clipboard, screen } from 'electron'
+import { app, BrowserWindow, dialog, nativeImage, clipboard, screen } from 'electron'
 import fsPromises from 'fs/promises'
 import log from 'electron-log'
 import type { PinWindowPayload } from '@shared/types/clipboard'
@@ -40,6 +40,10 @@ export class PinWindowManager {
         ? payload.y
         : Math.round(currentDisplay.workArea.y + (currentDisplay.workArea.height - height) / 2)
 
+    log.info(
+      `[PinWindowManager] Creating pin window: ${pinId}, type: ${payload.type}, size: ${width}x${height}, pos: (${posX}, ${posY})`
+    )
+
     const win = new BrowserWindow({
       width: Math.round(width),
       height: Math.round(height),
@@ -64,7 +68,8 @@ export class PinWindowManager {
       }
     })
 
-    win.setAlwaysOnTop(true, 'floating')
+    const topLevel = isOsx ? 'screen-saver' : 'floating'
+    win.setAlwaysOnTop(true, topLevel)
     win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
 
     const baseUrl =
@@ -75,20 +80,32 @@ export class PinWindowManager {
     const url = new URL(baseUrl)
     url.searchParams.set('type', 'pin')
     url.searchParams.set('pinId', pinId)
+    url.searchParams.set('wid', '1')
+    try {
+      url.searchParams.set('udp', app.getPath('userData'))
+    } catch {
+      // ignore
+    }
     url.hash = `/pin?pinId=${pinId}`
 
-    win.webContents.once('did-finish-load', () => {
+    const showAndFocus = (): void => {
       if (win.isDestroyed()) return
-      win.show()
+      if (!win.isVisible()) {
+        win.show()
+      }
+      if (isOsx) {
+        app.focus({ steal: true })
+      }
       win.focus()
       win.webContents.send('mt::pin-window-data', payload)
+    }
+
+    win.webContents.once('did-finish-load', () => {
+      showAndFocus()
     })
 
     win.once('ready-to-show', () => {
-      if (!win.isDestroyed()) {
-        win.show()
-        win.focus()
-      }
+      showAndFocus()
     })
 
     win.loadURL(url.toString())

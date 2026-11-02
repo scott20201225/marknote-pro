@@ -21,7 +21,7 @@
     <!-- Pinned Image View -->
     <div v-if="payload?.type === 'image'" class="pinned-image-view">
       <img
-        :src="payload.content"
+        :src="getImageSrc(payload.content)"
         class="pinned-img"
         :style="{ transform: `scale(${zoomLevel})` }"
         alt="Pinned Image"
@@ -41,6 +41,12 @@
       <div class="text-card-body">
         <pre class="text-content"><code>{{ payload.content }}</code></pre>
       </div>
+    </div>
+
+    <!-- Loading Placeholder (Avoid pure invisible blank window) -->
+    <div v-else class="pinned-loading-view">
+      <div class="pinned-spinner"></div>
+      <span class="loading-text">加载贴图中...</span>
     </div>
 
     <!-- Custom Right-Click Context Menu -->
@@ -196,6 +202,17 @@ const onKeydown = (e: KeyboardEvent): void => {
 }
 
 let removeDataSub: (() => void) | null = null
+
+const getImageSrc = (content?: string): string => {
+  if (!content) return ''
+  if (content.startsWith('data:') || content.startsWith('http://') || content.startsWith('https://')) {
+    return content
+  }
+  if (content.startsWith('/')) {
+    return `file://${content}`
+  }
+  return content
+}
 
 onMounted(async () => {
   let id = new URLSearchParams(window.location.search).get('pinId')
@@ -402,5 +419,39 @@ onUnmounted(() => {
   height: 1px;
   background: rgba(255, 255, 255, 0.1);
   margin: 4px 0;
+}
+
+/* Loading Placeholder */
+.pinned-loading-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 220px;
+  height: 140px;
+  background: rgba(24, 27, 34, 0.9);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.pinned-spinner {
+  width: 22px;
+  height: 22px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

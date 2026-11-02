@@ -1,4 +1,4 @@
-import { ipcMain, dialog, nativeImage, clipboard, BrowserWindow } from 'electron'
+import { ipcMain, dialog, nativeImage, clipboard, BrowserWindow, app } from 'electron'
 import fs from 'fs'
 import fsPromises from 'fs/promises'
 import log from 'electron-log'
@@ -44,39 +44,49 @@ export const registerClipboardIpcHandlers = (): void => {
   })
 
   ipcMain.handle('mt::clipboard-paste-item', async (_event, item: ClipboardItemRecord) => {
-    clipboardService.pasteItem(item)
-    clipboardModal.hide()
+    try {
+      clipboardService.pasteItem(item)
+      clipboardModal.hide()
+      await clipboardService.simulatePaste()
+      return true
+    } catch (err) {
+      log.error('[Clipboard] Failed to paste item:', err)
+      return false
+    }
   })
 
   ipcMain.handle('mt::clipboard-pin-item', async (_event, item: ClipboardItemRecord) => {
-    clipboardModal.hide()
-    if (item.type === 'image') {
-      let content = item.imageDataUrl || ''
-      if (item.imagePath && fs.existsSync(item.imagePath)) {
-        try {
-          const buf = await fsPromises.readFile(item.imagePath)
-          content = `data:image/png;base64,${buf.toString('base64')}`
-        } catch (e) {
-          log.warn('Could not read image buffer from path:', item.imagePath)
-        }
+    try {
+      clipboardModal.hide()
+      const pinId = `pin_${item.id}_${Date.now()}`
+      if (item.type === 'image') {
+        const imageContent =
+          item.imagePath && fs.existsSync(item.imagePath)
+            ? item.imagePath
+            : item.imageDataUrl || ''
+
+        pinManager.createPinWindow({
+          id: pinId,
+          type: 'image',
+          content: imageContent,
+          width: item.width || 400,
+          height: item.height || 300,
+          title: item.previewText || '历史截图'
+        })
+      } else {
+        pinManager.createPinWindow({
+          id: pinId,
+          type: 'text',
+          content: item.content || '',
+          width: 480,
+          height: 280,
+          title: item.previewText || '剪贴板文本'
+        })
       }
-      pinManager.createPinWindow({
-        id: `pin_${item.id}_${Date.now()}`,
-        type: 'image',
-        content,
-        width: item.width || 400,
-        height: item.height || 300,
-        title: item.previewText
-      })
-    } else {
-      pinManager.createPinWindow({
-        id: `pin_${item.id}_${Date.now()}`,
-        type: 'text',
-        content: item.content,
-        width: 480,
-        height: 280,
-        title: item.previewText || '剪贴板文本'
-      })
+      return true
+    } catch (err) {
+      log.error('[Clipboard] Failed to pin item:', err)
+      return false
     }
   })
 

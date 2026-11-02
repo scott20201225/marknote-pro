@@ -937,49 +937,57 @@ function findVerticalScrollOffset(
   width: number,
   height: number
 ): { dy: number; isIdentical: boolean; minDiff: number } {
-  const bandH = Math.min(48, Math.floor(height * 0.15))
-  const bandTop = height - bandH - 12
-  if (bandTop <= 0 || width <= 10) return { dy: 0, isIdentical: true, minDiff: 0 }
-
-  const cols: number[] = []
-  for (let c = 0.15; c <= 0.85; c += 0.06) {
-    cols.push(Math.floor(width * c))
+  if (width < 30 || height < 60) {
+    return { dy: 0, isIdentical: true, minDiff: 0 }
   }
 
-  // 1. Quick check for dy = 0 (identical frame / bottom reached)
-  let diffZero = 0
-  let countZero = 0
-  for (let by = 0; by < bandH; by += 2) {
-    const y = bandTop + by
-    for (const col of cols) {
-      const idx = (y * width + col) * 4
-      diffZero +=
+  // 1. 确定采样列范围（左右各避开 10% 边界，规避滚动条和边缘阴影）
+  const startCol = Math.floor(width * 0.1)
+  const endCol = Math.floor(width * 0.9)
+  const colStep = Math.max(1, Math.floor(width / 120)) // 采样约 100~120 列
+
+  // 2. 选择基准模板区域 (Template Band)
+  // 取前一帧下部区域 (避开紧贴底部的 5% 边缘)
+  const templateH = Math.min(60, Math.max(30, Math.floor(height * 0.12)))
+  const templateTop = Math.max(10, height - templateH - Math.floor(height * 0.05))
+
+  // 3. 快速全屏静止/底部判定
+  let totalDiff = 0
+  let sampleCount = 0
+  for (let y = templateTop; y < templateTop + templateH; y += 3) {
+    for (let x = startCol; x < endCol; x += colStep * 2) {
+      const idx = (y * width + x) * 4
+      totalDiff +=
         Math.abs(prevData[idx] - currData[idx]) +
         Math.abs(prevData[idx + 1] - currData[idx + 1]) +
         Math.abs(prevData[idx + 2] - currData[idx + 2])
-      countZero++
+      sampleCount++
     }
   }
-  const avgZero = countZero > 0 ? diffZero / countZero : 0
-  if (avgZero < 4) {
-    return { dy: 0, isIdentical: true, minDiff: avgZero }
+  const avgZeroDiff = sampleCount > 0 ? totalDiff / sampleCount : 0
+  if (avgZeroDiff < 3.5) {
+    return { dy: 0, isIdentical: true, minDiff: avgZeroDiff }
   }
 
-  // 2. Search candidate dy from 3 up to bandTop
-  let bestDy = 0
+  // 4. 在当前帧中自上而下滑动搜索 Template 的最佳匹配位置 (SAD - Sum of Absolute Differences)
+  let bestYCurr = -1
   let minDiff = Infinity
 
-  for (let dy = 3; dy < bandTop; dy += 1) {
+  const maxSearchY = templateTop - 2
+  const minSearchY = Math.max(0, templateTop - Math.floor(height * 0.85))
+
+  for (let searchY = maxSearchY; searchY >= minSearchY; searchY -= 1) {
     let diff = 0
     let count = 0
-    for (let by = 0; by < bandH; by += 2) {
-      const yPrev = bandTop + by
-      const yCurr = yPrev - dy
-      if (yCurr < 0 || yCurr >= height) continue
 
-      for (const col of cols) {
-        const idxPrev = (yPrev * width + col) * 4
-        const idxCurr = (yCurr * width + col) * 4
+    for (let row = 0; row < templateH; row += 2) {
+      const yPrev = templateTop + row
+      const yCurr = searchY + row
+      if (yCurr >= height) continue
+
+      for (let x = startCol; x < endCol; x += colStep) {
+        const idxPrev = (yPrev * width + x) * 4
+        const idxCurr = (yCurr * width + x) * 4
 
         diff +=
           Math.abs(prevData[idxPrev] - currData[idxCurr]) +
@@ -988,18 +996,20 @@ function findVerticalScrollOffset(
         count++
       }
     }
-    const avgDiff = count > 0 ? diff / count : Infinity
-    if (avgDiff < minDiff) {
-      minDiff = avgDiff
-      bestDy = dy
+
+    const avg = count > 0 ? diff / count : Infinity
+    if (avg < minDiff) {
+      minDiff = avg
+      bestYCurr = searchY
     }
   }
 
-  if (minDiff > 60) {
+  if (minDiff > 45 || bestYCurr < 0) {
     return { dy: 0, isIdentical: false, minDiff }
   }
 
-  return { dy: bestDy, isIdentical: false, minDiff }
+  const dy = templateTop - bestYCurr
+  return { dy, isIdentical: false, minDiff }
 }
 
 const enterScrollingCapture = async (): Promise<void> => {
@@ -1052,7 +1062,7 @@ const scrollDownAndCapture = async (_fromAuto = false): Promise<void> => {
     }
 
     await window.electron.ipcRenderer.invoke('mt::capture-scroll-down', rect)
-    await new Promise((resolve) => setTimeout(resolve, 200))
+    await new Promise((resolve) => setTimeout(resolve, 280))
 
     const sliceDataUrl = await window.electron.ipcRenderer.invoke('mt::capture-slice', rect)
     if (!sliceDataUrl) {
@@ -1152,7 +1162,7 @@ const runAutoScrollLoop = async (): Promise<void> => {
   if (isAutoScrolling.value) {
     autoScrollTimer = setTimeout(() => {
       runAutoScrollLoop()
-    }, 280)
+    }, 380)
   }
 }
 

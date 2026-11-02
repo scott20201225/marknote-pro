@@ -188,7 +188,8 @@ const selectItem = (index: number): void => {
 
 const pasteItem = async (item: ClipboardItemRecord): Promise<void> => {
   try {
-    await window.electron.ipcRenderer.invoke('mt::clipboard-paste-item', item)
+    const raw = JSON.parse(JSON.stringify(item))
+    await window.electron.ipcRenderer.invoke('mt::clipboard-paste-item', raw)
   } catch (err) {
     console.error('Failed to paste item:', err)
   }
@@ -196,7 +197,8 @@ const pasteItem = async (item: ClipboardItemRecord): Promise<void> => {
 
 const pinItem = async (item: ClipboardItemRecord): Promise<void> => {
   try {
-    await window.electron.ipcRenderer.invoke('mt::clipboard-pin-item', item)
+    const raw = JSON.parse(JSON.stringify(item))
+    await window.electron.ipcRenderer.invoke('mt::clipboard-pin-item', raw)
   } catch (err) {
     console.error('Failed to pin item:', err)
   }

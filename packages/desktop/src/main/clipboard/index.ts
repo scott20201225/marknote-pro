@@ -3,8 +3,12 @@ import os from 'os'
 import fs from 'fs'
 import fsPromises from 'fs/promises'
 import crypto from 'crypto'
+import { exec } from 'child_process'
+import { promisify } from 'util'
 import { clipboard, nativeImage } from 'electron'
 import log from 'electron-log'
+
+const execAsync = promisify(exec)
 import { TypedEmitter } from '@shared/types/typedEmitter'
 import type { ClipboardItemRecord, ClipboardContentType } from '@shared/types/clipboard'
 
@@ -297,6 +301,23 @@ export class ClipboardService extends TypedEmitter<ClipboardServiceEvents> {
       clipboard.writeText(item.content)
     }
     this._lastHash = item.hash
+  }
+
+  public async simulatePaste(): Promise<void> {
+    // Wait for the window manager to return focus to the previous application
+    await new Promise((resolve) => setTimeout(resolve, 120))
+    try {
+      if (process.platform === 'darwin') {
+        await execAsync(`osascript -e 'tell application "System Events" to keystroke "v" using command down'`)
+      } else if (process.platform === 'win32') {
+        await execAsync(`powershell -NoProfile -Command "$wshell = New-Object -ComObject wscript.shell; $wshell.SendKeys('^v')"` )
+      } else if (process.platform === 'linux') {
+        await execAsync(`xdotool key ctrl+v`)
+      }
+      log.info('[ClipboardService] Successfully simulated paste keystroke')
+    } catch (err) {
+      log.warn('[ClipboardService] Failed to simulate paste keystroke:', err)
+    }
   }
 }
 

@@ -17,12 +17,54 @@ exports.default = async function (context) {
   }
 
   const entitlementsPath = path.join(__dirname, 'mac', 'entitlements.mac.plist')
-  console.log(`[afterPack] Ad-hoc signing macOS app bundle with entitlements: ${appPath}`)
+  console.log(`[afterPack] Clean inside-out ad-hoc signing with stable Designated Requirement: ${appPath}`)
+
+  const run = (cmd) => {
+    execSync(cmd, { stdio: 'inherit' })
+  }
+
   try {
-    execSync(`codesign --force --deep --sign - --entitlements "${entitlementsPath}" "${appPath}"`, {
-      stdio: 'inherit'
-    })
-    console.log(`[afterPack] Ad-hoc codesign completed successfully for ${appPath}`)
+    // 1. Sign helper binaries inside Electron Framework
+    const crashpad = path.join(
+      appPath,
+      'Contents/Frameworks/Electron Framework.framework/Versions/A/Helpers/chrome_crashpad_handler'
+    )
+    if (fs.existsSync(crashpad)) {
+      run(`codesign --force --sign - "${crashpad}"`)
+    }
+
+    // 2. Sign bundled CLI tools (e.g. mac-scroll)
+    const staticBin = path.join(appPath, 'Contents/Resources/static/bin/mac-scroll')
+    if (fs.existsSync(staticBin)) {
+      run(`codesign --force --sign - "${staticBin}"`)
+    }
+
+    // 3. Sign nested frameworks
+    const fwDir = path.join(appPath, 'Contents/Frameworks')
+    if (fs.existsSync(fwDir)) {
+      const fwEntries = fs.readdirSync(fwDir)
+      for (const entry of fwEntries) {
+        if (entry.endsWith('.framework')) {
+          const full = path.join(fwDir, entry)
+          run(`codesign --force --sign - "${full}"`)
+        }
+      }
+
+      // 4. Sign helper apps
+      for (const entry of fwEntries) {
+        if (entry.endsWith('.app')) {
+          const full = path.join(fwDir, entry)
+          run(`codesign --force --sign - --entitlements "${entitlementsPath}" "${full}"`)
+        }
+      }
+    }
+
+    // 5. Sign main app bundle with permanent stable Designated Requirement
+    run(
+      `codesign --force --sign - -r="designated => identifier \\"com.scott20201225.marknotepro\\"" --entitlements "${entitlementsPath}" "${appPath}"`
+    )
+
+    console.log(`[afterPack] Successfully signed ${appPath} with stable Designated Requirement!`)
   } catch (err) {
     console.error(`[afterPack] Codesign failed:`, err)
     throw err

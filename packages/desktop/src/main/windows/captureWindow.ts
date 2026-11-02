@@ -91,24 +91,29 @@ export class CaptureWindowManager {
       }
 
       if (!dataUrl) {
-        log.error('[CaptureWindowManager] Both screencapture and desktopCapturer failed. Requesting permission.')
-        const res = await dialog.showMessageBox({
-          type: 'warning',
-          title: 'MarkNotePro 截图权限提示',
-          message: '未获得系统屏幕录制权限，无法截取屏幕。',
-          detail:
-            '由于 macOS 系统安全机制，重新安装或更新应用后可能需要刷新授权：\n\n' +
-            '1. 请打开「系统设置 -> 隐私与安全 -> 屏幕与系统音频录制」；\n' +
-            '2. 找到并选中 MarkNotePro，先点击开关关闭，再重新打开（或用 “-” 号移除后重新添加）；\n' +
-            '3. 重启 MarkNotePro 后即可正常截图。',
-          buttons: ['打开系统设置', '稍后再说'],
-          defaultId: 0,
-          cancelId: 1
-        })
-        if (res.response === 0) {
-          shell.openExternal(
-            'x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture'
-          )
+        const accessStatus = isOsx ? systemPreferences.getMediaAccessStatus('screen') : 'unknown'
+        log.error('[CaptureWindowManager] Both screencapture and desktopCapturer failed. accessStatus:', accessStatus)
+
+        // Only prompt modal warning if permission was explicitly denied or not available
+        if (accessStatus === 'denied') {
+          const res = await dialog.showMessageBox({
+            type: 'warning',
+            title: 'MarkNotePro 截图权限提示',
+            message: '未获得系统屏幕录制权限，无法截取屏幕。',
+            detail:
+              'MarkNotePro 需要屏幕录制权限以捕获屏幕画面：\n\n' +
+              '1. 请前往「系统设置 -> 隐私与安全 -> 屏幕与系统音频录制」；\n' +
+              '2. 开启 MarkNotePro 的访问开关；\n' +
+              '3. 重新打开应用即可正常截图。',
+            buttons: ['打开系统设置', '稍后再说'],
+            defaultId: 0,
+            cancelId: 1
+          })
+          if (res.response === 0) {
+            shell.openExternal(
+              'x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture'
+            )
+          }
         }
         return
       }
@@ -186,14 +191,18 @@ export class CaptureWindowManager {
     if (!this._win || this._win.isDestroyed()) return null
     try {
       this._win.setOpacity(0)
-      await new Promise((resolve) => setTimeout(resolve, 80))
+      await new Promise((resolve) => setTimeout(resolve, 90))
 
       const tmpPath = path.join('/tmp', `marknotepro_slice_${Date.now()}.png`)
 
       if (isOsx) {
-        await execAsync(
-          `/usr/sbin/screencapture -x -R${Math.round(rect.x)},${Math.round(rect.y)},${Math.round(rect.width)},${Math.round(rect.height)} "${tmpPath}"`
-        )
+        try {
+          await execAsync(
+            `/usr/sbin/screencapture -x -R${Math.round(rect.x)},${Math.round(rect.y)},${Math.round(rect.width)},${Math.round(rect.height)} "${tmpPath}"`
+          )
+        } catch (scErr) {
+          log.warn('[CaptureWindowManager] captureSlice screencapture error:', scErr)
+        }
       }
 
       this._win.setOpacity(1)
@@ -202,6 +211,27 @@ export class CaptureWindowManager {
         const buf = await fsPromises.readFile(tmpPath)
         fsPromises.unlink(tmpPath).catch(() => {})
         return `data:image/png;base64,${buf.toString('base64')}`
+      }
+
+      // Fallback: desktopCapturer
+      const cursorPoint = screen.getCursorScreenPoint()
+      const currentDisplay = screen.getDisplayNearestPoint(cursorPoint)
+      const scaleFactor = currentDisplay.scaleFactor || 1
+      const sources = await desktopCapturer.getSources({
+        types: ['screen'],
+        thumbnailSize: {
+          width: Math.round(currentDisplay.bounds.width * scaleFactor),
+          height: Math.round(currentDisplay.bounds.height * scaleFactor)
+        }
+      })
+      let targetSource = sources.find((s) => s.display_id === String(currentDisplay.id)) || sources[0]
+      if (targetSource) {
+        const relX = Math.round((rect.x - currentDisplay.bounds.x) * scaleFactor)
+        const relY = Math.round((rect.y - currentDisplay.bounds.y) * scaleFactor)
+        const relW = Math.round(rect.width * scaleFactor)
+        const relH = Math.round(rect.height * scaleFactor)
+        const cropped = targetSource.thumbnail.crop({ x: relX, y: relY, width: relW, height: relH })
+        return cropped.toDataURL()
       }
     } catch (err) {
       log.error('[CaptureWindowManager] captureSlice error:', err)
@@ -217,11 +247,11 @@ export class CaptureWindowManager {
     try {
       const staticDir = path.join(app.isPackaged ? process.resourcesPath : app.getAppPath(), 'static')
       const macScrollBin = path.join(staticDir, 'bin', 'mac-scroll')
-      let args = '-8'
+      let args = '-12'
       if (rect) {
         const cx = Math.round(rect.x + rect.width / 2)
         const cy = Math.round(rect.y + rect.height / 2)
-        args = `-8 ${cx} ${cy}`
+        args = `-12 ${cx} ${cy}`
       }
       if (fs.existsSync(macScrollBin)) {
         await execAsync(`"${macScrollBin}" ${args}`)
