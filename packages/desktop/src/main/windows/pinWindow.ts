@@ -104,9 +104,6 @@ export class PinWindowManager {
       if (!win.isVisible()) {
         win.show()
       }
-      if (isOsx) {
-        app.focus({ steal: true })
-      }
       win.focus()
       win.webContents.send('mt::pin-window-data', payload)
     }
@@ -125,11 +122,35 @@ export class PinWindowManager {
       this._windows.delete(pinId)
       this._payloads.delete(pinId)
       this._winToPinId.delete(win.id)
+      this.restoreEditorFocus()
     })
 
     this._windows.set(pinId, win)
     this._winToPinId.set(win.id, pinId)
     return win
+  }
+
+  public restoreEditorFocus(excludeWin?: BrowserWindow): void {
+    // If there is another pin window open, focus that pin window
+    for (const [, pinWin] of this._windows.entries()) {
+      if (pinWin !== excludeWin && !pinWin.isDestroyed() && pinWin.isVisible()) {
+        pinWin.focus()
+        return
+      }
+    }
+
+    // Otherwise restore focus to the main MarkNotePro editor window
+    const allWindows = BrowserWindow.getAllWindows()
+    const editorWin = allWindows.find(
+      (w) =>
+        !w.isDestroyed() &&
+        w.isVisible() &&
+        w !== excludeWin &&
+        !this._winToPinId.has(w.id)
+    )
+    if (editorWin) {
+      editorWin.focus()
+    }
   }
 
   public getPayload(pinId?: string, sourceWindow?: BrowserWindow): PinWindowPayload | null {
@@ -144,18 +165,21 @@ export class PinWindowManager {
   }
 
   public closePin(pinId?: string, sourceWindow?: BrowserWindow): void {
-    if (pinId && this._windows.has(pinId)) {
-      const win = this._windows.get(pinId)
-      if (win && !win.isDestroyed()) {
+    const win = (pinId ? this._windows.get(pinId) : sourceWindow) || sourceWindow
+    if (win) {
+      this.restoreEditorFocus(win)
+      if (!win.isDestroyed()) {
+        try {
+          win.setVisibleOnAllWorkspaces(false)
+        } catch {}
         win.destroy()
       }
-      this._windows.delete(pinId)
-      this._payloads.delete(pinId)
-      return
-    }
-
-    if (sourceWindow && !sourceWindow.isDestroyed()) {
-      sourceWindow.destroy()
+      if (pinId) {
+        this._windows.delete(pinId)
+        this._payloads.delete(pinId)
+      }
+      this._winToPinId.delete(win.id)
+      this.restoreEditorFocus()
     }
   }
 

@@ -1,6 +1,6 @@
 <template>
   <div
-    class="pin-window-container"
+    :class="['pin-window-container', isDarkTheme ? 'theme-dark' : 'theme-light']"
     :style="{ opacity: windowOpacity }"
     @mousedown="onMouseDown"
     @wheel="onWheel"
@@ -12,10 +12,26 @@
     <!-- Hover Action Bar -->
     <div class="hover-toolbar">
       <span class="zoom-badge">{{ Math.round(zoomLevel * 100) }}%</span>
-      <button class="mini-btn" title="重置缩放 (100%)" @click.stop="resetZoom">1:1</button>
-      <button class="mini-btn" title="复制图片" @click.stop="copyPin">📋</button>
-      <button class="mini-btn" title="保存图片" @click.stop="savePin">💾</button>
-      <button class="mini-btn close" title="关闭贴图 (双击 / Esc)" @click.stop="closePin">✕</button>
+      <button class="mini-btn zoom-btn" :title="tr('zoomReset')" @click.stop="resetZoom">1:1</button>
+      <button class="mini-btn" :title="tr('copyImage') + ' (⌘C)'" @click.stop="copyPin">
+        <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>
+      </button>
+      <button class="mini-btn" :title="tr('saveImage') + ' (⌘S)'" @click.stop="savePin">
+        <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+      </button>
+      <button class="mini-btn close" :title="tr('closePin')" @click.stop="closePin">
+        <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
     </div>
 
     <!-- Pinned Image View -->
@@ -37,12 +53,12 @@
     >
       <div class="text-card-header">
         <div class="mac-traffic-dots">
-          <span class="dot dot-close" title="关闭贴图 (Esc)" @click.stop="closePin"></span>
-          <span class="dot dot-copy" title="复制代码" @click.stop="copyPin"></span>
-          <span class="dot dot-ontop" :class="{ active: isAlwaysOnTop }" title="置顶切换" @click.stop="toggleAlwaysOnTop"></span>
+          <span class="dot dot-close" :title="tr('closePin')" @click.stop="closePin"></span>
+          <span class="dot dot-copy" :title="tr('copyCode')" @click.stop="copyPin"></span>
+          <span class="dot dot-ontop" :class="{ active: isAlwaysOnTop }" :title="tr('alwaysOnTop')" @click.stop="toggleAlwaysOnTop"></span>
         </div>
         <span class="text-card-badge">📌 {{ payload.title || '代码 / 文本贴图' }}</span>
-        <button class="header-action-btn" title="复制代码" @click.stop="copyPin">复制</button>
+        <button class="header-action-btn" :title="tr('copyCode')" @click.stop="copyPin">{{ tr('copyCode') }}</button>
       </div>
       <div class="text-card-body">
         <pre class="text-content"><code>{{ payload.content }}</code></pre>
@@ -52,7 +68,7 @@
     <!-- Loading Placeholder (Avoid pure invisible blank window) -->
     <div v-else class="pinned-loading-view">
       <div class="pinned-spinner"></div>
-      <span class="loading-text">加载贴图中...</span>
+      <span class="loading-text">{{ tr('loading') }}</span>
     </div>
 
     <!-- Custom Right-Click Context Menu -->
@@ -62,19 +78,19 @@
       :style="{ left: `${contextMenuX}px`, top: `${contextMenuY}px` }"
       @mousedown.stop
     >
-      <div class="menu-item" @click="copyPin">复制图片</div>
-      <div class="menu-item" @click="savePin">另存为...</div>
+      <div class="menu-item" @click="copyPin">{{ tr('copyImage') }}</div>
+      <div class="menu-item" @click="savePin">{{ tr('saveAs') }}</div>
       <div class="menu-divider"></div>
-      <div class="menu-item" @click="setZoom(0.5)">缩放至 50%</div>
-      <div class="menu-item" @click="resetZoom">恢复 100% (1:1)</div>
-      <div class="menu-item" @click="setZoom(1.5)">缩放至 150%</div>
-      <div class="menu-item" @click="setZoom(2.0)">缩放至 200%</div>
+      <div class="menu-item" @click="setZoom(0.5)">{{ tr('zoom50') }}</div>
+      <div class="menu-item" @click="resetZoom">{{ tr('zoom100') }}</div>
+      <div class="menu-item" @click="setZoom(1.5)">{{ tr('zoom150') }}</div>
+      <div class="menu-item" @click="setZoom(2.0)">{{ tr('zoom200') }}</div>
       <div class="menu-divider"></div>
       <div class="menu-item" @click="toggleAlwaysOnTop">
-        {{ isAlwaysOnTop ? '✓ 置顶显示' : '置顶显示' }}
+        {{ isAlwaysOnTop ? `✓ ${tr('alwaysOnTop')}` : tr('alwaysOnTop') }}
       </div>
       <div class="menu-divider"></div>
-      <div class="menu-item danger" @click="closePin">关闭贴图 (Esc)</div>
+      <div class="menu-item danger" @click="closePin">{{ tr('closePin') }}</div>
     </div>
   </div>
 </template>
@@ -82,6 +98,156 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import type { PinWindowPayload } from '@shared/types/clipboard'
+import { isDarkThemeId } from '../../../common/theme'
+
+const isDarkTheme = ref(false)
+const currentLang = ref('zh-CN')
+
+const pinI18n: Record<string, Record<string, string>> = {
+  'zh-CN': {
+    zoomReset: '恢复 100% (1:1)',
+    copyImage: '复制图片',
+    saveImage: '保存图片',
+    closePin: '关闭贴图 (Esc)',
+    saveAs: '另存为...',
+    zoom50: '缩放至 50%',
+    zoom100: '恢复 100% (1:1)',
+    zoom150: '缩放至 150%',
+    zoom200: '缩放至 200%',
+    alwaysOnTop: '置顶显示',
+    copyCode: '复制代码',
+    loading: '加载贴图中...'
+  },
+  'zh-TW': {
+    zoomReset: '恢復 100% (1:1)',
+    copyImage: '複製圖片',
+    saveImage: '儲存圖片',
+    closePin: '關閉貼圖 (Esc)',
+    saveAs: '另存為...',
+    zoom50: '縮放至 50%',
+    zoom100: '恢復 100% (1:1)',
+    zoom150: '縮放至 150%',
+    zoom200: '縮放至 200%',
+    alwaysOnTop: '置頂顯示',
+    copyCode: '複製代碼',
+    loading: '載入貼圖中...'
+  },
+  en: {
+    zoomReset: 'Reset 100% (1:1)',
+    copyImage: 'Copy Image',
+    saveImage: 'Save Image',
+    closePin: 'Close Pin (Esc)',
+    saveAs: 'Save As...',
+    zoom50: 'Zoom to 50%',
+    zoom100: 'Reset 100% (1:1)',
+    zoom150: 'Zoom to 150%',
+    zoom200: 'Zoom to 200%',
+    alwaysOnTop: 'Always on Top',
+    copyCode: 'Copy Code',
+    loading: 'Loading pin...'
+  },
+  ja: {
+    zoomReset: '100%に戻す (1:1)',
+    copyImage: '画像をコピー',
+    saveImage: '画像を保存',
+    closePin: 'ピン留めを閉じる (Esc)',
+    saveAs: '名前を付けて保存...',
+    zoom50: '50%に縮小',
+    zoom100: '100%に戻す (1:1)',
+    zoom150: '150%に拡大',
+    zoom200: '200%に拡大',
+    alwaysOnTop: '常に最前面に表示',
+    copyCode: 'コードをコピー',
+    loading: '読み込み中...'
+  },
+  ko: {
+    zoomReset: '100% 초기화 (1:1)',
+    copyImage: '이미지 복사',
+    saveImage: '이미지 저장',
+    closePin: '고정 닫기 (Esc)',
+    saveAs: '다른 이름으로 저장...',
+    zoom50: '50% 축소',
+    zoom100: '100% 초기화 (1:1)',
+    zoom150: '150% 확대',
+    zoom200: '200% 확대',
+    alwaysOnTop: '항상 위에 표시',
+    copyCode: '코드 복사',
+    loading: '로딩 중...'
+  },
+  de: {
+    zoomReset: 'Auf 100% zurücksetzen (1:1)',
+    copyImage: 'Bild kopieren',
+    saveImage: 'Bild speichern',
+    closePin: 'Schließen (Esc)',
+    saveAs: 'Speichern unter...',
+    zoom50: 'Auf 50% zoomen',
+    zoom100: 'Auf 100% zurücksetzen (1:1)',
+    zoom150: 'Auf 150% zoomen',
+    zoom200: 'Auf 200% zoomen',
+    alwaysOnTop: 'Immer im Vordergrund',
+    copyCode: 'Code kopieren',
+    loading: 'Laden...'
+  },
+  fr: {
+    zoomReset: 'Réinitialiser 100% (1:1)',
+    copyImage: 'Copier l\'image',
+    saveImage: 'Enregistrer l\'image',
+    closePin: 'Fermer (Esc)',
+    saveAs: 'Enregistrer sous...',
+    zoom50: 'Zoomer à 50%',
+    zoom100: 'Réinitialiser 100% (1:1)',
+    zoom150: 'Zoomer à 150%',
+    zoom200: 'Zoomer à 200%',
+    alwaysOnTop: 'Toujours au premier plan',
+    copyCode: 'Copier le code',
+    loading: 'Chargement...'
+  },
+  es: {
+    zoomReset: 'Restablecer 100% (1:1)',
+    copyImage: 'Copiar imagen',
+    saveImage: 'Guardar imagen',
+    closePin: 'Cerrar (Esc)',
+    saveAs: 'Guardar como...',
+    zoom50: 'Zoom al 50%',
+    zoom100: 'Restablecer 100% (1:1)',
+    zoom150: 'Zoom al 150%',
+    zoom200: 'Zoom al 200%',
+    alwaysOnTop: 'Siempre al frente',
+    copyCode: 'Copiar código',
+    loading: 'Cargando...'
+  }
+}
+
+const tr = (key: string): string => {
+  const dict = pinI18n[currentLang.value] || pinI18n['zh-CN']
+  return dict[key] || pinI18n['zh-CN'][key] || key
+}
+
+const detectTheme = (): void => {
+  const localTheme = localStorage.getItem('current-theme')
+  if (localTheme) {
+    isDarkTheme.value = isDarkThemeId(localTheme)
+    return
+  }
+  isDarkTheme.value = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+}
+
+const detectLanguage = (): void => {
+  const localLang = localStorage.getItem('current-language')
+  if (localLang) {
+    currentLang.value = localLang
+    return
+  }
+  const navLang = navigator.language
+  if (navLang.startsWith('zh')) {
+    currentLang.value = navLang.includes('TW') || navLang.includes('HK') ? 'zh-TW' : 'zh-CN'
+  } else if (navLang.startsWith('ja')) currentLang.value = 'ja'
+  else if (navLang.startsWith('ko')) currentLang.value = 'ko'
+  else if (navLang.startsWith('de')) currentLang.value = 'de'
+  else if (navLang.startsWith('fr')) currentLang.value = 'fr'
+  else if (navLang.startsWith('es')) currentLang.value = 'es'
+  else currentLang.value = 'en'
+}
 
 const payload = ref<PinWindowPayload | null>(null)
 const pinId = ref('')
@@ -245,11 +411,42 @@ const getImageSrc = (content?: string): string => {
 }
 
 onMounted(async () => {
+  detectTheme()
+  detectLanguage()
+
   let id = new URLSearchParams(window.location.search).get('pinId')
   if (!id && window.location.hash.includes('?')) {
     id = new URLSearchParams(window.location.hash.split('?')[1]).get('pinId')
   }
   pinId.value = id || ''
+
+  try {
+    window.electron.ipcRenderer.send('mt::ask-for-user-preference')
+    window.electron.ipcRenderer.on('mt::user-preference', (_e, prefs: any) => {
+      if (prefs) {
+        if (prefs.theme) {
+          isDarkTheme.value = isDarkThemeId(prefs.theme)
+        }
+        if (prefs.language) {
+          currentLang.value = prefs.language
+        }
+      }
+    })
+    window.electron.ipcRenderer.on('language-changed', (_e, lang: string) => {
+      if (lang) currentLang.value = lang
+    })
+  } catch (err) {
+    console.warn('Failed to query user preferences:', err)
+  }
+
+  if (window.matchMedia) {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+      const localTheme = localStorage.getItem('current-theme')
+      if (!localTheme) {
+        isDarkTheme.value = e.matches
+      }
+    })
+  }
 
   try {
     const data = await window.electron.ipcRenderer.invoke(
@@ -306,47 +503,101 @@ onUnmounted(() => {
   right: 8px;
   display: flex;
   align-items: center;
-  gap: 4px;
-  background: rgba(18, 20, 24, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  gap: 3px;
   border-radius: 6px;
-  padding: 2px 6px;
+  padding: 3px 6px;
   opacity: 0;
-  transition: opacity 0.15s ease;
+  transition: opacity 0.15s ease, background 0.15s ease, border-color 0.15s ease;
   z-index: 1000;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 .pin-window-container:hover .hover-toolbar {
   opacity: 1;
 }
 
-.zoom-badge {
-  font-size: 10px;
+/* Theme Light (Default & White Backgrounds) */
+.theme-light .hover-toolbar {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.theme-light .zoom-badge {
+  color: #646a73;
+}
+
+.theme-light .mini-btn {
+  color: #4e5969;
+}
+
+.theme-light .mini-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: #1f2329;
+}
+
+.theme-light .mini-btn.close:hover {
+  background: rgba(245, 63, 63, 0.12);
+  color: #f53f3f;
+}
+
+/* Theme Dark */
+.theme-dark .hover-toolbar {
+  background: rgba(24, 26, 32, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+.theme-dark .zoom-badge {
   color: #94a3b8;
+}
+
+.theme-dark .mini-btn {
+  color: #cbd5e1;
+}
+
+.theme-dark .mini-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
+.theme-dark .mini-btn.close:hover {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.zoom-badge {
+  font-size: 11px;
   padding: 0 4px;
-  font-family: monospace;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', monospace;
+  font-weight: 600;
+  letter-spacing: 0.2px;
 }
 
 .mini-btn {
   background: transparent;
   border: none;
-  color: #cbd5e1;
   font-size: 11px;
+  font-weight: 600;
   cursor: pointer;
-  padding: 3px 5px;
+  padding: 4px 5px;
   border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: all 0.12s ease;
 }
 
-.mini-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
-  color: #ffffff;
+.mini-btn svg {
+  display: block;
 }
 
-.mini-btn.close:hover {
-  background: #ef4444;
-  color: #ffffff;
+.mini-btn.zoom-btn {
+  font-size: 11px;
+  padding: 3px 6px;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
 }
 
 /* Pinned Image */
@@ -374,28 +625,45 @@ onUnmounted(() => {
 .pinned-text-view {
   width: 90%;
   height: 90%;
-  background: rgba(26, 29, 36, 0.95);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 10px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.65);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   transform-origin: center center;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.theme-light .pinned-text-view {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.2);
+}
+
+.theme-dark .pinned-text-view {
+  background: rgba(26, 29, 36, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.65);
 }
 
 .text-card-header {
   height: 36px;
   padding: 0 12px;
-  background: rgba(255, 255, 255, 0.05);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   flex-shrink: 0;
+}
+
+.theme-light .text-card-header {
+  background: rgba(0, 0, 0, 0.03);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.theme-dark .text-card-header {
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .mac-traffic-dots {
@@ -434,7 +702,6 @@ onUnmounted(() => {
 
 .text-card-badge {
   font-size: 11px;
-  color: #f59e0b;
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
@@ -442,17 +709,39 @@ onUnmounted(() => {
   max-width: 60%;
 }
 
+.theme-light .text-card-badge {
+  color: #b45309;
+}
+
+.theme-dark .text-card-badge {
+  color: #f59e0b;
+}
+
 .header-action-btn {
-  background: rgba(255, 255, 255, 0.1);
   border: none;
-  color: #cbd5e1;
   font-size: 11px;
   padding: 2px 8px;
   border-radius: 4px;
   cursor: pointer;
+  transition: all 0.12s ease;
 }
 
-.header-action-btn:hover {
+.theme-light .header-action-btn {
+  background: rgba(0, 0, 0, 0.06);
+  color: #334155;
+}
+
+.theme-light .header-action-btn:hover {
+  background: #336df4;
+  color: #ffffff;
+}
+
+.theme-dark .header-action-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+}
+
+.theme-dark .header-action-btn:hover {
   background: #3b82f6;
   color: #ffffff;
 }
@@ -468,48 +757,88 @@ onUnmounted(() => {
   font-family: 'JetBrains Mono', Menlo, Monaco, Consolas, monospace;
   font-size: 13px;
   line-height: 1.6;
-  color: #f1f5f9;
   white-space: pre-wrap;
   word-break: break-all;
+}
+
+.theme-light .text-content {
+  color: #1e293b;
+}
+
+.theme-dark .text-content {
+  color: #f1f5f9;
 }
 
 /* Custom Context Menu */
 .custom-context-menu {
   position: absolute;
-  background: rgba(24, 27, 34, 0.96);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 8px;
   padding: 4px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65);
   z-index: 2000;
   min-width: 140px;
+}
+
+.theme-light .custom-context-menu {
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+}
+
+.theme-dark .custom-context-menu {
+  background: rgba(24, 27, 34, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65);
 }
 
 .menu-item {
   padding: 6px 12px;
   font-size: 12px;
-  color: #cbd5e1;
   border-radius: 4px;
   cursor: pointer;
-  transition: background 0.1s ease;
+  transition: background 0.1s ease, color 0.1s ease;
 }
 
-.menu-item:hover {
+.theme-light .menu-item {
+  color: #1f2329;
+}
+
+.theme-light .menu-item:hover {
+  background: rgba(51, 109, 244, 0.1);
+  color: #336df4;
+}
+
+.theme-light .menu-item.danger:hover {
+  background: rgba(245, 63, 63, 0.12);
+  color: #f53f3f;
+}
+
+.theme-dark .menu-item {
+  color: #cbd5e1;
+}
+
+.theme-dark .menu-item:hover {
   background: #3b82f6;
   color: #ffffff;
 }
 
-.menu-item.danger:hover {
+.theme-dark .menu-item.danger:hover {
   background: #ef4444;
   color: #ffffff;
 }
 
 .menu-divider {
   height: 1px;
-  background: rgba(255, 255, 255, 0.1);
   margin: 4px 0;
+}
+
+.theme-light .menu-divider {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.theme-dark .menu-divider {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 /* Loading Placeholder */
@@ -521,23 +850,41 @@ onUnmounted(() => {
   gap: 10px;
   width: 220px;
   height: 140px;
-  background: rgba(24, 27, 34, 0.9);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 10px;
+  font-size: 12px;
+}
+
+.theme-light .pinned-loading-view {
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  color: #475569;
+}
+
+.theme-dark .pinned-loading-view {
+  background: rgba(24, 27, 34, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   color: #94a3b8;
-  font-size: 12px;
 }
 
 .pinned-spinner {
   width: 22px;
   height: 22px;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-top-color: #3b82f6;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
+}
+
+.theme-light .pinned-spinner {
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-top-color: #336df4;
+}
+
+.theme-dark .pinned-spinner {
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #3b82f6;
 }
 
 @keyframes spin {

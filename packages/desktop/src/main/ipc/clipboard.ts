@@ -56,7 +56,7 @@ export const registerClipboardIpcHandlers = (): void => {
   ipcMain.handle('mt::clipboard-paste-item', async (_event, item: ClipboardItemRecord) => {
     try {
       clipboardService.pasteItem(item)
-      clipboardModal.hide()
+      clipboardModal.hide(true)
       await clipboardService.simulatePaste()
       return true
     } catch (err) {
@@ -101,7 +101,7 @@ export const registerClipboardIpcHandlers = (): void => {
   })
 
   ipcMain.on('mt::clipboard-hide-modal', () => {
-    clipboardModal.hide()
+    clipboardModal.hide(true)
   })
 
   // 2. Screen Capture
@@ -186,35 +186,7 @@ export const registerClipboardIpcHandlers = (): void => {
   })
 
   ipcMain.on('mt::capture-first-frame-ready', () => {
-    if (captureManager.win && !captureManager.win.isDestroyed() && !captureManager.win.isVisible()) {
-      captureManager.win.show()
-      captureManager.win.focus()
-    }
-  })
-
-  ipcMain.handle(
-    'mt::capture-slice',
-    async (_event, rect: { x: number; y: number; width: number; height: number }) => {
-      return captureManager.captureSlice(rect)
-    }
-  )
-
-  ipcMain.handle(
-    'mt::capture-scroll-down',
-    async (_event, rect?: { x: number; y: number; width: number; height: number }, pixelDelta?: number) => {
-      await captureManager.scrollDown(rect, typeof pixelDelta === 'number' ? pixelDelta : -220)
-      return true
-    }
-  )
-
-  ipcMain.on('mt::capture-set-level', (_event, level: 'normal' | 'floating') => {
-    if (captureManager.win && !captureManager.win.isDestroyed()) {
-      captureManager.win.setAlwaysOnTop(true, level)
-    }
-  })
-
-  ipcMain.on('mt::capture-set-ignore-mouse', (_event, ignore: boolean, forward?: boolean) => {
-    captureManager.setIgnoreMouseEvents(ignore, forward ?? true)
+    captureManager.showCaptureWindow()
   })
 
   // 3. Pin Window Handlers

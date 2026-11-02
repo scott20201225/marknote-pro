@@ -180,6 +180,16 @@ class App {
       // dock icon is clicked and there are no other windows open.
       if (this._windowManager.windowCount === 0) {
         this.ready()
+      } else {
+        const allWins = BrowserWindow.getAllWindows()
+        const editorWin = allWins.find((w) => !w.isDestroyed() && w.isVisible())
+        if (editorWin) {
+          if (isOsx) {
+            app.focus({ steal: true })
+          }
+          editorWin.show()
+          editorWin.focus()
+        }
       }
     })
 

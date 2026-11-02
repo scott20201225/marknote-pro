@@ -7,7 +7,6 @@
     @mousemove="onMouseMove"
     @mouseup="onMouseUp"
     @dblclick="onDoubleClick"
-    @wheel="onWheel"
     @contextmenu.prevent="onContextMenu"
     @keydown="onKeydown"
     tabindex="0"
@@ -15,7 +14,7 @@
     <!-- Background Canvas (Screenshot + Mask + Drawing Annotations) -->
     <canvas ref="canvasRef" class="main-canvas"></canvas>
 
-    <!-- Floating Brush Size Indicator (when wheel scrolling or adjusting pen/marker) -->
+    <!-- Floating Brush Size Indicator (when adjusting pen/marker) -->
     <div
       v-if="brushPreviewVisible"
       class="brush-preview-hud"
@@ -31,7 +30,7 @@
         }"
       ></div>
       <span class="brush-preview-label">
-        {{ activeTool === 'marker' ? '荧光笔' : '画笔' }} {{ Math.round(brushPreviewSize) }}px
+        {{ activeTool === 'marker' ? tr('marker') : tr('pencil') }} {{ Math.round(brushPreviewSize) }}px
       </span>
     </div>
 
@@ -81,7 +80,7 @@
           lineHeight: '1.35',
           caretColor: textStyle === 'filled' ? (isLightActiveColor ? '#0f172a' : '#ffffff') : activeColor
         }"
-        :placeholder="textInputState.isStepNote ? '输入步骤说明...' : '输入文字...'"
+        :placeholder="textInputState.isStepNote ? tr('stepNotePlaceholder') : tr('textPlaceholder')"
         rows="1"
         autofocus
         @input="autoResizeTextarea"
@@ -96,7 +95,7 @@
 
     <!-- Lark-Style Generous Floating Toolbar (Docked Right of Selection) -->
     <div
-      v-if="hasSelection && !isDragging && !isScrollingCaptureMode"
+      v-if="hasSelection && !isDragging"
       ref="toolbarRef"
       class="lark-toolbar-wrapper"
       :style="toolbarPositionStyle"
@@ -106,7 +105,11 @@
     >
       <!-- Row 1: Primary Tool Palette (Lark Scale: Generous, Comfortable, High Affordance) -->
       <div class="lark-primary-toolbar">
-        <div class="toolbar-drag-grip" title="工具栏">
+        <div
+          class="toolbar-drag-grip"
+          @mouseenter="showTooltip($event, tr('toolbarDrag'))"
+          @mouseleave="hideTooltip"
+        >
           <svg viewBox="0 0 10 20" width="10" height="20" fill="currentColor">
             <circle cx="3" cy="4" r="1.5"></circle>
             <circle cx="7" cy="4" r="1.5"></circle>
@@ -121,8 +124,9 @@
         <button
           ref="toolBtnRect"
           :class="['lark-tool-btn', { active: activeTool === 'rect' }]"
-          title="矩形 (R)"
-          @click="setTool('rect')"
+          @mouseenter="showTooltip($event, tr('rect'), 'R')"
+          @mouseleave="hideTooltip"
+          @click="setTool('rect'); hideTooltip()"
         >
           <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" stroke-width="2">
             <rect x="3.5" y="3.5" width="17" height="17" rx="2.5"></rect>
@@ -133,8 +137,9 @@
         <button
           ref="toolBtnCircle"
           :class="['lark-tool-btn', { active: activeTool === 'circle' }]"
-          title="圆形 (C)"
-          @click="setTool('circle')"
+          @mouseenter="showTooltip($event, tr('circle'), 'C')"
+          @mouseleave="hideTooltip"
+          @click="setTool('circle'); hideTooltip()"
         >
           <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" stroke-width="2">
             <ellipse cx="12" cy="12" rx="8.5" ry="8.5"></ellipse>
@@ -145,8 +150,9 @@
         <button
           ref="toolBtnLine"
           :class="['lark-tool-btn', { active: activeTool === 'line' }]"
-          title="直线 (L)"
-          @click="setTool('line')"
+          @mouseenter="showTooltip($event, tr('line'), 'L')"
+          @mouseleave="hideTooltip"
+          @click="setTool('line'); hideTooltip()"
         >
           <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" stroke-width="2">
             <line x1="4" y1="20" x2="20" y2="4"></line>
@@ -157,8 +163,9 @@
         <button
           ref="toolBtnArrow"
           :class="['lark-tool-btn', { active: activeTool === 'arrow' }]"
-          title="箭头 (A)"
-          @click="setTool('arrow')"
+          @mouseenter="showTooltip($event, tr('arrow'), 'A')"
+          @mouseleave="hideTooltip"
+          @click="setTool('arrow'); hideTooltip()"
         >
           <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" stroke-width="2">
             <line x1="5" y1="19" x2="19" y2="5"></line>
@@ -170,8 +177,9 @@
         <button
           ref="toolBtnPencil"
           :class="['lark-tool-btn', { active: activeTool === 'pencil' }]"
-          title="画笔 (P)"
-          @click="setTool('pencil')"
+          @mouseenter="showTooltip($event, tr('pencil'), 'P')"
+          @mouseleave="hideTooltip"
+          @click="setTool('pencil'); hideTooltip()"
         >
           <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" stroke-width="2">
             <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
@@ -183,8 +191,9 @@
         <button
           ref="toolBtnText"
           :class="['lark-tool-btn', { active: activeTool === 'text' }]"
-          title="文本 (T)"
-          @click="setTool('text')"
+          @mouseenter="showTooltip($event, tr('text'), 'T')"
+          @mouseleave="hideTooltip"
+          @click="setTool('text'); hideTooltip()"
         >
           <span class="text-btn-label">T</span>
         </button>
@@ -193,12 +202,13 @@
         <button
           ref="toolBtnStep"
           :class="['lark-tool-btn', { active: activeTool === 'step' }]"
-          title="序号标记 (S)"
-          @click="setTool('step')"
+          @mouseenter="showTooltip($event, tr('step'), 'S')"
+          @mouseleave="hideTooltip"
+          @click="setTool('step'); hideTooltip()"
         >
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor">
-            <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.8"></circle>
-            <path d="M10.8 10L12 9v6m-1.5 0h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+          <svg viewBox="0 0 24 24" width="20" height="20">
+            <circle cx="12" cy="12" r="9" fill="currentColor"></circle>
+            <text x="12" y="16" text-anchor="middle" font-size="12" font-weight="800" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">1</text>
           </svg>
         </button>
 
@@ -206,18 +216,14 @@
         <button
           ref="toolBtnStepNote"
           :class="['lark-tool-btn', { active: activeTool === 'stepNote' }]"
-          title="序号说明：序号 + 文本说明"
-          @click="setTool('stepNote')"
+          @mouseenter="showTooltip($event, tr('stepNote'))"
+          @mouseleave="hideTooltip"
+          @click="setTool('stepNote'); hideTooltip()"
         >
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor">
-            <!-- Left: Number Badge Circle with clear outline and sharp number 1 -->
-            <circle cx="7" cy="12" r="5" stroke="currentColor" stroke-width="1.6"></circle>
-            <path d="M6 10.8L7 9.8v4.4m-1 0h2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path>
-            <!-- Right: Note / Document Icon -->
-            <rect x="13.5" y="6.5" width="8" height="11" rx="1.5" stroke="currentColor" stroke-width="1.8"></rect>
-            <line x1="15.5" y1="9.5" x2="19.5" y2="9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></line>
-            <line x1="15.5" y1="12" x2="19.5" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></line>
-            <line x1="15.5" y1="14.5" x2="18" y2="14.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></line>
+          <svg viewBox="0 0 24 24" width="20" height="20">
+            <circle cx="7" cy="12" r="6" fill="currentColor"></circle>
+            <text x="7" y="15.2" text-anchor="middle" font-size="9" font-weight="800" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">1</text>
+            <text x="17" y="16.5" text-anchor="middle" font-size="13" font-weight="800" fill="currentColor" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">T</text>
           </svg>
         </button>
 
@@ -225,8 +231,9 @@
         <button
           ref="toolBtnMosaic"
           :class="['lark-tool-btn', { active: activeTool === 'mosaic' }]"
-          title="马赛克 (M)"
-          @click="setTool('mosaic')"
+          @mouseenter="showTooltip($event, tr('mosaic'), 'M')"
+          @mouseleave="hideTooltip"
+          @click="setTool('mosaic'); hideTooltip()"
         >
           <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" stroke-width="2">
             <rect x="3.5" y="3.5" width="17" height="17" rx="2"></rect>
@@ -239,8 +246,9 @@
         <button
           ref="toolBtnHighlight"
           :class="['lark-tool-btn', { active: activeTool === 'highlight' }]"
-          title="高亮 (矩形高亮)"
-          @click="setTool('highlight')"
+          @mouseenter="showTooltip($event, tr('highlight'))"
+          @mouseleave="hideTooltip"
+          @click="setTool('highlight'); hideTooltip()"
         >
           <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none">
             <rect x="3.5" y="3.5" width="17" height="17" rx="3.5" stroke-width="1.8"></rect>
@@ -255,8 +263,9 @@
         <button
           ref="toolBtnMarker"
           :class="['lark-tool-btn', { active: activeTool === 'marker' }]"
-          title="荧光笔 (H)"
-          @click="setTool('marker')"
+          @mouseenter="showTooltip($event, tr('marker'), 'H')"
+          @mouseleave="hideTooltip"
+          @click="setTool('marker'); hideTooltip()"
         >
           <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round">
             <line x1="4.5" y1="19.5" x2="10.5" y2="4.5"></line>
@@ -270,8 +279,9 @@
         <button
           ref="toolBtnWatermark"
           :class="['lark-tool-btn', { active: isWatermarkActive || activeTool === 'watermark' }]"
-          title="添加水印 (W)"
-          @click="toggleWatermark"
+          @mouseenter="showTooltip($event, tr('watermark'), 'W')"
+          @mouseleave="hideTooltip"
+          @click="toggleWatermark(); hideTooltip()"
         >
           <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none">
             <rect x="3.5" y="3.5" width="17" height="17" rx="3" stroke-width="1.8"></rect>
@@ -284,26 +294,14 @@
         <!-- 13. Pin to Desktop 📌 (固定按钮 / 快捷钉) -->
         <button
           class="lark-tool-btn action-pin"
-          title="固定在桌面 (快捷钉 - P)"
-          @click="pinCapture"
+          @mouseenter="showTooltip($event, tr('pin'), 'P')"
+          @mouseleave="hideTooltip"
+          @click="pinCapture(); hideTooltip()"
         >
           <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none">
             <rect x="7" y="3" width="10" height="2.5" rx="1" fill="currentColor"></rect>
             <path d="M8.5 5.5h7l-.5 4 2.5 3v1.5h-11V12.5l2.5-3z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path>
             <line x1="12" y1="14" x2="12" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line>
-          </svg>
-        </button>
-
-        <!-- 14. Scrolling Screenshot [ ⬚ ] (长截图) -->
-        <button
-          class="lark-tool-btn action-scrolling"
-          title="长截图 / 滚动截屏"
-          @click="enterScrollingCapture"
-        >
-          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" stroke-width="2">
-            <rect x="5" y="2" width="14" height="20" rx="2"></rect>
-            <path d="M12 7v10"></path>
-            <polyline points="9 14 12 17 15 14"></polyline>
           </svg>
         </button>
 
@@ -313,8 +311,9 @@
         <button
           class="lark-tool-btn"
           :disabled="historyIndex <= 0"
-          title="撤销 (Ctrl/Cmd+Z)"
-          @click="undo"
+          @mouseenter="showTooltip($event, tr('undo'), 'Cmd+Z')"
+          @mouseleave="hideTooltip"
+          @click="undo(); hideTooltip()"
         >
           <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" stroke-width="2">
             <path d="M3 7v6h6"></path>
@@ -325,8 +324,9 @@
         <!-- 15. Save / Download ↓ -->
         <button
           class="lark-tool-btn action-save"
-          title="保存图片 (Ctrl/Cmd+S)"
-          @click="saveCapture"
+          @mouseenter="showTooltip($event, tr('save'), 'Cmd+S')"
+          @mouseleave="hideTooltip"
+          @click="saveCapture(); hideTooltip()"
         >
           <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" stroke-width="2">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -338,8 +338,9 @@
         <!-- 16. Cancel ✕ (Lark Red on hover) -->
         <button
           class="lark-tool-btn action-close"
-          title="取消 (Esc)"
-          @click="closeCapture"
+          @mouseenter="showTooltip($event, tr('close'), 'Esc')"
+          @mouseleave="hideTooltip"
+          @click="closeCapture(); hideTooltip()"
         >
           <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -350,8 +351,9 @@
         <!-- 17. Confirm ✓ (Lark Green Signature) -->
         <button
           class="lark-tool-btn action-confirm"
-          title="完成并复制 (Enter / 双击选区)"
-          @click="copyCapture"
+          @mouseenter="showTooltip($event, tr('confirm'), 'Enter / 双击')"
+          @mouseleave="hideTooltip"
+          @click="copyCapture(); hideTooltip()"
         >
           <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" stroke-width="2.5">
             <polyline points="20 6 9 17 4 12"></polyline>
@@ -374,22 +376,25 @@
           <div class="text-style-group">
             <button
               :class="['text-style-btn', { active: textStyle === 'normal' }]"
-              title="无底色文字"
-              @click="textStyle = 'normal'"
+              @mouseenter="showTooltip($event, tr('textNormal'))"
+              @mouseleave="hideTooltip"
+              @click="textStyle = 'normal'; hideTooltip()"
             >
               <span class="style-preview normal">T</span>
             </button>
             <button
               :class="['text-style-btn', { active: textStyle === 'filled' }]"
-              title="填充底色"
-              @click="textStyle = 'filled'"
+              @mouseenter="showTooltip($event, tr('textFilled'))"
+              @mouseleave="hideTooltip"
+              @click="textStyle = 'filled'; hideTooltip()"
             >
               <span class="style-preview filled">T</span>
             </button>
             <button
               :class="['text-style-btn', { active: textStyle === 'bordered' }]"
-              title="边框文字"
-              @click="textStyle = 'bordered'"
+              @mouseenter="showTooltip($event, tr('textBordered'))"
+              @mouseleave="hideTooltip"
+              @click="textStyle = 'bordered'; hideTooltip()"
             >
               <span class="style-preview bordered">T</span>
             </button>
@@ -414,7 +419,8 @@
               v-for="size in presetSizes"
               :key="size"
               :class="['stroke-option', { active: strokeWidth === size }]"
-              :title="`粗细: ${size * 6}px`"
+              @mouseenter="showTooltip($event, `${tr('marker')} ${tr('strokeWidth')}: ${size * 6}px`)"
+              @mouseleave="hideTooltip"
               @click="setStrokeSize(size)"
             >
               <div
@@ -436,7 +442,8 @@
               v-for="size in presetSizes"
               :key="size"
               :class="['stroke-option', { active: strokeWidth === size }]"
-              :title="getStrokeTooltip(size)"
+              @mouseenter="showTooltip($event, getStrokeTooltip(size))"
+              @mouseleave="hideTooltip"
               @click="setStrokeSize(size)"
             >
               <div
@@ -457,8 +464,9 @@
           <div class="text-style-group">
             <button
               :class="['sub-mode-btn', { active: mosaicStyle === 'pixel' }]"
-              title="像素马赛克"
-              @click="setMosaicStyle('pixel')"
+              @mouseenter="showTooltip($event, tr('mosaicPixel'))"
+              @mouseleave="hideTooltip"
+              @click="setMosaicStyle('pixel'); hideTooltip()"
             >
               <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor">
                 <rect x="3" y="3" width="6" height="6" rx="1"></rect>
@@ -469,8 +477,9 @@
             </button>
             <button
               :class="['sub-mode-btn', { active: mosaicStyle === 'blur' }]"
-              title="毛玻璃模糊"
-              @click="setMosaicStyle('blur')"
+              @mouseenter="showTooltip($event, tr('mosaicBlur'))"
+              @mouseleave="hideTooltip"
+              @click="setMosaicStyle('blur'); hideTooltip()"
             >
               <svg viewBox="0 0 20 20" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.8">
                 <path d="M10 3s-5 6.2-5 9.5a5 5 0 0 0 10 0C15 9.2 10 3 10 3z"></path>
@@ -484,8 +493,9 @@
           <div class="text-style-group">
             <button
               :class="['sub-mode-btn', { active: mosaicMode === 'brush' }]"
-              title="自由涂抹"
-              @click="mosaicMode = 'brush'"
+              @mouseenter="showTooltip($event, tr('mosaicBrush'))"
+              @mouseleave="hideTooltip"
+              @click="mosaicMode = 'brush'; hideTooltip()"
             >
               <svg viewBox="0 0 20 20" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round">
                 <path d="M7 11V6a1.5 1.5 0 0 1 3 0v5"></path>
@@ -495,8 +505,9 @@
             </button>
             <button
               :class="['sub-mode-btn', { active: mosaicMode === 'rect' }]"
-              title="框选矩形"
-              @click="mosaicMode = 'rect'"
+              @mouseenter="showTooltip($event, tr('mosaicRect'))"
+              @mouseleave="hideTooltip"
+              @click="mosaicMode = 'rect'; hideTooltip()"
             >
               <svg viewBox="0 0 20 20" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.8">
                 <rect x="3" y="3" width="14" height="14" rx="2" stroke-dasharray="2.5 2.5"></rect>
@@ -508,7 +519,7 @@
 
           <!-- Intensity Slider (模糊强度 50%) -->
           <div class="mosaic-slider-group">
-            <span class="mosaic-slider-label">模糊强度</span>
+            <span class="mosaic-slider-label">{{ tr('mosaicIntensity') }}</span>
             <input
               type="range"
               min="10"
@@ -534,12 +545,12 @@
               :class="['preset-pill', { active: watermarkText === p }]"
               @click="setWatermarkPreset(p)"
             >
-              {{ p.length > 6 ? p.slice(0, 4) + '..' : p }}
+              {{ p.length > 12 ? p.slice(0, 10) + '..' : p }}
             </button>
           </div>
           <input
             v-model="watermarkText"
-            placeholder="自定义水印..."
+            :placeholder="tr('watermarkCustomPlaceholder')"
             class="watermark-input"
             @input="renderAll"
             @mousedown.stop
@@ -556,8 +567,13 @@
             <span class="step-badge-preview" :style="{ backgroundColor: activeColor }">
               {{ stepCounter }}
             </span>
-            <button class="step-reset-btn" title="重置序号为 1" @click="stepCounter = 1">
-              重置序号
+            <button
+              class="step-reset-btn"
+              @mouseenter="showTooltip($event, tr('stepResetTooltip'))"
+              @mouseleave="hideTooltip"
+              @click="stepCounter = 1; hideTooltip()"
+            >
+              {{ tr('stepReset') }}
             </button>
           </div>
         </template>
@@ -574,7 +590,8 @@
                 backgroundColor: color.hex,
                 borderColor: color.border || 'transparent'
               }"
-              :title="color.name"
+              @mouseenter="showTooltip($event, getColorName(color))"
+              @mouseleave="hideTooltip"
               @click="activeColor = color.hex"
             >
               <span v-if="activeColor === color.hex" :class="['color-check', { darkText: color.hex === '#ffffff' || color.hex === '#ffc60c' }]">✓</span>
@@ -584,47 +601,14 @@
       </div>
     </div>
 
-    <!-- Lark-Style Scrolling Screen Capture Side Control Dock -->
+    <!-- Custom Fast Lark Tooltip HUD -->
     <div
-      v-if="isScrollingCaptureMode"
-      class="lark-scrolling-dock"
-      :style="scrollingDockPositionStyle"
-      @mousedown.stop
+      v-if="tooltipState.visible"
+      :class="['lark-tooltip-hud', { 'placement-below': tooltipState.isBelow }]"
+      :style="{ left: `${tooltipState.x}px`, top: `${tooltipState.y}px` }"
     >
-      <div class="scrolling-dock-header">
-        <span class="scrolling-dock-title">长截图 / 滚动截屏</span>
-        <span class="scrolling-height-badge">已拼接: {{ stitchedHeight }}px</span>
-      </div>
-
-      <div class="scrolling-tips">
-        {{ scrollStatusMessage || '请直接在选区内滑动滚轮或触控板向下浏览，系统将实时拼接长图；完成后点击“完成长截图”或按 Enter。' }}
-      </div>
-
-      <!-- Action Buttons (Pure Manual Scrolling) -->
-      <div class="scrolling-dock-actions">
-        <button
-          class="scrolling-btn confirm"
-          :disabled="isCapturingSlice"
-          @click="finishScrollingCapture"
-        >
-          ✓ 完成长截图 (Enter)
-        </button>
-
-        <button
-          class="scrolling-btn cancel"
-          @click="cancelScrollingCapture"
-        >
-          ✕ 取消 (ESC)
-        </button>
-      </div>
-
-      <!-- Live Long Screenshot Preview Card -->
-      <div v-if="stitchedHeight > 0" class="scrolling-preview-container">
-        <div class="scrolling-preview-label">长图预览</div>
-        <div class="scrolling-preview-scroll">
-          <canvas ref="scrollingPreviewCanvasRef" class="scrolling-preview-canvas"></canvas>
-        </div>
-      </div>
+      <span class="tooltip-text">{{ tooltipState.text }}</span>
+      <span v-if="tooltipState.shortcut" class="tooltip-shortcut">{{ tooltipState.shortcut }}</span>
     </div>
   </div>
 </template>
@@ -633,6 +617,469 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import type { ScreenCaptureDisplayInfo } from '@shared/types/clipboard'
 import { isDarkThemeId } from '../../../common/theme'
+
+// =============================================================
+// i18n Dictionary for Screen Capture (8 Languages)
+// =============================================================
+const captureI18n: Record<string, Record<string, string>> = {
+  'zh-CN': {
+    toolbarDrag: '拖拽移动工具栏',
+    rect: '矩形',
+    circle: '圆形',
+    line: '直线',
+    arrow: '箭头',
+    pencil: '画笔 / 涂鸦',
+    text: '文本工具',
+    step: '序号标记',
+    stepNote: '序号说明 (序号+文本)',
+    mosaic: '马赛克 / 模糊',
+    highlight: '高亮 (矩形高亮)',
+    marker: '荧光笔',
+    watermark: '添加水印',
+    pin: '钉在桌面 (贴图)',
+    undo: '撤销',
+    save: '保存图片',
+    close: '取消截屏',
+    confirm: '完成并复制',
+    textNormal: '无底色文字',
+    textFilled: '填充底色',
+    textBordered: '边框文字',
+    strokeWidth: '粗细',
+    mosaicPixel: '像素马赛克',
+    mosaicBlur: '毛玻璃模糊',
+    mosaicBrush: '自由涂抹',
+    mosaicRect: '框选矩形',
+    mosaicIntensity: '模糊强度',
+    watermarkCustomPlaceholder: '自定义水印...',
+    stepReset: '重置序号',
+    stepResetTooltip: '重置序号为 1',
+    stepNotePlaceholder: '输入步骤说明...',
+    textPlaceholder: '输入文字...',
+    wmInternalOnly: '内部资料 · 严禁外传',
+    wmConfidential: '机密文件',
+    wmForReview: '仅供审核',
+    colorRed: '红色',
+    colorYellow: '黄色',
+    colorGreen: '绿色',
+    colorBlue: '蓝色',
+    colorBlack: '黑色',
+    colorGray: '灰色',
+    colorWhite: '白色'
+  },
+  'zh-TW': {
+    toolbarDrag: '拖曳移動工具列',
+    rect: '矩形',
+    circle: '圓形',
+    line: '直線',
+    arrow: '箭頭',
+    pencil: '畫筆 / 塗鴉',
+    text: '文字工具',
+    step: '序號標記',
+    stepNote: '序號說明 (序號+文字)',
+    mosaic: '馬賽克 / 模糊',
+    highlight: '高亮 (矩形高亮)',
+    marker: '螢光筆',
+    watermark: '添加浮水印',
+    pin: '釘在桌面 (貼圖)',
+    undo: '復原',
+    save: '儲存圖片',
+    close: '取消截圖',
+    confirm: '完成並複製',
+    textNormal: '無底色文字',
+    textFilled: '填充底色',
+    textBordered: '邊框文字',
+    strokeWidth: '粗細',
+    mosaicPixel: '像素馬賽克',
+    mosaicBlur: '毛玻璃模糊',
+    mosaicBrush: '自由塗抹',
+    mosaicRect: '框選矩形',
+    mosaicIntensity: '模糊強度',
+    watermarkCustomPlaceholder: '自訂浮水印...',
+    stepReset: '重設序號',
+    stepResetTooltip: '重設序號為 1',
+    stepNotePlaceholder: '輸入步驟說明...',
+    textPlaceholder: '輸入文字...',
+    wmInternalOnly: '內部資料 · 嚴禁外傳',
+    wmConfidential: '機密文件',
+    wmForReview: '僅供審核',
+    colorRed: '紅色',
+    colorYellow: '黃色',
+    colorGreen: '綠色',
+    colorBlue: '藍色',
+    colorBlack: '黑色',
+    colorGray: '灰色',
+    colorWhite: '白色'
+  },
+  en: {
+    toolbarDrag: 'Drag Toolbar',
+    rect: 'Rectangle',
+    circle: 'Circle / Ellipse',
+    line: 'Line',
+    arrow: 'Arrow',
+    pencil: 'Pen / Doodle',
+    text: 'Text Tool',
+    step: 'Step Badge',
+    stepNote: 'Step Note (Badge + Text)',
+    mosaic: 'Mosaic / Blur',
+    highlight: 'Highlight Box',
+    marker: 'Highlighter',
+    watermark: 'Add Watermark',
+    pin: 'Pin to Desktop',
+    undo: 'Undo',
+    save: 'Save Image',
+    close: 'Cancel Capture',
+    confirm: 'Done & Copy',
+    textNormal: 'Normal Text',
+    textFilled: 'Filled Background',
+    textBordered: 'Bordered Text',
+    strokeWidth: 'Stroke Width',
+    mosaicPixel: 'Pixelated Mosaic',
+    mosaicBlur: 'Frosted Blur',
+    mosaicBrush: 'Freehand Brush',
+    mosaicRect: 'Rectangle Frame',
+    mosaicIntensity: 'Intensity',
+    watermarkCustomPlaceholder: 'Custom watermark...',
+    stepReset: 'Reset',
+    stepResetTooltip: 'Reset counter to 1',
+    stepNotePlaceholder: 'Enter step note...',
+    textPlaceholder: 'Enter text...',
+    wmInternalOnly: 'INTERNAL ONLY',
+    wmConfidential: 'CONFIDENTIAL',
+    wmForReview: 'FOR REVIEW ONLY',
+    colorRed: 'Red',
+    colorYellow: 'Yellow',
+    colorGreen: 'Green',
+    colorBlue: 'Blue',
+    colorBlack: 'Black',
+    colorGray: 'Gray',
+    colorWhite: 'White'
+  },
+  ja: {
+    toolbarDrag: 'ツールバーをドラッグ',
+    rect: '矩形',
+    circle: '円 / 楕円',
+    line: '直線',
+    arrow: '矢印',
+    pencil: 'ペン / 落書き',
+    text: 'テキスト',
+    step: '番号バッジ',
+    stepNote: '番号付き説明',
+    mosaic: 'モザイク / ぼかし',
+    highlight: 'ハイライト',
+    marker: '蛍光ペン',
+    watermark: '透かしを追加',
+    pin: 'デスクトップにピン留め',
+    undo: '元に戻す',
+    save: '画像を保存',
+    close: 'キャプチャをキャンセル',
+    confirm: '完了してコピー',
+    textNormal: '標準テキスト',
+    textFilled: '背景塗りつぶし',
+    textBordered: '枠線付きテキスト',
+    strokeWidth: '太さ',
+    mosaicPixel: 'ピクセルモザイク',
+    mosaicBlur: 'すりガラスぼかし',
+    mosaicBrush: '自由ブラシ',
+    mosaicRect: '矩形選択',
+    mosaicIntensity: 'ぼかし強度',
+    watermarkCustomPlaceholder: 'カスタム透かし...',
+    stepReset: 'リセット',
+    stepResetTooltip: '番号を 1 にリセット',
+    stepNotePlaceholder: 'ステップ説明を入力...',
+    textPlaceholder: 'テキストを入力...',
+    wmInternalOnly: '社外秘',
+    wmConfidential: '機密',
+    wmForReview: '確認用',
+    colorRed: '赤',
+    colorOrange: 'オレンジ',
+    colorYellow: '黄',
+    colorGreen: '緑',
+    colorBlue: '青',
+    colorBlack: '黒',
+    colorGray: 'グレー',
+    colorWhite: '白'
+  },
+  ko: {
+    toolbarDrag: '툴바 드래그 이동',
+    rect: '직사각형',
+    circle: '원형',
+    line: '직선',
+    arrow: '화살표',
+    pencil: '펜 / 그리기',
+    text: '텍스트 도구',
+    step: '순서 번호',
+    stepNote: '번호 설명 (번호+텍스트)',
+    mosaic: '모자이크 / 블러',
+    highlight: '강조 상자',
+    marker: '형광펜',
+    watermark: '워터마크 추가',
+    pin: '데스크톱 핀',
+    undo: '실행 취소',
+    save: '이미지 저장',
+    close: '캡처 취소',
+    confirm: '완료 및 복사',
+    textNormal: '일반 텍스트',
+    textFilled: '배경 채우기',
+    textBordered: '테두리 텍스트',
+    strokeWidth: '굵기',
+    mosaicPixel: '픽셀 모자이크',
+    mosaicBlur: '흐림 효과',
+    mosaicBrush: '자유 브러시',
+    mosaicRect: '직사각형 영역',
+    mosaicIntensity: '강도',
+    watermarkCustomPlaceholder: '사용자 지정 워터마크...',
+    stepReset: '초기화',
+    stepResetTooltip: '번호를 1로 초기화',
+    stepNotePlaceholder: '단계 설명 입력...',
+    textPlaceholder: '텍스트 입력...',
+    wmInternalOnly: '대외비 · 유출금지',
+    wmConfidential: '기밀문서',
+    wmForReview: '검토용',
+    colorRed: '빨강',
+    colorOrange: '주황',
+    colorYellow: '노랑',
+    colorGreen: '초록',
+    colorBlue: '파랑',
+    colorBlack: '검정',
+    colorGray: '회색',
+    colorWhite: '흰색'
+  },
+  de: {
+    toolbarDrag: 'Symbolleiste verschieben',
+    rect: 'Rechteck',
+    circle: 'Kreis',
+    line: 'Linie',
+    arrow: 'Pfeil',
+    pencil: 'Stift / Freihand',
+    text: 'Textwerkzeug',
+    step: 'Schritt-Nummer',
+    stepNote: 'Schritt-Notiz',
+    mosaic: 'Mosaik / Weichzeichner',
+    highlight: 'Hervorhebung',
+    marker: 'Textmarker',
+    watermark: 'Wasserzeichen hinzufügen',
+    pin: 'An Desktop anheften',
+    undo: 'Rückgängig',
+    save: 'Bild speichern',
+    close: 'Abbrechen',
+    confirm: 'Fertig & Kopieren',
+    textNormal: 'Standardtext',
+    textFilled: 'Ausgefüllter Hintergrund',
+    textBordered: 'Umrandeter Text',
+    strokeWidth: 'Strichstärke',
+    mosaicPixel: 'Pixel-Mosaik',
+    mosaicBlur: 'Weichzeichner',
+    mosaicBrush: 'Freihandpinsel',
+    mosaicRect: 'Rechteckbereich',
+    mosaicIntensity: 'Intensität',
+    watermarkCustomPlaceholder: 'Benutzerdefiniertes Wasserzeichen...',
+    stepReset: 'Zurücksetzen',
+    stepResetTooltip: 'Zähler auf 1 zurücksetzen',
+    stepNotePlaceholder: 'Schritt-Beschreibung eingeben...',
+    textPlaceholder: 'Text eingeben...',
+    wmInternalOnly: 'NUR INTERN',
+    wmConfidential: 'VERTRAULICH',
+    wmForReview: 'ZUR PRÜFUNG',
+    colorRed: 'Rot',
+    colorOrange: 'Orange',
+    colorYellow: 'Gelb',
+    colorGreen: 'Grün',
+    colorBlue: 'Blau',
+    colorBlack: 'Schwarz',
+    colorGray: 'Grau',
+    colorWhite: 'Weiß'
+  },
+  fr: {
+    toolbarDrag: 'Déplacer la barre d\'outils',
+    rect: 'Rectangle',
+    circle: 'Cercle',
+    line: 'Ligne',
+    arrow: 'Flèche',
+    pencil: 'Stylo / Dessin',
+    text: 'Outil Texte',
+    step: 'Numéro d\'étape',
+    stepNote: 'Note d\'étape',
+    mosaic: 'Mosaïque / Flou',
+    highlight: 'Cadre de surbrillance',
+    marker: 'Surligneur',
+    watermark: 'Ajouter un filigrane',
+    pin: 'Épingler au bureau',
+    undo: 'Annuler',
+    save: 'Enregistrer l\'image',
+    close: 'Annuler',
+    confirm: 'Terminer et copier',
+    textNormal: 'Texte normal',
+    textFilled: 'Arrière-plan rempli',
+    textBordered: 'Texte avec bordure',
+    strokeWidth: 'Épaisseur',
+    mosaicPixel: 'Mosaïque pixélisée',
+    mosaicBlur: 'Flou dépoli',
+    mosaicBrush: 'Pinceau à main levée',
+    mosaicRect: 'Zone rectangulaire',
+    mosaicIntensity: 'Intensité',
+    watermarkCustomPlaceholder: 'Filigrane personnalisé...',
+    stepReset: 'Réinitialiser',
+    stepResetTooltip: 'Réinitialiser le compteur à 1',
+    stepNotePlaceholder: 'Entrez la description de l\'étape...',
+    textPlaceholder: 'Entrez du texte...',
+    wmInternalOnly: 'INTERNE UNIQUEMENT',
+    wmConfidential: 'CONFIDENTIEL',
+    wmForReview: 'POUR RÉVISION',
+    colorRed: 'Rouge',
+    colorOrange: 'Orange',
+    colorYellow: 'Jaune',
+    colorGreen: 'Vert',
+    colorBlue: 'Bleu',
+    colorBlack: 'Noir',
+    colorGray: 'Gris',
+    colorWhite: 'Blanc'
+  },
+  es: {
+    toolbarDrag: 'Arrastrar barra de herramientas',
+    rect: 'Rectángulo',
+    circle: 'Círculo',
+    line: 'Línea',
+    arrow: 'Flecha',
+    pencil: 'Lápiz / Dibujo',
+    text: 'Herramienta de texto',
+    step: 'Insignia de paso',
+    stepNote: 'Nota de paso',
+    mosaic: 'Mosaico / Desenfoque',
+    highlight: 'Caja de resaltado',
+    marker: 'Resaltador',
+    watermark: 'Añadir marca de agua',
+    pin: 'Fijar en escritorio',
+    undo: 'Deshacer',
+    save: 'Guardar imagen',
+    close: 'Cancelar captura',
+    confirm: 'Listo y copiar',
+    textNormal: 'Texto normal',
+    textFilled: 'Fondo relleno',
+    textBordered: 'Texto con borde',
+    strokeWidth: 'Grosor',
+    mosaicPixel: 'Mosaico pixelado',
+    mosaicBlur: 'Desenfoque esmerilado',
+    mosaicBrush: 'Pincel libre',
+    mosaicRect: 'Marco rectangular',
+    mosaicIntensity: 'Intensidad',
+    watermarkCustomPlaceholder: 'Marca de agua personalizada...',
+    stepReset: 'Restablecer',
+    stepResetTooltip: 'Restablecer contador a 1',
+    stepNotePlaceholder: 'Ingrese nota del paso...',
+    textPlaceholder: 'Ingrese texto...',
+    wmInternalOnly: 'SOLO USO INTERNO',
+    wmConfidential: 'CONFIDENCIAL',
+    wmForReview: 'SOLO REVISIÓN',
+    colorRed: 'Rojo',
+    colorOrange: 'Naranja',
+    colorYellow: 'Amarillo',
+    colorGreen: 'Verde',
+    colorBlue: 'Azul',
+    colorBlack: 'Negro',
+    colorGray: 'Gris',
+    colorWhite: 'Blanco'
+  }
+}
+
+const currentLang = ref<string>('zh-CN')
+
+const tr = (key: string, params?: Record<string, string | number>): string => {
+  const lang = currentLang.value
+  const bundle = captureI18n[lang] || captureI18n['zh-CN'] || captureI18n.en
+  let val = bundle[key] || captureI18n.en[key] || key
+  if (params) {
+    Object.keys(params).forEach((k) => {
+      val = val.replace(new RegExp(`\\{${k}\\}`, 'g'), String(params[k]))
+    })
+  }
+  return val
+}
+
+const detectLanguage = (): void => {
+  const urlLang = new URLSearchParams(window.location.search).get('lang')
+  if (urlLang) {
+    currentLang.value = urlLang
+    return
+  }
+  const localLang = localStorage.getItem('language')
+  if (localLang) {
+    currentLang.value = localLang
+    return
+  }
+  const nav = navigator.language || 'zh-CN'
+  if (nav.startsWith('zh-TW') || nav.startsWith('zh-HK')) currentLang.value = 'zh-TW'
+  else if (nav.startsWith('zh')) currentLang.value = 'zh-CN'
+  else if (nav.startsWith('ja')) currentLang.value = 'ja'
+  else if (nav.startsWith('ko')) currentLang.value = 'ko'
+  else if (nav.startsWith('de')) currentLang.value = 'de'
+  else if (nav.startsWith('fr')) currentLang.value = 'fr'
+  else if (nav.startsWith('es')) currentLang.value = 'es'
+  else currentLang.value = 'en'
+}
+
+// =============================================================
+// Tooltip System (Fast, Beautiful, Zero Lag)
+// =============================================================
+const tooltipState = ref<{
+  visible: boolean
+  text: string
+  shortcut?: string
+  x: number
+  y: number
+  isBelow: boolean
+}>({
+  visible: false,
+  text: '',
+  shortcut: undefined,
+  x: 0,
+  y: 0,
+  isBelow: false
+})
+
+let tooltipTimer: any = null
+let isTooltipActive = false
+
+const showTooltip = (e: MouseEvent, text: string, shortcut?: string): void => {
+  if (tooltipTimer) clearTimeout(tooltipTimer)
+  const target = e.currentTarget as HTMLElement | null
+  if (!target) return
+
+  const computePos = () => {
+    const rect = target.getBoundingClientRect()
+    const isBelow = rect.top - 36 < 0
+    let x = rect.left + rect.width / 2
+    let y = isBelow ? rect.bottom + 8 : rect.top - 8
+    x = Math.max(20, Math.min(window.innerWidth - 20, x))
+    return { x, y, isBelow }
+  }
+
+  const update = () => {
+    const { x, y, isBelow } = computePos()
+    tooltipState.value = {
+      visible: true,
+      text,
+      shortcut,
+      x,
+      y,
+      isBelow
+    }
+    isTooltipActive = true
+  }
+
+  if (isTooltipActive) {
+    update()
+  } else {
+    tooltipTimer = setTimeout(update, 70)
+  }
+}
+
+const hideTooltip = (): void => {
+  if (tooltipTimer) clearTimeout(tooltipTimer)
+  tooltipTimer = setTimeout(() => {
+    tooltipState.value.visible = false
+    isTooltipActive = false
+  }, 60)
+}
 
 // Custom Vue directive for 100% instant auto-focus on text editor creation
 const vFocus = {
@@ -686,7 +1133,6 @@ const containerRef = ref<HTMLDivElement | null>(null)
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const textInputRef = ref<HTMLTextAreaElement | null>(null)
 const toolbarRef = ref<HTMLDivElement | null>(null)
-const scrollingPreviewCanvasRef = ref<HTMLCanvasElement | null>(null)
 
 // Theme adaptation for MarkNotePro
 const isDarkTheme = ref(false)
@@ -720,8 +1166,13 @@ const mosaicStyle = ref<'pixel' | 'blur'>('pixel')
 
 // Watermark State
 const isWatermarkActive = ref(false)
-const watermarkText = ref('内部资料 · 严禁外传')
-const watermarkPresets = ['内部资料 · 严禁外传', '机密文件', '仅供审核', 'MarkNotePro']
+const watermarkText = ref('')
+const watermarkPresets = computed(() => [
+  tr('wmInternalOnly'),
+  tr('wmConfidential'),
+  tr('wmForReview'),
+  'MarkNotePro'
+])
 
 let pixelMosaicCanvas: HTMLCanvasElement | null = null
 let blurMosaicCanvas: HTMLCanvasElement | null = null
@@ -778,6 +1229,9 @@ const setWatermarkPreset = (p: string): void => {
 }
 
 const toggleWatermark = (): void => {
+  if (!watermarkText.value) {
+    watermarkText.value = tr('wmInternalOnly')
+  }
   isWatermarkActive.value = !isWatermarkActive.value
   if (isWatermarkActive.value) {
     activeTool.value = 'watermark'
@@ -804,16 +1258,20 @@ const onMosaicSliderInput = (): void => {
 
 const activeTool = ref<ToolType>('none')
 
-// Exact 7 Lark Palette Colors from User's Screenshot
+// Exact 7 Lark Palette Colors with i18n support
 const larkPalette = [
-  { hex: '#f64b45', name: '红色' },
-  { hex: '#ffc60c', name: '黄色' },
-  { hex: '#34be4b', name: '绿色' },
-  { hex: '#336df4', name: '蓝色' },
-  { hex: '#1f2329', name: '黑色' },
-  { hex: '#8f959e', name: '灰色' },
-  { hex: '#ffffff', name: '白色', border: 'rgba(0,0,0,0.18)' }
+  { hex: '#f64b45', key: 'colorRed', name: '红色' },
+  { hex: '#ffc60c', key: 'colorYellow', name: '黄色' },
+  { hex: '#34be4b', key: 'colorGreen', name: '绿色' },
+  { hex: '#336df4', key: 'colorBlue', name: '蓝色' },
+  { hex: '#1f2329', key: 'colorBlack', name: '黑色' },
+  { hex: '#8f959e', key: 'colorGray', name: '灰色' },
+  { hex: '#ffffff', key: 'colorWhite', name: '白色', border: 'rgba(0,0,0,0.18)' }
 ]
+
+const getColorName = (color: { key?: string; name: string }): string => {
+  return color.key ? tr(color.key) : color.name
+}
 
 const activeColor = ref('#f64b45')
 const presetSizes = [2, 4, 6, 8]
@@ -845,7 +1303,8 @@ const screenBounds = ref({ x: 0, y: 0, width: 0, height: 0 })
 const screenWorkArea = ref({ x: 0, y: 0, width: 0, height: 0 })
 
 // Smart Target Auto-Detection (Window / Sub-region)
-const detectedWindows = ref<Array<{ x: number; y: number; w: number; h: number; owner?: string; title?: string }>>([])
+const detectedWindows = ref<Array<{ pid?: number; x: number; y: number; w: number; h: number; owner?: string; title?: string }>>([])
+const targetPid = ref<number>(0)
 const smartHoverRect = ref<{ x: number; y: number; width: number; height: number; label?: string } | null>(null)
 let isMouseDownBeforeSelection = false
 let mouseDownPoint = { x: 0, y: 0 }
@@ -915,376 +1374,6 @@ const textInputState = ref({
 const isComposing = ref(false)
 
 // -------------------------------------------------------------
-// Scrolling Screen Capture (长截图 / 滚动截屏) State & Algorithm
-// -------------------------------------------------------------
-const isScrollingCaptureMode = ref(false)
-const isCapturingSlice = ref(false)
-const scrollStatusMessage = ref('')
-const stitchedHeight = ref(0)
-
-let stitchedMasterCanvas: HTMLCanvasElement | null = null
-let prevSliceCanvas: HTMLCanvasElement | null = null
-
-// ShareX Best Match & Ignore Bottom Cache
-let bestMatchCount = 0
-let bestMatchIndex = 0
-let bestIgnoreBottomOffset = 0
-
-// 1. Precise Pixel Difference Counter (detects whether screen moved at all)
-function countChangedPixels(
-  d1: Uint8ClampedArray,
-  d2: Uint8ClampedArray,
-  width: number,
-  height: number,
-  startCol: number,
-  endCol: number
-): number {
-  let changedCount = 0
-  const yStart = Math.floor(height * 0.05)
-  const yEnd = Math.floor(height * 0.95)
-  for (let y = yStart; y < yEnd; y += 3) {
-    const rowOffset = y * width * 4
-    for (let x = startCol; x < endCol; x += 3) {
-      const idx = rowOffset + x * 4
-      const diff =
-        Math.abs(d1[idx] - d2[idx]) +
-        Math.abs(d1[idx + 1] - d2[idx + 1]) +
-        Math.abs(d1[idx + 2] - d2[idx + 2])
-      if (diff > 12) {
-        changedCount++
-      }
-    }
-  }
-  return changedCount
-}
-
-// 2. ShareX Row Comparison (Memory scanline matching with antialias tolerance)
-function compareRows(
-  d1: Uint8ClampedArray,
-  y1: number,
-  d2: Uint8ClampedArray,
-  y2: number,
-  width: number,
-  startCol: number,
-  endCol: number,
-  threshold: number = 7.0
-): boolean {
-  const r1 = y1 * width * 4
-  const r2 = y2 * width * 4
-  let diffSum = 0
-  let samples = 0
-
-  for (let x = startCol; x < endCol; x += 2) {
-    const i1 = r1 + x * 4
-    const i2 = r2 + x * 4
-    diffSum +=
-      Math.abs(d1[i1] - d2[i2]) +
-      Math.abs(d1[i1 + 1] - d2[i2 + 1]) +
-      Math.abs(d1[i1 + 2] - d2[i2 + 2])
-    samples++
-  }
-
-  return samples > 0 && diffSum / samples <= threshold
-}
-
-// 3. ShareX CombineImages Algorithm (Feature row overlap + AutoIgnoreBottomEdge + BestGuess)
-function shareXCombineImages(
-  resultCanvas: HTMLCanvasElement,
-  currCanvas: HTMLCanvasElement,
-  prevCanvas: HTMLCanvasElement | null
-): { newCanvas: HTMLCanvasElement; matchHeight: number; status: 'success' | 'partial' | 'unchanged' | 'no-match' } | null {
-  const width = currCanvas.width
-  const currH = currCanvas.height
-  const resH = resultCanvas.height
-
-  const rctx = resultCanvas.getContext('2d')
-  const cctx = currCanvas.getContext('2d')
-  if (!rctx || !cctx) return null
-
-  // ShareX Rule 1: Exclude side scrollbars & margins (5% to 33% of width)
-  let ignoreSideOffset = Math.max(40, Math.floor(width / 20))
-  ignoreSideOffset = Math.min(ignoreSideOffset, Math.floor(width / 3))
-  const startCol = ignoreSideOffset
-  const endCol = width - ignoreSideOffset
-
-  const resultData = rctx.getImageData(0, 0, width, resH).data
-  const currData = cctx.getImageData(0, 0, width, currH).data
-
-  // ShareX Rule 2: Check if current slice has zero movement compared to previous slice
-  if (prevCanvas) {
-    const pctx = prevCanvas.getContext('2d')
-    if (pctx) {
-      const prevData = pctx.getImageData(0, 0, width, prevCanvas.height).data
-      const changed = countChangedPixels(prevData, currData, width, Math.min(prevCanvas.height, currH), startCol, endCol)
-      if (changed < 20) {
-        return { newCanvas: resultCanvas, matchHeight: 0, status: 'unchanged' }
-      }
-    }
-  }
-
-  // ShareX Rule 3: AutoIgnoreBottomEdge (Detect static/fixed bottom bar or floating footer)
-  const ignoreBottomOffsetMax = Math.floor(currH / 3)
-  let ignoreBottomOffset = Math.max(25, Math.floor(currH / 12))
-
-  for (let i = 0; i <= ignoreBottomOffsetMax; i++) {
-    const yRes = resH - 1 - i
-    const yCurr = currH - 1 - i
-    if (yRes < 0 || yCurr < 0) break
-    if (!compareRows(resultData, yRes, currData, yCurr, width, startCol, endCol, 3.5)) {
-      ignoreBottomOffset += i
-      break
-    }
-  }
-
-  ignoreBottomOffset = Math.max(ignoreBottomOffset, bestIgnoreBottomOffset)
-  ignoreBottomOffset = Math.min(ignoreBottomOffset, ignoreBottomOffsetMax)
-
-  // ShareX Rule 4: Consecutive Scanline Matching
-  let matchCount = 0
-  let matchIndex = 0
-  const matchLimit = Math.floor(currH * 0.7)
-  const rectBottom = resH - ignoreBottomOffset - 1
-
-  const startSearchY = currH - 1 - ignoreBottomOffset
-  const minSearchY = Math.max(10, Math.floor(currH * 0.05))
-
-  for (let currentImageY = startSearchY; currentImageY >= minSearchY && matchCount < matchLimit; currentImageY--) {
-    let currentMatchCount = 0
-
-    for (let y = 0; currentImageY - y >= 0 && rectBottom - y >= 0 && currentMatchCount < matchLimit; y++) {
-      if (compareRows(resultData, rectBottom - y, currData, currentImageY - y, width, startCol, endCol, 7.0)) {
-        currentMatchCount++
-      } else {
-        break
-      }
-    }
-
-    if (currentMatchCount > matchCount) {
-      matchCount = currentMatchCount
-      matchIndex = currentImageY
-    }
-  }
-
-  let bestGuess = false
-  // ShareX Rule 5: Best Guess Fallback (for solid colors / plain text)
-  if (matchCount === 0 && bestMatchCount > 0) {
-    matchCount = bestMatchCount
-    matchIndex = bestMatchIndex
-    ignoreBottomOffset = bestIgnoreBottomOffset
-    bestGuess = true
-  }
-
-  if (matchCount >= 8) {
-    const matchHeight = currH - matchIndex - 1
-    if (matchHeight > 0) {
-      if (matchCount > bestMatchCount) {
-        bestMatchCount = matchCount
-        bestMatchIndex = matchIndex
-        bestIgnoreBottomOffset = ignoreBottomOffset
-      }
-
-      // ShareX Rule 6: Create and stitch new canvas
-      const newHeight = resH - ignoreBottomOffset + matchHeight
-      const newCanvas = document.createElement('canvas')
-      newCanvas.width = width
-      newCanvas.height = newHeight
-      const nctx = newCanvas.getContext('2d')
-      if (!nctx) return null
-
-      // Draw original result without the bottom offset
-      nctx.drawImage(
-        resultCanvas,
-        0, 0, width, resH - ignoreBottomOffset,
-        0, 0, width, resH - ignoreBottomOffset
-      )
-
-      // Draw the new slice from currCanvas starting at matchIndex + 1
-      nctx.drawImage(
-        currCanvas,
-        0, matchIndex + 1, width, matchHeight,
-        0, resH - ignoreBottomOffset, width, matchHeight
-      )
-
-      return {
-        newCanvas,
-        matchHeight,
-        status: bestGuess ? 'partial' : 'success'
-      }
-    }
-  }
-
-  return { newCanvas: resultCanvas, matchHeight: 0, status: 'no-match' }
-}
-
-const enterScrollingCapture = async (): Promise<void> => {
-  if (!hasSelection.value) return
-  if (textInputState.value.active) commitTextInput()
-  activeTool.value = 'none'
-  isScrollingCaptureMode.value = true
-  scrollStatusMessage.value = '已就绪：请直接在选区内滑动滚轮或触控板向下浏览'
-
-  bestMatchCount = 0
-  bestMatchIndex = 0
-  bestIgnoreBottomOffset = 0
-
-  const sel = normSelection.value
-  const dpr = window.devicePixelRatio || 1
-  const sw = Math.round(sel.width * dpr)
-  const sh = Math.round(sel.height * dpr)
-
-  stitchedMasterCanvas = document.createElement('canvas')
-  stitchedMasterCanvas.width = sw
-  stitchedMasterCanvas.height = sh
-  const mctx = stitchedMasterCanvas.getContext('2d')
-  if (mctx && screenshotImage.value) {
-    mctx.drawImage(
-      screenshotImage.value,
-      sel.x * dpr,
-      sel.y * dpr,
-      sw,
-      sh,
-      0,
-      0,
-      sw,
-      sh
-    )
-    prevSliceCanvas = document.createElement('canvas')
-    prevSliceCanvas.width = sw
-    prevSliceCanvas.height = sh
-    const pctx = prevSliceCanvas.getContext('2d')
-    pctx?.drawImage(stitchedMasterCanvas, 0, 0)
-
-    stitchedHeight.value = Math.round(sel.height)
-    nextTick(() => updateScrollingPreview())
-  }
-  renderAll()
-}
-
-const captureCurrentViewportAndStitch = async (): Promise<boolean> => {
-  if (!isScrollingCaptureMode.value || isCapturingSlice.value) return false
-  isCapturingSlice.value = true
-
-  try {
-    const sel = normSelection.value
-    const rect = {
-      x: screenBounds.value.x + sel.x,
-      y: screenBounds.value.y + sel.y,
-      width: sel.width,
-      height: sel.height
-    }
-
-    const sliceDataUrl = await window.electron.ipcRenderer.invoke('mt::capture-slice', rect)
-    if (!sliceDataUrl) return false
-
-    const sliceImg = new Image()
-    sliceImg.src = sliceDataUrl
-    await new Promise((resolve) => {
-      sliceImg.onload = resolve
-    })
-
-    const currSliceCanvas = document.createElement('canvas')
-    currSliceCanvas.width = sliceImg.width
-    currSliceCanvas.height = sliceImg.height
-    const tctx = currSliceCanvas.getContext('2d')
-    if (!tctx) return false
-    tctx.drawImage(sliceImg, 0, 0)
-
-    if (stitchedMasterCanvas) {
-      const stitchRes = shareXCombineImages(stitchedMasterCanvas, currSliceCanvas, prevSliceCanvas)
-      if (!stitchRes || stitchRes.status === 'unchanged' || stitchRes.status === 'no-match') {
-        return false
-      }
-
-      stitchedMasterCanvas = stitchRes.newCanvas
-      prevSliceCanvas = currSliceCanvas
-      const dpr = window.devicePixelRatio || 1
-      stitchedHeight.value = Math.round(stitchedMasterCanvas.height / dpr)
-      scrollStatusMessage.value = `已拼接 +${Math.round(stitchRes.matchHeight / dpr)}px (总长 ${stitchedHeight.value}px)`
-      updateScrollingPreview()
-      return true
-    }
-  } catch (err) {
-    console.error('Failed to capture and stitch viewport:', err)
-  } finally {
-    isCapturingSlice.value = false
-  }
-  return false
-}
-
-const scrollDownAndCapture = async (pixelDelta = -220): Promise<void> => {
-  if (!isScrollingCaptureMode.value || isCapturingSlice.value) return
-
-  try {
-    const sel = normSelection.value
-    const rect = {
-      x: screenBounds.value.x + sel.x,
-      y: screenBounds.value.y + sel.y,
-      width: sel.width,
-      height: sel.height
-    }
-
-    await window.electron.ipcRenderer.invoke('mt::capture-scroll-down', rect, pixelDelta)
-    await new Promise((resolve) => setTimeout(resolve, 160))
-
-    await captureCurrentViewportAndStitch()
-  } catch (err) {
-    console.error('Failed to scrollDownAndCapture:', err)
-  }
-}
-
-const updateScrollingPreview = (): void => {
-  const pCanvas = scrollingPreviewCanvasRef.value
-  if (!pCanvas || !stitchedMasterCanvas) return
-  const pCtx = pCanvas.getContext('2d')
-  if (!pCtx) return
-
-  const targetW = 180
-  const aspect = stitchedMasterCanvas.height / stitchedMasterCanvas.width
-  const targetH = Math.round(targetW * aspect)
-
-  pCanvas.width = targetW
-  pCanvas.height = targetH
-
-  pCtx.drawImage(stitchedMasterCanvas, 0, 0, targetW, targetH)
-}
-
-const finishScrollingCapture = async (): Promise<void> => {
-  isScrollingCaptureMode.value = false
-  if (!stitchedMasterCanvas) {
-    cancelScrollingCapture()
-    return
-  }
-
-  try {
-    const fullDataUrl = stitchedMasterCanvas.toDataURL('image/png')
-    stitchedMasterCanvas = null
-    prevSliceCanvas = null
-    stitchedHeight.value = 0
-    scrollStatusMessage.value = ''
-    await window.electron.ipcRenderer.invoke('mt::capture-copy', fullDataUrl)
-  } catch (err) {
-    console.error('finishScrollingCapture failed:', err)
-  } finally {
-    closeCapture()
-  }
-}
-
-const cancelScrollingCapture = (): void => {
-  try {
-    isScrollingCaptureMode.value = false
-    stitchedMasterCanvas = null
-    prevSliceCanvas = null
-    stitchedHeight.value = 0
-    scrollStatusMessage.value = ''
-    if (wheelThrottleTimer) {
-      clearTimeout(wheelThrottleTimer)
-      wheelThrottleTimer = null
-    }
-  } catch {}
-  closeCapture()
-}
-
-// -------------------------------------------------------------
 // Sub-toolbar Caret X Coordinate Calculation
 // -------------------------------------------------------------
 const subToolbarCaretX = computed(() => {
@@ -1349,12 +1438,12 @@ const brushPreviewSize = computed(() => {
 
 const getStrokeTooltip = (size: number): string => {
   if (activeTool.value === 'marker') {
-    return `荧光高亮笔粗细: ${size * 6}px`
+    return `${tr('marker')} ${tr('strokeWidth')}: ${size * 6}px`
   }
   if (activeTool.value === 'pencil') {
-    return `画笔粗细: ${size}px`
+    return `${tr('pencil')} ${tr('strokeWidth')}: ${size}px`
   }
-  return `标注线条粗细: ${size}px`
+  return `${tr('strokeWidth')}: ${size}px`
 }
 
 const setStrokeSize = (size: number): void => {
@@ -1371,39 +1460,6 @@ const showBrushIndicator = (x: number, y: number): void => {
   brushHideTimer = setTimeout(() => {
     brushPreviewVisible.value = false
   }, 1000)
-}
-
-let wheelThrottleTimer: ReturnType<typeof setTimeout> | null = null
-const onWheel = (e: WheelEvent): void => {
-  if (isScrollingCaptureMode.value) {
-    e.preventDefault()
-    if (e.deltaY > 0 && !wheelThrottleTimer && !isCapturingSlice.value) {
-      const step = Math.min(320, Math.max(140, Math.round(e.deltaY * 1.5)))
-      wheelThrottleTimer = setTimeout(() => {
-        wheelThrottleTimer = null
-      }, 220)
-      scrollDownAndCapture(-step)
-    }
-    return
-  }
-
-  if (activeTool.value === 'none') return
-  e.preventDefault()
-  if (e.deltaY < 0) {
-    if (activeTool.value === 'text' || activeTool.value === 'stepNote') {
-      fontSizeVal.value = Math.min(64, fontSizeVal.value + 2)
-    } else {
-      strokeWidth.value = Math.min(10, strokeWidth.value + 1)
-    }
-  } else {
-    if (activeTool.value === 'text' || activeTool.value === 'stepNote') {
-      fontSizeVal.value = Math.max(12, fontSizeVal.value - 2)
-    } else {
-      strokeWidth.value = Math.max(1, strokeWidth.value - 1)
-    }
-  }
-  showBrushIndicator(e.clientX, e.clientY)
-  renderAll()
 }
 
 // -------------------------------------------------------------
@@ -1684,55 +1740,6 @@ const toolbarPositionStyle = computed(() => {
   }
 })
 
-// Lark Scrolling Dock Position Style (Smart collision with Dock, Menubar, and Screen Edges)
-const scrollingDockPositionStyle = computed(() => {
-  const sel = normSelection.value
-  const dockWidth = 240
-  const dockHeight = 360
-
-  const screenW = window.innerWidth
-  const screenH = window.innerHeight
-
-  const wa = screenWorkArea.value
-  const waY = wa.height > 0 ? Math.max(0, wa.y - screenBounds.value.y) : 0
-  const waH = wa.height > 0 ? wa.height : screenH
-  const waX = wa.width > 0 ? Math.max(0, wa.x - screenBounds.value.x) : 0
-  const waW = wa.width > 0 ? wa.width : screenW
-
-  const safeTop = Math.max(28, waY + 6)
-  const dockMargin = waH >= screenH ? 90 : 12
-  const safeBottom = Math.min(screenH - dockMargin, waY + waH - 12)
-  const safeLeft = Math.max(12, waX + 10)
-  const safeRight = Math.min(screenW - 12, waX + waW - 10)
-
-  // 1. Horizontal placement: try right first, then left, then inside selection
-  let left = sel.x + sel.width + 16
-  if (left + dockWidth > safeRight) {
-    // Try placing on left side of selection
-    left = sel.x - dockWidth - 16
-    if (left < safeLeft) {
-      // Both sides cramped: place inside the selection on the right
-      left = Math.max(safeLeft, safeRight - dockWidth - 16)
-    }
-  }
-  left = Math.max(safeLeft, Math.min(left, safeRight - dockWidth))
-
-  // 2. Vertical placement: align with top of selection
-  let top = sel.y
-  // If colliding with macOS Dock or bottom of screen, pull UP so all buttons remain 100% visible!
-  if (top + dockHeight > safeBottom) {
-    top = Math.max(safeTop, safeBottom - dockHeight)
-  }
-  if (top < safeTop) {
-    top = safeTop
-  }
-
-  return {
-    left: `${Math.round(left)}px`,
-    top: `${Math.round(top)}px`
-  }
-})
-
 const setTool = (tool: ToolType): void => {
   if (textInputState.value.active) {
     commitTextInput()
@@ -1788,80 +1795,15 @@ const getHitTarget = (x: number, y: number): string => {
 }
 
 // -------------------------------------------------------------
-// Smart Window & Sub-region Auto-detection
+// Smart Window Auto-detection (Lark: GetSmallestWindowBoundsFromCursor)
 // -------------------------------------------------------------
-const detectVisualBlock = (
-  cx: number,
-  cy: number,
-  winX: number,
-  winY: number,
-  winW: number,
-  winH: number
-): { x: number; y: number; width: number; height: number } | null => {
-  if (winW < 360 || winH < 240) return null
-  const canvas = canvasRef.value
-  if (!canvas) return null
-  const ctx = canvas.getContext('2d', { willReadFrequently: true })
-  if (!ctx) return null
-
-  const dpr = window.devicePixelRatio || 1
-  const searchRadius = 380
-  const minX = Math.max(winX, cx - searchRadius)
-  const maxX = Math.min(winX + winW, cx + searchRadius)
-  const minY = Math.max(winY, cy - searchRadius)
-  const maxY = Math.min(winY + winH, cy + searchRadius)
-
-  try {
-    const centerPix = ctx.getImageData(Math.round(cx * dpr), Math.round(cy * dpr), 1, 1).data
-    const cr = centerPix[0], cg = centerPix[1], cb = centerPix[2]
-
-    const isDiff = (r: number, g: number, b: number) => {
-      return Math.abs(r - cr) + Math.abs(g - cg) + Math.abs(b - cb) > 48
-    }
-
-    const step = 4
-    let left = winX, right = winX + winW, top = winY, bottom = winY + winH
-
-    for (let x = cx - step; x >= minX; x -= step) {
-      const p = ctx.getImageData(Math.round(x * dpr), Math.round(cy * dpr), 1, 1).data
-      if (isDiff(p[0], p[1], p[2])) {
-        left = x + step
-        break
-      }
-    }
-
-    for (let x = cx + step; x <= maxX; x += step) {
-      const p = ctx.getImageData(Math.round(x * dpr), Math.round(cy * dpr), 1, 1).data
-      if (isDiff(p[0], p[1], p[2])) {
-        right = x
-        break
-      }
-    }
-
-    for (let y = cy - step; y >= minY; y -= step) {
-      const p = ctx.getImageData(Math.round(cx * dpr), Math.round(y * dpr), 1, 1).data
-      if (isDiff(p[0], p[1], p[2])) {
-        top = y + step
-        break
-      }
-    }
-
-    for (let y = cy + step; y <= maxY; y += step) {
-      const p = ctx.getImageData(Math.round(cx * dpr), Math.round(y * dpr), 1, 1).data
-      if (isDiff(p[0], p[1], p[2])) {
-        bottom = y
-        break
-      }
-    }
-
-    const bw = right - left
-    const bh = bottom - top
-    if (bw >= 120 && bh >= 80 && (bw < winW - 30 || bh < winH - 30)) {
-      return { x: Math.round(left), y: Math.round(top), width: Math.round(bw), height: Math.round(bh) }
-    }
-  } catch {}
-
-  return null
+let smartRenderRaf: number | null = null
+const scheduleSmartRender = (): void => {
+  if (smartRenderRaf) return
+  smartRenderRaf = requestAnimationFrame(() => {
+    smartRenderRaf = null
+    renderAll()
+  })
 }
 
 const findSmartTarget = (
@@ -1871,15 +1813,22 @@ const findSmartTarget = (
   const sx = screenBounds.value.x + mouseX
   const sy = screenBounds.value.y + mouseY
 
-  const matches = detectedWindows.value.filter((w) => {
-    return sx >= w.x && sx <= w.x + w.w && sy >= w.y && sy <= w.y + w.h && w.w >= 80 && w.h >= 60
+  // Natural Front-to-Back Z-order from macOS CGWindowListCopyWindowInfo:
+  // The first window enclosing the cursor is ALWAYS the topmost visible window seen by the user!
+  // We strictly preserve the native Z-order so background/hidden windows (e.g. obscured Sunlogin, minimized apps)
+  // will NEVER preempt the topmost visible foreground application.
+  const topWin = detectedWindows.value.find((w) => {
+    return (
+      sx >= w.x &&
+      sx <= w.x + w.w &&
+      sy >= w.y &&
+      sy <= w.y + w.h &&
+      w.w >= 80 &&
+      w.h >= 60
+    )
   })
 
-  if (matches.length === 0) return null
-
-  // Sort matching windows by area ascending: smaller windows / popups / dialogs take precedence!
-  matches.sort((a, b) => a.w * a.h - b.w * b.h)
-  const topWin = matches[0]
+  if (!topWin) return null
 
   const winLeft = Math.max(0, topWin.x - screenBounds.value.x)
   const winTop = Math.max(0, topWin.y - screenBounds.value.y)
@@ -1889,14 +1838,6 @@ const findSmartTarget = (
   const winHeight = winBottom - winTop
 
   if (winWidth < 60 || winHeight < 50) return null
-
-  const subRect = detectVisualBlock(mouseX, mouseY, winLeft, winTop, winWidth, winHeight)
-  if (subRect) {
-    return {
-      ...subRect,
-      label: `${topWin.owner || '区域'}`
-    }
-  }
 
   return {
     x: Math.round(winLeft),
@@ -1947,23 +1888,11 @@ const renderAll = (): void => {
     // Right
     ctx.fillRect(sel.x + sel.width, sel.y, width - (sel.x + sel.width), sel.height)
 
-    if (isScrollingCaptureMode.value) {
-      // CLEAR the selection area completely so it becomes transparent to the underlying desktop/window!
-      ctx.clearRect(sel.x, sel.y, sel.width, sel.height)
-
-      // Draw dashed selection border OUTSIDE the cutout so no border pixels get into the captured rect
-      ctx.strokeStyle = '#336df4'
-      ctx.lineWidth = 2
-      ctx.setLineDash([6, 4])
-      ctx.strokeRect(sel.x - 2, sel.y - 2, sel.width + 4, sel.height + 4)
-      ctx.setLineDash([])
-    } else {
-      // Normal selection border (Lark signature blue #336df4)
-      ctx.strokeStyle = '#336df4'
-      ctx.lineWidth = 1.5
-      ctx.setLineDash([])
-      ctx.strokeRect(sel.x, sel.y, sel.width, sel.height)
-    }
+    // Selection border (Lark signature blue #336df4)
+    ctx.strokeStyle = '#336df4'
+    ctx.lineWidth = 1.5
+    ctx.setLineDash([])
+    ctx.strokeRect(sel.x, sel.y, sel.width, sel.height)
 
     // Selection Dimension Tag Pill (Lark style)
     const tagY = sel.y > 30 ? sel.y - 24 : sel.y + 6
@@ -1981,29 +1910,27 @@ const renderAll = (): void => {
     ctx.textBaseline = 'middle'
     ctx.fillText(`${Math.round(sel.width)} × ${Math.round(sel.height)} px`, sel.x + 8, tagY + 10)
 
-    if (!isScrollingCaptureMode.value) {
-      // 3. Draw Annotations clipped inside selection
-      ctx.save()
-      ctx.beginPath()
-      ctx.rect(sel.x, sel.y, sel.width, sel.height)
-      ctx.clip()
+    // 3. Draw Annotations clipped inside selection
+    ctx.save()
+    ctx.beginPath()
+    ctx.rect(sel.x, sel.y, sel.width, sel.height)
+    ctx.clip()
 
-      for (const ann of annotations.value) {
-        drawSingleAnnotation(ctx, ann)
-      }
-      if (currentAnnotation.value) {
-        drawSingleAnnotation(ctx, currentAnnotation.value)
-      }
-
-      if (isWatermarkActive.value) {
-        drawWatermark(ctx, sel)
-      }
-
-      ctx.restore()
-
-      // 4. Draw Lark Corner Handles & Edge Grips
-      drawSelectionHandles(ctx, sel, hoveredHandle.value)
+    for (const ann of annotations.value) {
+      drawSingleAnnotation(ctx, ann)
     }
+    if (currentAnnotation.value) {
+      drawSingleAnnotation(ctx, currentAnnotation.value)
+    }
+
+    if (isWatermarkActive.value) {
+      drawWatermark(ctx, sel)
+    }
+
+    ctx.restore()
+
+    // 4. Draw Lark Corner Handles & Edge Grips
+    drawSelectionHandles(ctx, sel, hoveredHandle.value)
   } else {
     // Dim the screen before selection
     ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'
@@ -2099,7 +2026,7 @@ const drawWatermark = (ctx: CanvasRenderingContext2D, bounds: { x: number; y: nu
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
 
-  const text = watermarkText.value || '内部资料 · 严禁外传'
+  const text = watermarkText.value || tr('wmInternalOnly')
   const stepX = 180
   const stepY = 110
 
@@ -2685,7 +2612,7 @@ const onMouseMove = (e: MouseEvent): void => {
         (prev && smart && (prev.x !== smart.x || prev.y !== smart.y || prev.width !== smart.width || prev.height !== smart.height))
       if (changed) {
         smartHoverRect.value = smart
-        renderAll()
+        scheduleSmartRender()
       }
       return
     }
@@ -2815,10 +2742,6 @@ const onDoubleClick = (e: MouseEvent): void => {
 const onContextMenu = (): void => {
   if (textInputState.value.active) {
     cancelTextInput()
-    return
-  }
-  if (isScrollingCaptureMode.value) {
-    cancelScrollingCapture()
     return
   }
   if (hasSelection.value) {
@@ -2961,17 +2884,6 @@ const saveCapture = async (): Promise<void> => {
 
 const closeCapture = (): void => {
   try {
-    isScrollingCaptureMode.value = false
-    stitchedMasterCanvas = null
-    prevSliceCanvas = null
-    if (wheelThrottleTimer) {
-      clearTimeout(wheelThrottleTimer)
-      wheelThrottleTimer = null
-    }
-  } catch (err) {
-    console.error('Error cleaning up capture state:', err)
-  }
-  try {
     window.electron.ipcRenderer.send('mt::capture-close')
   } catch (err) {
     console.error('Error sending capture-close:', err)
@@ -2992,19 +2904,13 @@ const onKeydown = (e: KeyboardEvent): void => {
 
   if (e.key === 'Escape') {
     e.preventDefault()
-    if (isScrollingCaptureMode.value) {
-      cancelScrollingCapture()
-    } else {
-      closeCapture()
-    }
+    closeCapture()
     return
   }
 
   if (e.key === 'Enter') {
     e.preventDefault()
-    if (isScrollingCaptureMode.value) {
-      finishScrollingCapture()
-    } else if (hasSelection.value) {
+    if (hasSelection.value) {
       copyCapture()
     }
     return
@@ -3086,6 +2992,27 @@ const applyCaptureData = (info: ScreenCaptureDisplayInfo): void => {
 
 onMounted(async () => {
   detectTheme()
+  detectLanguage()
+
+  try {
+    window.electron.ipcRenderer.send('mt::ask-for-user-preference')
+    window.electron.ipcRenderer.on('mt::user-preference', (_e, prefs: any) => {
+      if (prefs) {
+        if (prefs.theme) {
+          isDarkTheme.value = isDarkThemeId(prefs.theme)
+        }
+        if (prefs.language) {
+          currentLang.value = prefs.language
+        }
+      }
+    })
+    window.electron.ipcRenderer.on('language-changed', (_e, lang: string) => {
+      if (lang) currentLang.value = lang
+    })
+  } catch (err) {
+    console.warn('Failed to query user preferences:', err)
+  }
+
   removeDataSub = window.electron.ipcRenderer.on('mt::capture-data-ready', (_event, info: ScreenCaptureDisplayInfo) => {
     applyCaptureData(info)
   })
@@ -3111,6 +3038,8 @@ onMounted(async () => {
 onUnmounted(() => {
   if (removeDataSub) removeDataSub()
   if (brushHideTimer) clearTimeout(brushHideTimer)
+  if (tooltipTimer) clearTimeout(tooltipTimer)
+  if (smartRenderRaf) cancelAnimationFrame(smartRenderRaf)
   window.removeEventListener('resize', renderAll)
 })
 </script>
@@ -3853,11 +3782,6 @@ onUnmounted(() => {
 }
 
 /* Action button accents */
-.action-scrolling:hover {
-  background: rgba(51, 109, 244, 0.12);
-  color: #336df4;
-}
-
 .action-pin:hover {
   background: rgba(245, 158, 11, 0.12);
   color: #f59e0b;
@@ -3904,198 +3828,76 @@ onUnmounted(() => {
   color: #336df4;
 }
 
-/* Lark-Style Scrolling Screen Capture Side Control Dock */
-.lark-scrolling-dock {
-  position: absolute;
-  width: 230px;
-  max-height: calc(100vh - 110px);
-  overflow-y: auto;
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.16), 0 2px 6px rgba(0, 0, 0, 0.06);
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  z-index: 1002;
-  cursor: default;
-  animation: subToolbarFadeIn 0.15s ease-out;
-}
-
-.theme-dark .lark-scrolling-dock {
-  background: #23252a;
-  border-color: rgba(255, 255, 255, 0.12);
-  color: #e2e8f0;
-}
-
-.scrolling-dock-header {
-  display: flex;
+/* Custom Fast Lark Tooltip HUD */
+.lark-tooltip-hud {
+  position: fixed;
+  z-index: 999999;
+  transform: translate(-50%, -100%);
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-}
-
-.scrolling-dock-title {
-  font-size: 13px;
-  font-weight: bold;
-  color: #1f2329;
-}
-
-.theme-dark .scrolling-dock-title {
-  color: #ffffff;
-}
-
-.scrolling-height-badge {
-  font-size: 11px;
-  color: #336df4;
-  background: #e9eeff;
-  padding: 1px 6px;
-  border-radius: 4px;
-  font-weight: bold;
-}
-
-.theme-dark .scrolling-height-badge {
-  color: #60a5fa;
-  background: rgba(51, 109, 244, 0.25);
-}
-
-.scrolling-tips {
-  font-size: 11px;
-  color: #646a73;
-  line-height: 1.4;
-}
-
-.theme-dark .scrolling-tips {
-  color: #94a3b8;
-}
-
-.scrolling-dock-actions {
-  display: flex;
-  flex-direction: column;
   gap: 6px;
-}
-
-.scrolling-btn {
-  border: none;
+  background: rgba(31, 35, 41, 0.94);
+  color: #ffffff;
+  padding: 5px 9px;
   border-radius: 6px;
-  padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.12s ease;
-}
-
-.scrolling-btn.primary {
-  background: #336df4;
-  color: #ffffff;
-}
-
-.scrolling-btn.primary:hover:not(:disabled) {
-  background: #2563eb;
-}
-
-.scrolling-btn.primary:disabled {
-  opacity: 0.6;
-  cursor: wait;
-}
-
-.scrolling-btn.auto {
-  background: #f0f7ff;
-  color: #0284c7;
-}
-
-.theme-dark .scrolling-btn.auto {
-  background: rgba(2, 132, 199, 0.2);
-  color: #38bdf8;
-}
-
-.scrolling-btn.auto:hover:not(:disabled) {
-  background: #e0f2fe;
-}
-
-.scrolling-btn.confirm {
-  background: #eaf8ec;
-  color: #34be4b;
-}
-
-.theme-dark .scrolling-btn.auto {
-  background: #f0f7ff;
-  color: #0284c7;
-}
-
-.theme-dark .scrolling-btn.auto {
-  background: rgba(2, 132, 199, 0.2);
-  color: #38bdf8;
-}
-
-.scrolling-btn.auto:hover:not(:disabled) {
-  background: #e0f2fe;
-}
-
-.scrolling-btn.confirm {
-  background: rgba(52, 190, 75, 0.2);
-  color: #4ade80;
-}
-
-.scrolling-btn.confirm:hover {
-  background: #34be4b;
-  color: #ffffff;
-}
-
-.scrolling-btn.cancel {
-  background: #f5f6f7;
-  color: #646a73;
-}
-
-.theme-dark .scrolling-btn.cancel {
-  background: #2b2e35;
-  color: #94a3b8;
-}
-
-.scrolling-btn.cancel:hover {
-  background: #feeceb;
-  color: #f64b45;
-}
-
-.scrolling-preview-container {
-  border-top: 1px solid rgba(31, 35, 41, 0.08);
-  padding-top: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.theme-dark .scrolling-preview-container {
-  border-top-color: rgba(255, 255, 255, 0.08);
-}
-
-.scrolling-preview-label {
   font-size: 11px;
-  font-weight: bold;
-  color: #8f959e;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25), 0 1px 3px rgba(0, 0, 0, 0.12);
+  user-select: none;
+  animation: tooltipFadeIn 0.08s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
-.scrolling-preview-scroll {
-  max-height: 160px;
-  overflow-y: auto;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 4px;
-  background: #f8fafc;
-  display: flex;
-  justify-content: center;
-  padding: 4px 0;
+.lark-tooltip-hud.placement-below {
+  transform: translate(-50%, 0);
+  animation-name: tooltipFadeInBelow;
 }
 
-.theme-dark .scrolling-preview-scroll {
-  background: #18191c;
-  border-color: rgba(255, 255, 255, 0.08);
+.theme-dark .lark-tooltip-hud {
+  background: rgba(15, 23, 42, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f1f5f9;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
 }
 
-.scrolling-preview-canvas {
-  display: block;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+.tooltip-text {
+  font-size: 11px;
+  letter-spacing: 0.2px;
+}
+
+.tooltip-shortcut {
+  font-size: 10px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.95);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+  font-weight: 600;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -92%) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -100%) scale(1);
+  }
+}
+
+@keyframes tooltipFadeInBelow {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
 }
 </style>

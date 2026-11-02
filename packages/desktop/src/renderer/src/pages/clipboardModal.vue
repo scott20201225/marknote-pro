@@ -1,5 +1,5 @@
 <template>
-  <div class="clipboard-modal-container" @keydown="handleGlobalKeydown">
+  <div :class="['clipboard-modal-container', isDarkTheme ? 'theme-dark' : 'theme-light']">
     <!-- Header Search Bar -->
     <div class="search-header">
       <div class="search-icon">
@@ -13,7 +13,7 @@
         v-model="searchQuery"
         type="text"
         class="search-input"
-        placeholder="搜索历史记录... (↑↓ 选择, ↵ 复制, P 钉在桌面, Esc 退出)"
+        :placeholder="tr('searchPlaceholder')"
         @input="onSearchInput"
       />
 
@@ -23,23 +23,23 @@
           :class="['category-tab-btn', { active: currentCategory === 'all' }]"
           @click="setCategory('all')"
         >
-          全部 <span class="tab-count">{{ items.length }}</span>
+          {{ tr('all') }} <span class="tab-count">{{ items.length }}</span>
         </button>
         <button
           :class="['category-tab-btn', { active: currentCategory === 'image' }]"
           @click="setCategory('image')"
         >
-          图片 <span class="tab-count">{{ imageCount }}</span>
+          {{ tr('image') }} <span class="tab-count">{{ imageCount }}</span>
         </button>
         <button
           :class="['category-tab-btn', { active: currentCategory === 'text' }]"
           @click="setCategory('text')"
         >
-          文本 <span class="tab-count">{{ textCount }}</span>
+          {{ tr('text') }} <span class="tab-count">{{ textCount }}</span>
         </button>
       </div>
 
-      <button class="close-btn" title="关闭 (Esc)" @click="closeModal">
+      <button class="close-btn" :title="tr('close')" @click="closeModal">
         ✕
       </button>
     </div>
@@ -50,7 +50,7 @@
       <div ref="listRef" class="list-column">
         <div v-if="filteredItems.length === 0" class="empty-hint">
           <div class="empty-icon">📋</div>
-          <div class="empty-text">无相关剪贴板历史</div>
+          <div class="empty-text">{{ tr('empty') }}</div>
         </div>
 
         <div
@@ -71,7 +71,7 @@
             <div class="item-title">{{ getItemTitle(item) }}</div>
             <div class="item-meta">
               <span class="item-time">{{ formatTime(item.timestamp) }}</span>
-              <span v-if="item.charCount" class="item-extra">{{ item.charCount }} 字符</span>
+              <span v-if="item.charCount" class="item-extra">{{ item.charCount }} {{ tr('chars') }}</span>
               <span v-else-if="item.width && item.height" class="item-extra">{{ item.width }}×{{ item.height }}</span>
             </div>
           </div>
@@ -81,7 +81,7 @@
             <button
               v-if="item.type === 'image'"
               class="action-icon-btn pin"
-              title="钉在桌面 (P)"
+              :title="tr('pinDesktop')"
               @click.stop="pinItem(item)"
             >
               📌
@@ -89,13 +89,13 @@
             <!-- Copy button for all -->
             <button
               class="action-icon-btn copy"
-              :title="copiedItemId === item.id ? '已复制' : '复制到剪贴板'"
+              :title="copiedItemId === item.id ? tr('copied') : tr('copyToClipboard')"
               @click.stop="copyItem(item)"
             >
               <span v-if="copiedItemId === item.id" class="copied-check">✓</span>
               <span v-else>📋</span>
             </button>
-            <button class="action-icon-btn delete" title="删除" @click.stop="deleteItem(item)">
+            <button class="action-icon-btn delete" :title="tr('delete')" @click.stop="deleteItem(item)">
               🗑️
             </button>
           </div>
@@ -116,19 +116,19 @@
               <button
                 v-if="selectedItem.type === 'image'"
                 class="btn btn-secondary"
-                title="钉在桌面 (P)"
+                :title="tr('pinDesktop')"
                 @click="pinItem(selectedItem)"
               >
-                📌 贴图
+                📌 {{ tr('pin') }}
               </button>
               <!-- Primary action: Copy & Close (↵) -->
               <button
                 class="btn btn-primary"
-                title="复制到剪贴板并退出 (↵)"
+                :title="tr('copyAndExitTip')"
                 @click="copyAndClose(selectedItem)"
               >
-                <span v-if="copiedItemId === selectedItem.id">✓ 已复制</span>
-                <span v-else>📋 复制</span>
+                <span v-if="copiedItemId === selectedItem.id">✓ {{ tr('copied') }}</span>
+                <span v-else>📋 {{ tr('copy') }}</span>
               </button>
             </div>
           </div>
@@ -143,7 +143,7 @@
                 alt="Clipboard Image"
               />
               <div class="image-dimension-info">
-                分辨率: {{ selectedItem.width || '?' }} × {{ selectedItem.height || '?' }} 像素
+                {{ tr('resolution', { w: selectedItem.width || '?', h: selectedItem.height || '?' }) }}
               </div>
             </div>
 
@@ -155,19 +155,19 @@
         </template>
 
         <div v-else class="preview-placeholder">
-          选择左侧记录以预览内容
+          {{ tr('previewPlaceholder') }}
         </div>
       </div>
     </div>
 
     <!-- Footer Shortcuts Bar -->
     <div class="footer-bar">
-      <div class="shortcut-tip"><kbd>↑</kbd><kbd>↓</kbd> 导航</div>
-      <div class="shortcut-tip"><kbd>↵</kbd> 复制并退出</div>
-      <div v-if="selectedItem?.type === 'image'" class="shortcut-tip"><kbd>P</kbd> 钉在桌面</div>
-      <div class="shortcut-tip"><kbd>Esc</kbd> 退出</div>
+      <div class="shortcut-tip"><kbd>↑</kbd><kbd>↓</kbd> {{ tr('navTip') }}</div>
+      <div class="shortcut-tip"><kbd>↵</kbd> {{ tr('copyAndExit') }}</div>
+      <div v-if="selectedItem?.type === 'image'" class="shortcut-tip"><kbd>P</kbd> {{ tr('pinTip') }}</div>
+      <div class="shortcut-tip"><kbd>Esc</kbd> {{ tr('exit') }}</div>
       <div class="footer-right">
-        <button class="clear-all-link" @click="clearAllHistory">清空全部历史</button>
+        <button class="clear-all-link" @click="clearAllHistory">{{ tr('clearAll') }}</button>
       </div>
     </div>
   </div>
@@ -176,7 +176,304 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import type { ClipboardItemRecord } from '@shared/types/clipboard'
+import { isDarkThemeId } from '../../../common/theme'
 
+// =============================================================
+// Multi-language (i18n) Support
+// =============================================================
+const i18nDict: Record<string, Record<string, string>> = {
+  'zh-CN': {
+    searchPlaceholder: '搜索历史记录... (↑↓ 选择, ↵ 复制, P 钉在桌面, Esc 退出)',
+    all: '全部',
+    image: '图片',
+    text: '文本',
+    close: '关闭 (Esc)',
+    empty: '无相关剪贴板历史',
+    chars: '字符',
+    pinDesktop: '钉在桌面 (P)',
+    copied: '已复制',
+    copyToClipboard: '复制到剪贴板',
+    delete: '删除',
+    pin: '贴图',
+    copy: '复制',
+    copyAndExitTip: '复制到剪贴板并退出 (↵)',
+    resolution: '分辨率: {w} × {h} 像素',
+    previewPlaceholder: '选择左侧记录以预览内容',
+    navTip: '导航',
+    copyAndExit: '复制并退出',
+    pinTip: '钉在桌面',
+    exit: '退出',
+    clearAll: '清空全部历史',
+    confirmClear: '确定要清空所有剪贴板历史记录吗？',
+    justNow: '刚刚',
+    minutesAgo: '{n}分钟前',
+    hoursAgo: '{n}小时前',
+    daysAgo: '{n}天前',
+    clipboardText: '剪贴板文本'
+  },
+  'zh-TW': {
+    searchPlaceholder: '搜尋歷史記錄... (↑↓ 選擇, ↵ 複製, P 釘在桌面, Esc 退出)',
+    all: '全部',
+    image: '圖片',
+    text: '文字',
+    close: '關閉 (Esc)',
+    empty: '無相關剪貼簿歷史',
+    chars: '字元',
+    pinDesktop: '釘在桌面 (P)',
+    copied: '已複製',
+    copyToClipboard: '複製到剪貼簿',
+    delete: '刪除',
+    pin: '貼圖',
+    copy: '複製',
+    copyAndExitTip: '複製到剪貼簿並退出 (↵)',
+    resolution: '解析度: {w} × {h} 像素',
+    previewPlaceholder: '選擇左側記錄以預覽內容',
+    navTip: '導航',
+    copyAndExit: '複製並退出',
+    pinTip: '釘在桌面',
+    exit: '退出',
+    clearAll: '清空全部歷史',
+    confirmClear: '確定要清空所有剪貼簿歷史記錄嗎？',
+    justNow: '剛剛',
+    minutesAgo: '{n}分鐘前',
+    hoursAgo: '{n}小時前',
+    daysAgo: '{n}天前',
+    clipboardText: '剪貼簿文字'
+  },
+  en: {
+    searchPlaceholder: 'Search history... (↑↓ Navigate, ↵ Copy, P Pin, Esc Close)',
+    all: 'All',
+    image: 'Images',
+    text: 'Text',
+    close: 'Close (Esc)',
+    empty: 'No clipboard history found',
+    chars: 'chars',
+    pinDesktop: 'Pin to Desktop (P)',
+    copied: 'Copied',
+    copyToClipboard: 'Copy to Clipboard',
+    delete: 'Delete',
+    pin: 'Pin',
+    copy: 'Copy',
+    copyAndExitTip: 'Copy to clipboard & exit (↵)',
+    resolution: 'Resolution: {w} × {h} px',
+    previewPlaceholder: 'Select an item on the left to preview',
+    navTip: 'Navigate',
+    copyAndExit: 'Copy & Exit',
+    pinTip: 'Pin to Desktop',
+    exit: 'Exit',
+    clearAll: 'Clear All History',
+    confirmClear: 'Are you sure you want to clear all clipboard history?',
+    justNow: 'Just now',
+    minutesAgo: '{n}m ago',
+    hoursAgo: '{n}h ago',
+    daysAgo: '{n}d ago',
+    clipboardText: 'Clipboard Text'
+  },
+  ja: {
+    searchPlaceholder: '履歴を検索... (↑↓ 選択, ↵ コピー, P ピン留め, Esc 閉じる)',
+    all: 'すべて',
+    image: '画像',
+    text: 'テキスト',
+    close: '閉じる (Esc)',
+    empty: 'クリップボード履歴がありません',
+    chars: '文字',
+    pinDesktop: 'デスクトップにピン留め (P)',
+    copied: 'コピーしました',
+    copyToClipboard: 'クリップボードにコピー',
+    delete: '削除',
+    pin: 'ピン留め',
+    copy: 'コピー',
+    copyAndExitTip: 'コピーして閉じる (↵)',
+    resolution: '解像度: {w} × {h} ピクセル',
+    previewPlaceholder: '左の項目を選択してプレビュー',
+    navTip: '移動',
+    copyAndExit: 'コピーして終了',
+    pinTip: 'ピン留め',
+    exit: '終了',
+    clearAll: 'すべての履歴を消去',
+    confirmClear: 'すべてのクリップボード履歴を消去しますか？',
+    justNow: 'たった今',
+    minutesAgo: '{n}分前',
+    hoursAgo: '{n}時間前',
+    daysAgo: '{n}日前',
+    clipboardText: 'クリップボードテキスト'
+  },
+  ko: {
+    searchPlaceholder: '기록 검색... (↑↓ 탐색, ↵ 복사, P 데스크톱 핀, Esc 닫기)',
+    all: '전체',
+    image: '이미지',
+    text: '텍스트',
+    close: '닫기 (Esc)',
+    empty: '클립보드 기록이 없습니다',
+    chars: '글자',
+    pinDesktop: '데스크톱 핀 (P)',
+    copied: '복사됨',
+    copyToClipboard: '클립보드에 복사',
+    delete: '삭제',
+    pin: '핀 고정',
+    copy: '복사',
+    copyAndExitTip: '복사 후 닫기 (↵)',
+    resolution: '해상도: {w} × {h} px',
+    previewPlaceholder: '왼쪽 항목을 선택하여 미리보기',
+    navTip: '탐색',
+    copyAndExit: '복사 후 종료',
+    pinTip: '데스크톱 핀',
+    exit: '종료',
+    clearAll: '모든 기록 삭제',
+    confirmClear: '모든 클립보드 기록을 삭제하시겠습니까?',
+    justNow: '방금',
+    minutesAgo: '{n}분 전',
+    hoursAgo: '{n}시간 전',
+    daysAgo: '{n}일 전',
+    clipboardText: '클립보드 텍스트'
+  },
+  de: {
+    searchPlaceholder: 'Verlauf durchsuchen... (↑↓ Auswählen, ↵ Kopieren, P Anheften, Esc Schließen)',
+    all: 'Alle',
+    image: 'Bilder',
+    text: 'Text',
+    close: 'Schließen (Esc)',
+    empty: 'Kein Zwischenablage-Verlauf',
+    chars: 'Zeichen',
+    pinDesktop: 'An Desktop anheften (P)',
+    copied: 'Kopiert',
+    copyToClipboard: 'In Zwischenablage kopieren',
+    delete: 'Löschen',
+    pin: 'Anheften',
+    copy: 'Kopieren',
+    copyAndExitTip: 'Kopieren & Schließen (↵)',
+    resolution: 'Auflösung: {w} × {h} px',
+    previewPlaceholder: 'Eintrag links auswählen für Vorschau',
+    navTip: 'Navigieren',
+    copyAndExit: 'Kopieren & Beenden',
+    pinTip: 'Anheften',
+    exit: 'Beenden',
+    clearAll: 'Gesamten Verlauf löschen',
+    confirmClear: 'Möchten Sie wirklich den gesamten Zwischenablage-Verlauf löschen?',
+    justNow: 'Gerade eben',
+    minutesAgo: 'vor {n}m',
+    hoursAgo: 'vor {n}h',
+    daysAgo: 'vor {n}d',
+    clipboardText: 'Zwischenablage-Text'
+  },
+  fr: {
+    searchPlaceholder: 'Rechercher... (↑↓ Sélectionner, ↵ Copier, P Épingler, Esc Fermer)',
+    all: 'Tout',
+    image: 'Images',
+    text: 'Texte',
+    close: 'Fermer (Esc)',
+    empty: 'Aucun historique',
+    chars: 'caractères',
+    pinDesktop: 'Épingler au bureau (P)',
+    copied: 'Copié',
+    copyToClipboard: 'Copier dans le presse-papiers',
+    delete: 'Supprimer',
+    pin: 'Épingler',
+    copy: 'Copier',
+    copyAndExitTip: 'Copier et fermer (↵)',
+    resolution: 'Résolution : {w} × {h} px',
+    previewPlaceholder: 'Sélectionnez un élément à gauche pour afficher l\'aperçu',
+    navTip: 'Naviguer',
+    copyAndExit: 'Copier et quitter',
+    pinTip: 'Épingler',
+    exit: 'Quitter',
+    clearAll: 'Effacer tout l\'historique',
+    confirmClear: 'Voulez-vous vraiment effacer tout l\'historique ?',
+    justNow: 'À l\'instant',
+    minutesAgo: 'il y a {n}m',
+    hoursAgo: 'il y a {n}h',
+    daysAgo: 'il y a {n}j',
+    clipboardText: 'Texte du presse-papiers'
+  },
+  es: {
+    searchPlaceholder: 'Buscar historial... (↑↓ Seleccionar, ↵ Copiar, P Fijar, Esc Cerrar)',
+    all: 'Todo',
+    image: 'Imágenes',
+    text: 'Texto',
+    close: 'Cerrar (Esc)',
+    empty: 'Sin historial de portapapeles',
+    chars: 'caracteres',
+    pinDesktop: 'Fijar en escritorio (P)',
+    copied: 'Copiado',
+    copyToClipboard: 'Copiar al portapapeles',
+    delete: 'Eliminar',
+    pin: 'Fijar',
+    copy: 'Copiar',
+    copyAndExitTip: 'Copiar y cerrar (↵)',
+    resolution: 'Resolución: {w} × {h} px',
+    previewPlaceholder: 'Seleccione un elemento para vista previa',
+    navTip: 'Navegar',
+    copyAndExit: 'Copiar y salir',
+    pinTip: 'Fijar en escritorio',
+    exit: 'Salir',
+    clearAll: 'Borrar todo el historial',
+    confirmClear: '¿Está seguro de que desea borrar todo el historial?',
+    justNow: 'Ahora mismo',
+    minutesAgo: 'hace {n}m',
+    hoursAgo: 'hace {n}h',
+    daysAgo: 'hace {n}d',
+    clipboardText: 'Texto del portapapeles'
+  }
+}
+
+const currentLang = ref<string>('zh-CN')
+
+const tr = (key: string, params?: Record<string, string | number>): string => {
+  const lang = currentLang.value
+  const bundle = i18nDict[lang] || i18nDict['zh-CN'] || i18nDict.en
+  let val = bundle[key] || i18nDict.en[key] || key
+  if (params) {
+    Object.keys(params).forEach((k) => {
+      val = val.replace(new RegExp(`\\{${k}\\}`, 'g'), String(params[k]))
+    })
+  }
+  return val
+}
+
+const detectLanguage = (): void => {
+  const urlLang = new URLSearchParams(window.location.search).get('lang')
+  if (urlLang) {
+    currentLang.value = urlLang
+    return
+  }
+  const localLang = localStorage.getItem('language')
+  if (localLang) {
+    currentLang.value = localLang
+    return
+  }
+  const nav = navigator.language || 'zh-CN'
+  if (nav.startsWith('zh-TW') || nav.startsWith('zh-HK')) currentLang.value = 'zh-TW'
+  else if (nav.startsWith('zh')) currentLang.value = 'zh-CN'
+  else if (nav.startsWith('ja')) currentLang.value = 'ja'
+  else if (nav.startsWith('ko')) currentLang.value = 'ko'
+  else if (nav.startsWith('de')) currentLang.value = 'de'
+  else if (nav.startsWith('fr')) currentLang.value = 'fr'
+  else if (nav.startsWith('es')) currentLang.value = 'es'
+  else currentLang.value = 'en'
+}
+
+// =============================================================
+// Theme Support (Light / Dark)
+// =============================================================
+const isDarkTheme = ref(false)
+
+const detectTheme = (): void => {
+  const urlTheme = new URLSearchParams(window.location.search).get('theme')
+  if (urlTheme) {
+    isDarkTheme.value = isDarkThemeId(urlTheme)
+    return
+  }
+  const localTheme = localStorage.getItem('theme')
+  if (localTheme) {
+    isDarkTheme.value = isDarkThemeId(localTheme)
+    return
+  }
+  isDarkTheme.value = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+}
+
+// =============================================================
+// Core State & Logic
+// =============================================================
 const searchInputRef = ref<HTMLInputElement | null>(null)
 const listRef = ref<HTMLDivElement | null>(null)
 const items = ref<ClipboardItemRecord[]>([])
@@ -217,20 +514,20 @@ const selectedItem = computed(() => {
 
 const getItemTitle = (item: ClipboardItemRecord): string => {
   if (item.previewText) return item.previewText
-  if (item.type === 'image') return `图片 (${item.width || 0} × ${item.height || 0})`
+  if (item.type === 'image') return `${tr('image')} (${item.width || 0} × ${item.height || 0})`
   return item.content.slice(0, 100)
 }
 
 const formatTime = (timestamp: number): string => {
   const diff = Date.now() - timestamp
   const seconds = Math.floor(diff / 1000)
-  if (seconds < 60) return '刚刚'
+  if (seconds < 60) return tr('justNow')
   const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}分钟前`
+  if (minutes < 60) return tr('minutesAgo', { n: minutes })
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}小时前`
+  if (hours < 24) return tr('hoursAgo', { n: hours })
   const days = Math.floor(hours / 24)
-  return `${days}天前`
+  return tr('daysAgo', { n: days })
 }
 
 const loadHistory = async (): Promise<void> => {
@@ -277,15 +574,6 @@ const copyAndClose = async (item: ClipboardItemRecord): Promise<void> => {
   }
 }
 
-const pasteItem = async (item: ClipboardItemRecord): Promise<void> => {
-  try {
-    const raw = JSON.parse(JSON.stringify(item))
-    await window.electron.ipcRenderer.invoke('mt::clipboard-paste-item', raw)
-  } catch (err) {
-    console.error('Failed to paste item:', err)
-  }
-}
-
 const pinItem = async (item: ClipboardItemRecord): Promise<void> => {
   try {
     const raw = JSON.parse(JSON.stringify(item))
@@ -308,6 +596,7 @@ const deleteItem = async (item: ClipboardItemRecord): Promise<void> => {
 }
 
 const clearAllHistory = async (): Promise<void> => {
+  if (!confirm(tr('confirmClear'))) return
   try {
     await window.electron.ipcRenderer.invoke('mt::clipboard-clear-history')
     items.value = []
@@ -392,12 +681,57 @@ const handleGlobalKeydown = (e: KeyboardEvent): void => {
 
 let removeShowSub: (() => void) | null = null
 let removeUpdatedSub: (() => void) | null = null
+let mediaQuery: MediaQueryList | null = null
+let mediaQueryHandler: ((e: MediaQueryListEvent) => void) | null = null
 
 onMounted(() => {
+  detectLanguage()
+  detectTheme()
   loadHistory()
 
-  removeShowSub = window.electron.ipcRenderer.on('mt::clipboard-modal-show', (_event, history) => {
-    items.value = history || []
+  // Match system theme live changes
+  if (window.matchMedia) {
+    mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    mediaQueryHandler = (e: MediaQueryListEvent): void => {
+      const localTheme = localStorage.getItem('theme')
+      if (!localTheme) {
+        isDarkTheme.value = e.matches
+      }
+    }
+    mediaQuery.addEventListener('change', mediaQueryHandler)
+  }
+
+  // Ask for user preferences (theme & language)
+  window.electron.ipcRenderer.send('mt::ask-for-user-preference')
+  window.electron.ipcRenderer.on('mt::user-preference', (_e, prefs: any) => {
+    if (prefs) {
+      if (prefs.theme) {
+        isDarkTheme.value = isDarkThemeId(prefs.theme)
+      }
+      if (prefs.language) {
+        currentLang.value = prefs.language
+      }
+    }
+  })
+
+  // Listen for language changes from main
+  window.electron.ipcRenderer.on('language-changed', (_e, lang: string) => {
+    if (lang) currentLang.value = lang
+  })
+
+  // Show modal subscription
+  removeShowSub = window.electron.ipcRenderer.on('mt::clipboard-modal-show', (_event, payload: any) => {
+    if (Array.isArray(payload)) {
+      items.value = payload
+    } else if (payload && typeof payload === 'object') {
+      items.value = payload.history || []
+      if (typeof payload.isDark === 'boolean') {
+        isDarkTheme.value = payload.isDark
+      }
+      if (payload.lang) {
+        currentLang.value = payload.lang
+      }
+    }
     searchQuery.value = ''
     currentCategory.value = 'all'
     selectedIndex.value = 0
@@ -421,25 +755,126 @@ onMounted(() => {
 onUnmounted(() => {
   if (removeShowSub) removeShowSub()
   if (removeUpdatedSub) removeUpdatedSub()
+  if (mediaQuery && mediaQueryHandler) {
+    mediaQuery.removeEventListener('change', mediaQueryHandler)
+  }
   window.removeEventListener('keydown', handleGlobalKeydown)
 })
 </script>
 
 <style scoped>
+/* ==================== THEME VARIABLES ==================== */
+.clipboard-modal-container.theme-dark {
+  --bg-modal: rgba(30, 32, 38, 0.94);
+  --border-modal: rgba(255, 255, 255, 0.12);
+  --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.12);
+  --text-main: #f0f0f0;
+  --text-secondary: rgba(255, 255, 255, 0.6);
+  --text-tertiary: rgba(255, 255, 255, 0.4);
+  --header-bg: rgba(255, 255, 255, 0.03);
+  --header-border: rgba(255, 255, 255, 0.08);
+  --search-icon: #8c92a4;
+  --search-placeholder: #656d81;
+  --tab-bg: rgba(255, 255, 255, 0.06);
+  --tab-text: #94a3b8;
+  --tab-hover-bg: rgba(255, 255, 255, 0.08);
+  --tab-hover-text: #ffffff;
+  --tab-active-bg: #3b82f6;
+  --tab-active-text: #ffffff;
+  --tab-active-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --tab-count-bg: rgba(0, 0, 0, 0.25);
+  --close-btn-color: #7b8296;
+  --close-btn-hover: rgba(255, 255, 255, 0.1);
+  --list-border: rgba(255, 255, 255, 0.08);
+  --item-bg: rgba(255, 255, 255, 0.03);
+  --item-border: rgba(255, 255, 255, 0.05);
+  --item-hover-bg: rgba(255, 255, 255, 0.06);
+  --item-active-bg: #3b82f6;
+  --item-active-text: #ffffff;
+  --badge-wrap-bg: rgba(255, 255, 255, 0.08);
+  --act-btn-color: #cbd5e1;
+  --act-btn-hover: rgba(255, 255, 255, 0.2);
+  --preview-bg: rgba(18, 20, 24, 0.45);
+  --preview-header-bg: rgba(255, 255, 255, 0.02);
+  --preview-border: rgba(255, 255, 255, 0.08);
+  --btn-sec-bg: rgba(255, 255, 255, 0.09);
+  --btn-sec-border: transparent;
+  --btn-sec-text: #e2e8f0;
+  --btn-sec-hover: rgba(255, 255, 255, 0.18);
+  --code-bg: transparent;
+  --code-border: transparent;
+  --code-text: #e2e8f0;
+  --footer-bg: rgba(20, 22, 26, 0.95);
+  --footer-border: rgba(255, 255, 255, 0.08);
+  --footer-text: #7b8296;
+  --kbd-bg: rgba(255, 255, 255, 0.1);
+  --kbd-border: rgba(255, 255, 255, 0.15);
+  --kbd-text: #cbd5e1;
+}
+
+.clipboard-modal-container.theme-light {
+  --bg-modal: rgba(255, 255, 255, 0.94);
+  --border-modal: rgba(0, 0, 0, 0.12);
+  --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(0, 0, 0, 0.08);
+  --text-main: #1f2328;
+  --text-secondary: #57606a;
+  --text-tertiary: #8c959f;
+  --header-bg: rgba(246, 248, 250, 0.6);
+  --header-border: rgba(0, 0, 0, 0.08);
+  --search-icon: #57606a;
+  --search-placeholder: #8c959f;
+  --tab-bg: rgba(0, 0, 0, 0.05);
+  --tab-text: #57606a;
+  --tab-hover-bg: rgba(0, 0, 0, 0.08);
+  --tab-hover-text: #1f2328;
+  --tab-active-bg: #ffffff;
+  --tab-active-text: #1f2328;
+  --tab-active-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  --tab-count-bg: rgba(0, 0, 0, 0.08);
+  --close-btn-color: #6e7781;
+  --close-btn-hover: rgba(0, 0, 0, 0.08);
+  --list-border: rgba(0, 0, 0, 0.08);
+  --item-bg: rgba(0, 0, 0, 0.015);
+  --item-border: rgba(0, 0, 0, 0.04);
+  --item-hover-bg: rgba(0, 0, 0, 0.05);
+  --item-active-bg: #0969da;
+  --item-active-text: #ffffff;
+  --badge-wrap-bg: rgba(0, 0, 0, 0.05);
+  --act-btn-color: #57606a;
+  --act-btn-hover: rgba(0, 0, 0, 0.1);
+  --preview-bg: rgba(246, 248, 250, 0.7);
+  --preview-header-bg: rgba(255, 255, 255, 0.6);
+  --preview-border: rgba(0, 0, 0, 0.08);
+  --btn-sec-bg: #f6f8fa;
+  --btn-sec-border: #d0d7de;
+  --btn-sec-text: #24292f;
+  --btn-sec-hover: #f3f4f6;
+  --code-bg: #ffffff;
+  --code-border: rgba(0, 0, 0, 0.08);
+  --code-text: #1f2328;
+  --footer-bg: rgba(246, 248, 250, 0.95);
+  --footer-border: rgba(0, 0, 0, 0.08);
+  --footer-text: #57606a;
+  --kbd-bg: #ffffff;
+  --kbd-border: #d0d7de;
+  --kbd-text: #1f2328;
+}
+
+/* Base Modal Container */
 .clipboard-modal-container {
   width: 100vw;
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: rgba(30, 32, 38, 0.94);
+  background: var(--bg-modal);
   backdrop-filter: blur(28px) saturate(190%);
   -webkit-backdrop-filter: blur(28px) saturate(190%);
-  color: #e6e6e6;
+  color: var(--text-main);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   user-select: none;
   border-radius: 14px;
   overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.12);
+  box-shadow: var(--shadow-modal);
   box-sizing: border-box;
 }
 
@@ -448,13 +883,13 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   padding: 12px 18px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--header-border);
+  background: var(--header-bg);
   gap: 12px;
 }
 
 .search-icon {
-  color: #8c92a4;
+  color: var(--search-icon);
   display: flex;
   align-items: center;
 }
@@ -464,13 +899,13 @@ onUnmounted(() => {
   background: transparent;
   border: none;
   outline: none;
-  color: #ffffff;
+  color: var(--text-main);
   font-size: 15px;
   letter-spacing: 0.2px;
 }
 
 .search-input::placeholder {
-  color: #656d81;
+  color: var(--search-placeholder);
 }
 
 /* Category Filter Tabs */
@@ -478,7 +913,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 3px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--tab-bg);
   padding: 3px;
   border-radius: 8px;
   flex-shrink: 0;
@@ -487,7 +922,7 @@ onUnmounted(() => {
 .category-tab-btn {
   border: none;
   background: transparent;
-  color: #94a3b8;
+  color: var(--tab-text);
   padding: 4px 10px;
   border-radius: 6px;
   font-size: 12px;
@@ -500,39 +935,28 @@ onUnmounted(() => {
 }
 
 .category-tab-btn:hover {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.08);
+  color: var(--tab-hover-text);
+  background: var(--tab-hover-bg);
 }
 
 .category-tab-btn.active {
-  background: #3b82f6;
-  color: #ffffff;
+  background: var(--tab-active-bg);
+  color: var(--tab-active-text);
+  box-shadow: var(--tab-active-shadow);
 }
 
 .category-tab-btn .tab-count {
   font-size: 10px;
   opacity: 0.85;
-  background: rgba(0, 0, 0, 0.25);
+  background: var(--tab-count-bg);
   padding: 1px 5px;
   border-radius: 10px;
-}
-
-.category-tab-btn.active .tab-count {
-  background: rgba(255, 255, 255, 0.25);
-}
-
-.stats-badge {
-  font-size: 12px;
-  color: #8c92a4;
-  background: rgba(255, 255, 255, 0.07);
-  padding: 3px 8px;
-  border-radius: 6px;
 }
 
 .close-btn {
   background: transparent;
   border: none;
-  color: #7b8296;
+  color: var(--close-btn-color);
   font-size: 14px;
   cursor: pointer;
   padding: 4px 6px;
@@ -540,8 +964,8 @@ onUnmounted(() => {
 }
 
 .close-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
+  background: var(--close-btn-hover);
+  color: var(--text-main);
 }
 
 /* Body */
@@ -554,7 +978,7 @@ onUnmounted(() => {
 /* Left list column */
 .list-column {
   width: 320px;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid var(--list-border);
   overflow-y: auto;
   padding: 8px;
   display: flex;
@@ -568,7 +992,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #72798e;
+  color: var(--text-tertiary);
   gap: 8px;
 }
 
@@ -585,15 +1009,18 @@ onUnmounted(() => {
   transition: background 0.12s ease;
   position: relative;
   gap: 10px;
+  background: var(--item-bg);
+  border: 1px solid var(--item-border);
 }
 
 .history-item:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--item-hover-bg);
 }
 
 .history-item.active {
-  background: #3b82f6;
-  color: #ffffff;
+  background: var(--item-active-bg);
+  color: var(--item-active-text);
+  border-color: transparent;
 }
 
 .item-icon-wrapper {
@@ -603,7 +1030,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--badge-wrap-bg);
   font-size: 13px;
   flex-shrink: 0;
 }
@@ -625,7 +1052,7 @@ onUnmounted(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: #e2e8f0;
+  color: var(--text-main);
 }
 
 .history-item.active .item-title {
@@ -638,11 +1065,11 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   font-size: 11px;
-  color: #7b8296;
+  color: var(--text-secondary);
 }
 
 .history-item.active .item-meta {
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .item-actions {
@@ -656,14 +1083,6 @@ onUnmounted(() => {
   display: flex;
 }
 
-.history-item.active .action-icon-btn {
-  color: #ffffff;
-}
-
-.history-item.active .action-icon-btn:hover {
-  background: rgba(255, 255, 255, 0.28);
-}
-
 .action-icon-btn {
   background: transparent;
   border: none;
@@ -671,11 +1090,19 @@ onUnmounted(() => {
   cursor: pointer;
   padding: 3px 5px;
   border-radius: 4px;
-  color: #cbd5e1;
+  color: var(--act-btn-color);
 }
 
 .action-icon-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--act-btn-hover);
+}
+
+.history-item.active .action-icon-btn {
+  color: #ffffff;
+}
+
+.history-item.active .action-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.28);
 }
 
 .copied-check {
@@ -690,7 +1117,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  background: rgba(18, 20, 24, 0.45);
+  background: var(--preview-bg);
 }
 
 .preview-header {
@@ -698,8 +1125,8 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 10px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--preview-border);
+  background: var(--preview-header-bg);
 }
 
 .preview-meta-title {
@@ -719,7 +1146,7 @@ onUnmounted(() => {
 
 .preview-timestamp {
   font-size: 12px;
-  color: #7b8296;
+  color: var(--text-secondary);
 }
 
 .preview-header-actions {
@@ -739,18 +1166,13 @@ onUnmounted(() => {
 }
 
 .btn-secondary {
-  background: rgba(255, 255, 255, 0.09);
-  color: #e2e8f0;
+  background: var(--btn-sec-bg);
+  border: 1px solid var(--btn-sec-border);
+  color: var(--btn-sec-text);
 }
 
 .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.18);
-  color: #ffffff;
-}
-
-.btn-secondary.btn-success {
-  background: #10b981;
-  color: #ffffff;
+  background: var(--btn-sec-hover);
 }
 
 .btn-primary {
@@ -782,13 +1204,12 @@ onUnmounted(() => {
   max-height: 280px;
   object-fit: contain;
   border-radius: 6px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  background: rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
 
 .image-dimension-info {
   font-size: 12px;
-  color: #8c92a4;
+  color: var(--text-secondary);
 }
 
 .text-preview-wrapper {
@@ -802,7 +1223,11 @@ onUnmounted(() => {
   line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-all;
-  color: #e2e8f0;
+  color: var(--code-text);
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  padding: 12px;
+  border-radius: 8px;
 }
 
 .preview-placeholder {
@@ -810,7 +1235,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #72798e;
+  color: var(--text-tertiary);
   font-size: 14px;
 }
 
@@ -819,10 +1244,10 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   padding: 8px 18px;
-  background: rgba(20, 22, 26, 0.95);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--footer-bg);
+  border-top: 1px solid var(--footer-border);
   font-size: 11px;
-  color: #7b8296;
+  color: var(--footer-text);
   gap: 16px;
 }
 
@@ -833,12 +1258,14 @@ onUnmounted(() => {
 }
 
 kbd {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--kbd-bg);
+  border: 1px solid var(--kbd-border);
+  color: var(--kbd-text);
   padding: 2px 5px;
   border-radius: 4px;
-  color: #cbd5e1;
   font-family: inherit;
   font-size: 10px;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.08);
 }
 
 .footer-right {

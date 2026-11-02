@@ -44,6 +44,7 @@ export interface ScreenCaptureDisplayInfo {
     height: number
   }
   windows?: Array<{
+    pid?: number
     x: number
     y: number
     w: number

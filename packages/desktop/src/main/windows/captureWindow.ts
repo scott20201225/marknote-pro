@@ -22,13 +22,31 @@ const execAsync = util.promisify(exec)
 export class CaptureWindowManager {
   private _win: BrowserWindow | null = null
   private _currentPayload: ScreenCaptureDisplayInfo | null = null
+  private _isCapturing = false
+  private _wasEditorActive = false
+  private _fallbackTimer: NodeJS.Timeout | null = null
 
   public get currentPayload(): ScreenCaptureDisplayInfo | null {
     return this._currentPayload
   }
 
+  public get isCapturing(): boolean {
+    return this._isCapturing
+  }
+
   public async startCapture(): Promise<void> {
     console.log('[CaptureWindowManager] startCapture called!')
+    this._isCapturing = true
+
+    // Check whether MarkNotePro was the active window when shortcut was triggered
+    const activeWin = BrowserWindow.getFocusedWindow()
+    this._wasEditorActive = activeWin !== null && !activeWin.isDestroyed()
+
+    if (this._fallbackTimer) {
+      clearTimeout(this._fallbackTimer)
+      this._fallbackTimer = null
+    }
+
     if (this._win && !this._win.isDestroyed()) {
       this._win.destroy()
       this._win = null
@@ -155,8 +173,8 @@ export class CaptureWindowManager {
         }
       })
 
-      this._win.setAlwaysOnTop(true, 'floating')
-      this._win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+      // Zero-flicker: Avoid setting workspace flags on hidden windows,
+      // which causes WindowServer to clear layers and trigger flashes.
 
       try {
         globalShortcut.register('Escape', () => {
@@ -194,14 +212,11 @@ export class CaptureWindowManager {
         if (!this._win || this._win.isDestroyed()) return
         this._win.webContents.send('mt::capture-data-ready', payload)
 
-        // Zero-flicker: we wait for mt::capture-first-frame-ready from renderer before showing.
-        // Fallback timer: if frame signal is delayed, show after 500ms to guarantee visibility.
-        setTimeout(() => {
-          if (this._win && !this._win.isDestroyed() && !this._win.isVisible()) {
-            this._win.show()
-            this._win.focus()
-          }
-        }, 500)
+        // Safety fallback: only show after 2.5s if renderer signal fails,
+        // preventing premature blank display that causes visual flicker.
+        this._fallbackTimer = setTimeout(() => {
+          this.showCaptureWindow()
+        }, 2500)
       })
 
       this._win.loadURL(url.toString())
@@ -212,6 +227,7 @@ export class CaptureWindowManager {
           globalShortcut.unregister('CommandOrControl+Escape')
         } catch {}
         this._win = null
+        this._isCapturing = false
       })
     } catch (err) {
       try {
@@ -224,98 +240,59 @@ export class CaptureWindowManager {
     }
   }
 
-  public async captureSlice(rect: { x: number; y: number; width: number; height: number }): Promise<string | null> {
-    if (!this._win || this._win.isDestroyed()) return null
-    try {
-      const tmpPath = path.join('/tmp', `marknotepro_slice_${Date.now()}.png`)
-
-      if (isOsx) {
-        try {
-          // Zero-flicker: the capture window has a transparent cutout at rect,
-          // so screencapture captures the underlying application directly without hiding the window!
-          await Promise.race([
-            execAsync(
-              `/usr/sbin/screencapture -x -R${Math.round(rect.x)},${Math.round(rect.y)},${Math.round(rect.width)},${Math.round(rect.height)} "${tmpPath}"`
-            ),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('screencapture timeout')), 1500))
-          ])
-        } catch (scErr) {
-          log.warn('[CaptureWindowManager] captureSlice screencapture error:', scErr)
-        }
-      }
-
-      if (fs.existsSync(tmpPath)) {
-        const buf = await fsPromises.readFile(tmpPath)
-        fsPromises.unlink(tmpPath).catch(() => {})
-        return `data:image/png;base64,${buf.toString('base64')}`
-      }
-
-      // Fallback: desktopCapturer
-      const cursorPoint = screen.getCursorScreenPoint()
-      const currentDisplay = screen.getDisplayNearestPoint(cursorPoint)
-      const scaleFactor = currentDisplay.scaleFactor || 1
-      const sources = await desktopCapturer.getSources({
-        types: ['screen'],
-        thumbnailSize: {
-          width: Math.round(currentDisplay.bounds.width * scaleFactor),
-          height: Math.round(currentDisplay.bounds.height * scaleFactor)
-        }
-      })
-      let targetSource = sources.find((s) => s.display_id === String(currentDisplay.id)) || sources[0]
-      if (targetSource) {
-        const relX = Math.round((rect.x - currentDisplay.bounds.x) * scaleFactor)
-        const relY = Math.round((rect.y - currentDisplay.bounds.y) * scaleFactor)
-        const relW = Math.round(rect.width * scaleFactor)
-        const relH = Math.round(rect.height * scaleFactor)
-        const cropped = targetSource.thumbnail.crop({ x: relX, y: relY, width: relW, height: relH })
-        return cropped.toDataURL()
-      }
-    } catch (err) {
-      log.error('[CaptureWindowManager] captureSlice error:', err)
+  public showCaptureWindow(): void {
+    if (this._fallbackTimer) {
+      clearTimeout(this._fallbackTimer)
+      this._fallbackTimer = null
     }
-    return null
-  }
+    if (!this._win || this._win.isDestroyed() || this._win.isVisible()) return
 
-  public setIgnoreMouseEvents(_ignore: boolean, _forward: boolean = true): void {
-    // Fail-safe: NEVER ignore mouse events on capture window to prevent unclickable buttons or focus deadlocks!
-  }
-
-  public async scrollDown(
-    rect?: { x: number; y: number; width: number; height: number },
-    pixelDelta: number = -220
-  ): Promise<void> {
-    if (!isOsx) return
+    // Apply alwaysOnTop and workspace visibility at the exact moment of display
     try {
-      const staticDir = path.join(app.isPackaged ? process.resourcesPath : app.getAppPath(), 'static')
-      const macScrollBin = path.join(staticDir, 'bin', 'mac-scroll')
-      let args = `${pixelDelta}`
-      if (rect) {
-        const cx = Math.round(rect.x + rect.width / 2)
-        const cy = Math.round(rect.y + rect.height / 2)
-        args = `${pixelDelta} ${cx} ${cy} ${process.pid}`
-      }
-      if (fs.existsSync(macScrollBin)) {
-        await Promise.race([
-          execAsync(`"${macScrollBin}" ${args}`),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('mac-scroll timeout')), 1000))
-        ])
-      }
-    } catch (err) {
-      log.warn('[CaptureWindowManager] scrollDown error:', err)
+      this._win.setAlwaysOnTop(true, 'floating')
+      this._win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+    } catch (e) {
+      log.warn('[CaptureWindowManager] setAlwaysOnTop error:', e)
     }
+
+    // Never steal system application focus. Simply display and focus the window itself.
+    this._win.show()
+    this._win.focus()
   }
 
   public close(): void {
+    if (this._fallbackTimer) {
+      clearTimeout(this._fallbackTimer)
+      this._fallbackTimer = null
+    }
+    this._isCapturing = false
+
     try {
       globalShortcut.unregister('Escape')
       globalShortcut.unregister('CommandOrControl+Escape')
     } catch {}
-    try {
-      exec('pkill -f "screencapture -x -R" || true')
-    } catch {}
+
+    const wasEditorActive = this._wasEditorActive
+    this._wasEditorActive = false
+
     if (this._win && !this._win.isDestroyed()) {
+      try {
+        this._win.setVisibleOnAllWorkspaces(false)
+      } catch {}
       this._win.destroy()
       this._win = null
+    }
+
+    // Natural Focus Restoration:
+    // If MarkNotePro was the active application before capture started, gently return focus to editor.
+    // If the user was in an external third-party application (e.g. Lark, Chrome, Terminal),
+    // NEVER steal or hijack focus back to MarkNotePro. Let macOS return focus to the previous app naturally!
+    if (wasEditorActive) {
+      const allWins = BrowserWindow.getAllWindows()
+      const editorWin = allWins.find((w) => !w.isDestroyed() && w !== this._win && w.isVisible())
+      if (editorWin) {
+        editorWin.focus()
+      }
     }
   }
 

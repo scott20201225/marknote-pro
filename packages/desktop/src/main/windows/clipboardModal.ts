@@ -1,11 +1,13 @@
 import path from 'path'
-import { app, BrowserWindow, screen } from 'electron'
+import { app, BrowserWindow, screen, nativeTheme } from 'electron'
+import log from 'electron-log'
 import { getClipboardService } from '../clipboard'
 import { isOsx } from '../config'
 
 export class ClipboardModalWindow {
   private _win: BrowserWindow | null = null
   private _isReady: boolean = false
+  private _wasMarkNoteActive: boolean = false
 
   constructor() {
     if (app.isReady()) {
@@ -51,7 +53,7 @@ export class ClipboardModalWindow {
       }
     })
 
-    const topLevel = isOsx ? 'screen-saver' : 'screen-saver'
+    const topLevel = 'floating'
     this._win.setAlwaysOnTop(true, topLevel)
     this._win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
 
@@ -62,6 +64,7 @@ export class ClipboardModalWindow {
 
     const url = new URL(baseUrl)
     url.searchParams.set('type', 'clipboard')
+    url.searchParams.set('theme', nativeTheme.shouldUseDarkColors ? 'dark' : 'light')
     url.hash = '/clipboard'
 
     this._win.loadURL(url.toString())
@@ -71,7 +74,9 @@ export class ClipboardModalWindow {
     })
 
     this._win.on('blur', () => {
-      this.hide()
+      if (this._win && !this._win.isDestroyed() && this._win.isVisible()) {
+        this.hide(this._wasMarkNoteActive)
+      }
     })
 
     this._win.on('closed', () => {
@@ -86,6 +91,9 @@ export class ClipboardModalWindow {
     }
 
     if (!this._win) return
+
+    const currentFocused = BrowserWindow.getFocusedWindow()
+    this._wasMarkNoteActive = currentFocused !== null
 
     // Immediately poll clipboard so latest system/Lark screenshot or copy is caught instantly!
     const clipboardService = getClipboardService()
@@ -106,21 +114,35 @@ export class ClipboardModalWindow {
     const posY = Math.round(dispY + (dispH - winHeight) / 2)
 
     this._win.setPosition(posX, posY)
-    const topLevel = isOsx ? 'screen-saver' : 'screen-saver'
+    const topLevel = 'floating'
     this._win.setAlwaysOnTop(true, topLevel)
     this._win.moveTop()
-    if (isOsx) {
-      app.focus({ steal: true })
-    }
     this._win.show()
     this._win.focus()
 
-    this._win.webContents.send('mt::clipboard-modal-show', clipboardService.history)
+    this._win.webContents.send('mt::clipboard-modal-show', {
+      history: clipboardService.history,
+      isDark: nativeTheme.shouldUseDarkColors
+    })
   }
 
-  public hide(): void {
+  public hide(restoreFocusToEditor?: boolean): void {
+    const shouldRestore = restoreFocusToEditor ?? this._wasMarkNoteActive
     if (this._win && !this._win.isDestroyed() && this._win.isVisible()) {
       this._win.hide()
+    }
+    if (shouldRestore) {
+      this.restoreEditorFocus()
+    }
+  }
+
+  public restoreEditorFocus(): void {
+    const allWindows = BrowserWindow.getAllWindows()
+    const editorWin = allWindows.find(
+      (w) => w !== this._win && !w.isDestroyed() && w.isVisible()
+    )
+    if (editorWin) {
+      editorWin.focus()
     }
   }
 

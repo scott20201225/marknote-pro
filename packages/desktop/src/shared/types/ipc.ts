@@ -144,14 +144,6 @@ export interface IpcInvokeChannels {
     args: [dataUrl: string, bounds?: { x: number; y: number; width: number; height: number }]
     ret: void
   }
-  'mt::capture-slice': {
-    args: [rect: { x: number; y: number; width: number; height: number }]
-    ret: string | null
-  }
-  'mt::capture-scroll-down': {
-    args: [rect?: { x: number; y: number; width: number; height: number }, pixelDelta?: number]
-    ret: boolean
-  }
   'mt::pin-window-get-payload': { args: [pinId?: string]; ret: PinWindowPayload | null }
   'mt::pin-window-copy': { args: [dataUrl: string]; ret: boolean }
   'mt::pin-window-save': { args: [dataUrl: string]; ret: string | null }
@@ -338,7 +330,7 @@ export interface IpcSendChannels {
   'mt::trigger-clipboard-history': []
   'mt::clipboard-hide-modal': []
   'mt::capture-close': []
-  'mt::capture-set-ignore-mouse': [ignore: boolean, forward?: boolean]
+  'mt::capture-first-frame-ready': []
   'mt::pin-window-close': [pinId?: string]
   'mt::pin-window-drag': [payload: { dx: number; dy: number; pinId?: string }]
   'mt::pin-window-set-always-on-top': [flag: boolean, pinId?: string]
