@@ -330,6 +330,8 @@
     "icons": {
       "files": "Notes",
       "search": "Search",
+      "screenCapture": "Screen Capture",
+      "clipboardHistory": "Clipboard History",
       "toc": "Table of Contents",
       "headingNumbering": "Show heading numbering",
       "headingNumberingIncludeTopLevel": "Number the top-level heading",

@@ -3,7 +3,15 @@ import fs from 'fs'
 import fsPromises from 'fs/promises'
 import { exec } from 'child_process'
 import util from 'util'
-import { BrowserWindow, desktopCapturer, screen } from 'electron'
+import {
+  app,
+  BrowserWindow,
+  desktopCapturer,
+  screen,
+  dialog,
+  shell,
+  systemPreferences
+} from 'electron'
 import log from 'electron-log'
 import type { ScreenCaptureDisplayInfo } from '@shared/types/clipboard'
 import { isOsx } from '../config'
@@ -34,6 +42,8 @@ export class CaptureWindowManager {
       let dataUrl = ''
 
       if (isOsx) {
+        const accessStatus = systemPreferences.getMediaAccessStatus('screen')
+        log.info('[CaptureWindowManager] macOS screen mediaAccessStatus:', accessStatus)
         try {
           const tmpCapturePath = path.join('/tmp', `marknotepro_cap_${Date.now()}.png`)
           await execAsync(`/usr/sbin/screencapture -x "${tmpCapturePath}"`)
@@ -48,24 +58,49 @@ export class CaptureWindowManager {
       }
 
       if (!dataUrl) {
-        const sources = await desktopCapturer.getSources({
-          types: ['screen'],
-          thumbnailSize: {
-            width: Math.round(bounds.width * scaleFactor),
-            height: Math.round(bounds.height * scaleFactor)
+        try {
+          const sources = await desktopCapturer.getSources({
+            types: ['screen'],
+            thumbnailSize: {
+              width: Math.round(bounds.width * scaleFactor),
+              height: Math.round(bounds.height * scaleFactor)
+            }
+          })
+
+          let targetSource = sources.find((s) => s.display_id === String(currentDisplay.id))
+          if (!targetSource && sources.length > 0) {
+            targetSource = sources[0]
           }
+
+          if (targetSource) {
+            dataUrl = targetSource.thumbnail.toDataURL()
+          }
+        } catch (dcErr) {
+          log.warn('[CaptureWindowManager] desktopCapturer getSources error:', dcErr)
+        }
+      }
+
+      if (!dataUrl) {
+        log.error('[CaptureWindowManager] Both screencapture and desktopCapturer failed. Requesting permission.')
+        const res = await dialog.showMessageBox({
+          type: 'warning',
+          title: 'MarkNotePro 截图权限提示',
+          message: '未获得系统屏幕录制权限，无法截取屏幕。',
+          detail:
+            '由于 macOS 系统安全机制，重新安装或更新应用后可能需要刷新授权：\n\n' +
+            '1. 请打开「系统设置 -> 隐私与安全 -> 屏幕与系统音频录制」；\n' +
+            '2. 找到并选中 MarkNotePro，先点击开关关闭，再重新打开（或用 “-” 号移除后重新添加）；\n' +
+            '3. 重启 MarkNotePro 后即可正常截图。',
+          buttons: ['打开系统设置', '稍后再说'],
+          defaultId: 0,
+          cancelId: 1
         })
-
-        let targetSource = sources.find((s) => s.display_id === String(currentDisplay.id))
-        if (!targetSource && sources.length > 0) {
-          targetSource = sources[0]
+        if (res.response === 0) {
+          shell.openExternal(
+            'x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture'
+          )
         }
-
-        if (!targetSource) {
-          throw new Error('No desktop capturer screen source found.')
-        }
-
-        dataUrl = targetSource.thumbnail.toDataURL()
+        return
       }
 
       this._win = new BrowserWindow({
@@ -104,14 +139,13 @@ export class CaptureWindowManager {
       url.searchParams.set('type', 'capture')
       url.hash = '/capture'
 
-      this._win.loadURL(url.toString())
-
       const payload: ScreenCaptureDisplayInfo = {
         id: currentDisplay.id,
         bounds,
         scaleFactor,
         dataUrl
       }
+      this._currentPayload = payload
 
       this._win.webContents.once('did-finish-load', () => {
         if (!this._win || this._win.isDestroyed()) return
@@ -119,6 +153,14 @@ export class CaptureWindowManager {
         this._win.focus()
         this._win.webContents.send('mt::capture-data-ready', payload)
       })
+
+      this._win.once('ready-to-show', () => {
+        if (!this._win || this._win.isDestroyed()) return
+        this._win.show()
+        this._win.focus()
+      })
+
+      this._win.loadURL(url.toString())
 
       this._win.on('closed', () => {
         this._win = null
@@ -134,11 +176,9 @@ export class CaptureWindowManager {
     if (!this._win || this._win.isDestroyed()) return null
     try {
       this._win.setOpacity(0)
-      await new Promise((resolve) => setTimeout(resolve, 60))
+      await new Promise((resolve) => setTimeout(resolve, 80))
 
       const tmpPath = path.join('/tmp', `marknotepro_slice_${Date.now()}.png`)
-      const d = screen.getDisplayNearestPoint({ x: rect.x, y: rect.y })
-      const sf = d.scaleFactor || 1
 
       if (isOsx) {
         await execAsync(
@@ -162,11 +202,22 @@ export class CaptureWindowManager {
     return null
   }
 
-  public async scrollDown(): Promise<void> {
+  public async scrollDown(rect?: { x: number; y: number; width: number; height: number }): Promise<void> {
     if (!isOsx) return
     try {
-      // Simulate down arrow key or mouse scroll in macOS
-      await execAsync(`osascript -e 'tell application "System Events" to key code 125'`)
+      const staticDir = path.join(app.isPackaged ? process.resourcesPath : app.getAppPath(), 'static')
+      const macScrollBin = path.join(staticDir, 'bin', 'mac-scroll')
+      let args = '-8'
+      if (rect) {
+        const cx = Math.round(rect.x + rect.width / 2)
+        const cy = Math.round(rect.y + rect.height / 2)
+        args = `-8 ${cx} ${cy}`
+      }
+      if (fs.existsSync(macScrollBin)) {
+        await execAsync(`"${macScrollBin}" ${args}`)
+      } else {
+        await execAsync(`osascript -e 'tell application "System Events" to key code 125'`)
+      }
     } catch (err) {
       log.warn('[CaptureWindowManager] scrollDown error:', err)
     }

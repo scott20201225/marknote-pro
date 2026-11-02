@@ -330,6 +330,8 @@
     "icons": {
       "files": "笔记",
       "search": "搜索",
+      "screenCapture": "屏幕截图",
+      "clipboardHistory": "剪贴板历史",
       "toc": "目录",
       "headingNumbering": "显示标题序号",
       "headingNumberingIncludeTopLevel": "最高级标题参与编号",

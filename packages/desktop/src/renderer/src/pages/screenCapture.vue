@@ -232,16 +232,33 @@
           </svg>
         </button>
 
-        <!-- 11. Highlighter /// (高亮 / 荧光笔) -->
+        <!-- 10. Highlight Box ⬚ (高亮 / 矩形高亮) -->
+        <button
+          ref="toolBtnHighlight"
+          :class="['lark-tool-btn', { active: activeTool === 'highlight' }]"
+          title="高亮 (矩形高亮)"
+          @click="setTool('highlight')"
+        >
+          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none">
+            <rect x="3.5" y="3.5" width="17" height="17" rx="3.5" stroke-width="1.8"></rect>
+            <circle cx="12" cy="12" r="5.2" stroke-width="1.6"></circle>
+            <line x1="8.5" y1="12" x2="12" y2="8.5" stroke-width="1.4" stroke-linecap="round"></line>
+            <line x1="9.5" y1="14.5" x2="14.5" y2="9.5" stroke-width="1.4" stroke-linecap="round"></line>
+            <line x1="12" y1="15.5" x2="15.5" y2="12" stroke-width="1.4" stroke-linecap="round"></line>
+          </svg>
+        </button>
+
+        <!-- 11. Highlighter Pen 彡 (荧光笔) -->
         <button
           ref="toolBtnMarker"
           :class="['lark-tool-btn', { active: activeTool === 'marker' }]"
-          title="高亮 / 荧光笔 (H)"
+          title="荧光笔 (H)"
           @click="setTool('marker')"
         >
           <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round">
             <line x1="4.5" y1="19.5" x2="10.5" y2="4.5"></line>
-            <line x1="10.5" y1="19.5" x2="16.5" y2="4.5"></line>
+            <line x1="8.5" y1="19.5" x2="14.5" y2="4.5"></line>
+            <line x1="12.5" y1="19.5" x2="18.5" y2="4.5"></line>
             <line x1="16.5" y1="19.5" x2="22.5" y2="4.5"></line>
           </svg>
         </button>
@@ -387,29 +404,8 @@
           </div>
         </template>
 
-        <!-- B. Highlighter Settings: Mode (Rect/Brush) + Size Dots -->
+        <!-- B. Highlighter Pen Settings: Size Dots only (no sub-level mode switch) -->
         <template v-else-if="activeTool === 'marker'">
-          <div class="text-style-group">
-            <button
-              :class="['sub-mode-btn', { active: markerMode === 'rect' }]"
-              title="矩形高亮框"
-              @click="markerMode = 'rect'"
-            >
-              <svg viewBox="0 0 20 20" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.8">
-                <rect x="3" y="4" width="14" height="12" rx="2"></rect>
-              </svg>
-            </button>
-            <button
-              :class="['sub-mode-btn', { active: markerMode === 'brush' }]"
-              title="自由荧光笔涂抹"
-              @click="markerMode = 'brush'"
-            >
-              <svg viewBox="0 0 20 20" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.8">
-                <path d="M4 16l4-1 9-9-3-3-9 9-1 4z"></path>
-              </svg>
-            </button>
-          </div>
-
           <div class="stroke-selector">
             <div
               v-for="size in presetSizes"
@@ -565,7 +561,7 @@
 
         <!-- 7 Lark Rounded-Square Color Swatches (NEVER shown for mosaic) -->
         <template v-if="activeTool !== 'mosaic'">
-          <div class="sub-divider"></div>
+          <div class="sub-divider" v-if="activeTool !== 'highlight'"></div>
           <div class="color-palette">
             <div
               v-for="color in larkPalette"
@@ -598,18 +594,26 @@
       </div>
 
       <div class="scrolling-tips">
-        向下滚动鼠标滚轮，或点击下方按钮向下滚动以拼接长图
+        {{ scrollStatusMessage || '点击下方按钮向下滚动以智能匹配拼接长图' }}
       </div>
 
       <!-- Action Buttons -->
       <div class="scrolling-dock-actions">
         <button
           class="scrolling-btn primary"
-          :disabled="isCapturingSlice"
-          @click="scrollDownAndCapture"
+          :disabled="isCapturingSlice || isAutoScrolling"
+          @click="scrollDownAndCapture(false)"
         >
-          <span v-if="isCapturingSlice">正在截取...</span>
-          <span v-else>↓ 向下滚动截取</span>
+          <span v-if="isCapturingSlice">正在拼接...</span>
+          <span v-else>↓ 单步向下滚动</span>
+        </button>
+
+        <button
+          class="scrolling-btn auto"
+          :disabled="isCapturingSlice && !isAutoScrolling"
+          @click="toggleAutoScroll"
+        >
+          <span>{{ isAutoScrolling ? '⏹ 停止自动滚动' : '▶ 连续自动滚动' }}</span>
         </button>
 
         <button
@@ -628,7 +632,7 @@
       </div>
 
       <!-- Live Long Screenshot Preview Card -->
-      <div v-if="scrollingSlices.length > 0" class="scrolling-preview-container">
+      <div v-if="stitchedHeight > 0" class="scrolling-preview-container">
         <div class="scrolling-preview-label">长图预览</div>
         <div class="scrolling-preview-scroll">
           <canvas ref="scrollingPreviewCanvasRef" class="scrolling-preview-canvas"></canvas>
@@ -659,6 +663,7 @@ type ToolType =
   | 'arrow'
   | 'line'
   | 'pencil'
+  | 'highlight'
   | 'marker'
   | 'mosaic'
   | 'text'
@@ -715,6 +720,7 @@ const toolBtnCircle = ref<HTMLButtonElement | null>(null)
 const toolBtnLine = ref<HTMLButtonElement | null>(null)
 const toolBtnArrow = ref<HTMLButtonElement | null>(null)
 const toolBtnPencil = ref<HTMLButtonElement | null>(null)
+const toolBtnHighlight = ref<HTMLButtonElement | null>(null)
 const toolBtnMarker = ref<HTMLButtonElement | null>(null)
 const toolBtnText = ref<HTMLButtonElement | null>(null)
 const toolBtnStep = ref<HTMLButtonElement | null>(null)
@@ -913,149 +919,277 @@ const textInputState = ref({
 const isComposing = ref(false)
 
 // -------------------------------------------------------------
-// Scrolling Screen Capture (长截图 / 滚动截屏) State
+// Scrolling Screen Capture (长截图 / 滚动截屏) State & Algorithm
 // -------------------------------------------------------------
 const isScrollingCaptureMode = ref(false)
 const isCapturingSlice = ref(false)
-const scrollingSlices = ref<HTMLImageElement[]>([])
+const isAutoScrolling = ref(false)
+const scrollStatusMessage = ref('')
 const stitchedHeight = ref(0)
+
+let autoScrollTimer: any = null
+let stitchedMasterCanvas: HTMLCanvasElement | null = null
+let prevSliceImageData: ImageData | null = null
+
+function findVerticalScrollOffset(
+  prevData: Uint8ClampedArray,
+  currData: Uint8ClampedArray,
+  width: number,
+  height: number
+): { dy: number; isIdentical: boolean; minDiff: number } {
+  const bandH = Math.min(48, Math.floor(height * 0.15))
+  const bandTop = height - bandH - 12
+  if (bandTop <= 0 || width <= 10) return { dy: 0, isIdentical: true, minDiff: 0 }
+
+  const cols: number[] = []
+  for (let c = 0.15; c <= 0.85; c += 0.06) {
+    cols.push(Math.floor(width * c))
+  }
+
+  // 1. Quick check for dy = 0 (identical frame / bottom reached)
+  let diffZero = 0
+  let countZero = 0
+  for (let by = 0; by < bandH; by += 2) {
+    const y = bandTop + by
+    for (const col of cols) {
+      const idx = (y * width + col) * 4
+      diffZero +=
+        Math.abs(prevData[idx] - currData[idx]) +
+        Math.abs(prevData[idx + 1] - currData[idx + 1]) +
+        Math.abs(prevData[idx + 2] - currData[idx + 2])
+      countZero++
+    }
+  }
+  const avgZero = countZero > 0 ? diffZero / countZero : 0
+  if (avgZero < 4) {
+    return { dy: 0, isIdentical: true, minDiff: avgZero }
+  }
+
+  // 2. Search candidate dy from 3 up to bandTop
+  let bestDy = 0
+  let minDiff = Infinity
+
+  for (let dy = 3; dy < bandTop; dy += 1) {
+    let diff = 0
+    let count = 0
+    for (let by = 0; by < bandH; by += 2) {
+      const yPrev = bandTop + by
+      const yCurr = yPrev - dy
+      if (yCurr < 0 || yCurr >= height) continue
+
+      for (const col of cols) {
+        const idxPrev = (yPrev * width + col) * 4
+        const idxCurr = (yCurr * width + col) * 4
+
+        diff +=
+          Math.abs(prevData[idxPrev] - currData[idxCurr]) +
+          Math.abs(prevData[idxPrev + 1] - currData[idxCurr + 1]) +
+          Math.abs(prevData[idxPrev + 2] - currData[idxCurr + 2])
+        count++
+      }
+    }
+    const avgDiff = count > 0 ? diff / count : Infinity
+    if (avgDiff < minDiff) {
+      minDiff = avgDiff
+      bestDy = dy
+    }
+  }
+
+  if (minDiff > 60) {
+    return { dy: 0, isIdentical: false, minDiff }
+  }
+
+  return { dy: bestDy, isIdentical: false, minDiff }
+}
 
 const enterScrollingCapture = async (): Promise<void> => {
   if (!hasSelection.value) return
   if (textInputState.value.active) commitTextInput()
   activeTool.value = 'none'
   isScrollingCaptureMode.value = true
-  scrollingSlices.value = []
+  isAutoScrolling.value = false
+  scrollStatusMessage.value = ''
 
   const sel = normSelection.value
   const dpr = window.devicePixelRatio || 1
-  const initialCanvas = document.createElement('canvas')
-  initialCanvas.width = Math.round(sel.width * dpr)
-  initialCanvas.height = Math.round(sel.height * dpr)
-  const ictx = initialCanvas.getContext('2d')
-  if (ictx && screenshotImage.value) {
-    ictx.drawImage(
+  const sw = Math.round(sel.width * dpr)
+  const sh = Math.round(sel.height * dpr)
+
+  stitchedMasterCanvas = document.createElement('canvas')
+  stitchedMasterCanvas.width = sw
+  stitchedMasterCanvas.height = sh
+  const mctx = stitchedMasterCanvas.getContext('2d')
+  if (mctx && screenshotImage.value) {
+    mctx.drawImage(
       screenshotImage.value,
       sel.x * dpr,
       sel.y * dpr,
-      sel.width * dpr,
-      sel.height * dpr,
+      sw,
+      sh,
       0,
       0,
-      initialCanvas.width,
-      initialCanvas.height
+      sw,
+      sh
     )
-    const initImg = new Image()
-    initImg.src = initialCanvas.toDataURL('image/png')
-    await new Promise((resolve) => {
-      initImg.onload = resolve
-    })
-    scrollingSlices.value.push(initImg)
+    prevSliceImageData = mctx.getImageData(0, 0, sw, sh)
     stitchedHeight.value = Math.round(sel.height)
-    updateScrollingPreview()
+    nextTick(() => updateScrollingPreview())
   }
 }
 
-const scrollDownAndCapture = async (): Promise<void> => {
+const scrollDownAndCapture = async (_fromAuto = false): Promise<void> => {
   if (!isScrollingCaptureMode.value || isCapturingSlice.value) return
   isCapturingSlice.value = true
+  scrollStatusMessage.value = '正在滚动并捕获...'
 
   try {
     const sel = normSelection.value
-    await window.electron.ipcRenderer.invoke('mt::capture-scroll-down')
-    await new Promise((resolve) => setTimeout(resolve, 150))
-
-    const sliceDataUrl = await window.electron.ipcRenderer.invoke('mt::capture-slice', {
+    const rect = {
       x: screenBounds.value.x + sel.x,
       y: screenBounds.value.y + sel.y,
       width: sel.width,
       height: sel.height
+    }
+
+    await window.electron.ipcRenderer.invoke('mt::capture-scroll-down', rect)
+    await new Promise((resolve) => setTimeout(resolve, 200))
+
+    const sliceDataUrl = await window.electron.ipcRenderer.invoke('mt::capture-slice', rect)
+    if (!sliceDataUrl) {
+      scrollStatusMessage.value = '捕获切片失败'
+      return
+    }
+
+    const sliceImg = new Image()
+    sliceImg.src = sliceDataUrl
+    await new Promise((resolve) => {
+      sliceImg.onload = resolve
     })
 
-    if (sliceDataUrl) {
-      const sliceImg = new Image()
-      sliceImg.src = sliceDataUrl
-      await new Promise((resolve) => {
-        sliceImg.onload = resolve
-      })
-      scrollingSlices.value.push(sliceImg)
-      stitchedHeight.value += Math.round(sel.height * 0.75)
-      updateScrollingPreview()
+    const tempCanvas = document.createElement('canvas')
+    tempCanvas.width = sliceImg.width
+    tempCanvas.height = sliceImg.height
+    const tctx = tempCanvas.getContext('2d')
+    if (!tctx) return
+    tctx.drawImage(sliceImg, 0, 0)
+    const currImageData = tctx.getImageData(0, 0, sliceImg.width, sliceImg.height)
+
+    if (prevSliceImageData && stitchedMasterCanvas) {
+      const matchRes = findVerticalScrollOffset(
+        prevSliceImageData.data,
+        currImageData.data,
+        sliceImg.width,
+        sliceImg.height
+      )
+
+      if (matchRes.isIdentical || matchRes.dy <= 1) {
+        scrollStatusMessage.value = '已到达页面底部或内容未变化'
+        if (isAutoScrolling.value) {
+          stopAutoScroll()
+        }
+        return
+      }
+
+      const dy = matchRes.dy
+      const oldCanvas = stitchedMasterCanvas
+      const newCanvas = document.createElement('canvas')
+      newCanvas.width = oldCanvas.width
+      newCanvas.height = oldCanvas.height + dy
+      const nctx = newCanvas.getContext('2d')
+      if (nctx) {
+        nctx.drawImage(oldCanvas, 0, 0)
+        nctx.drawImage(
+          sliceImg,
+          0,
+          sliceImg.height - dy,
+          sliceImg.width,
+          dy,
+          0,
+          oldCanvas.height,
+          sliceImg.width,
+          dy
+        )
+        stitchedMasterCanvas = newCanvas
+        const dpr = window.devicePixelRatio || 1
+        stitchedHeight.value = Math.round(newCanvas.height / dpr)
+        prevSliceImageData = currImageData
+        scrollStatusMessage.value = `已拼接 +${Math.round(dy / dpr)}px (总高 ${stitchedHeight.value}px)`
+        updateScrollingPreview()
+      }
     }
   } catch (err) {
     console.error('Failed to capture scroll slice:', err)
+    scrollStatusMessage.value = '滚动截屏出错'
   } finally {
     isCapturingSlice.value = false
   }
 }
 
-const updateScrollingPreview = (): void => {
-  const pCanvas = scrollingPreviewCanvasRef.value
-  if (!pCanvas || scrollingSlices.value.length === 0) return
-  const pCtx = pCanvas.getContext('2d')
-  if (!pCtx) return
-
-  const totalSlices = scrollingSlices.value.length
-  const baseImg = scrollingSlices.value[0]
-  const targetW = 180
-  const sliceH = (baseImg.height / baseImg.width) * targetW
-  const totalH = Math.round(sliceH * (1 + (totalSlices - 1) * 0.75))
-
-  pCanvas.width = targetW
-  pCanvas.height = totalH
-
-  let currentY = 0
-  for (let i = 0; i < totalSlices; i++) {
-    const img = scrollingSlices.value[i]
-    if (i === 0) {
-      pCtx.drawImage(img, 0, 0, targetW, sliceH)
-      currentY += sliceH
-    } else {
-      const stepH = sliceH * 0.75
-      pCtx.drawImage(img, 0, currentY - (sliceH - stepH), targetW, sliceH)
-      currentY += stepH
-    }
+const toggleAutoScroll = (): void => {
+  if (isAutoScrolling.value) {
+    stopAutoScroll()
+  } else {
+    startAutoScroll()
   }
 }
 
+const startAutoScroll = (): void => {
+  isAutoScrolling.value = true
+  runAutoScrollLoop()
+}
+
+const stopAutoScroll = (): void => {
+  isAutoScrolling.value = false
+  if (autoScrollTimer) {
+    clearTimeout(autoScrollTimer)
+    autoScrollTimer = null
+  }
+}
+
+const runAutoScrollLoop = async (): Promise<void> => {
+  if (!isAutoScrolling.value || !isScrollingCaptureMode.value) return
+  await scrollDownAndCapture(true)
+  if (isAutoScrolling.value) {
+    autoScrollTimer = setTimeout(() => {
+      runAutoScrollLoop()
+    }, 280)
+  }
+}
+
+const updateScrollingPreview = (): void => {
+  const pCanvas = scrollingPreviewCanvasRef.value
+  if (!pCanvas || !stitchedMasterCanvas) return
+  const pCtx = pCanvas.getContext('2d')
+  if (!pCtx) return
+
+  const targetW = 180
+  const aspect = stitchedMasterCanvas.height / stitchedMasterCanvas.width
+  const targetH = Math.round(targetW * aspect)
+
+  pCanvas.width = targetW
+  pCanvas.height = targetH
+
+  pCtx.drawImage(stitchedMasterCanvas, 0, 0, targetW, targetH)
+}
+
 const finishScrollingCapture = async (): Promise<void> => {
-  if (scrollingSlices.value.length === 0) {
+  stopAutoScroll()
+  if (!stitchedMasterCanvas) {
     cancelScrollingCapture()
     return
   }
 
-  const base = scrollingSlices.value[0]
-  const fullW = base.width
-  const sliceH = base.height
-  const stepH = Math.round(sliceH * 0.75)
-  const fullH = sliceH + (scrollingSlices.value.length - 1) * stepH
-
-  const stitchCanvas = document.createElement('canvas')
-  stitchCanvas.width = fullW
-  stitchCanvas.height = fullH
-  const sCtx = stitchCanvas.getContext('2d')
-  if (!sCtx) return
-
-  let curY = 0
-  for (let i = 0; i < scrollingSlices.value.length; i++) {
-    const img = scrollingSlices.value[i]
-    if (i === 0) {
-      sCtx.drawImage(img, 0, 0)
-      curY += sliceH
-    } else {
-      sCtx.drawImage(img, 0, curY - (sliceH - stepH))
-      curY += stepH
-    }
-  }
-
-  const fullDataUrl = stitchCanvas.toDataURL('image/png')
+  const fullDataUrl = stitchedMasterCanvas.toDataURL('image/png')
   await window.electron.ipcRenderer.invoke('mt::capture-copy', fullDataUrl)
 }
 
 const cancelScrollingCapture = (): void => {
+  stopAutoScroll()
   isScrollingCaptureMode.value = false
-  scrollingSlices.value = []
+  stitchedMasterCanvas = null
+  prevSliceImageData = null
   stitchedHeight.value = 0
+  scrollStatusMessage.value = ''
   renderAll()
 }
 
@@ -1079,6 +1213,9 @@ const subToolbarCaretX = computed(() => {
       break
     case 'pencil':
       targetBtn = toolBtnPencil.value
+      break
+    case 'highlight':
+      targetBtn = toolBtnHighlight.value
       break
     case 'marker':
       targetBtn = toolBtnMarker.value
@@ -1738,18 +1875,21 @@ const drawSingleAnnotation = (ctx: CanvasRenderingContext2D, ann: Annotation): v
       ctx.lineTo(ann.points[i].x, ann.points[i].y)
     }
     ctx.stroke()
-  } else if (ann.tool === 'marker') {
+  } else if (ann.tool === 'highlight') {
     ctx.save()
     ctx.globalAlpha = 0.38
     ctx.fillStyle = ann.color
+    const rx = Math.min(ann.startX, ann.endX)
+    const ry = Math.min(ann.startY, ann.endY)
+    const rw = Math.abs(ann.endX - ann.startX)
+    const rh = Math.abs(ann.endY - ann.startY)
+    ctx.fillRect(rx, ry, rw, rh)
+    ctx.restore()
+  } else if (ann.tool === 'marker') {
+    ctx.save()
+    ctx.globalAlpha = 0.38
     ctx.strokeStyle = ann.color
-    if (ann.markerMode === 'rect' || (!ann.points && ann.startX !== undefined)) {
-      const rx = Math.min(ann.startX, ann.endX)
-      const ry = Math.min(ann.startY, ann.endY)
-      const rw = Math.abs(ann.endX - ann.startX)
-      const rh = Math.abs(ann.endY - ann.startY)
-      ctx.fillRect(rx, ry, rw, rh)
-    } else if (ann.points && ann.points.length > 0) {
+    if (ann.points && ann.points.length > 0) {
       ctx.lineWidth = getMarkerWidth(ann.strokeWidth)
       ctx.lineCap = 'square'
       ctx.lineJoin = 'round'
@@ -1759,6 +1899,13 @@ const drawSingleAnnotation = (ctx: CanvasRenderingContext2D, ann: Annotation): v
         ctx.lineTo(ann.points[i].x, ann.points[i].y)
       }
       ctx.stroke()
+    } else {
+      ctx.fillStyle = ann.color
+      const rx = Math.min(ann.startX, ann.endX)
+      const ry = Math.min(ann.startY, ann.endY)
+      const rw = Math.abs(ann.endX - ann.startX)
+      const rh = Math.abs(ann.endY - ann.startY)
+      ctx.fillRect(rx, ry, rw, rh)
     }
     ctx.restore()
   } else if (ann.tool === 'mosaic') {
@@ -2035,6 +2182,10 @@ const onMouseDown = (e: MouseEvent): void => {
         }
 
         isDrawingAnnotation.value = true
+        const isFreehand =
+          activeTool.value === 'pencil' ||
+          activeTool.value === 'marker' ||
+          (activeTool.value === 'mosaic' && mosaicMode.value === 'brush')
         currentAnnotation.value = {
           id: `ann_${Date.now()}`,
           tool: activeTool.value,
@@ -2044,11 +2195,10 @@ const onMouseDown = (e: MouseEvent): void => {
           startY: y,
           endX: x,
           endY: y,
-          points: [{ x, y }],
+          points: isFreehand ? [{ x, y }] : undefined,
           mosaicMode: mosaicMode.value,
           mosaicStyle: mosaicStyle.value,
-          mosaicBlockSize: mosaicBlockSize.value,
-          markerMode: markerMode.value
+          mosaicBlockSize: mosaicBlockSize.value
         }
         return
       } else {
@@ -3379,12 +3529,40 @@ onUnmounted(() => {
   cursor: wait;
 }
 
+.scrolling-btn.auto {
+  background: #f0f7ff;
+  color: #0284c7;
+}
+
+.theme-dark .scrolling-btn.auto {
+  background: rgba(2, 132, 199, 0.2);
+  color: #38bdf8;
+}
+
+.scrolling-btn.auto:hover:not(:disabled) {
+  background: #e0f2fe;
+}
+
 .scrolling-btn.confirm {
   background: #eaf8ec;
   color: #34be4b;
 }
 
-.theme-dark .scrolling-btn.confirm {
+.theme-dark .scrolling-btn.auto {
+  background: #f0f7ff;
+  color: #0284c7;
+}
+
+.theme-dark .scrolling-btn.auto {
+  background: rgba(2, 132, 199, 0.2);
+  color: #38bdf8;
+}
+
+.scrolling-btn.auto:hover:not(:disabled) {
+  background: #e0f2fe;
+}
+
+.scrolling-btn.confirm {
   background: rgba(52, 190, 75, 0.2);
   color: #4ade80;
 }

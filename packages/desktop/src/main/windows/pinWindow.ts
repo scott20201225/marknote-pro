@@ -8,6 +8,7 @@ import { isOsx } from '../config'
 export class PinWindowManager {
   private _windows: Map<string, BrowserWindow> = new Map()
   private _payloads: Map<string, PinWindowPayload> = new Map()
+  private _winToPinId: Map<number, string> = new Map()
 
   public createPinWindow(payload: PinWindowPayload): BrowserWindow {
     const pinId = payload.id || `pin_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
@@ -17,8 +18,18 @@ export class PinWindowManager {
     const cursorPoint = screen.getCursorScreenPoint()
     const currentDisplay = screen.getDisplayNearestPoint(cursorPoint)
 
-    const width = Math.min(Math.max(payload.width || 400, 100), currentDisplay.workArea.width)
-    const height = Math.min(Math.max(payload.height || 300, 60), currentDisplay.workArea.height)
+    const maxW = Math.round(currentDisplay.workArea.width * 0.8)
+    const maxH = Math.round(currentDisplay.workArea.height * 0.8)
+    let w = payload.width || 400
+    let h = payload.height || 300
+    if (w > maxW || h > maxH) {
+      const scale = Math.min(maxW / w, maxH / h)
+      w = Math.round(w * scale)
+      h = Math.round(h * scale)
+    }
+
+    const width = Math.min(Math.max(w, 100), currentDisplay.workArea.width)
+    const height = Math.min(Math.max(h, 60), currentDisplay.workArea.height)
 
     const posX =
       payload.x !== undefined
@@ -66,25 +77,42 @@ export class PinWindowManager {
     url.searchParams.set('pinId', pinId)
     url.hash = `/pin?pinId=${pinId}`
 
-    win.loadURL(url.toString())
-
     win.webContents.once('did-finish-load', () => {
       if (win.isDestroyed()) return
       win.show()
+      win.focus()
       win.webContents.send('mt::pin-window-data', payload)
     })
+
+    win.once('ready-to-show', () => {
+      if (!win.isDestroyed()) {
+        win.show()
+        win.focus()
+      }
+    })
+
+    win.loadURL(url.toString())
 
     win.on('closed', () => {
       this._windows.delete(pinId)
       this._payloads.delete(pinId)
+      this._winToPinId.delete(win.id)
     })
 
     this._windows.set(pinId, win)
+    this._winToPinId.set(win.id, pinId)
     return win
   }
 
-  public getPayload(pinId: string): PinWindowPayload | null {
-    return this._payloads.get(pinId) || null
+  public getPayload(pinId?: string, sourceWindow?: BrowserWindow): PinWindowPayload | null {
+    if (pinId && this._payloads.has(pinId)) {
+      return this._payloads.get(pinId) || null
+    }
+    if (sourceWindow && this._winToPinId.has(sourceWindow.id)) {
+      const pid = this._winToPinId.get(sourceWindow.id)!
+      return this._payloads.get(pid) || null
+    }
+    return null
   }
 
   public closePin(pinId?: string, sourceWindow?: BrowserWindow): void {

@@ -1,4 +1,5 @@
 import { ipcMain, dialog, nativeImage, clipboard, BrowserWindow } from 'electron'
+import fs from 'fs'
 import fsPromises from 'fs/promises'
 import log from 'electron-log'
 import { getClipboardService } from '../clipboard'
@@ -18,6 +19,15 @@ export const registerClipboardIpcHandlers = (): void => {
     if (clipboardModal.win && !clipboardModal.win.isDestroyed()) {
       clipboardModal.win.webContents.send('mt::clipboard-history-updated', history)
     }
+  })
+
+  // Trigger from sidebar or UI
+  ipcMain.on('mt::trigger-screen-capture', () => {
+    captureManager.startCapture()
+  })
+
+  ipcMain.on('mt::trigger-clipboard-history', () => {
+    clipboardModal.toggle()
   })
 
   // 1. Clipboard History Modal
@@ -42,16 +52,16 @@ export const registerClipboardIpcHandlers = (): void => {
     clipboardModal.hide()
     if (item.type === 'image') {
       let content = item.imageDataUrl || ''
-      if (item.imagePath) {
+      if (item.imagePath && fs.existsSync(item.imagePath)) {
         try {
-          const img = nativeImage.createFromPath(item.imagePath)
-          content = img.toDataURL()
+          const buf = await fsPromises.readFile(item.imagePath)
+          content = `data:image/png;base64,${buf.toString('base64')}`
         } catch (e) {
-          log.warn('Could not read image from path:', item.imagePath)
+          log.warn('Could not read image buffer from path:', item.imagePath)
         }
       }
       pinManager.createPinWindow({
-        id: `pin_${item.id}`,
+        id: `pin_${item.id}_${Date.now()}`,
         type: 'image',
         content,
         width: item.width || 400,
@@ -60,7 +70,7 @@ export const registerClipboardIpcHandlers = (): void => {
       })
     } else {
       pinManager.createPinWindow({
-        id: `pin_${item.id}`,
+        id: `pin_${item.id}_${Date.now()}`,
         type: 'text',
         content: item.content,
         width: 480,
@@ -156,10 +166,13 @@ export const registerClipboardIpcHandlers = (): void => {
     }
   )
 
-  ipcMain.handle('mt::capture-scroll-down', async () => {
-    await captureManager.scrollDown()
-    return true
-  })
+  ipcMain.handle(
+    'mt::capture-scroll-down',
+    async (_event, rect?: { x: number; y: number; width: number; height: number }) => {
+      await captureManager.scrollDown(rect)
+      return true
+    }
+  )
 
   ipcMain.on('mt::capture-set-level', (_event, level: 'normal' | 'floating') => {
     if (captureManager.win && !captureManager.win.isDestroyed()) {
@@ -168,8 +181,9 @@ export const registerClipboardIpcHandlers = (): void => {
   })
 
   // 3. Pin Window Handlers
-  ipcMain.handle('mt::pin-window-get-payload', async (_event, pinId: string) => {
-    return pinManager.getPayload(pinId)
+  ipcMain.handle('mt::pin-window-get-payload', async (event, pinId?: string) => {
+    const senderWin = BrowserWindow.fromWebContents(event.sender) || undefined
+    return pinManager.getPayload(pinId, senderWin)
   })
 
   ipcMain.handle('mt::pin-window-copy', async (_event, dataUrl: string) => {

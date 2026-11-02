@@ -147,8 +147,11 @@ export interface IpcInvokeChannels {
     args: [rect: { x: number; y: number; width: number; height: number }]
     ret: string | null
   }
-  'mt::capture-scroll-down': { args: []; ret: boolean }
-  'mt::pin-window-get-payload': { args: [pinId: string]; ret: PinWindowPayload | null }
+  'mt::capture-scroll-down': {
+    args: [rect?: { x: number; y: number; width: number; height: number }]
+    ret: boolean
+  }
+  'mt::pin-window-get-payload': { args: [pinId?: string]; ret: PinWindowPayload | null }
   'mt::pin-window-copy': { args: [dataUrl: string]; ret: boolean }
   'mt::pin-window-save': { args: [dataUrl: string]; ret: string | null }
   'mt::ask-for-image-path': { args: []; ret: string[] }
@@ -330,6 +333,8 @@ export interface IpcInvokeChannels {
 // =================================================================
 
 export interface IpcSendChannels {
+  'mt::trigger-screen-capture': []
+  'mt::trigger-clipboard-history': []
   'mt::clipboard-hide-modal': []
   'mt::capture-close': []
   'mt::pin-window-close': [pinId?: string]

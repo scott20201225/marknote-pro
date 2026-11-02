@@ -2,7 +2,9 @@ import { h } from 'vue'
 import {
   Folder as FilesIcon,
   Search as SearchIcon,
-  Setting as SettingIcon
+  Setting as SettingIcon,
+  Crop as CropIcon,
+  DocumentCopy as DocumentCopyIcon
 } from '@element-plus/icons-vue'
 import { t } from '@/i18n'
 
@@ -22,6 +24,24 @@ export const sideBarIcons: SideBarIconEntry[] = [
     id: 'search',
     name: () => t('sideBar.icons.search'),
     icon: SearchIcon
+  },
+  {
+    id: 'screenCapture',
+    name: () => {
+      const isMac = navigator.userAgent.includes('Mac') || navigator.platform.includes('Mac')
+      const shortcut = isMac ? 'Control+Shift+1' : 'Ctrl+Shift+1'
+      return `${t('sideBar.icons.screenCapture')} (${shortcut})`
+    },
+    icon: CropIcon
+  },
+  {
+    id: 'clipboardHistory',
+    name: () => {
+      const isMac = navigator.userAgent.includes('Mac') || navigator.platform.includes('Mac')
+      const shortcut = isMac ? 'Control+Shift+3' : 'Ctrl+Shift+3'
+      return `${t('sideBar.icons.clipboardHistory')} (${shortcut})`
+    },
+    icon: DocumentCopyIcon
   }
 ]
 

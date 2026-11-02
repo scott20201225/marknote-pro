@@ -198,10 +198,13 @@ const onKeydown = (e: KeyboardEvent): void => {
 let removeDataSub: (() => void) | null = null
 
 onMounted(async () => {
-  const params = new URLSearchParams(window.location.search)
-  pinId.value = params.get('pinId') || ''
+  let id = new URLSearchParams(window.location.search).get('pinId')
+  if (!id && window.location.hash.includes('?')) {
+    id = new URLSearchParams(window.location.hash.split('?')[1]).get('pinId')
+  }
+  pinId.value = id || ''
 
-  if (pinId.value) {
+  try {
     const data = await window.electron.ipcRenderer.invoke(
       'mt::pin-window-get-payload',
       pinId.value
@@ -209,10 +212,14 @@ onMounted(async () => {
     if (data) {
       payload.value = data
     }
+  } catch (err) {
+    console.error('Failed to get pin payload:', err)
   }
 
   removeDataSub = window.electron.ipcRenderer.on('mt::pin-window-data', (_event, data) => {
-    payload.value = data
+    if (data) {
+      payload.value = data
+    }
   })
 
   window.addEventListener('click', () => {
