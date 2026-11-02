@@ -225,4 +225,26 @@ export const registerClipboardIpcHandlers = (): void => {
       pinManager.setAlwaysOnTop(flag, pinId, senderWin)
     }
   )
+
+  ipcMain.on(
+    'mt::pin-window-fit-size',
+    (
+      event,
+      payload: {
+        pinId?: string
+        naturalWidth: number
+        naturalHeight: number
+        zoom?: number
+      }
+    ) => {
+      const senderWin = BrowserWindow.fromWebContents(event.sender) || undefined
+      pinManager.fitSize(
+        payload.pinId,
+        payload.naturalWidth,
+        payload.naturalHeight,
+        payload.zoom,
+        senderWin
+      )
+    }
+  )
 }

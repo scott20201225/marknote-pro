@@ -17,19 +17,27 @@ export class PinWindowManager {
 
     const cursorPoint = screen.getCursorScreenPoint()
     const currentDisplay = screen.getDisplayNearestPoint(cursorPoint)
+    const scaleFactor = currentDisplay.scaleFactor || 1
 
-    const maxW = Math.round(currentDisplay.workArea.width * 0.8)
-    const maxH = Math.round(currentDisplay.workArea.height * 0.8)
+    const maxW = Math.round(currentDisplay.workArea.width * 0.95)
+    const maxH = Math.round(currentDisplay.workArea.height * 0.95)
     let w = payload.width || 400
     let h = payload.height || 300
+
+    // Convert raw physical pixels from capture/clipboard to logical points on Retina displays
+    if (payload.type === 'image' && (payload.x === undefined || payload.y === undefined) && scaleFactor > 1 && (w > maxW || h > maxH)) {
+      w = Math.round(w / scaleFactor)
+      h = Math.round(h / scaleFactor)
+    }
+
     if (w > maxW || h > maxH) {
       const scale = Math.min(maxW / w, maxH / h)
       w = Math.round(w * scale)
       h = Math.round(h * scale)
     }
 
-    const width = Math.min(Math.max(w, 100), currentDisplay.workArea.width)
-    const height = Math.min(Math.max(h, 60), currentDisplay.workArea.height)
+    const width = Math.min(Math.max(w, 80), currentDisplay.workArea.width)
+    const height = Math.min(Math.max(h, 40), currentDisplay.workArea.height)
 
     const posX =
       payload.x !== undefined
@@ -156,6 +164,48 @@ export class PinWindowManager {
     if (!win || win.isDestroyed()) return
     const [currX, currY] = win.getPosition()
     win.setPosition(Math.round(currX + dx), Math.round(currY + dy))
+  }
+
+  public fitSize(
+    pinId?: string,
+    naturalWidth?: number,
+    naturalHeight?: number,
+    zoom: number = 1.0,
+    sourceWindow?: BrowserWindow
+  ): void {
+    const win = (pinId ? this._windows.get(pinId) : sourceWindow) || sourceWindow
+    if (!win || win.isDestroyed() || !naturalWidth || !naturalHeight) return
+
+    const [winX, winY] = win.getPosition()
+    const [winW, winH] = win.getSize()
+    const currentDisplay = screen.getDisplayNearestPoint({ x: winX, y: winY })
+    const scaleFactor = currentDisplay.scaleFactor || 1
+
+    let targetW = Math.round((naturalWidth / scaleFactor) * zoom)
+    let targetH = Math.round((naturalHeight / scaleFactor) * zoom)
+
+    const maxW = Math.round(currentDisplay.workArea.width * 0.95)
+    const maxH = Math.round(currentDisplay.workArea.height * 0.95)
+    if (targetW > maxW || targetH > maxH) {
+      const scale = Math.min(maxW / targetW, maxH / targetH)
+      targetW = Math.round(targetW * scale)
+      targetH = Math.round(targetH * scale)
+    }
+
+    targetW = Math.max(targetW, 80)
+    targetH = Math.max(targetH, 40)
+
+    const centerX = winX + winW / 2
+    const centerY = winY + winH / 2
+    const newX = Math.round(centerX - targetW / 2)
+    const newY = Math.round(centerY - targetH / 2)
+
+    win.setBounds({
+      x: newX,
+      y: newY,
+      width: targetW,
+      height: targetH
+    })
   }
 
   public setAlwaysOnTop(flag: boolean, pinId?: string, sourceWindow?: BrowserWindow): void {

@@ -23,9 +23,9 @@
       <img
         :src="getImageSrc(payload.content)"
         class="pinned-img"
-        :style="{ transform: `scale(${zoomLevel})` }"
         alt="Pinned Image"
         draggable="false"
+        @load="onImageLoad"
       />
     </div>
 
@@ -130,22 +130,46 @@ const onMouseUp = (): void => {
   window.removeEventListener('mouseup', onMouseUp)
 }
 
+let currentNaturalWidth = 0
+let currentNaturalHeight = 0
+
+const onImageLoad = (e: Event): void => {
+  const img = e.target as HTMLImageElement
+  if (!img) return
+  currentNaturalWidth = img.naturalWidth
+  currentNaturalHeight = img.naturalHeight
+  applyFitSize()
+}
+
+const applyFitSize = (): void => {
+  if (!currentNaturalWidth || !currentNaturalHeight) return
+  window.electron.ipcRenderer.send('mt::pin-window-fit-size', {
+    pinId: pinId.value,
+    naturalWidth: currentNaturalWidth,
+    naturalHeight: currentNaturalHeight,
+    zoom: zoomLevel.value
+  })
+}
+
 // Mouse Wheel Zoom
 const onWheel = (e: WheelEvent): void => {
   e.preventDefault()
-  const delta = e.deltaY > 0 ? -0.08 : 0.08
-  const nextZoom = Math.min(Math.max(zoomLevel.value + delta, 0.2), 6.0)
+  const delta = e.deltaY > 0 ? -0.1 : 0.1
+  const nextZoom = Math.min(Math.max(zoomLevel.value + delta, 0.2), 5.0)
   zoomLevel.value = Math.round(nextZoom * 100) / 100
+  applyFitSize()
 }
 
 const resetZoom = (): void => {
   zoomLevel.value = 1.0
   contextMenuVisible.value = false
+  applyFitSize()
 }
 
 const setZoom = (z: number): void => {
   zoomLevel.value = z
   contextMenuVisible.value = false
+  applyFitSize()
 }
 
 const toggleAlwaysOnTop = (): void => {
@@ -257,11 +281,11 @@ onUnmounted(() => {
 
 <style scoped>
 .pin-window-container {
-  width: 100vw;
-  height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  display: block;
   background: transparent;
   user-select: none;
   overflow: hidden;
@@ -329,19 +353,21 @@ onUnmounted(() => {
 .pinned-image-view {
   width: 100%;
   height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  margin: 0;
+  padding: 0;
+  display: block;
+  overflow: hidden;
 }
 
 .pinned-img {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-  border-radius: 4px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.15);
-  transform-origin: center center;
-  transition: transform 0.05s linear;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: fill;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+  padding: 0;
 }
 
 /* Pinned Text View */
