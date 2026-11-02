@@ -134,6 +134,7 @@ export interface IpcInvokeChannels {
   'mt::clipboard-get-history': { args: []; ret: ClipboardItemRecord[] }
   'mt::clipboard-delete-item': { args: [id: string]; ret: boolean }
   'mt::clipboard-clear-history': { args: []; ret: boolean }
+  'mt::clipboard-copy-item': { args: [item: ClipboardItemRecord]; ret: boolean }
   'mt::clipboard-paste-item': { args: [item: ClipboardItemRecord]; ret: void }
   'mt::clipboard-pin-item': { args: [item: ClipboardItemRecord]; ret: void }
   'mt::capture-get-data': { args: []; ret: ScreenCaptureDisplayInfo | null }

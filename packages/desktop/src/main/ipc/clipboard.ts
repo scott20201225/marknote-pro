@@ -43,6 +43,16 @@ export const registerClipboardIpcHandlers = (): void => {
     return clipboardService.clearHistory()
   })
 
+  ipcMain.handle('mt::clipboard-copy-item', async (_event, item: ClipboardItemRecord) => {
+    try {
+      clipboardService.copyToClipboard(item)
+      return true
+    } catch (err) {
+      log.error('[Clipboard] Failed to copy item:', err)
+      return false
+    }
+  })
+
   ipcMain.handle('mt::clipboard-paste-item', async (_event, item: ClipboardItemRecord) => {
     try {
       clipboardService.pasteItem(item)

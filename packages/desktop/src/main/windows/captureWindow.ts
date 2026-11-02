@@ -190,13 +190,12 @@ export class CaptureWindowManager {
   public async captureSlice(rect: { x: number; y: number; width: number; height: number }): Promise<string | null> {
     if (!this._win || this._win.isDestroyed()) return null
     try {
-      this._win.setOpacity(0)
-      await new Promise((resolve) => setTimeout(resolve, 90))
-
       const tmpPath = path.join('/tmp', `marknotepro_slice_${Date.now()}.png`)
 
       if (isOsx) {
         try {
+          // Zero-flicker: the capture window has a transparent cutout at rect,
+          // so screencapture captures the underlying application directly without hiding the window!
           await execAsync(
             `/usr/sbin/screencapture -x -R${Math.round(rect.x)},${Math.round(rect.y)},${Math.round(rect.width)},${Math.round(rect.height)} "${tmpPath}"`
           )
@@ -204,8 +203,6 @@ export class CaptureWindowManager {
           log.warn('[CaptureWindowManager] captureSlice screencapture error:', scErr)
         }
       }
-
-      this._win.setOpacity(1)
 
       if (fs.existsSync(tmpPath)) {
         const buf = await fsPromises.readFile(tmpPath)
@@ -235,9 +232,6 @@ export class CaptureWindowManager {
       }
     } catch (err) {
       log.error('[CaptureWindowManager] captureSlice error:', err)
-      if (this._win && !this._win.isDestroyed()) {
-        this._win.setOpacity(1)
-      }
     }
     return null
   }
@@ -245,6 +239,13 @@ export class CaptureWindowManager {
   public async scrollDown(rect?: { x: number; y: number; width: number; height: number }): Promise<void> {
     if (!isOsx) return
     try {
+      // Temporarily ignore mouse events on the full-screen capture window so WindowServer
+      // passes mouse move and scroll wheel events directly through to the underlying application!
+      if (this._win && !this._win.isDestroyed()) {
+        this._win.setIgnoreMouseEvents(true, { forward: false })
+      }
+      await new Promise((r) => setTimeout(r, 20))
+
       const staticDir = path.join(app.isPackaged ? process.resourcesPath : app.getAppPath(), 'static')
       const macScrollBin = path.join(staticDir, 'bin', 'mac-scroll')
       let args = '-12'
@@ -258,8 +259,16 @@ export class CaptureWindowManager {
       } else {
         await execAsync(`osascript -e 'tell application "System Events" to key code 125'`)
       }
+
+      // Wait a moment for WindowServer to dispatch the event and for the underlying app to scroll
+      await new Promise((r) => setTimeout(r, 60))
     } catch (err) {
       log.warn('[CaptureWindowManager] scrollDown error:', err)
+    } finally {
+      // Restore mouse events so user can interact with the dock buttons
+      if (this._win && !this._win.isDestroyed()) {
+        this._win.setIgnoreMouseEvents(false)
+      }
     }
   }
 

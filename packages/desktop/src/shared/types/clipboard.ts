@@ -4,6 +4,8 @@ export interface ClipboardItemRecord {
   id: string
   type: ClipboardContentType
   content: string // raw text, code content, or HTML
+  htmlContent?: string // rich text HTML formatting
+  rtfContent?: string // rich text RTF formatting
   previewText?: string
   imagePath?: string // absolute path in ~/.mark-suite/clipboard/images/
   imageDataUrl?: string // thumbnail or base64 (for fast list display)

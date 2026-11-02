@@ -929,87 +929,195 @@ const stitchedHeight = ref(0)
 
 let autoScrollTimer: any = null
 let stitchedMasterCanvas: HTMLCanvasElement | null = null
-let prevSliceImageData: ImageData | null = null
+let prevSliceCanvas: HTMLCanvasElement | null = null
 
-function findVerticalScrollOffset(
-  prevData: Uint8ClampedArray,
-  currData: Uint8ClampedArray,
+// ShareX Best Match & Ignore Bottom Cache
+let bestMatchCount = 0
+let bestMatchIndex = 0
+let bestIgnoreBottomOffset = 0
+
+// 1. ShareX Image Comparison (Whole frame similarity / reached bottom detection)
+function compareSlicesIdentical(
+  d1: Uint8ClampedArray,
+  d2: Uint8ClampedArray,
   width: number,
-  height: number
-): { dy: number; isIdentical: boolean; minDiff: number } {
-  if (width < 30 || height < 60) {
-    return { dy: 0, isIdentical: true, minDiff: 0 }
-  }
-
-  // 1. 确定采样列范围（左右各避开 10% 边界，规避滚动条和边缘阴影）
-  const startCol = Math.floor(width * 0.1)
-  const endCol = Math.floor(width * 0.9)
-  const colStep = Math.max(1, Math.floor(width / 120)) // 采样约 100~120 列
-
-  // 2. 选择基准模板区域 (Template Band)
-  // 取前一帧下部区域 (避开紧贴底部的 5% 边缘)
-  const templateH = Math.min(60, Math.max(30, Math.floor(height * 0.12)))
-  const templateTop = Math.max(10, height - templateH - Math.floor(height * 0.05))
-
-  // 3. 快速全屏静止/底部判定
-  let totalDiff = 0
+  height: number,
+  startCol: number,
+  endCol: number
+): boolean {
+  let diffSum = 0
   let sampleCount = 0
-  for (let y = templateTop; y < templateTop + templateH; y += 3) {
-    for (let x = startCol; x < endCol; x += colStep * 2) {
-      const idx = (y * width + x) * 4
-      totalDiff +=
-        Math.abs(prevData[idx] - currData[idx]) +
-        Math.abs(prevData[idx + 1] - currData[idx + 1]) +
-        Math.abs(prevData[idx + 2] - currData[idx + 2])
+  const yStart = Math.floor(height * 0.1)
+  const yEnd = Math.floor(height * 0.9)
+  for (let y = yStart; y < yEnd; y += 4) {
+    const rowOffset = y * width * 4
+    for (let x = startCol; x < endCol; x += 4) {
+      const idx = rowOffset + x * 4
+      diffSum +=
+        Math.abs(d1[idx] - d2[idx]) +
+        Math.abs(d1[idx + 1] - d2[idx + 1]) +
+        Math.abs(d1[idx + 2] - d2[idx + 2])
       sampleCount++
     }
   }
-  const avgZeroDiff = sampleCount > 0 ? totalDiff / sampleCount : 0
-  if (avgZeroDiff < 3.5) {
-    return { dy: 0, isIdentical: true, minDiff: avgZeroDiff }
+  return sampleCount > 0 && diffSum / sampleCount < 2.5
+}
+
+// 2. ShareX Row Comparison (Memory scanline matching with antialias tolerance)
+function compareRows(
+  d1: Uint8ClampedArray,
+  y1: number,
+  d2: Uint8ClampedArray,
+  y2: number,
+  width: number,
+  startCol: number,
+  endCol: number,
+  threshold: number = 6.0
+): boolean {
+  const r1 = y1 * width * 4
+  const r2 = y2 * width * 4
+  let diffSum = 0
+  let samples = 0
+
+  for (let x = startCol; x < endCol; x += 2) {
+    const i1 = r1 + x * 4
+    const i2 = r2 + x * 4
+    diffSum +=
+      Math.abs(d1[i1] - d2[i2]) +
+      Math.abs(d1[i1 + 1] - d2[i2 + 1]) +
+      Math.abs(d1[i1 + 2] - d2[i2 + 2])
+    samples++
   }
 
-  // 4. 在当前帧中自上而下滑动搜索 Template 的最佳匹配位置 (SAD - Sum of Absolute Differences)
-  let bestYCurr = -1
-  let minDiff = Infinity
+  return samples > 0 && diffSum / samples <= threshold
+}
 
-  const maxSearchY = templateTop - 2
-  const minSearchY = Math.max(0, templateTop - Math.floor(height * 0.85))
+// 3. ShareX CombineImages Algorithm (Feature row overlap + AutoIgnoreBottomEdge + BestGuess)
+function shareXCombineImages(
+  resultCanvas: HTMLCanvasElement,
+  currCanvas: HTMLCanvasElement,
+  prevCanvas: HTMLCanvasElement | null
+): { newCanvas: HTMLCanvasElement; matchHeight: number; status: 'success' | 'partial' | 'bottom' } | null {
+  const width = currCanvas.width
+  const currH = currCanvas.height
+  const resH = resultCanvas.height
 
-  for (let searchY = maxSearchY; searchY >= minSearchY; searchY -= 1) {
-    let diff = 0
-    let count = 0
+  const rctx = resultCanvas.getContext('2d')
+  const cctx = currCanvas.getContext('2d')
+  if (!rctx || !cctx) return null
 
-    for (let row = 0; row < templateH; row += 2) {
-      const yPrev = templateTop + row
-      const yCurr = searchY + row
-      if (yCurr >= height) continue
+  // ShareX Rule 1: Exclude side scrollbars & margins (5% to 33% of width)
+  let ignoreSideOffset = Math.max(40, Math.floor(width / 20))
+  ignoreSideOffset = Math.min(ignoreSideOffset, Math.floor(width / 3))
+  const startCol = ignoreSideOffset
+  const endCol = width - ignoreSideOffset
 
-      for (let x = startCol; x < endCol; x += colStep) {
-        const idxPrev = (yPrev * width + x) * 4
-        const idxCurr = (yCurr * width + x) * 4
+  const resultData = rctx.getImageData(0, 0, width, resH).data
+  const currData = cctx.getImageData(0, 0, width, currH).data
 
-        diff +=
-          Math.abs(prevData[idxPrev] - currData[idxCurr]) +
-          Math.abs(prevData[idxPrev + 1] - currData[idxCurr + 1]) +
-          Math.abs(prevData[idxPrev + 2] - currData[idxCurr + 2])
-        count++
+  // ShareX Rule 2: Compare if current slice is identical to previous slice (reached bottom)
+  if (prevCanvas) {
+    const pctx = prevCanvas.getContext('2d')
+    if (pctx) {
+      const prevData = pctx.getImageData(0, 0, width, prevCanvas.height).data
+      if (compareSlicesIdentical(prevData, currData, width, Math.min(prevCanvas.height, currH), startCol, endCol)) {
+        return { newCanvas: resultCanvas, matchHeight: 0, status: 'bottom' }
+      }
+    }
+  }
+
+  // ShareX Rule 3: AutoIgnoreBottomEdge (Detect static/fixed bottom bar or floating footer)
+  const ignoreBottomOffsetMax = Math.floor(currH / 3)
+  let ignoreBottomOffset = Math.max(25, Math.floor(currH / 12))
+
+  for (let i = 0; i <= ignoreBottomOffsetMax; i++) {
+    const yRes = resH - 1 - i
+    const yCurr = currH - 1 - i
+    if (yRes < 0 || yCurr < 0) break
+    if (!compareRows(resultData, yRes, currData, yCurr, width, startCol, endCol, 3.5)) {
+      ignoreBottomOffset += i
+      break
+    }
+  }
+
+  ignoreBottomOffset = Math.max(ignoreBottomOffset, bestIgnoreBottomOffset)
+  ignoreBottomOffset = Math.min(ignoreBottomOffset, ignoreBottomOffsetMax)
+
+  // ShareX Rule 4: Consecutive Scanline Matching
+  let matchCount = 0
+  let matchIndex = 0
+  const matchLimit = Math.floor(currH * 0.6)
+  const rectBottom = resH - ignoreBottomOffset - 1
+
+  const startSearchY = currH - 1 - ignoreBottomOffset
+  const minSearchY = Math.max(10, Math.floor(currH * 0.05))
+
+  for (let currentImageY = startSearchY; currentImageY >= minSearchY && matchCount < matchLimit; currentImageY--) {
+    let currentMatchCount = 0
+
+    for (let y = 0; currentImageY - y >= 0 && rectBottom - y >= 0 && currentMatchCount < matchLimit; y++) {
+      if (compareRows(resultData, rectBottom - y, currData, currentImageY - y, width, startCol, endCol, 6.0)) {
+        currentMatchCount++
+      } else {
+        break
       }
     }
 
-    const avg = count > 0 ? diff / count : Infinity
-    if (avg < minDiff) {
-      minDiff = avg
-      bestYCurr = searchY
+    if (currentMatchCount > matchCount) {
+      matchCount = currentMatchCount
+      matchIndex = currentImageY
     }
   }
 
-  if (minDiff > 45 || bestYCurr < 0) {
-    return { dy: 0, isIdentical: false, minDiff }
+  let bestGuess = false
+  // ShareX Rule 5: Best Guess Fallback (for solid colors / plain text)
+  if (matchCount === 0 && bestMatchCount > 0) {
+    matchCount = bestMatchCount
+    matchIndex = bestMatchIndex
+    ignoreBottomOffset = bestIgnoreBottomOffset
+    bestGuess = true
   }
 
-  const dy = templateTop - bestYCurr
-  return { dy, isIdentical: false, minDiff }
+  if (matchCount >= 8) {
+    const matchHeight = currH - matchIndex - 1
+    if (matchHeight > 0) {
+      if (matchCount > bestMatchCount) {
+        bestMatchCount = matchCount
+        bestMatchIndex = matchIndex
+        bestIgnoreBottomOffset = ignoreBottomOffset
+      }
+
+      // ShareX Rule 6: Create and stitch new canvas
+      const newHeight = resH - ignoreBottomOffset + matchHeight
+      const newCanvas = document.createElement('canvas')
+      newCanvas.width = width
+      newCanvas.height = newHeight
+      const nctx = newCanvas.getContext('2d')
+      if (!nctx) return null
+
+      // Draw original result without the bottom offset
+      nctx.drawImage(
+        resultCanvas,
+        0, 0, width, resH - ignoreBottomOffset,
+        0, 0, width, resH - ignoreBottomOffset
+      )
+
+      // Draw the new slice from currCanvas starting at matchIndex + 1
+      nctx.drawImage(
+        currCanvas,
+        0, matchIndex + 1, width, matchHeight,
+        0, resH - ignoreBottomOffset, width, matchHeight
+      )
+
+      return {
+        newCanvas,
+        matchHeight,
+        status: bestGuess ? 'partial' : 'success'
+      }
+    }
+  }
+
+  return null
 }
 
 const enterScrollingCapture = async (): Promise<void> => {
@@ -1018,7 +1126,11 @@ const enterScrollingCapture = async (): Promise<void> => {
   activeTool.value = 'none'
   isScrollingCaptureMode.value = true
   isAutoScrolling.value = false
-  scrollStatusMessage.value = ''
+  scrollStatusMessage.value = '已就绪：点击下方按钮开始滚动拼接长图'
+
+  bestMatchCount = 0
+  bestMatchIndex = 0
+  bestIgnoreBottomOffset = 0
 
   const sel = normSelection.value
   const dpr = window.devicePixelRatio || 1
@@ -1041,10 +1153,16 @@ const enterScrollingCapture = async (): Promise<void> => {
       sw,
       sh
     )
-    prevSliceImageData = mctx.getImageData(0, 0, sw, sh)
+    prevSliceCanvas = document.createElement('canvas')
+    prevSliceCanvas.width = sw
+    prevSliceCanvas.height = sh
+    const pctx = prevSliceCanvas.getContext('2d')
+    pctx?.drawImage(stitchedMasterCanvas, 0, 0)
+
     stitchedHeight.value = Math.round(sel.height)
     nextTick(() => updateScrollingPreview())
   }
+  renderAll()
 }
 
 const scrollDownAndCapture = async (_fromAuto = false): Promise<void> => {
@@ -1062,7 +1180,7 @@ const scrollDownAndCapture = async (_fromAuto = false): Promise<void> => {
     }
 
     await window.electron.ipcRenderer.invoke('mt::capture-scroll-down', rect)
-    await new Promise((resolve) => setTimeout(resolve, 280))
+    await new Promise((resolve) => setTimeout(resolve, 200))
 
     const sliceDataUrl = await window.electron.ipcRenderer.invoke('mt::capture-slice', rect)
     if (!sliceDataUrl) {
@@ -1076,56 +1194,38 @@ const scrollDownAndCapture = async (_fromAuto = false): Promise<void> => {
       sliceImg.onload = resolve
     })
 
-    const tempCanvas = document.createElement('canvas')
-    tempCanvas.width = sliceImg.width
-    tempCanvas.height = sliceImg.height
-    const tctx = tempCanvas.getContext('2d')
+    const currSliceCanvas = document.createElement('canvas')
+    currSliceCanvas.width = sliceImg.width
+    currSliceCanvas.height = sliceImg.height
+    const tctx = currSliceCanvas.getContext('2d')
     if (!tctx) return
     tctx.drawImage(sliceImg, 0, 0)
-    const currImageData = tctx.getImageData(0, 0, sliceImg.width, sliceImg.height)
 
-    if (prevSliceImageData && stitchedMasterCanvas) {
-      const matchRes = findVerticalScrollOffset(
-        prevSliceImageData.data,
-        currImageData.data,
-        sliceImg.width,
-        sliceImg.height
-      )
+    if (stitchedMasterCanvas) {
+      const stitchRes = shareXCombineImages(stitchedMasterCanvas, currSliceCanvas, prevSliceCanvas)
 
-      if (matchRes.isIdentical || matchRes.dy <= 1) {
-        scrollStatusMessage.value = '已到达页面底部或内容未变化'
+      if (!stitchRes) {
+        scrollStatusMessage.value = '未检测到内容滚动或匹配差异过大'
         if (isAutoScrolling.value) {
           stopAutoScroll()
         }
         return
       }
 
-      const dy = matchRes.dy
-      const oldCanvas = stitchedMasterCanvas
-      const newCanvas = document.createElement('canvas')
-      newCanvas.width = oldCanvas.width
-      newCanvas.height = oldCanvas.height + dy
-      const nctx = newCanvas.getContext('2d')
-      if (nctx) {
-        nctx.drawImage(oldCanvas, 0, 0)
-        nctx.drawImage(
-          sliceImg,
-          0,
-          sliceImg.height - dy,
-          sliceImg.width,
-          dy,
-          0,
-          oldCanvas.height,
-          sliceImg.width,
-          dy
-        )
-        stitchedMasterCanvas = newCanvas
-        const dpr = window.devicePixelRatio || 1
-        stitchedHeight.value = Math.round(newCanvas.height / dpr)
-        prevSliceImageData = currImageData
-        scrollStatusMessage.value = `已拼接 +${Math.round(dy / dpr)}px (总高 ${stitchedHeight.value}px)`
-        updateScrollingPreview()
+      if (stitchRes.status === 'bottom') {
+        scrollStatusMessage.value = '已到达页面底部，长图拼接完成'
+        if (isAutoScrolling.value) {
+          stopAutoScroll()
+        }
+        return
       }
+
+      stitchedMasterCanvas = stitchRes.newCanvas
+      prevSliceCanvas = currSliceCanvas
+      const dpr = window.devicePixelRatio || 1
+      stitchedHeight.value = Math.round(stitchedMasterCanvas.height / dpr)
+      scrollStatusMessage.value = `已精准拼接 +${Math.round(stitchRes.matchHeight / dpr)}px (总长 ${stitchedHeight.value}px)`
+      updateScrollingPreview()
     }
   } catch (err) {
     console.error('Failed to capture scroll slice:', err)
@@ -1162,7 +1262,7 @@ const runAutoScrollLoop = async (): Promise<void> => {
   if (isAutoScrolling.value) {
     autoScrollTimer = setTimeout(() => {
       runAutoScrollLoop()
-    }, 380)
+    }, 420)
   }
 }
 
@@ -1197,7 +1297,7 @@ const cancelScrollingCapture = (): void => {
   stopAutoScroll()
   isScrollingCaptureMode.value = false
   stitchedMasterCanvas = null
-  prevSliceImageData = null
+  prevSliceCanvas = null
   stitchedHeight.value = 0
   scrollStatusMessage.value = ''
   renderAll()
@@ -1675,11 +1775,23 @@ const renderAll = (): void => {
     // Right
     ctx.fillRect(sel.x + sel.width, sel.y, width - (sel.x + sel.width), sel.height)
 
-    // Selection border (Lark signature blue #336df4)
-    ctx.strokeStyle = '#336df4'
-    ctx.lineWidth = 1.5
-    ctx.setLineDash([])
-    ctx.strokeRect(sel.x, sel.y, sel.width, sel.height)
+    if (isScrollingCaptureMode.value) {
+      // CLEAR the selection area completely so it becomes transparent to the underlying desktop/window!
+      ctx.clearRect(sel.x, sel.y, sel.width, sel.height)
+
+      // Draw dashed selection border OUTSIDE the cutout so no border pixels get into the captured rect
+      ctx.strokeStyle = '#336df4'
+      ctx.lineWidth = 2
+      ctx.setLineDash([6, 4])
+      ctx.strokeRect(sel.x - 2, sel.y - 2, sel.width + 4, sel.height + 4)
+      ctx.setLineDash([])
+    } else {
+      // Normal selection border (Lark signature blue #336df4)
+      ctx.strokeStyle = '#336df4'
+      ctx.lineWidth = 1.5
+      ctx.setLineDash([])
+      ctx.strokeRect(sel.x, sel.y, sel.width, sel.height)
+    }
 
     // Selection Dimension Tag Pill (Lark style)
     const tagY = sel.y > 30 ? sel.y - 24 : sel.y + 6
@@ -1697,27 +1809,29 @@ const renderAll = (): void => {
     ctx.textBaseline = 'middle'
     ctx.fillText(`${Math.round(sel.width)} × ${Math.round(sel.height)} px`, sel.x + 8, tagY + 10)
 
-    // 3. Draw Annotations clipped inside selection
-    ctx.save()
-    ctx.beginPath()
-    ctx.rect(sel.x, sel.y, sel.width, sel.height)
-    ctx.clip()
+    if (!isScrollingCaptureMode.value) {
+      // 3. Draw Annotations clipped inside selection
+      ctx.save()
+      ctx.beginPath()
+      ctx.rect(sel.x, sel.y, sel.width, sel.height)
+      ctx.clip()
 
-    for (const ann of annotations.value) {
-      drawSingleAnnotation(ctx, ann)
+      for (const ann of annotations.value) {
+        drawSingleAnnotation(ctx, ann)
+      }
+      if (currentAnnotation.value) {
+        drawSingleAnnotation(ctx, currentAnnotation.value)
+      }
+
+      if (isWatermarkActive.value) {
+        drawWatermark(ctx, sel)
+      }
+
+      ctx.restore()
+
+      // 4. Draw Lark Corner Handles & Edge Grips
+      drawSelectionHandles(ctx, sel, hoveredHandle.value)
     }
-    if (currentAnnotation.value) {
-      drawSingleAnnotation(ctx, currentAnnotation.value)
-    }
-
-    if (isWatermarkActive.value) {
-      drawWatermark(ctx, sel)
-    }
-
-    ctx.restore()
-
-    // 4. Draw Lark Corner Handles & Edge Grips
-    drawSelectionHandles(ctx, sel, hoveredHandle.value)
   } else {
     // Dim the screen before selection
     ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'
@@ -1988,15 +2102,21 @@ const drawSingleAnnotation = (ctx: CanvasRenderingContext2D, ann: Annotation): v
       if (w > maxW) maxW = w
     }
 
-    const pad = 4
+    const padX = 6
+    const padY = 3
     const isStep = ann.tool === 'stepNote'
-    const badgeW = isStep ? fSize + 12 : 0
+    const badgeDiameter = 22
+    const badgeR = 11
+    const badgeGap = 6
+    const badgeW = isStep ? badgeDiameter + badgeGap : 0
     const totalHeight = lines.length * lineHeight
+    const contentH = Math.max(isStep ? badgeDiameter : 0, totalHeight)
+
     ann.box = {
-      x: ann.startX - pad,
-      y: ann.startY - pad,
-      width: maxW + pad * 2 + badgeW,
-      height: totalHeight + pad * 2
+      x: ann.startX,
+      y: ann.startY,
+      width: maxW + padX * 2 + badgeW,
+      height: contentH + padY * 2
     }
 
     // Lark Style 1: Filled background card
@@ -2039,28 +2159,34 @@ const drawSingleAnnotation = (ctx: CanvasRenderingContext2D, ann: Annotation): v
       ctx.restore()
     }
 
-    // If it's a Step Note, draw the circular step badge on the left
+    const badgeCx = ann.startX + padX + badgeR
+    const badgeCy = ann.startY + padY + Math.max(badgeR, Math.round(contentH / 2))
+
+    // If it's a Step Note, draw the circular step badge on the left (exact same 22px as pure step)
     if (isStep && ann.stepNumber) {
-      const badgeR = (fSize + 2) / 2
-      const badgeCx = ann.startX + badgeR
-      const badgeCy = ann.startY + badgeR
       ctx.save()
       ctx.fillStyle = ann.color
       ctx.beginPath()
       ctx.arc(badgeCx, badgeCy, badgeR, 0, Math.PI * 2)
       ctx.fill()
       ctx.fillStyle = '#ffffff'
-      ctx.font = `bold ${Math.max(10, fSize - 3)}px sans-serif`
+      ctx.font = 'bold 12px sans-serif'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillText(String(ann.stepNumber), badgeCx, badgeCy)
       ctx.restore()
     }
 
-    // Draw text lines
-    const textStartX = ann.startX + badgeW
+    // Draw text lines (aligned with input textarea line baseline, zero vertical jump)
+    ctx.textBaseline = 'middle'
+    ctx.textAlign = 'left'
+    const textStartX = ann.startX + padX + badgeW
+
+    const textCenterY = isStep && contentH === badgeDiameter ? badgeCy : ann.startY + padY + Math.round(contentH / 2)
+    const firstLineCenterY = textCenterY - ((lines.length - 1) * lineHeight) / 2
+
     lines.forEach((line, i) => {
-      const lineY = ann.startY + i * lineHeight
+      const lineY = firstLineCenterY + i * lineHeight
 
       if (ann.textStyle === 'filled') {
         const isLight = ann.color === '#ffffff' || ann.color === '#ffc60c'
@@ -2073,7 +2199,7 @@ const drawSingleAnnotation = (ctx: CanvasRenderingContext2D, ann: Annotation): v
       }
     })
   } else if (ann.tool === 'step') {
-    const radius = 13
+    const radius = 11 // Exact same 22px diameter
     ctx.beginPath()
     ctx.arc(ann.startX, ann.startY, radius, 0, Math.PI * 2)
     ctx.fill()
@@ -2755,8 +2881,8 @@ onUnmounted(() => {
 
 /* Inline Step Badge for Step Note */
 .step-badge-inline {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   color: #ffffff;
   display: flex;

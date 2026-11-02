@@ -80,12 +80,20 @@ export class ClipboardModalWindow {
     })
   }
 
-  public show(): void {
+  public async show(): Promise<void> {
     if (!this._win || this._win.isDestroyed()) {
       this._createWindow()
     }
 
     if (!this._win) return
+
+    // Immediately poll clipboard so latest system/Lark screenshot or copy is caught instantly!
+    const clipboardService = getClipboardService()
+    try {
+      await clipboardService.checkClipboardNow()
+    } catch (err) {
+      log.warn('[ClipboardModal] checkClipboardNow error:', err as Error)
+    }
 
     // Center on the display where the cursor currently is
     const cursorPoint = screen.getCursorScreenPoint()
@@ -107,7 +115,6 @@ export class ClipboardModalWindow {
     this._win.show()
     this._win.focus()
 
-    const clipboardService = getClipboardService()
     this._win.webContents.send('mt::clipboard-modal-show', clipboardService.history)
   }
 

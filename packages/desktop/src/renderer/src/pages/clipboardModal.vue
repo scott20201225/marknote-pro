@@ -13,12 +13,32 @@
         v-model="searchQuery"
         type="text"
         class="search-input"
-        placeholder="搜索历史记录... (↑↓ 选择, ↵ 粘贴, P 钉在桌面, Esc 退出)"
+        placeholder="搜索历史记录... (↑↓ 选择, ↵ 复制, P 钉在桌面, Esc 退出)"
         @input="onSearchInput"
       />
-      <div class="stats-badge">
-        <span>{{ filteredItems.length }} / {{ items.length }}</span>
+
+      <!-- Category Filter Tabs: 全部 / 图片 / 文本 -->
+      <div class="category-tabs">
+        <button
+          :class="['category-tab-btn', { active: currentCategory === 'all' }]"
+          @click="setCategory('all')"
+        >
+          全部 <span class="tab-count">{{ items.length }}</span>
+        </button>
+        <button
+          :class="['category-tab-btn', { active: currentCategory === 'image' }]"
+          @click="setCategory('image')"
+        >
+          图片 <span class="tab-count">{{ imageCount }}</span>
+        </button>
+        <button
+          :class="['category-tab-btn', { active: currentCategory === 'text' }]"
+          @click="setCategory('text')"
+        >
+          文本 <span class="tab-count">{{ textCount }}</span>
+        </button>
       </div>
+
       <button class="close-btn" title="关闭 (Esc)" @click="closeModal">
         ✕
       </button>
@@ -38,7 +58,7 @@
           :key="item.id"
           :class="['history-item', { active: index === selectedIndex }]"
           @click="selectItem(index)"
-          @dblclick="pasteItem(item)"
+          @dblclick="copyAndClose(item)"
         >
           <div class="item-icon-wrapper">
             <span v-if="item.type === 'image'" class="type-badge image-badge">🖼️</span>
@@ -57,8 +77,23 @@
           </div>
 
           <div class="item-actions">
-            <button class="action-icon-btn pin" title="钉在桌面 (P)" @click.stop="pinItem(item)">
+            <!-- For image: Pin to desktop -->
+            <button
+              v-if="item.type === 'image'"
+              class="action-icon-btn pin"
+              title="钉在桌面 (P)"
+              @click.stop="pinItem(item)"
+            >
               📌
+            </button>
+            <!-- Copy button for all -->
+            <button
+              class="action-icon-btn copy"
+              :title="copiedItemId === item.id ? '已复制' : '复制到剪贴板'"
+              @click.stop="copyItem(item)"
+            >
+              <span v-if="copiedItemId === item.id" class="copied-check">✓</span>
+              <span v-else>📋</span>
             </button>
             <button class="action-icon-btn delete" title="删除" @click.stop="deleteItem(item)">
               🗑️
@@ -77,11 +112,23 @@
               <span class="preview-timestamp">{{ new Date(selectedItem.timestamp).toLocaleString() }}</span>
             </div>
             <div class="preview-header-actions">
-              <button class="btn btn-secondary" title="钉在桌面" @click="pinItem(selectedItem)">
+              <!-- If image: Pin button -->
+              <button
+                v-if="selectedItem.type === 'image'"
+                class="btn btn-secondary"
+                title="钉在桌面 (P)"
+                @click="pinItem(selectedItem)"
+              >
                 📌 贴图
               </button>
-              <button class="btn btn-primary" title="粘贴到当前程序" @click="pasteItem(selectedItem)">
-                ↵ 粘贴
+              <!-- Primary action: Copy & Close (↵) -->
+              <button
+                class="btn btn-primary"
+                title="复制到剪贴板并退出 (↵)"
+                @click="copyAndClose(selectedItem)"
+              >
+                <span v-if="copiedItemId === selectedItem.id">✓ 已复制</span>
+                <span v-else>📋 复制</span>
               </button>
             </div>
           </div>
@@ -116,8 +163,8 @@
     <!-- Footer Shortcuts Bar -->
     <div class="footer-bar">
       <div class="shortcut-tip"><kbd>↑</kbd><kbd>↓</kbd> 导航</div>
-      <div class="shortcut-tip"><kbd>↵</kbd> 复制并粘贴</div>
-      <div class="shortcut-tip"><kbd>P</kbd> 钉在桌面</div>
+      <div class="shortcut-tip"><kbd>↵</kbd> 复制并退出</div>
+      <div v-if="selectedItem?.type === 'image'" class="shortcut-tip"><kbd>P</kbd> 钉在桌面</div>
       <div class="shortcut-tip"><kbd>Esc</kbd> 退出</div>
       <div class="footer-right">
         <button class="clear-all-link" @click="clearAllHistory">清空全部历史</button>
@@ -135,11 +182,28 @@ const listRef = ref<HTMLDivElement | null>(null)
 const items = ref<ClipboardItemRecord[]>([])
 const searchQuery = ref('')
 const selectedIndex = ref(0)
+const currentCategory = ref<'all' | 'image' | 'text'>('all')
+
+const imageCount = computed(() => items.value.filter((i) => i.type === 'image').length)
+const textCount = computed(() => items.value.filter((i) => i.type !== 'image').length)
+
+const setCategory = (cat: 'all' | 'image' | 'text'): void => {
+  currentCategory.value = cat
+  selectedIndex.value = 0
+  scrollSelectedItemIntoView()
+}
 
 const filteredItems = computed(() => {
+  let list = items.value
+  if (currentCategory.value === 'image') {
+    list = list.filter((i) => i.type === 'image')
+  } else if (currentCategory.value === 'text') {
+    list = list.filter((i) => i.type !== 'image')
+  }
+
   const q = searchQuery.value.trim().toLowerCase()
-  if (!q) return items.value
-  return items.value.filter((item) => {
+  if (!q) return list
+  return list.filter((item) => {
     if (item.content && item.content.toLowerCase().includes(q)) return true
     if (item.previewText && item.previewText.toLowerCase().includes(q)) return true
     return false
@@ -184,6 +248,33 @@ const loadHistory = async (): Promise<void> => {
 const selectItem = (index: number): void => {
   selectedIndex.value = index
   scrollSelectedItemIntoView()
+}
+
+const copiedItemId = ref<string | null>(null)
+let copyToastTimer: any = null
+
+const copyItem = async (item: ClipboardItemRecord): Promise<void> => {
+  try {
+    const raw = JSON.parse(JSON.stringify(item))
+    await window.electron.ipcRenderer.invoke('mt::clipboard-copy-item', raw)
+    copiedItemId.value = item.id
+    if (copyToastTimer) clearTimeout(copyToastTimer)
+    copyToastTimer = setTimeout(() => {
+      copiedItemId.value = null
+    }, 1500)
+  } catch (err) {
+    console.error('Failed to copy item:', err)
+  }
+}
+
+const copyAndClose = async (item: ClipboardItemRecord): Promise<void> => {
+  try {
+    const raw = JSON.parse(JSON.stringify(item))
+    await window.electron.ipcRenderer.invoke('mt::clipboard-copy-item', raw)
+    closeModal()
+  } catch (err) {
+    console.error('Failed to copy and close:', err)
+  }
 }
 
 const pasteItem = async (item: ClipboardItemRecord): Promise<void> => {
@@ -272,18 +363,30 @@ const handleGlobalKeydown = (e: KeyboardEvent): void => {
   if (e.key === 'Enter') {
     e.preventDefault()
     if (selectedItem.value) {
-      pasteItem(selectedItem.value)
+      copyAndClose(selectedItem.value)
     }
     return
   }
 
-  // Pressing 'p' or 'P' outside of search typing or when modifier pressed
+  // Pressing 'p' or 'P': pin image (images only)
   if ((e.key === 'p' || e.key === 'P') && (e.metaKey || e.ctrlKey || document.activeElement !== searchInputRef.value)) {
-    e.preventDefault()
-    if (selectedItem.value) {
+    if (selectedItem.value && selectedItem.value.type === 'image') {
+      e.preventDefault()
       pinItem(selectedItem.value)
+      return
     }
-    return
+  }
+
+  // Pressing 'c' or 'C': copy text / item content to clipboard
+  if (
+    ((e.metaKey || e.ctrlKey) && (e.key === 'c' || e.key === 'C')) ||
+    ((e.key === 'c' || e.key === 'C') && document.activeElement !== searchInputRef.value)
+  ) {
+    if (selectedItem.value) {
+      e.preventDefault()
+      copyItem(selectedItem.value)
+      return
+    }
   }
 }
 
@@ -296,6 +399,7 @@ onMounted(() => {
   removeShowSub = window.electron.ipcRenderer.on('mt::clipboard-modal-show', (_event, history) => {
     items.value = history || []
     searchQuery.value = ''
+    currentCategory.value = 'all'
     selectedIndex.value = 0
     nextTick(() => {
       searchInputRef.value?.focus()
@@ -367,6 +471,54 @@ onUnmounted(() => {
 
 .search-input::placeholder {
   color: #656d81;
+}
+
+/* Category Filter Tabs */
+.category-tabs {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 3px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.category-tab-btn {
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s ease;
+  font-weight: 500;
+}
+
+.category-tab-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.category-tab-btn.active {
+  background: #3b82f6;
+  color: #ffffff;
+}
+
+.category-tab-btn .tab-count {
+  font-size: 10px;
+  opacity: 0.85;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 1px 5px;
+  border-radius: 10px;
+}
+
+.category-tab-btn.active .tab-count {
+  background: rgba(255, 255, 255, 0.25);
 }
 
 .stats-badge {
@@ -499,8 +651,17 @@ onUnmounted(() => {
   gap: 4px;
 }
 
-.history-item:hover .item-actions {
+.history-item:hover .item-actions,
+.history-item.active .item-actions {
   display: flex;
+}
+
+.history-item.active .action-icon-btn {
+  color: #ffffff;
+}
+
+.history-item.active .action-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.28);
 }
 
 .action-icon-btn {
@@ -515,6 +676,12 @@ onUnmounted(() => {
 
 .action-icon-btn:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+.copied-check {
+  color: #10b981;
+  font-size: 13px;
+  font-weight: bold;
 }
 
 /* Right preview column */
@@ -578,6 +745,11 @@ onUnmounted(() => {
 
 .btn-secondary:hover {
   background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+}
+
+.btn-secondary.btn-success {
+  background: #10b981;
   color: #ffffff;
 }
 
