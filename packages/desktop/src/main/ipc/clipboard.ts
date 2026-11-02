@@ -189,6 +189,10 @@ export const registerClipboardIpcHandlers = (): void => {
     captureManager.showCaptureWindow()
   })
 
+  ipcMain.on('mt::capture-text-mode', (_event, active: boolean) => {
+    captureManager.setTextEditingMode(active)
+  })
+
   // 3. Pin Window Handlers
   ipcMain.handle('mt::pin-window-get-payload', async (event, pinId?: string) => {
     const senderWin = BrowserWindow.fromWebContents(event.sender) || undefined

@@ -83,6 +83,9 @@
         :placeholder="textInputState.isStepNote ? tr('stepNotePlaceholder') : tr('textPlaceholder')"
         rows="1"
         autofocus
+        spellcheck="false"
+        autocapitalize="off"
+        autocomplete="off"
         @input="autoResizeTextarea"
         @compositionstart="onCompositionStart"
         @compositionend="onCompositionEnd"
@@ -1483,6 +1486,9 @@ const openTextEditor = (
     text: initialText
   }
 
+  // Notify main process to lower window level below IME candidate popup (101) & steal app focus
+  window.electron.ipcRenderer.send('mt::capture-text-mode', true)
+
   // GUARANTEE INSTANT FOCUS: no extra click required!
   const focusInput = () => {
     const el = textInputRef.value
@@ -1587,6 +1593,7 @@ const commitTextInput = (): void => {
   textInputState.value.active = false
   textInputState.value.editingId = null
   textInputState.value.text = ''
+  window.electron.ipcRenderer.send('mt::capture-text-mode', false)
   renderAll()
 }
 
@@ -1594,6 +1601,7 @@ const cancelTextInput = (): void => {
   textInputState.value.active = false
   textInputState.value.editingId = null
   textInputState.value.text = ''
+  window.electron.ipcRenderer.send('mt::capture-text-mode', false)
   renderAll()
 }
 

@@ -272,9 +272,10 @@ export class CaptureWindowManager {
 
     // Apply alwaysOnTop and workspace visibility at the exact moment of display
     try {
-      // Use 'screen-saver' (level 1000) with relativeLevel 1 to completely cover
-      // macOS Menu Bar, Dock, IME candidate windows, and Windows Taskbar
-      this._win.setAlwaysOnTop(true, 'screen-saver', 1)
+      // macOS: Use 'status' (level 25) with relativeLevel 1 (level 26) to cover Menu Bar (24) and Dock (20),
+      // while strictly staying BELOW IME candidate pop-up windows (level 101) so candidates are visible!
+      // Windows/Linux: Use 'screen-saver' with native full screen to completely cover taskbars.
+      this._win.setAlwaysOnTop(true, isOsx ? 'status' : 'screen-saver', 1)
       this._win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
       if (!isOsx) {
         // Windows / Linux: Enter native full screen to completely hide the system taskbar
@@ -284,9 +285,53 @@ export class CaptureWindowManager {
       log.warn('[CaptureWindowManager] setAlwaysOnTop error:', e)
     }
 
-    // Never steal system application focus. Simply display and focus the window itself.
+    if (isOsx) {
+      // Steal app focus so macOS connects the IME (Input Method Engine) context to this window
+      app.focus({ steal: true })
+    }
     this._win.show()
     this._win.focus()
+    this._win.webContents?.focus()
+  }
+
+  public setTextEditingMode(active: boolean): void {
+    if (!this._win || this._win.isDestroyed()) return
+
+    if (active) {
+      log.info('[CaptureWindowManager] Entering text editing mode: adjusting window level and focusing for IME')
+      // 1. Temporarily unregister global Escape so typing/cancelling Pinyin candidates won't abort the screenshot
+      try {
+        globalShortcut.unregister('Escape')
+        globalShortcut.unregister('CommandOrControl+Escape')
+      } catch {}
+
+      // 2. Adjust window level to 'floating' (3) so all IME candidate popups (101) stay reliably on top
+      try {
+        this._win.setAlwaysOnTop(true, 'floating')
+      } catch (e) {
+        log.warn('[CaptureWindowManager] setAlwaysOnTop floating error:', e)
+      }
+
+      if (isOsx) {
+        app.focus({ steal: true })
+      }
+      this._win.focus()
+      this._win.webContents?.focus()
+    } else {
+      log.info('[CaptureWindowManager] Exiting text editing mode: restoring window level and shortcuts')
+      try {
+        globalShortcut.register('Escape', () => {
+          this.close()
+        })
+        globalShortcut.register('CommandOrControl+Escape', () => {
+          this.close()
+        })
+      } catch {}
+
+      try {
+        this._win.setAlwaysOnTop(true, isOsx ? 'status' : 'screen-saver', 1)
+      } catch {}
+    }
   }
 
   public close(): void {
