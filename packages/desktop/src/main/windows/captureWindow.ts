@@ -164,6 +164,7 @@ export class CaptureWindowManager {
         y: bounds.y,
         width: bounds.width,
         height: bounds.height,
+        useContentSize: false,
         frame: false,
         resizable: false,
         movable: false,
@@ -173,8 +174,8 @@ export class CaptureWindowManager {
         alwaysOnTop: true,
         skipTaskbar: true,
         enableLargerThanScreen: true,
-        fullscreen: !isOsx, // Windows / Linux: 使用系统级 Native Fullscreen，彻底压制任务栏
-        fullscreenable: true,
+        fullscreen: false,
+        fullscreenable: false,
         transparent: false, // 实体不透明全屏窗口，杜绝任何透底与 DWM 混合导致的重影/双任务栏
         backgroundColor: '#000000',
         hasShadow: false,
@@ -186,15 +187,6 @@ export class CaptureWindowManager {
           nodeIntegration: false
         }
       })
-
-      if (!isOsx) {
-        this._win.on('leave-html-full-screen', () => {
-          this.close()
-        })
-        this._win.on('leave-full-screen', () => {
-          this.close()
-        })
-      }
 
       // Zero-flicker: Avoid setting workspace flags on hidden windows,
       // which causes WindowServer to clear layers and trigger flashes.
@@ -272,23 +264,31 @@ export class CaptureWindowManager {
 
     // Apply alwaysOnTop and workspace visibility at the exact moment of display
     try {
-      // macOS: Use 'status' (level 25) with relativeLevel 1 (level 26) to cover Menu Bar (24) and Dock (20),
-      // while strictly staying BELOW IME candidate pop-up windows (level 101) so candidates are visible!
-      // Windows/Linux: Use 'screen-saver' with native full screen to completely cover taskbars.
-      this._win.setAlwaysOnTop(true, isOsx ? 'status' : 'screen-saver', 1)
-      this._win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
-      if (!isOsx) {
-        // Windows / Linux: Enter native full screen to completely hide the system taskbar
-        this._win.setFullScreen(true)
+      if (isOsx) {
+        // macOS: Use 'status' (level 25) with relativeLevel 1 (level 26) to cover Menu Bar (24) and Dock (20),
+        // while strictly staying BELOW IME candidate pop-up windows (level 101) so candidates are visible!
+        this._win.setAlwaysOnTop(true, 'status', 1)
+        this._win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+        app.focus({ steal: true })
+      } else {
+        // Windows / Linux:
+        // Explicitly set exact display bounds to cover full screen including taskbar without native fullscreen side-effects
+        const currentDisplay = this._currentPayload
+          ? { bounds: this._currentPayload.bounds }
+          : screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
+        this._win.setBounds({
+          x: currentDisplay.bounds.x,
+          y: currentDisplay.bounds.y,
+          width: currentDisplay.bounds.width,
+          height: currentDisplay.bounds.height
+        })
+        this._win.setAlwaysOnTop(true, 'screen-saver')
+        this._win.setVisibleOnAllWorkspaces(true)
       }
     } catch (e) {
       log.warn('[CaptureWindowManager] setAlwaysOnTop error:', e)
     }
 
-    if (isOsx) {
-      // Steal app focus so macOS connects the IME (Input Method Engine) context to this window
-      app.focus({ steal: true })
-    }
     this._win.show()
     this._win.focus()
     this._win.webContents?.focus()
@@ -329,7 +329,7 @@ export class CaptureWindowManager {
       } catch {}
 
       try {
-        this._win.setAlwaysOnTop(true, isOsx ? 'status' : 'screen-saver', 1)
+        this._win.setAlwaysOnTop(true, isOsx ? 'status' : 'screen-saver', isOsx ? 1 : 0)
       } catch {}
     }
   }
@@ -351,9 +351,6 @@ export class CaptureWindowManager {
 
     if (this._win && !this._win.isDestroyed()) {
       try {
-        if (!isOsx && this._win.isFullScreen()) {
-          this._win.setFullScreen(false)
-        }
         this._win.setVisibleOnAllWorkspaces(false)
       } catch {}
       this._win.destroy()

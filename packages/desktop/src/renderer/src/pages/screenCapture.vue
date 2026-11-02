@@ -1866,10 +1866,11 @@ const renderAll = (): void => {
   if (!ctx) return
 
   const dpr = window.devicePixelRatio || 1
-  const width = Math.round(window.innerWidth)
-  const height = Math.round(window.innerHeight)
-  const physicalW = Math.round(width * dpr)
-  const physicalH = Math.round(height * dpr)
+  const img = screenshotImage.value
+  const physicalW = img.naturalWidth || Math.round(window.innerWidth * dpr)
+  const physicalH = img.naturalHeight || Math.round(window.innerHeight * dpr)
+  const width = Math.round(physicalW / dpr)
+  const height = Math.round(physicalH / dpr)
 
   if (canvas.width !== physicalW || canvas.height !== physicalH) {
     canvas.width = physicalW
@@ -1882,7 +1883,7 @@ const renderAll = (): void => {
   // Disabling imageSmoothing avoids blurry anti-aliasing on fonts and windows, completely eliminating scaling illusions.
   ctx.save()
   ctx.imageSmoothingEnabled = false
-  ctx.drawImage(screenshotImage.value, 0, 0, physicalW, physicalH)
+  ctx.drawImage(img, 0, 0, physicalW, physicalH)
   ctx.restore()
 
   // 2. Vector annotations and selection mask: render in CSS logical point space
@@ -3075,9 +3076,8 @@ onUnmounted(() => {
 
 .main-canvas {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  top: 0;
+  left: 0;
   display: block;
 }
 

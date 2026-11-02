@@ -164,6 +164,10 @@ class App {
     app.on('ready', this.ready)
 
     app.on('window-all-closed', () => {
+      // Guard: Never quit if active editor windows are still tracked or managed
+      if (this._windowManager.windowCount > 0) {
+        return
+      }
       // Close all the image path watcher
       for (const watcher of watchers.values()) {
         watcher.close()
