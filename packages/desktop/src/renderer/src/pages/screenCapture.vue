@@ -1140,8 +1140,8 @@ const isDarkTheme = ref(false)
 const detectTheme = (): void => {
   const urlTheme = new URLSearchParams(window.location.search).get('theme')
   const localTheme = localStorage.getItem('theme') || urlTheme
-  if (localTheme && isDarkThemeId(localTheme)) {
-    isDarkTheme.value = true
+  if (localTheme) {
+    isDarkTheme.value = isDarkThemeId(localTheme)
   } else {
     isDarkTheme.value = window.matchMedia('(prefers-color-scheme: dark)').matches
   }

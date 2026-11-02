@@ -1,5 +1,5 @@
 import path from 'path'
-import { app, BrowserWindow, dialog, nativeImage, clipboard, screen } from 'electron'
+import { app, BrowserWindow, dialog, nativeImage, clipboard, screen, nativeTheme } from 'electron'
 import fsPromises from 'fs/promises'
 import log from 'electron-log'
 import type { PinWindowPayload } from '@shared/types/clipboard'
@@ -92,6 +92,7 @@ export class PinWindowManager {
     url.searchParams.set('type', 'pin')
     url.searchParams.set('pinId', pinId)
     url.searchParams.set('wid', '1')
+    url.searchParams.set('theme', nativeTheme.shouldUseDarkColors ? 'dark' : 'light')
     try {
       url.searchParams.set('udp', app.getPath('userData'))
     } catch {

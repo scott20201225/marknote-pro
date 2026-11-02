@@ -224,7 +224,9 @@ const tr = (key: string): string => {
 }
 
 const detectTheme = (): void => {
-  const localTheme = localStorage.getItem('current-theme')
+  const urlTheme = new URLSearchParams(window.location.search).get('theme')
+  const localTheme =
+    urlTheme || localStorage.getItem('theme') || localStorage.getItem('current-theme')
   if (localTheme) {
     isDarkTheme.value = isDarkThemeId(localTheme)
     return

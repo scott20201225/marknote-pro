@@ -10,13 +10,8 @@ export class ClipboardModalWindow {
   private _wasMarkNoteActive: boolean = false
 
   constructor() {
-    if (app.isReady()) {
-      this._createWindow()
-    } else {
-      app.whenReady().then(() => {
-        this._createWindow()
-      })
-    }
+    // Pure lazy loading: do not eagerly create floating window at application startup,
+    // which interferes with macOS keyWindow activation and text input context.
   }
 
   private _createWindow(): void {
@@ -142,7 +137,11 @@ export class ClipboardModalWindow {
       (w) => w !== this._win && !w.isDestroyed() && w.isVisible()
     )
     if (editorWin) {
+      if (isOsx) {
+        app.focus({ steal: true })
+      }
       editorWin.focus()
+      editorWin.webContents?.focus()
     }
   }
 
