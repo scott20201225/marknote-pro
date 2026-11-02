@@ -844,6 +844,14 @@ const scaleFactor = ref(1)
 const screenBounds = ref({ x: 0, y: 0, width: 0, height: 0 })
 const screenWorkArea = ref({ x: 0, y: 0, width: 0, height: 0 })
 
+// Smart Target Auto-Detection (Window / Sub-region)
+const detectedWindows = ref<Array<{ x: number; y: number; w: number; h: number; owner?: string; title?: string }>>([])
+const smartHoverRect = ref<{ x: number; y: number; width: number; height: number; label?: string } | null>(null)
+let isMouseDownBeforeSelection = false
+let mouseDownPoint = { x: 0, y: 0 }
+let potentialSmartCandidate: { x: number; y: number; width: number; height: number; label?: string } | null = null
+let hasMovedMouseSinceDown = false
+
 // Selection Rect
 const selStartX = ref(0)
 const selStartY = ref(0)
@@ -1604,6 +1612,10 @@ const currentCursor = computed(() => {
     }
   }
 
+  if (!hasSelection.value && smartHoverRect.value) {
+    return 'pointer'
+  }
+
   return 'crosshair'
 })
 
@@ -1776,6 +1788,126 @@ const getHitTarget = (x: number, y: number): string => {
 }
 
 // -------------------------------------------------------------
+// Smart Window & Sub-region Auto-detection
+// -------------------------------------------------------------
+const detectVisualBlock = (
+  cx: number,
+  cy: number,
+  winX: number,
+  winY: number,
+  winW: number,
+  winH: number
+): { x: number; y: number; width: number; height: number } | null => {
+  if (winW < 360 || winH < 240) return null
+  const canvas = canvasRef.value
+  if (!canvas) return null
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })
+  if (!ctx) return null
+
+  const dpr = window.devicePixelRatio || 1
+  const searchRadius = 380
+  const minX = Math.max(winX, cx - searchRadius)
+  const maxX = Math.min(winX + winW, cx + searchRadius)
+  const minY = Math.max(winY, cy - searchRadius)
+  const maxY = Math.min(winY + winH, cy + searchRadius)
+
+  try {
+    const centerPix = ctx.getImageData(Math.round(cx * dpr), Math.round(cy * dpr), 1, 1).data
+    const cr = centerPix[0], cg = centerPix[1], cb = centerPix[2]
+
+    const isDiff = (r: number, g: number, b: number) => {
+      return Math.abs(r - cr) + Math.abs(g - cg) + Math.abs(b - cb) > 48
+    }
+
+    const step = 4
+    let left = winX, right = winX + winW, top = winY, bottom = winY + winH
+
+    for (let x = cx - step; x >= minX; x -= step) {
+      const p = ctx.getImageData(Math.round(x * dpr), Math.round(cy * dpr), 1, 1).data
+      if (isDiff(p[0], p[1], p[2])) {
+        left = x + step
+        break
+      }
+    }
+
+    for (let x = cx + step; x <= maxX; x += step) {
+      const p = ctx.getImageData(Math.round(x * dpr), Math.round(cy * dpr), 1, 1).data
+      if (isDiff(p[0], p[1], p[2])) {
+        right = x
+        break
+      }
+    }
+
+    for (let y = cy - step; y >= minY; y -= step) {
+      const p = ctx.getImageData(Math.round(cx * dpr), Math.round(y * dpr), 1, 1).data
+      if (isDiff(p[0], p[1], p[2])) {
+        top = y + step
+        break
+      }
+    }
+
+    for (let y = cy + step; y <= maxY; y += step) {
+      const p = ctx.getImageData(Math.round(cx * dpr), Math.round(y * dpr), 1, 1).data
+      if (isDiff(p[0], p[1], p[2])) {
+        bottom = y
+        break
+      }
+    }
+
+    const bw = right - left
+    const bh = bottom - top
+    if (bw >= 120 && bh >= 80 && (bw < winW - 30 || bh < winH - 30)) {
+      return { x: Math.round(left), y: Math.round(top), width: Math.round(bw), height: Math.round(bh) }
+    }
+  } catch {}
+
+  return null
+}
+
+const findSmartTarget = (
+  mouseX: number,
+  mouseY: number
+): { x: number; y: number; width: number; height: number; label?: string } | null => {
+  const sx = screenBounds.value.x + mouseX
+  const sy = screenBounds.value.y + mouseY
+
+  const matches = detectedWindows.value.filter((w) => {
+    return sx >= w.x && sx <= w.x + w.w && sy >= w.y && sy <= w.y + w.h && w.w >= 80 && w.h >= 60
+  })
+
+  if (matches.length === 0) return null
+
+  // Sort matching windows by area ascending: smaller windows / popups / dialogs take precedence!
+  matches.sort((a, b) => a.w * a.h - b.w * b.h)
+  const topWin = matches[0]
+
+  const winLeft = Math.max(0, topWin.x - screenBounds.value.x)
+  const winTop = Math.max(0, topWin.y - screenBounds.value.y)
+  const winRight = Math.min(window.innerWidth, winLeft + topWin.w)
+  const winBottom = Math.min(window.innerHeight, winTop + topWin.h)
+  const winWidth = winRight - winLeft
+  const winHeight = winBottom - winTop
+
+  if (winWidth < 60 || winHeight < 50) return null
+
+  const subRect = detectVisualBlock(mouseX, mouseY, winLeft, winTop, winWidth, winHeight)
+  if (subRect) {
+    return {
+      ...subRect,
+      label: `${topWin.owner || '区域'}`
+    }
+  }
+
+  return {
+    x: Math.round(winLeft),
+    y: Math.round(winTop),
+    width: Math.round(winWidth),
+    height: Math.round(winHeight),
+    label: `${topWin.owner || topWin.title || '窗口'}`
+  }
+}
+
+// -------------------------------------------------------------
 // Canvas Rendering Engine
 // -------------------------------------------------------------
 const renderAll = (): void => {
@@ -1876,6 +2008,80 @@ const renderAll = (): void => {
     // Dim the screen before selection
     ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'
     ctx.fillRect(0, 0, width, height)
+
+    // Smart Auto-Selection Highlight (Lark / CleanShot signature smart selection)
+    if (smartHoverRect.value && !isSelecting.value) {
+      const sm = smartHoverRect.value
+
+      // Clear dark mask inside the detected smart target so it shines through bright & crisp!
+      ctx.clearRect(sm.x, sm.y, sm.width, sm.height)
+      ctx.drawImage(
+        screenshotImage.value,
+        sm.x * dpr,
+        sm.y * dpr,
+        sm.width * dpr,
+        sm.height * dpr,
+        sm.x,
+        sm.y,
+        sm.width,
+        sm.height
+      )
+
+      // Translucent Lark blue overlay
+      ctx.fillStyle = 'rgba(51, 109, 244, 0.10)'
+      ctx.fillRect(sm.x, sm.y, sm.width, sm.height)
+
+      // Signature Lark blue border
+      ctx.strokeStyle = '#336df4'
+      ctx.lineWidth = 2
+      ctx.strokeRect(sm.x, sm.y, sm.width, sm.height)
+
+      // 4 corner brackets
+      const cLen = Math.min(16, Math.min(sm.width / 4, sm.height / 4))
+      ctx.lineWidth = 3
+      ctx.strokeStyle = '#336df4'
+      ctx.beginPath()
+      // Top-left
+      ctx.moveTo(sm.x, sm.y + cLen); ctx.lineTo(sm.x, sm.y); ctx.lineTo(sm.x + cLen, sm.y)
+      // Top-right
+      ctx.moveTo(sm.x + sm.width - cLen, sm.y); ctx.lineTo(sm.x + sm.width, sm.y); ctx.lineTo(sm.x + sm.width, sm.y + cLen)
+      // Bottom-left
+      ctx.moveTo(sm.x, sm.y + sm.height - cLen); ctx.lineTo(sm.x, sm.y + sm.height); ctx.lineTo(sm.x + cLen, sm.y + sm.height)
+      // Bottom-right
+      ctx.moveTo(sm.x + sm.width - cLen, sm.y + sm.height); ctx.lineTo(sm.x + sm.width, sm.y + sm.height); ctx.lineTo(sm.x + sm.width, sm.y + sm.height - cLen)
+      ctx.stroke()
+
+      // Smart pill badge above the smart rect
+      const badgeText = `${sm.label ? sm.label + '  ·  ' : ''}${Math.round(sm.width)} × ${Math.round(sm.height)} px  ·  单击直接选取`
+      ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      const badgeW = ctx.measureText(badgeText).width + 24
+      const badgeH = 26
+      let badgeX = sm.x + 8
+      if (badgeX + badgeW > width - 12) {
+        badgeX = width - badgeW - 12
+      }
+      let badgeY = sm.y > 34 ? sm.y - 32 : sm.y + 8
+
+      ctx.save()
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.35)'
+      ctx.shadowBlur = 8
+      ctx.fillStyle = isDarkTheme.value ? 'rgba(30, 32, 38, 0.94)' : 'rgba(31, 35, 41, 0.90)'
+      ctx.beginPath()
+      ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 6)
+      ctx.fill()
+      ctx.restore()
+
+      // Blue indicator dot
+      ctx.fillStyle = '#60a5fa'
+      ctx.beginPath()
+      ctx.arc(badgeX + 12, badgeY + badgeH / 2, 4, 0, Math.PI * 2)
+      ctx.fill()
+
+      // Badge label text
+      ctx.fillStyle = '#ffffff'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(badgeText, badgeX + 22, badgeY + badgeH / 2)
+    }
   }
 
   ctx.restore()
@@ -2392,14 +2598,11 @@ const onMouseDown = (e: MouseEvent): void => {
     }
   }
 
-  // D. Fresh selection outside
-  isSelecting.value = true
-  hasSelection.value = true
-  selStartX.value = x
-  selStartY.value = y
-  selEndX.value = x
-  selEndY.value = y
-  renderAll()
+  // D. Candidate selection outside
+  isMouseDownBeforeSelection = true
+  mouseDownPoint = { x, y }
+  potentialSmartCandidate = smartHoverRect.value
+  hasMovedMouseSinceDown = false
 }
 
 const onMouseMove = (e: MouseEvent): void => {
@@ -2446,12 +2649,46 @@ const onMouseMove = (e: MouseEvent): void => {
     return
   }
 
-  // 4. Initial Selecting
+  // 4. Initial Selecting (Manual drag in progress)
   if (isSelecting.value) {
     selEndX.value = x
     selEndY.value = y
     renderAll()
     return
+  }
+
+  // 4b. Before selection is active:
+  if (!hasSelection.value) {
+    if (isMouseDownBeforeSelection) {
+      const dist = Math.hypot(x - mouseDownPoint.x, y - mouseDownPoint.y)
+      if (dist > 4) {
+        // User dragged: start manual selection!
+        hasMovedMouseSinceDown = true
+        isSelecting.value = true
+        hasSelection.value = true
+        smartHoverRect.value = null
+        potentialSmartCandidate = null
+        selStartX.value = mouseDownPoint.x
+        selStartY.value = mouseDownPoint.y
+        selEndX.value = x
+        selEndY.value = y
+        renderAll()
+        return
+      }
+    } else {
+      // User is moving mouse: update smart candidate
+      const smart = findSmartTarget(x, y)
+      const prev = smartHoverRect.value
+      const changed =
+        (!prev && smart) ||
+        (prev && !smart) ||
+        (prev && smart && (prev.x !== smart.x || prev.y !== smart.y || prev.width !== smart.width || prev.height !== smart.height))
+      if (changed) {
+        smartHoverRect.value = smart
+        renderAll()
+      }
+      return
+    }
   }
 
   // 5. Drawing Annotation inside selection
@@ -2483,6 +2720,25 @@ const onMouseMove = (e: MouseEvent): void => {
 }
 
 const onMouseUp = (): void => {
+  if (isMouseDownBeforeSelection) {
+    isMouseDownBeforeSelection = false
+    if (!hasSelection.value) {
+      // User clicked without dragging: snap to smart candidate!
+      if (potentialSmartCandidate) {
+        selStartX.value = potentialSmartCandidate.x
+        selStartY.value = potentialSmartCandidate.y
+        selEndX.value = potentialSmartCandidate.x + potentialSmartCandidate.width
+        selEndY.value = potentialSmartCandidate.y + potentialSmartCandidate.height
+        hasSelection.value = true
+        smartHoverRect.value = null
+        potentialSmartCandidate = null
+        normalizeSelection()
+        renderAll()
+        return
+      }
+    }
+    potentialSmartCandidate = null
+  }
   // If user just opened text editor on click, guarantee focus remains in textarea!
   if (textInputState.value.active) {
     requestAnimationFrame(() => {
@@ -2569,6 +2825,7 @@ const onContextMenu = (): void => {
     hasSelection.value = false
     annotations.value = []
     activeTool.value = 'none'
+    smartHoverRect.value = null
     renderAll()
   } else {
     closeCapture()
@@ -2811,6 +3068,7 @@ const applyCaptureData = (info: ScreenCaptureDisplayInfo): void => {
   if (!info || !info.dataUrl) return
   screenBounds.value = info.bounds
   screenWorkArea.value = info.workArea || info.bounds
+  detectedWindows.value = info.windows || []
   scaleFactor.value = info.scaleFactor || 1
 
   const img = new Image()
@@ -2818,6 +3076,10 @@ const applyCaptureData = (info: ScreenCaptureDisplayInfo): void => {
     screenshotImage.value = img
     buildMosaicCaches(img)
     renderAll()
+    // Zero-flicker: Signal main process that the first frame is fully painted and ready to show
+    requestAnimationFrame(() => {
+      window.electron.ipcRenderer.send('mt::capture-first-frame-ready')
+    })
   }
   img.src = info.dataUrl
 }

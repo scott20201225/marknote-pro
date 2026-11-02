@@ -43,6 +43,14 @@ export interface ScreenCaptureDisplayInfo {
     width: number
     height: number
   }
+  windows?: Array<{
+    x: number
+    y: number
+    w: number
+    h: number
+    owner?: string
+    title?: string
+  }>
   scaleFactor: number
   dataUrl: string
 }

@@ -41,31 +41,41 @@ export class CaptureWindowManager {
       const scaleFactor = currentDisplay.scaleFactor || 1
 
       let dataUrl = ''
+      let windowList: Array<{ x: number; y: number; w: number; h: number; owner?: string; title?: string }> = []
 
       if (isOsx) {
         const accessStatus = systemPreferences.getMediaAccessStatus('screen')
         log.info('[CaptureWindowManager] macOS screen mediaAccessStatus:', accessStatus)
 
-        try {
-          const micStatus = systemPreferences.getMediaAccessStatus('microphone')
-          log.info('[CaptureWindowManager] macOS mic mediaAccessStatus:', micStatus)
-          if (micStatus === 'not-determined') {
-            await systemPreferences.askForMediaAccess('microphone')
-          }
-        } catch (mErr) {
-          log.warn('[CaptureWindowManager] askForMediaAccess microphone error:', mErr)
-        }
-        try {
-          const tmpCapturePath = path.join('/tmp', `marknotepro_cap_${Date.now()}.png`)
-          await execAsync(`/usr/sbin/screencapture -x "${tmpCapturePath}"`)
-          if (fs.existsSync(tmpCapturePath)) {
-            const buf = await fsPromises.readFile(tmpCapturePath)
-            dataUrl = `data:image/png;base64,${buf.toString('base64')}`
-            fsPromises.unlink(tmpCapturePath).catch(() => {})
-          }
-        } catch (scErr) {
-          log.warn('[CaptureWindowManager] screencapture CLI error:', scErr)
-        }
+        const tmpCapturePath = path.join('/tmp', `marknotepro_cap_${Date.now()}.png`)
+        const staticDir = path.join(app.isPackaged ? process.resourcesPath : app.getAppPath(), 'static')
+        const macScrollBin = path.join(staticDir, 'bin', 'mac-scroll')
+
+        const capturePromise = execAsync(`/usr/sbin/screencapture -x "${tmpCapturePath}"`)
+          .then(async () => {
+            if (fs.existsSync(tmpCapturePath)) {
+              const buf = await fsPromises.readFile(tmpCapturePath)
+              dataUrl = `data:image/png;base64,${buf.toString('base64')}`
+              fsPromises.unlink(tmpCapturePath).catch(() => {})
+            }
+          })
+          .catch((scErr) => log.warn('[CaptureWindowManager] screencapture CLI error:', scErr))
+
+        const windowsPromise = fs.existsSync(macScrollBin)
+          ? execAsync(`"${macScrollBin}" --list-windows`, { timeout: 1000 })
+              .then(({ stdout }) => {
+                if (stdout && stdout.trim().startsWith('[')) {
+                  try {
+                    windowList = JSON.parse(stdout.trim())
+                  } catch (pErr) {
+                    log.warn('[CaptureWindowManager] Failed to parse window list JSON:', pErr)
+                  }
+                }
+              })
+              .catch((wlErr) => log.warn('[CaptureWindowManager] list-windows error:', wlErr))
+          : Promise.resolve()
+
+        await Promise.all([capturePromise, windowsPromise])
       }
 
       if (!dataUrl) {
@@ -174,6 +184,7 @@ export class CaptureWindowManager {
         id: currentDisplay.id,
         bounds,
         workArea: currentDisplay.workArea,
+        windows: windowList,
         scaleFactor,
         dataUrl
       }
@@ -181,15 +192,16 @@ export class CaptureWindowManager {
 
       this._win.webContents.once('did-finish-load', () => {
         if (!this._win || this._win.isDestroyed()) return
-        this._win.show()
-        this._win.focus()
         this._win.webContents.send('mt::capture-data-ready', payload)
-      })
 
-      this._win.once('ready-to-show', () => {
-        if (!this._win || this._win.isDestroyed()) return
-        this._win.show()
-        this._win.focus()
+        // Zero-flicker: we wait for mt::capture-first-frame-ready from renderer before showing.
+        // Fallback timer: if frame signal is delayed, show after 500ms to guarantee visibility.
+        setTimeout(() => {
+          if (this._win && !this._win.isDestroyed() && !this._win.isVisible()) {
+            this._win.show()
+            this._win.focus()
+          }
+        }, 500)
       })
 
       this._win.loadURL(url.toString())

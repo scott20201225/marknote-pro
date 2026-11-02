@@ -185,6 +185,13 @@ export const registerClipboardIpcHandlers = (): void => {
     captureManager.close()
   })
 
+  ipcMain.on('mt::capture-first-frame-ready', () => {
+    if (captureManager.win && !captureManager.win.isDestroyed() && !captureManager.win.isVisible()) {
+      captureManager.win.show()
+      captureManager.win.focus()
+    }
+  })
+
   ipcMain.handle(
     'mt::capture-slice',
     async (_event, rect: { x: number; y: number; width: number; height: number }) => {
