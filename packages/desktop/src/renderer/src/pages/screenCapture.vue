@@ -586,6 +586,8 @@
       v-if="isScrollingCaptureMode"
       class="lark-scrolling-dock"
       :style="scrollingDockPositionStyle"
+      @mouseenter="onDockMouseEnter"
+      @mouseleave="onDockMouseLeave"
       @mousedown.stop
     >
       <div class="scrolling-dock-header">
@@ -594,7 +596,7 @@
       </div>
 
       <div class="scrolling-tips">
-        {{ scrollStatusMessage || '点击下方按钮向下滚动以智能匹配拼接长图' }}
+        {{ scrollStatusMessage || '支持手动滑滚轮/触控板滚动，系统将自动感应拼接；也可点击下方按钮自动向下截取。' }}
       </div>
 
       <!-- Action Buttons -->
@@ -602,10 +604,20 @@
         <button
           class="scrolling-btn primary"
           :disabled="isCapturingSlice || isAutoScrolling"
+          title="手动滚动底层页面后，点击即可将当前视口拼接到长图"
+          @click="captureCurrentViewportAndStitch(false)"
+        >
+          <span>📸 捕获当前视口并拼接</span>
+        </button>
+
+        <button
+          class="scrolling-btn"
+          :disabled="isCapturingSlice || isAutoScrolling"
+          title="由程序驱动页面向下滚动一格并自动拼接"
           @click="scrollDownAndCapture(false)"
         >
           <span v-if="isCapturingSlice">正在拼接...</span>
-          <span v-else>↓ 单步向下滚动</span>
+          <span v-else>↓ 自动向下滚一步</span>
         </button>
 
         <button
@@ -935,32 +947,35 @@ let prevSliceCanvas: HTMLCanvasElement | null = null
 let bestMatchCount = 0
 let bestMatchIndex = 0
 let bestIgnoreBottomOffset = 0
+let autoScrollConsecutiveUnchanged = 0
+let liveMonitorInterval: any = null
 
-// 1. ShareX Image Comparison (Whole frame similarity / reached bottom detection)
-function compareSlicesIdentical(
+// 1. Precise Pixel Difference Counter (detects whether screen moved at all)
+function countChangedPixels(
   d1: Uint8ClampedArray,
   d2: Uint8ClampedArray,
   width: number,
   height: number,
   startCol: number,
   endCol: number
-): boolean {
-  let diffSum = 0
-  let sampleCount = 0
-  const yStart = Math.floor(height * 0.1)
-  const yEnd = Math.floor(height * 0.9)
-  for (let y = yStart; y < yEnd; y += 4) {
+): number {
+  let changedCount = 0
+  const yStart = Math.floor(height * 0.05)
+  const yEnd = Math.floor(height * 0.95)
+  for (let y = yStart; y < yEnd; y += 3) {
     const rowOffset = y * width * 4
-    for (let x = startCol; x < endCol; x += 4) {
+    for (let x = startCol; x < endCol; x += 3) {
       const idx = rowOffset + x * 4
-      diffSum +=
+      const diff =
         Math.abs(d1[idx] - d2[idx]) +
         Math.abs(d1[idx + 1] - d2[idx + 1]) +
         Math.abs(d1[idx + 2] - d2[idx + 2])
-      sampleCount++
+      if (diff > 12) {
+        changedCount++
+      }
     }
   }
-  return sampleCount > 0 && diffSum / sampleCount < 2.5
+  return changedCount
 }
 
 // 2. ShareX Row Comparison (Memory scanline matching with antialias tolerance)
@@ -972,7 +987,7 @@ function compareRows(
   width: number,
   startCol: number,
   endCol: number,
-  threshold: number = 6.0
+  threshold: number = 7.0
 ): boolean {
   const r1 = y1 * width * 4
   const r2 = y2 * width * 4
@@ -997,7 +1012,7 @@ function shareXCombineImages(
   resultCanvas: HTMLCanvasElement,
   currCanvas: HTMLCanvasElement,
   prevCanvas: HTMLCanvasElement | null
-): { newCanvas: HTMLCanvasElement; matchHeight: number; status: 'success' | 'partial' | 'bottom' } | null {
+): { newCanvas: HTMLCanvasElement; matchHeight: number; status: 'success' | 'partial' | 'unchanged' | 'no-match' } | null {
   const width = currCanvas.width
   const currH = currCanvas.height
   const resH = resultCanvas.height
@@ -1015,13 +1030,14 @@ function shareXCombineImages(
   const resultData = rctx.getImageData(0, 0, width, resH).data
   const currData = cctx.getImageData(0, 0, width, currH).data
 
-  // ShareX Rule 2: Compare if current slice is identical to previous slice (reached bottom)
+  // ShareX Rule 2: Check if current slice has zero movement compared to previous slice
   if (prevCanvas) {
     const pctx = prevCanvas.getContext('2d')
     if (pctx) {
       const prevData = pctx.getImageData(0, 0, width, prevCanvas.height).data
-      if (compareSlicesIdentical(prevData, currData, width, Math.min(prevCanvas.height, currH), startCol, endCol)) {
-        return { newCanvas: resultCanvas, matchHeight: 0, status: 'bottom' }
+      const changed = countChangedPixels(prevData, currData, width, Math.min(prevCanvas.height, currH), startCol, endCol)
+      if (changed < 20) {
+        return { newCanvas: resultCanvas, matchHeight: 0, status: 'unchanged' }
       }
     }
   }
@@ -1046,7 +1062,7 @@ function shareXCombineImages(
   // ShareX Rule 4: Consecutive Scanline Matching
   let matchCount = 0
   let matchIndex = 0
-  const matchLimit = Math.floor(currH * 0.6)
+  const matchLimit = Math.floor(currH * 0.7)
   const rectBottom = resH - ignoreBottomOffset - 1
 
   const startSearchY = currH - 1 - ignoreBottomOffset
@@ -1056,7 +1072,7 @@ function shareXCombineImages(
     let currentMatchCount = 0
 
     for (let y = 0; currentImageY - y >= 0 && rectBottom - y >= 0 && currentMatchCount < matchLimit; y++) {
-      if (compareRows(resultData, rectBottom - y, currData, currentImageY - y, width, startCol, endCol, 6.0)) {
+      if (compareRows(resultData, rectBottom - y, currData, currentImageY - y, width, startCol, endCol, 7.0)) {
         currentMatchCount++
       } else {
         break
@@ -1117,7 +1133,26 @@ function shareXCombineImages(
     }
   }
 
-  return null
+  return { newCanvas: resultCanvas, matchHeight: 0, status: 'no-match' }
+}
+
+const startLiveViewportMonitor = (): void => {
+  stopLiveViewportMonitor()
+  liveMonitorInterval = setInterval(async () => {
+    if (!isScrollingCaptureMode.value) return
+    if (isCapturingSlice.value || isAutoScrolling.value) return
+    const stitched = await captureCurrentViewportAndStitch(true)
+    if (stitched) {
+      scrollStatusMessage.value = `✨ 智能感应到手动滚动，已拼接 (总长 ${stitchedHeight.value}px)`
+    }
+  }, 480)
+}
+
+const stopLiveViewportMonitor = (): void => {
+  if (liveMonitorInterval) {
+    clearInterval(liveMonitorInterval)
+    liveMonitorInterval = null
+  }
 }
 
 const enterScrollingCapture = async (): Promise<void> => {
@@ -1126,7 +1161,9 @@ const enterScrollingCapture = async (): Promise<void> => {
   activeTool.value = 'none'
   isScrollingCaptureMode.value = true
   isAutoScrolling.value = false
-  scrollStatusMessage.value = '已就绪：点击下方按钮开始滚动拼接长图'
+  autoScrollConsecutiveUnchanged = 0
+  scrollStatusMessage.value = '已就绪：支持手动滑滚轮/触控板滚动，系统将自动感应拼接'
+  window.electron.ipcRenderer.send('mt::capture-set-ignore-mouse', true, true)
 
   bestMatchCount = 0
   bestMatchIndex = 0
@@ -1162,13 +1199,14 @@ const enterScrollingCapture = async (): Promise<void> => {
     stitchedHeight.value = Math.round(sel.height)
     nextTick(() => updateScrollingPreview())
   }
+  startLiveViewportMonitor()
   renderAll()
 }
 
-const scrollDownAndCapture = async (_fromAuto = false): Promise<void> => {
-  if (!isScrollingCaptureMode.value || isCapturingSlice.value) return
+const captureCurrentViewportAndStitch = async (silent = false): Promise<boolean> => {
+  if (!isScrollingCaptureMode.value || isCapturingSlice.value) return false
   isCapturingSlice.value = true
-  scrollStatusMessage.value = '正在滚动并捕获...'
+  if (!silent) scrollStatusMessage.value = '正在捕获视口并匹配拼接...'
 
   try {
     const sel = normSelection.value
@@ -1179,13 +1217,10 @@ const scrollDownAndCapture = async (_fromAuto = false): Promise<void> => {
       height: sel.height
     }
 
-    await window.electron.ipcRenderer.invoke('mt::capture-scroll-down', rect)
-    await new Promise((resolve) => setTimeout(resolve, 200))
-
     const sliceDataUrl = await window.electron.ipcRenderer.invoke('mt::capture-slice', rect)
     if (!sliceDataUrl) {
-      scrollStatusMessage.value = '捕获切片失败'
-      return
+      if (!silent) scrollStatusMessage.value = '捕获切片失败'
+      return false
     }
 
     const sliceImg = new Image()
@@ -1198,26 +1233,24 @@ const scrollDownAndCapture = async (_fromAuto = false): Promise<void> => {
     currSliceCanvas.width = sliceImg.width
     currSliceCanvas.height = sliceImg.height
     const tctx = currSliceCanvas.getContext('2d')
-    if (!tctx) return
+    if (!tctx) return false
     tctx.drawImage(sliceImg, 0, 0)
 
     if (stitchedMasterCanvas) {
       const stitchRes = shareXCombineImages(stitchedMasterCanvas, currSliceCanvas, prevSliceCanvas)
 
-      if (!stitchRes) {
-        scrollStatusMessage.value = '未检测到内容滚动或匹配差异过大'
-        if (isAutoScrolling.value) {
-          stopAutoScroll()
+      if (!stitchRes || stitchRes.status === 'unchanged') {
+        if (!silent) {
+          scrollStatusMessage.value = '当前视口未发生位移，请滚动底层内容后再次捕获'
         }
-        return
+        return false
       }
 
-      if (stitchRes.status === 'bottom') {
-        scrollStatusMessage.value = '已到达页面底部，长图拼接完成'
-        if (isAutoScrolling.value) {
-          stopAutoScroll()
+      if (stitchRes.status === 'no-match') {
+        if (!silent) {
+          scrollStatusMessage.value = '未找到重叠特征行（滚动幅度可能过大，请保持部分重叠）'
         }
-        return
+        return false
       }
 
       stitchedMasterCanvas = stitchRes.newCanvas
@@ -1226,12 +1259,52 @@ const scrollDownAndCapture = async (_fromAuto = false): Promise<void> => {
       stitchedHeight.value = Math.round(stitchedMasterCanvas.height / dpr)
       scrollStatusMessage.value = `已精准拼接 +${Math.round(stitchRes.matchHeight / dpr)}px (总长 ${stitchedHeight.value}px)`
       updateScrollingPreview()
+      return true
     }
   } catch (err) {
-    console.error('Failed to capture scroll slice:', err)
-    scrollStatusMessage.value = '滚动截屏出错'
+    console.error('Failed to capture and stitch viewport:', err)
+    if (!silent) scrollStatusMessage.value = '拼接过程出错'
   } finally {
     isCapturingSlice.value = false
+  }
+  return false
+}
+
+const scrollDownAndCapture = async (fromAuto = false): Promise<void> => {
+  if (!isScrollingCaptureMode.value || isCapturingSlice.value) return
+
+  scrollStatusMessage.value = fromAuto ? '正在自动向下滚动并拼接...' : '向下滚动视口...'
+
+  try {
+    const sel = normSelection.value
+    const rect = {
+      x: screenBounds.value.x + sel.x,
+      y: screenBounds.value.y + sel.y,
+      width: sel.width,
+      height: sel.height
+    }
+
+    await window.electron.ipcRenderer.invoke('mt::capture-scroll-down', rect)
+    await new Promise((resolve) => setTimeout(resolve, 220))
+
+    const success = await captureCurrentViewportAndStitch(fromAuto)
+    if (success) {
+      autoScrollConsecutiveUnchanged = 0
+    } else {
+      if (fromAuto) {
+        autoScrollConsecutiveUnchanged++
+        if (autoScrollConsecutiveUnchanged >= 3) {
+          stopAutoScroll()
+          scrollStatusMessage.value = '连续3次未检测到新内容，自动滚动已暂停（可手动滚动继续拼接）'
+        } else {
+          scrollStatusMessage.value = `正在重试滚动 (${autoScrollConsecutiveUnchanged}/3)...`
+        }
+      } else {
+        scrollStatusMessage.value = '未检测到内容滚动，可手动滚动底层或再次点击'
+      }
+    }
+  } catch (err) {
+    console.error('Failed to scrollDownAndCapture:', err)
   }
 }
 
@@ -1245,6 +1318,7 @@ const toggleAutoScroll = (): void => {
 
 const startAutoScroll = (): void => {
   isAutoScrolling.value = true
+  autoScrollConsecutiveUnchanged = 0
   runAutoScrollLoop()
 }
 
@@ -1262,7 +1336,7 @@ const runAutoScrollLoop = async (): Promise<void> => {
   if (isAutoScrolling.value) {
     autoScrollTimer = setTimeout(() => {
       runAutoScrollLoop()
-    }, 420)
+    }, 450)
   }
 }
 
@@ -1282,8 +1356,20 @@ const updateScrollingPreview = (): void => {
   pCtx.drawImage(stitchedMasterCanvas, 0, 0, targetW, targetH)
 }
 
+const onDockMouseEnter = (): void => {
+  window.electron.ipcRenderer.send('mt::capture-set-ignore-mouse', false)
+}
+
+const onDockMouseLeave = (): void => {
+  if (isScrollingCaptureMode.value) {
+    window.electron.ipcRenderer.send('mt::capture-set-ignore-mouse', true, true)
+  }
+}
+
 const finishScrollingCapture = async (): Promise<void> => {
+  stopLiveViewportMonitor()
   stopAutoScroll()
+  window.electron.ipcRenderer.send('mt::capture-set-ignore-mouse', false)
   if (!stitchedMasterCanvas) {
     cancelScrollingCapture()
     return
@@ -1294,7 +1380,9 @@ const finishScrollingCapture = async (): Promise<void> => {
 }
 
 const cancelScrollingCapture = (): void => {
+  stopLiveViewportMonitor()
   stopAutoScroll()
+  window.electron.ipcRenderer.send('mt::capture-set-ignore-mouse', false)
   isScrollingCaptureMode.value = false
   stitchedMasterCanvas = null
   prevSliceCanvas = null
@@ -1392,11 +1480,15 @@ const showBrushIndicator = (x: number, y: number): void => {
   }, 1000)
 }
 
+let wheelThrottleTimer: any = null
 const onWheel = (e: WheelEvent): void => {
   if (isScrollingCaptureMode.value) {
     e.preventDefault()
-    if (e.deltaY > 0) {
-      scrollDownAndCapture()
+    if (e.deltaY > 0 && !wheelThrottleTimer && !isCapturingSlice.value) {
+      wheelThrottleTimer = setTimeout(() => {
+        wheelThrottleTimer = null
+      }, 350)
+      scrollDownAndCapture(false)
     }
     return
   }
@@ -2681,6 +2773,7 @@ const saveCapture = async (): Promise<void> => {
 }
 
 const closeCapture = (): void => {
+  stopLiveViewportMonitor()
   window.electron.ipcRenderer.send('mt::capture-close')
 }
 

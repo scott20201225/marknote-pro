@@ -338,6 +338,7 @@ export interface IpcSendChannels {
   'mt::trigger-clipboard-history': []
   'mt::clipboard-hide-modal': []
   'mt::capture-close': []
+  'mt::capture-set-ignore-mouse': [ignore: boolean, forward?: boolean]
   'mt::pin-window-close': [pinId?: string]
   'mt::pin-window-drag': [payload: { dx: number; dy: number; pinId?: string }]
   'mt::pin-window-set-always-on-top': [flag: boolean, pinId?: string]

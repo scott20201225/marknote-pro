@@ -200,6 +200,10 @@ export const registerClipboardIpcHandlers = (): void => {
     }
   })
 
+  ipcMain.on('mt::capture-set-ignore-mouse', (_event, ignore: boolean, forward?: boolean) => {
+    captureManager.setIgnoreMouseEvents(ignore, forward ?? true)
+  })
+
   // 3. Pin Window Handlers
   ipcMain.handle('mt::pin-window-get-payload', async (event, pinId?: string) => {
     const senderWin = BrowserWindow.fromWebContents(event.sender) || undefined

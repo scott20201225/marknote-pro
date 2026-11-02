@@ -144,7 +144,7 @@ export class CaptureWindowManager {
         }
       })
 
-      this._win.setAlwaysOnTop(true, 'normal')
+      this._win.setAlwaysOnTop(true, 'screen-saver')
       this._win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
 
       const baseUrl =
@@ -238,23 +238,22 @@ export class CaptureWindowManager {
     return null
   }
 
+  public setIgnoreMouseEvents(ignore: boolean, forward: boolean = true): void {
+    if (this._win && !this._win.isDestroyed()) {
+      this._win.setIgnoreMouseEvents(ignore, { forward })
+    }
+  }
+
   public async scrollDown(rect?: { x: number; y: number; width: number; height: number }): Promise<void> {
     if (!isOsx) return
     try {
-      // Temporarily ignore mouse events on the full-screen capture window so WindowServer
-      // passes mouse move and scroll wheel events directly through to the underlying application!
-      if (this._win && !this._win.isDestroyed()) {
-        this._win.setIgnoreMouseEvents(true, { forward: false })
-      }
-      await new Promise((r) => setTimeout(r, 20))
-
       const staticDir = path.join(app.isPackaged ? process.resourcesPath : app.getAppPath(), 'static')
       const macScrollBin = path.join(staticDir, 'bin', 'mac-scroll')
-      let args = '-12'
+      let args = '-180'
       if (rect) {
         const cx = Math.round(rect.x + rect.width / 2)
         const cy = Math.round(rect.y + rect.height / 2)
-        args = `-12 ${cx} ${cy}`
+        args = `-180 ${cx} ${cy} ${process.pid}`
       }
       if (fs.existsSync(macScrollBin)) {
         await execAsync(`"${macScrollBin}" ${args}`)
@@ -262,15 +261,10 @@ export class CaptureWindowManager {
         await execAsync(`osascript -e 'tell application "System Events" to key code 125'`)
       }
 
-      // Wait a moment for WindowServer to dispatch the event and for the underlying app to scroll
-      await new Promise((r) => setTimeout(r, 60))
+      // Wait a moment for WindowServer to dispatch the event and for the underlying app to scroll and repaint
+      await new Promise((r) => setTimeout(r, 100))
     } catch (err) {
       log.warn('[CaptureWindowManager] scrollDown error:', err)
-    } finally {
-      // Restore mouse events so user can interact with the dock buttons
-      if (this._win && !this._win.isDestroyed()) {
-        this._win.setIgnoreMouseEvents(false)
-      }
     }
   }
 
