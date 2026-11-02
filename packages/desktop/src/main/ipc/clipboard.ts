@@ -115,15 +115,17 @@ export const registerClipboardIpcHandlers = (): void => {
       clipboard.writeImage(img)
       const size = img.getSize()
       await clipboardService.addCapturedImage(dataUrl, size.width, size.height)
-      captureManager.close()
       return true
     } catch (err) {
       log.error('[Capture] Failed to copy capture:', err)
       return false
+    } finally {
+      captureManager.close()
     }
   })
 
   ipcMain.handle('mt::capture-save', async (event, dataUrl: string) => {
+    let saved = false
     try {
       const senderWin = BrowserWindow.fromWebContents(event.sender) || undefined
       const { filePath, canceled } = await dialog.showSaveDialog(senderWin!, {
@@ -138,11 +140,15 @@ export const registerClipboardIpcHandlers = (): void => {
       await fsPromises.writeFile(filePath, img.toPNG())
       const size = img.getSize()
       await clipboardService.addCapturedImage(dataUrl, size.width, size.height)
-      captureManager.close()
+      saved = true
       return filePath
     } catch (err) {
       log.error('[Capture] Failed to save capture:', err)
       return null
+    } finally {
+      if (saved) {
+        captureManager.close()
+      }
     }
   })
 
@@ -188,8 +194,8 @@ export const registerClipboardIpcHandlers = (): void => {
 
   ipcMain.handle(
     'mt::capture-scroll-down',
-    async (_event, rect?: { x: number; y: number; width: number; height: number }) => {
-      await captureManager.scrollDown(rect)
+    async (_event, rect?: { x: number; y: number; width: number; height: number }, pixelDelta?: number) => {
+      await captureManager.scrollDown(rect, typeof pixelDelta === 'number' ? pixelDelta : -220)
       return true
     }
   )

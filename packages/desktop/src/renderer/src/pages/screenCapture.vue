@@ -196,7 +196,10 @@
           title="序号标记 (S)"
           @click="setTool('step')"
         >
-          <span class="step-icon">①</span>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor">
+            <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.8"></circle>
+            <path d="M10.8 10L12 9v6m-1.5 0h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
         </button>
 
         <!-- 8. Step Note ①T (序号 + 说明图标) -->
@@ -207,9 +210,9 @@
           @click="setTool('stepNote')"
         >
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor">
-            <!-- Left: Number Badge Circle -->
-            <circle cx="7" cy="12" r="5.5" fill="currentColor"></circle>
-            <text x="7" y="15" fill="#ffffff" font-size="8.5" font-weight="bold" text-anchor="middle" font-family="-apple-system, sans-serif" stroke="none">1</text>
+            <!-- Left: Number Badge Circle with clear outline and sharp number 1 -->
+            <circle cx="7" cy="12" r="5" stroke="currentColor" stroke-width="1.6"></circle>
+            <path d="M6 10.8L7 9.8v4.4m-1 0h2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path>
             <!-- Right: Note / Document Icon -->
             <rect x="13.5" y="6.5" width="8" height="11" rx="1.5" stroke="currentColor" stroke-width="1.8"></rect>
             <line x1="15.5" y1="9.5" x2="19.5" y2="9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></line>
@@ -586,8 +589,6 @@
       v-if="isScrollingCaptureMode"
       class="lark-scrolling-dock"
       :style="scrollingDockPositionStyle"
-      @mouseenter="onDockMouseEnter"
-      @mouseleave="onDockMouseLeave"
       @mousedown.stop
     >
       <div class="scrolling-dock-header">
@@ -596,50 +597,24 @@
       </div>
 
       <div class="scrolling-tips">
-        {{ scrollStatusMessage || '支持手动滑滚轮/触控板滚动，系统将自动感应拼接；也可点击下方按钮自动向下截取。' }}
+        {{ scrollStatusMessage || '请直接在选区内滑动滚轮或触控板向下浏览，系统将实时拼接长图；完成后点击“完成长截图”或按 Enter。' }}
       </div>
 
-      <!-- Action Buttons -->
+      <!-- Action Buttons (Pure Manual Scrolling) -->
       <div class="scrolling-dock-actions">
         <button
-          class="scrolling-btn primary"
-          :disabled="isCapturingSlice || isAutoScrolling"
-          title="手动滚动底层页面后，点击即可将当前视口拼接到长图"
-          @click="captureCurrentViewportAndStitch(false)"
-        >
-          <span>📸 捕获当前视口并拼接</span>
-        </button>
-
-        <button
-          class="scrolling-btn"
-          :disabled="isCapturingSlice || isAutoScrolling"
-          title="由程序驱动页面向下滚动一格并自动拼接"
-          @click="scrollDownAndCapture(false)"
-        >
-          <span v-if="isCapturingSlice">正在拼接...</span>
-          <span v-else>↓ 自动向下滚一步</span>
-        </button>
-
-        <button
-          class="scrolling-btn auto"
-          :disabled="isCapturingSlice && !isAutoScrolling"
-          @click="toggleAutoScroll"
-        >
-          <span>{{ isAutoScrolling ? '⏹ 停止自动滚动' : '▶ 连续自动滚动' }}</span>
-        </button>
-
-        <button
           class="scrolling-btn confirm"
+          :disabled="isCapturingSlice"
           @click="finishScrollingCapture"
         >
-          ✓ 完成长截图
+          ✓ 完成长截图 (Enter)
         </button>
 
         <button
           class="scrolling-btn cancel"
           @click="cancelScrollingCapture"
         >
-          ✕ 取消
+          ✕ 取消 (ESC)
         </button>
       </div>
 
@@ -867,6 +842,7 @@ const selectMosaicMode = (mode: MosaicMode): void => {
 const screenshotImage = ref<HTMLImageElement | null>(null)
 const scaleFactor = ref(1)
 const screenBounds = ref({ x: 0, y: 0, width: 0, height: 0 })
+const screenWorkArea = ref({ x: 0, y: 0, width: 0, height: 0 })
 
 // Selection Rect
 const selStartX = ref(0)
@@ -935,11 +911,9 @@ const isComposing = ref(false)
 // -------------------------------------------------------------
 const isScrollingCaptureMode = ref(false)
 const isCapturingSlice = ref(false)
-const isAutoScrolling = ref(false)
 const scrollStatusMessage = ref('')
 const stitchedHeight = ref(0)
 
-let autoScrollTimer: any = null
 let stitchedMasterCanvas: HTMLCanvasElement | null = null
 let prevSliceCanvas: HTMLCanvasElement | null = null
 
@@ -947,8 +921,6 @@ let prevSliceCanvas: HTMLCanvasElement | null = null
 let bestMatchCount = 0
 let bestMatchIndex = 0
 let bestIgnoreBottomOffset = 0
-let autoScrollConsecutiveUnchanged = 0
-let liveMonitorInterval: any = null
 
 // 1. Precise Pixel Difference Counter (detects whether screen moved at all)
 function countChangedPixels(
@@ -1136,34 +1108,12 @@ function shareXCombineImages(
   return { newCanvas: resultCanvas, matchHeight: 0, status: 'no-match' }
 }
 
-const startLiveViewportMonitor = (): void => {
-  stopLiveViewportMonitor()
-  liveMonitorInterval = setInterval(async () => {
-    if (!isScrollingCaptureMode.value) return
-    if (isCapturingSlice.value || isAutoScrolling.value) return
-    const stitched = await captureCurrentViewportAndStitch(true)
-    if (stitched) {
-      scrollStatusMessage.value = `✨ 智能感应到手动滚动，已拼接 (总长 ${stitchedHeight.value}px)`
-    }
-  }, 480)
-}
-
-const stopLiveViewportMonitor = (): void => {
-  if (liveMonitorInterval) {
-    clearInterval(liveMonitorInterval)
-    liveMonitorInterval = null
-  }
-}
-
 const enterScrollingCapture = async (): Promise<void> => {
   if (!hasSelection.value) return
   if (textInputState.value.active) commitTextInput()
   activeTool.value = 'none'
   isScrollingCaptureMode.value = true
-  isAutoScrolling.value = false
-  autoScrollConsecutiveUnchanged = 0
-  scrollStatusMessage.value = '已就绪：支持手动滑滚轮/触控板滚动，系统将自动感应拼接'
-  window.electron.ipcRenderer.send('mt::capture-set-ignore-mouse', true, true)
+  scrollStatusMessage.value = '已就绪：请直接在选区内滑动滚轮或触控板向下浏览'
 
   bestMatchCount = 0
   bestMatchIndex = 0
@@ -1199,14 +1149,12 @@ const enterScrollingCapture = async (): Promise<void> => {
     stitchedHeight.value = Math.round(sel.height)
     nextTick(() => updateScrollingPreview())
   }
-  startLiveViewportMonitor()
   renderAll()
 }
 
-const captureCurrentViewportAndStitch = async (silent = false): Promise<boolean> => {
+const captureCurrentViewportAndStitch = async (): Promise<boolean> => {
   if (!isScrollingCaptureMode.value || isCapturingSlice.value) return false
   isCapturingSlice.value = true
-  if (!silent) scrollStatusMessage.value = '正在捕获视口并匹配拼接...'
 
   try {
     const sel = normSelection.value
@@ -1218,10 +1166,7 @@ const captureCurrentViewportAndStitch = async (silent = false): Promise<boolean>
     }
 
     const sliceDataUrl = await window.electron.ipcRenderer.invoke('mt::capture-slice', rect)
-    if (!sliceDataUrl) {
-      if (!silent) scrollStatusMessage.value = '捕获切片失败'
-      return false
-    }
+    if (!sliceDataUrl) return false
 
     const sliceImg = new Image()
     sliceImg.src = sliceDataUrl
@@ -1238,18 +1183,7 @@ const captureCurrentViewportAndStitch = async (silent = false): Promise<boolean>
 
     if (stitchedMasterCanvas) {
       const stitchRes = shareXCombineImages(stitchedMasterCanvas, currSliceCanvas, prevSliceCanvas)
-
-      if (!stitchRes || stitchRes.status === 'unchanged') {
-        if (!silent) {
-          scrollStatusMessage.value = '当前视口未发生位移，请滚动底层内容后再次捕获'
-        }
-        return false
-      }
-
-      if (stitchRes.status === 'no-match') {
-        if (!silent) {
-          scrollStatusMessage.value = '未找到重叠特征行（滚动幅度可能过大，请保持部分重叠）'
-        }
+      if (!stitchRes || stitchRes.status === 'unchanged' || stitchRes.status === 'no-match') {
         return false
       }
 
@@ -1257,23 +1191,20 @@ const captureCurrentViewportAndStitch = async (silent = false): Promise<boolean>
       prevSliceCanvas = currSliceCanvas
       const dpr = window.devicePixelRatio || 1
       stitchedHeight.value = Math.round(stitchedMasterCanvas.height / dpr)
-      scrollStatusMessage.value = `已精准拼接 +${Math.round(stitchRes.matchHeight / dpr)}px (总长 ${stitchedHeight.value}px)`
+      scrollStatusMessage.value = `已拼接 +${Math.round(stitchRes.matchHeight / dpr)}px (总长 ${stitchedHeight.value}px)`
       updateScrollingPreview()
       return true
     }
   } catch (err) {
     console.error('Failed to capture and stitch viewport:', err)
-    if (!silent) scrollStatusMessage.value = '拼接过程出错'
   } finally {
     isCapturingSlice.value = false
   }
   return false
 }
 
-const scrollDownAndCapture = async (fromAuto = false): Promise<void> => {
+const scrollDownAndCapture = async (pixelDelta = -220): Promise<void> => {
   if (!isScrollingCaptureMode.value || isCapturingSlice.value) return
-
-  scrollStatusMessage.value = fromAuto ? '正在自动向下滚动并拼接...' : '向下滚动视口...'
 
   try {
     const sel = normSelection.value
@@ -1284,59 +1215,12 @@ const scrollDownAndCapture = async (fromAuto = false): Promise<void> => {
       height: sel.height
     }
 
-    await window.electron.ipcRenderer.invoke('mt::capture-scroll-down', rect)
-    await new Promise((resolve) => setTimeout(resolve, 220))
+    await window.electron.ipcRenderer.invoke('mt::capture-scroll-down', rect, pixelDelta)
+    await new Promise((resolve) => setTimeout(resolve, 160))
 
-    const success = await captureCurrentViewportAndStitch(fromAuto)
-    if (success) {
-      autoScrollConsecutiveUnchanged = 0
-    } else {
-      if (fromAuto) {
-        autoScrollConsecutiveUnchanged++
-        if (autoScrollConsecutiveUnchanged >= 3) {
-          stopAutoScroll()
-          scrollStatusMessage.value = '连续3次未检测到新内容，自动滚动已暂停（可手动滚动继续拼接）'
-        } else {
-          scrollStatusMessage.value = `正在重试滚动 (${autoScrollConsecutiveUnchanged}/3)...`
-        }
-      } else {
-        scrollStatusMessage.value = '未检测到内容滚动，可手动滚动底层或再次点击'
-      }
-    }
+    await captureCurrentViewportAndStitch()
   } catch (err) {
     console.error('Failed to scrollDownAndCapture:', err)
-  }
-}
-
-const toggleAutoScroll = (): void => {
-  if (isAutoScrolling.value) {
-    stopAutoScroll()
-  } else {
-    startAutoScroll()
-  }
-}
-
-const startAutoScroll = (): void => {
-  isAutoScrolling.value = true
-  autoScrollConsecutiveUnchanged = 0
-  runAutoScrollLoop()
-}
-
-const stopAutoScroll = (): void => {
-  isAutoScrolling.value = false
-  if (autoScrollTimer) {
-    clearTimeout(autoScrollTimer)
-    autoScrollTimer = null
-  }
-}
-
-const runAutoScrollLoop = async (): Promise<void> => {
-  if (!isAutoScrolling.value || !isScrollingCaptureMode.value) return
-  await scrollDownAndCapture(true)
-  if (isAutoScrolling.value) {
-    autoScrollTimer = setTimeout(() => {
-      runAutoScrollLoop()
-    }, 450)
   }
 }
 
@@ -1356,39 +1240,40 @@ const updateScrollingPreview = (): void => {
   pCtx.drawImage(stitchedMasterCanvas, 0, 0, targetW, targetH)
 }
 
-const onDockMouseEnter = (): void => {
-  window.electron.ipcRenderer.send('mt::capture-set-ignore-mouse', false)
-}
-
-const onDockMouseLeave = (): void => {
-  if (isScrollingCaptureMode.value) {
-    window.electron.ipcRenderer.send('mt::capture-set-ignore-mouse', true, true)
-  }
-}
-
 const finishScrollingCapture = async (): Promise<void> => {
-  stopLiveViewportMonitor()
-  stopAutoScroll()
-  window.electron.ipcRenderer.send('mt::capture-set-ignore-mouse', false)
+  isScrollingCaptureMode.value = false
   if (!stitchedMasterCanvas) {
     cancelScrollingCapture()
     return
   }
 
-  const fullDataUrl = stitchedMasterCanvas.toDataURL('image/png')
-  await window.electron.ipcRenderer.invoke('mt::capture-copy', fullDataUrl)
+  try {
+    const fullDataUrl = stitchedMasterCanvas.toDataURL('image/png')
+    stitchedMasterCanvas = null
+    prevSliceCanvas = null
+    stitchedHeight.value = 0
+    scrollStatusMessage.value = ''
+    await window.electron.ipcRenderer.invoke('mt::capture-copy', fullDataUrl)
+  } catch (err) {
+    console.error('finishScrollingCapture failed:', err)
+  } finally {
+    closeCapture()
+  }
 }
 
 const cancelScrollingCapture = (): void => {
-  stopLiveViewportMonitor()
-  stopAutoScroll()
-  window.electron.ipcRenderer.send('mt::capture-set-ignore-mouse', false)
-  isScrollingCaptureMode.value = false
-  stitchedMasterCanvas = null
-  prevSliceCanvas = null
-  stitchedHeight.value = 0
-  scrollStatusMessage.value = ''
-  renderAll()
+  try {
+    isScrollingCaptureMode.value = false
+    stitchedMasterCanvas = null
+    prevSliceCanvas = null
+    stitchedHeight.value = 0
+    scrollStatusMessage.value = ''
+    if (wheelThrottleTimer) {
+      clearTimeout(wheelThrottleTimer)
+      wheelThrottleTimer = null
+    }
+  } catch {}
+  closeCapture()
 }
 
 // -------------------------------------------------------------
@@ -1480,15 +1365,16 @@ const showBrushIndicator = (x: number, y: number): void => {
   }, 1000)
 }
 
-let wheelThrottleTimer: any = null
+let wheelThrottleTimer: ReturnType<typeof setTimeout> | null = null
 const onWheel = (e: WheelEvent): void => {
   if (isScrollingCaptureMode.value) {
     e.preventDefault()
     if (e.deltaY > 0 && !wheelThrottleTimer && !isCapturingSlice.value) {
+      const step = Math.min(320, Math.max(140, Math.round(e.deltaY * 1.5)))
       wheelThrottleTimer = setTimeout(() => {
         wheelThrottleTimer = null
-      }, 350)
-      scrollDownAndCapture(false)
+      }, 220)
+      scrollDownAndCapture(-step)
     }
     return
   }
@@ -1724,45 +1610,61 @@ const currentCursor = computed(() => {
 // Lark Toolbar Position Style (Smart collision with Dock, Menubar, and Screen Edges)
 const toolbarPositionStyle = computed(() => {
   const sel = normSelection.value
-  const toolbarWidth = 650
-  const toolbarHeight = activeTool.value === 'none' ? 52 : 100
+  const toolbarWidth = 790
+  const toolbarHeight = activeTool.value === 'none' ? 52 : 110
 
   const screenH = window.innerHeight
   const screenW = window.innerWidth
-  const DOCK_MARGIN_BOTTOM = 85 // Safe margin to avoid macOS Dock at screen bottom
-  const MENU_MARGIN_TOP = 32    // Safe margin to avoid macOS Menu Bar at screen top
 
+  const wa = screenWorkArea.value
+  const waY = wa.height > 0 ? Math.max(0, wa.y - screenBounds.value.y) : 0
+  const waH = wa.height > 0 ? wa.height : screenH
+  const waX = wa.width > 0 ? Math.max(0, wa.x - screenBounds.value.x) : 0
+  const waW = wa.width > 0 ? wa.width : screenW
+
+  const safeTop = Math.max(28, waY + 6)
+  // Guarantee safe clearance from macOS Dock (at least 90px if waH is unreduced)
+  const dockMargin = waH >= screenH ? 90 : 12
+  const safeBottom = Math.min(screenH - dockMargin, waY + waH - 12)
+  const safeLeft = Math.max(12, waX + 10)
+  const safeRight = Math.min(screenW - 12, waX + waW - 10)
+
+  // 1. Horizontal placement: align right edge of toolbar with right edge of selection
   let left = sel.x + sel.width - toolbarWidth
-  // 1. Default: place toolbar below selection
-  let top = sel.y + sel.height + 12
+  if (left + toolbarWidth > safeRight) {
+    left = safeRight - toolbarWidth
+  }
+  if (left < safeLeft) {
+    left = safeLeft
+  }
 
-  // 2. If it collides with bottom edge or macOS Dock:
-  if (top + toolbarHeight > screenH - DOCK_MARGIN_BOTTOM) {
+  // 2. Vertical placement:
+  // Default: place toolbar 10px below selection
+  let top = sel.y + sel.height + 10
+
+  // If it collides with bottom edge or macOS Dock:
+  if (top + toolbarHeight > safeBottom) {
     // Try placing ABOVE selection
-    top = sel.y - toolbarHeight - 12
+    top = sel.y - toolbarHeight - 10
     // If it also collides with the top menu bar / screen top:
-    if (top < MENU_MARGIN_TOP) {
-      // Both top and bottom outside are cramped: place INSIDE the selection at the bottom
-      if (sel.height >= toolbarHeight + 40) {
-        top = sel.y + sel.height - toolbarHeight - 16
+    if (top < safeTop) {
+      // Both top and bottom outside are cramped: place INSIDE the selection
+      if (sel.height >= toolbarHeight + 24) {
+        // If selection bottom touches safeBottom, place INSIDE AT THE TOP of selection!
+        if (sel.y + sel.height >= safeBottom - 20) {
+          top = Math.max(safeTop, sel.y + 12)
+        } else {
+          top = Math.max(safeTop, sel.y + sel.height - toolbarHeight - 12)
+        }
       } else {
-        // Selection is short: place inside selection at top
-        top = Math.max(MENU_MARGIN_TOP + 8, sel.y + 8)
+        // Selection is short: clamp between safe areas
+        top = Math.max(safeTop, Math.min(top, safeBottom - toolbarHeight))
       }
     }
   }
 
-  // 3. Constrain horizontally within screen with 12px padding
-  if (left < 12) left = 12
-  if (left + toolbarWidth > screenW - 12) {
-    left = screenW - toolbarWidth - 12
-  }
-
-  // 4. Hard safety clamp vertically
-  if (top < MENU_MARGIN_TOP) top = MENU_MARGIN_TOP
-  if (top + toolbarHeight > screenH - DOCK_MARGIN_BOTTOM) {
-    top = Math.max(MENU_MARGIN_TOP, screenH - DOCK_MARGIN_BOTTOM - toolbarHeight)
-  }
+  // 3. Final safety clamp: 100% guarantee all buttons are visible and not covered by Dock
+  top = Math.max(safeTop, Math.min(top, safeBottom - toolbarHeight))
 
   return {
     top: `${Math.round(top)}px`,
@@ -1774,32 +1676,43 @@ const toolbarPositionStyle = computed(() => {
 const scrollingDockPositionStyle = computed(() => {
   const sel = normSelection.value
   const dockWidth = 240
-  const dockHeight = 420
+  const dockHeight = 360
 
   const screenW = window.innerWidth
   const screenH = window.innerHeight
-  const DOCK_MARGIN_BOTTOM = 85 // Safe area for macOS Dock
-  const MENU_MARGIN_TOP = 35    // Safe area for macOS Menu Bar
+
+  const wa = screenWorkArea.value
+  const waY = wa.height > 0 ? Math.max(0, wa.y - screenBounds.value.y) : 0
+  const waH = wa.height > 0 ? wa.height : screenH
+  const waX = wa.width > 0 ? Math.max(0, wa.x - screenBounds.value.x) : 0
+  const waW = wa.width > 0 ? wa.width : screenW
+
+  const safeTop = Math.max(28, waY + 6)
+  const dockMargin = waH >= screenH ? 90 : 12
+  const safeBottom = Math.min(screenH - dockMargin, waY + waH - 12)
+  const safeLeft = Math.max(12, waX + 10)
+  const safeRight = Math.min(screenW - 12, waX + waW - 10)
 
   // 1. Horizontal placement: try right first, then left, then inside selection
   let left = sel.x + sel.width + 16
-  if (left + dockWidth > screenW - 12) {
+  if (left + dockWidth > safeRight) {
     // Try placing on left side of selection
     left = sel.x - dockWidth - 16
-    if (left < 12) {
+    if (left < safeLeft) {
       // Both sides cramped: place inside the selection on the right
-      left = Math.max(12, sel.x + sel.width - dockWidth - 16)
+      left = Math.max(safeLeft, safeRight - dockWidth - 16)
     }
   }
+  left = Math.max(safeLeft, Math.min(left, safeRight - dockWidth))
 
   // 2. Vertical placement: align with top of selection
   let top = sel.y
   // If colliding with macOS Dock or bottom of screen, pull UP so all buttons remain 100% visible!
-  if (top + dockHeight > screenH - DOCK_MARGIN_BOTTOM) {
-    top = Math.max(MENU_MARGIN_TOP, screenH - DOCK_MARGIN_BOTTOM - dockHeight)
+  if (top + dockHeight > safeBottom) {
+    top = Math.max(safeTop, safeBottom - dockHeight)
   }
-  if (top < MENU_MARGIN_TOP) {
-    top = MENU_MARGIN_TOP
+  if (top < safeTop) {
+    top = safeTop
   }
 
   return {
@@ -2648,6 +2561,10 @@ const onContextMenu = (): void => {
     cancelTextInput()
     return
   }
+  if (isScrollingCaptureMode.value) {
+    cancelScrollingCapture()
+    return
+  }
   if (hasSelection.value) {
     hasSelection.value = false
     annotations.value = []
@@ -2759,8 +2676,17 @@ const copyCapture = async (): Promise<void> => {
     commitTextInput()
   }
   const dataUrl = getCroppedDataUrl()
-  if (!dataUrl) return
-  await window.electron.ipcRenderer.invoke('mt::capture-copy', dataUrl)
+  if (!dataUrl) {
+    closeCapture()
+    return
+  }
+  try {
+    await window.electron.ipcRenderer.invoke('mt::capture-copy', dataUrl)
+  } catch (err) {
+    console.error('Failed to copy capture:', err)
+  } finally {
+    closeCapture()
+  }
 }
 
 const saveCapture = async (): Promise<void> => {
@@ -2769,12 +2695,30 @@ const saveCapture = async (): Promise<void> => {
   }
   const dataUrl = getCroppedDataUrl()
   if (!dataUrl) return
-  await window.electron.ipcRenderer.invoke('mt::capture-save', dataUrl)
+  try {
+    await window.electron.ipcRenderer.invoke('mt::capture-save', dataUrl)
+  } catch (err) {
+    console.error('Failed to save capture:', err)
+  }
 }
 
 const closeCapture = (): void => {
-  stopLiveViewportMonitor()
-  window.electron.ipcRenderer.send('mt::capture-close')
+  try {
+    isScrollingCaptureMode.value = false
+    stitchedMasterCanvas = null
+    prevSliceCanvas = null
+    if (wheelThrottleTimer) {
+      clearTimeout(wheelThrottleTimer)
+      wheelThrottleTimer = null
+    }
+  } catch (err) {
+    console.error('Error cleaning up capture state:', err)
+  }
+  try {
+    window.electron.ipcRenderer.send('mt::capture-close')
+  } catch (err) {
+    console.error('Error sending capture-close:', err)
+  }
 }
 
 // -------------------------------------------------------------
@@ -2866,6 +2810,7 @@ let removeDataSub: (() => void) | null = null
 const applyCaptureData = (info: ScreenCaptureDisplayInfo): void => {
   if (!info || !info.dataUrl) return
   screenBounds.value = info.bounds
+  screenWorkArea.value = info.workArea || info.bounds
   scaleFactor.value = info.scaleFactor || 1
 
   const img = new Image()

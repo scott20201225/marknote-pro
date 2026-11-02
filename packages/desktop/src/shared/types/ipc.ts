@@ -149,7 +149,7 @@ export interface IpcInvokeChannels {
     ret: string | null
   }
   'mt::capture-scroll-down': {
-    args: [rect?: { x: number; y: number; width: number; height: number }]
+    args: [rect?: { x: number; y: number; width: number; height: number }, pixelDelta?: number]
     ret: boolean
   }
   'mt::pin-window-get-payload': { args: [pinId?: string]; ret: PinWindowPayload | null }

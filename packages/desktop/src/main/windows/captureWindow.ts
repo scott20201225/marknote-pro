@@ -7,6 +7,7 @@ import {
   app,
   BrowserWindow,
   desktopCapturer,
+  globalShortcut,
   screen,
   dialog,
   shell,
@@ -144,8 +145,21 @@ export class CaptureWindowManager {
         }
       })
 
-      this._win.setAlwaysOnTop(true, 'screen-saver')
+      this._win.setAlwaysOnTop(true, 'floating')
       this._win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+
+      try {
+        globalShortcut.register('Escape', () => {
+          log.info('[CaptureWindowManager] Global Emergency Escape triggered')
+          this.close()
+        })
+        globalShortcut.register('CommandOrControl+Escape', () => {
+          log.info('[CaptureWindowManager] Global Emergency Cmd+Escape triggered')
+          this.close()
+        })
+      } catch (gErr) {
+        log.warn('[CaptureWindowManager] Failed to register global emergency shortcuts:', gErr)
+      }
 
       const baseUrl =
         process.env.NODE_ENV === 'development'
@@ -159,6 +173,7 @@ export class CaptureWindowManager {
       const payload: ScreenCaptureDisplayInfo = {
         id: currentDisplay.id,
         bounds,
+        workArea: currentDisplay.workArea,
         scaleFactor,
         dataUrl
       }
@@ -180,9 +195,17 @@ export class CaptureWindowManager {
       this._win.loadURL(url.toString())
 
       this._win.on('closed', () => {
+        try {
+          globalShortcut.unregister('Escape')
+          globalShortcut.unregister('CommandOrControl+Escape')
+        } catch {}
         this._win = null
       })
     } catch (err) {
+      try {
+        globalShortcut.unregister('Escape')
+        globalShortcut.unregister('CommandOrControl+Escape')
+      } catch {}
       console.error('[CaptureWindowManager] Failed to capture screen:', err)
       log.error('[CaptureWindowManager] Failed to capture screen:', err)
       this.close()
@@ -198,9 +221,12 @@ export class CaptureWindowManager {
         try {
           // Zero-flicker: the capture window has a transparent cutout at rect,
           // so screencapture captures the underlying application directly without hiding the window!
-          await execAsync(
-            `/usr/sbin/screencapture -x -R${Math.round(rect.x)},${Math.round(rect.y)},${Math.round(rect.width)},${Math.round(rect.height)} "${tmpPath}"`
-          )
+          await Promise.race([
+            execAsync(
+              `/usr/sbin/screencapture -x -R${Math.round(rect.x)},${Math.round(rect.y)},${Math.round(rect.width)},${Math.round(rect.height)} "${tmpPath}"`
+            ),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('screencapture timeout')), 1500))
+          ])
         } catch (scErr) {
           log.warn('[CaptureWindowManager] captureSlice screencapture error:', scErr)
         }
@@ -238,37 +264,43 @@ export class CaptureWindowManager {
     return null
   }
 
-  public setIgnoreMouseEvents(ignore: boolean, forward: boolean = true): void {
-    if (this._win && !this._win.isDestroyed()) {
-      this._win.setIgnoreMouseEvents(ignore, { forward })
-    }
+  public setIgnoreMouseEvents(_ignore: boolean, _forward: boolean = true): void {
+    // Fail-safe: NEVER ignore mouse events on capture window to prevent unclickable buttons or focus deadlocks!
   }
 
-  public async scrollDown(rect?: { x: number; y: number; width: number; height: number }): Promise<void> {
+  public async scrollDown(
+    rect?: { x: number; y: number; width: number; height: number },
+    pixelDelta: number = -220
+  ): Promise<void> {
     if (!isOsx) return
     try {
       const staticDir = path.join(app.isPackaged ? process.resourcesPath : app.getAppPath(), 'static')
       const macScrollBin = path.join(staticDir, 'bin', 'mac-scroll')
-      let args = '-180'
+      let args = `${pixelDelta}`
       if (rect) {
         const cx = Math.round(rect.x + rect.width / 2)
         const cy = Math.round(rect.y + rect.height / 2)
-        args = `-180 ${cx} ${cy} ${process.pid}`
+        args = `${pixelDelta} ${cx} ${cy} ${process.pid}`
       }
       if (fs.existsSync(macScrollBin)) {
-        await execAsync(`"${macScrollBin}" ${args}`)
-      } else {
-        await execAsync(`osascript -e 'tell application "System Events" to key code 125'`)
+        await Promise.race([
+          execAsync(`"${macScrollBin}" ${args}`),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('mac-scroll timeout')), 1000))
+        ])
       }
-
-      // Wait a moment for WindowServer to dispatch the event and for the underlying app to scroll and repaint
-      await new Promise((r) => setTimeout(r, 100))
     } catch (err) {
       log.warn('[CaptureWindowManager] scrollDown error:', err)
     }
   }
 
   public close(): void {
+    try {
+      globalShortcut.unregister('Escape')
+      globalShortcut.unregister('CommandOrControl+Escape')
+    } catch {}
+    try {
+      exec('pkill -f "screencapture -x -R" || true')
+    } catch {}
     if (this._win && !this._win.isDestroyed()) {
       this._win.destroy()
       this._win = null
