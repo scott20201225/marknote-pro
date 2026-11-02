@@ -36,7 +36,13 @@
       :style="{ transform: `scale(${zoomLevel})` }"
     >
       <div class="text-card-header">
-        <span class="text-card-badge">📌 文本贴图</span>
+        <div class="mac-traffic-dots">
+          <span class="dot dot-close" title="关闭贴图 (Esc)" @click.stop="closePin"></span>
+          <span class="dot dot-copy" title="复制代码" @click.stop="copyPin"></span>
+          <span class="dot dot-ontop" :class="{ active: isAlwaysOnTop }" title="置顶切换" @click.stop="toggleAlwaysOnTop"></span>
+        </div>
+        <span class="text-card-badge">📌 {{ payload.title || '代码 / 文本贴图' }}</span>
+        <button class="header-action-btn" title="复制代码" @click.stop="copyPin">复制</button>
       </div>
       <div class="text-card-body">
         <pre class="text-content"><code>{{ payload.content }}</code></pre>
@@ -355,15 +361,74 @@ onUnmounted(() => {
 }
 
 .text-card-header {
-  padding: 6px 12px;
-  background: rgba(255, 255, 255, 0.04);
+  height: 36px;
+  padding: 0 12px;
+  background: rgba(255, 255, 255, 0.05);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.mac-traffic-dots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.1s ease, filter 0.1s ease;
+}
+
+.dot:hover {
+  transform: scale(1.15);
+  filter: brightness(1.2);
+}
+
+.dot-close {
+  background: #ff5f56;
+  border: 1px solid #e0443e;
+}
+
+.dot-copy {
+  background: #ffbd2e;
+  border: 1px solid #dea123;
+}
+
+.dot-ontop {
+  background: #27c93f;
+  border: 1px solid #1aab29;
 }
 
 .text-card-badge {
   font-size: 11px;
   color: #f59e0b;
   font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 60%;
+}
+
+.header-action-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #cbd5e1;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.header-action-btn:hover {
+  background: #3b82f6;
+  color: #ffffff;
 }
 
 .text-card-body {

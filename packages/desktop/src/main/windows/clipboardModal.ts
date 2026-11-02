@@ -51,6 +51,10 @@ export class ClipboardModalWindow {
       }
     })
 
+    const topLevel = isOsx ? 'screen-saver' : 'screen-saver'
+    this._win.setAlwaysOnTop(true, topLevel)
+    this._win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+
     const baseUrl =
       process.env.NODE_ENV === 'development'
         ? process.env['ELECTRON_RENDERER_URL']!
@@ -94,6 +98,12 @@ export class ClipboardModalWindow {
     const posY = Math.round(dispY + (dispH - winHeight) / 2)
 
     this._win.setPosition(posX, posY)
+    const topLevel = isOsx ? 'screen-saver' : 'screen-saver'
+    this._win.setAlwaysOnTop(true, topLevel)
+    this._win.moveTop()
+    if (isOsx) {
+      app.focus({ steal: true })
+    }
     this._win.show()
     this._win.focus()
 
