@@ -1858,23 +1858,30 @@ const renderAll = (): void => {
   if (!ctx) return
 
   const dpr = window.devicePixelRatio || 1
-  const width = window.innerWidth
-  const height = window.innerHeight
+  const width = Math.round(window.innerWidth)
+  const height = Math.round(window.innerHeight)
+  const physicalW = Math.round(width * dpr)
+  const physicalH = Math.round(height * dpr)
 
-  if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
-    canvas.width = width * dpr
-    canvas.height = height * dpr
+  if (canvas.width !== physicalW || canvas.height !== physicalH) {
+    canvas.width = physicalW
+    canvas.height = physicalH
     canvas.style.width = `${width}px`
     canvas.style.height = `${height}px`
   }
 
+  // 1. Raw screenshot background: 1:1 direct pixel-to-pixel mapping without scaling interpolation!
+  // Disabling imageSmoothing avoids blurry anti-aliasing on fonts and windows, completely eliminating scaling illusions.
+  ctx.save()
+  ctx.imageSmoothingEnabled = false
+  ctx.drawImage(screenshotImage.value, 0, 0, physicalW, physicalH)
+  ctx.restore()
+
+  // 2. Vector annotations and selection mask: render in CSS logical point space
   ctx.save()
   ctx.scale(dpr, dpr)
+  ctx.imageSmoothingEnabled = true
 
-  // 1. Draw raw screenshot image
-  ctx.drawImage(screenshotImage.value, 0, 0, width, height)
-
-  // 2. Draw dark translucent mask around selection
   if (hasSelection.value) {
     const sel = normSelection.value
 
@@ -3046,19 +3053,23 @@ onUnmounted(() => {
 
 <style scoped>
 .capture-fullscreen-container {
-  width: 100vw;
-  height: 100vh;
-  position: relative;
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
   overflow: hidden;
   user-select: none;
   outline: none;
-  background: transparent !important;
+  background: #000000 !important;
 }
 
 .main-canvas {
   position: absolute;
-  left: 0;
-  top: 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   display: block;
 }
 

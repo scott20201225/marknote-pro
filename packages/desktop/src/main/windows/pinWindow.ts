@@ -67,6 +67,7 @@ export class PinWindowManager {
       closable: true,
       alwaysOnTop: true,
       skipTaskbar: true,
+      enableLargerThanScreen: true,
       transparent: true,
       hasShadow: true,
       show: false,
@@ -77,6 +78,15 @@ export class PinWindowManager {
         nodeIntegration: false
       }
     })
+
+    // Lock aspect ratio so user manual resizing strictly preserves width-to-height proportion
+    if (width > 0 && height > 0) {
+      try {
+        win.setAspectRatio(width / height)
+      } catch (e) {
+        log.warn('[PinWindowManager] Failed to setAspectRatio:', e)
+      }
+    }
 
     // Pin windows stay above normal apps, but below the Clipboard History modal (which uses 'screen-saver')
     const topLevel = 'floating'
@@ -206,19 +216,16 @@ export class PinWindowManager {
     const currentDisplay = screen.getDisplayNearestPoint({ x: winX, y: winY })
     const scaleFactor = currentDisplay.scaleFactor || 1
 
-    let targetW = Math.round((naturalWidth / scaleFactor) * zoom)
-    let targetH = Math.round((naturalHeight / scaleFactor) * zoom)
+    const aspectRatio = naturalWidth / naturalHeight
+    try {
+      win.setAspectRatio(aspectRatio)
+    } catch {}
 
-    const maxW = Math.round(currentDisplay.workArea.width * 0.95)
-    const maxH = Math.round(currentDisplay.workArea.height * 0.95)
-    if (targetW > maxW || targetH > maxH) {
-      const scale = Math.min(maxW / targetW, maxH / targetH)
-      targetW = Math.round(targetW * scale)
-      targetH = Math.round(targetH * scale)
-    }
-
-    targetW = Math.max(targetW, 80)
-    targetH = Math.max(targetH, 40)
+    const baseW = naturalWidth / scaleFactor
+    let targetW = Math.round(baseW * zoom)
+    // Keep minimum 20px and maximum 10000px, without arbitrary 0.95 clamping
+    targetW = Math.max(Math.min(targetW, 10000), 20)
+    let targetH = Math.max(10, Math.round(targetW / aspectRatio))
 
     const centerX = winX + winW / 2
     const centerY = winY + winH / 2

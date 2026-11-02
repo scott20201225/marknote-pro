@@ -69,7 +69,10 @@ export class CaptureWindowManager {
         const staticDir = path.join(app.isPackaged ? process.resourcesPath : app.getAppPath(), 'static')
         const macScrollBin = path.join(staticDir, 'bin', 'mac-scroll')
 
-        const capturePromise = execAsync(`/usr/sbin/screencapture -x "${tmpCapturePath}"`)
+        // Capture exact display bounds using -R to eliminate multi-screen mismatch and scaling distortion
+        const capturePromise = execAsync(
+          `/usr/sbin/screencapture -x -R ${bounds.x},${bounds.y},${bounds.width},${bounds.height} "${tmpCapturePath}"`
+        )
           .then(async () => {
             if (fs.existsSync(tmpCapturePath)) {
               const buf = await fsPromises.readFile(tmpCapturePath)
@@ -98,15 +101,24 @@ export class CaptureWindowManager {
 
       if (!dataUrl) {
         try {
+          const reqW = Math.max(1, Math.round(bounds.width * scaleFactor))
+          const reqH = Math.max(1, Math.round(bounds.height * scaleFactor))
+
           const sources = await desktopCapturer.getSources({
             types: ['screen'],
             thumbnailSize: {
-              width: Math.round(bounds.width * scaleFactor),
-              height: Math.round(bounds.height * scaleFactor)
+              width: reqW,
+              height: reqH
             }
           })
 
-          let targetSource = sources.find((s) => s.display_id === String(currentDisplay.id))
+          const dispIdStr = String(currentDisplay.id)
+          let targetSource = sources.find(
+            (s) =>
+              s.display_id === dispIdStr ||
+              s.id === `screen:${dispIdStr}` ||
+              s.id.startsWith(`screen:${dispIdStr}:`)
+          )
           if (!targetSource && sources.length > 0) {
             targetSource = sources[0]
           }
@@ -161,9 +173,11 @@ export class CaptureWindowManager {
         alwaysOnTop: true,
         skipTaskbar: true,
         enableLargerThanScreen: true,
-        transparent: true,
+        fullscreen: !isOsx, // Windows / Linux: 使用系统级 Native Fullscreen，彻底压制任务栏
+        fullscreenable: true,
+        transparent: false, // 实体不透明全屏窗口，杜绝任何透底与 DWM 混合导致的重影/双任务栏
+        backgroundColor: '#000000',
         hasShadow: false,
-        backgroundColor: '#00000000',
         show: false,
         webPreferences: {
           preload: path.join(__dirname, '../preload/index.js'),
@@ -172,6 +186,15 @@ export class CaptureWindowManager {
           nodeIntegration: false
         }
       })
+
+      if (!isOsx) {
+        this._win.on('leave-html-full-screen', () => {
+          this.close()
+        })
+        this._win.on('leave-full-screen', () => {
+          this.close()
+        })
+      }
 
       // Zero-flicker: Avoid setting workspace flags on hidden windows,
       // which causes WindowServer to clear layers and trigger flashes.
@@ -249,8 +272,14 @@ export class CaptureWindowManager {
 
     // Apply alwaysOnTop and workspace visibility at the exact moment of display
     try {
-      this._win.setAlwaysOnTop(true, 'floating')
+      // Use 'screen-saver' (level 1000) with relativeLevel 1 to completely cover
+      // macOS Menu Bar, Dock, IME candidate windows, and Windows Taskbar
+      this._win.setAlwaysOnTop(true, 'screen-saver', 1)
       this._win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+      if (!isOsx) {
+        // Windows / Linux: Enter native full screen to completely hide the system taskbar
+        this._win.setFullScreen(true)
+      }
     } catch (e) {
       log.warn('[CaptureWindowManager] setAlwaysOnTop error:', e)
     }
@@ -277,6 +306,9 @@ export class CaptureWindowManager {
 
     if (this._win && !this._win.isDestroyed()) {
       try {
+        if (!isOsx && this._win.isFullScreen()) {
+          this._win.setFullScreen(false)
+        }
         this._win.setVisibleOnAllWorkspaces(false)
       } catch {}
       this._win.destroy()

@@ -9,6 +9,13 @@
     @keydown="onKeydown"
     tabindex="0"
   >
+    <!-- Permanent Subtle Pin Badge (Disappears on hover to reveal full toolbar) -->
+    <div class="pin-badge-permanent" title="MarkNotePro 贴图">
+      <svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor">
+        <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"></path>
+      </svg>
+    </div>
+
     <!-- Hover Action Bar -->
     <div class="hover-toolbar">
       <span class="zoom-badge">{{ Math.round(zoomLevel * 100) }}%</span>
@@ -300,30 +307,58 @@ const onMouseUp = (): void => {
 
 let currentNaturalWidth = 0
 let currentNaturalHeight = 0
+let isProgrammaticResize = false
+
+const onWindowResize = (): void => {
+  if (isProgrammaticResize) return
+  if (!currentNaturalWidth || !currentNaturalHeight) return
+  const dpr = window.devicePixelRatio || 1
+  const baseW = currentNaturalWidth / dpr
+  if (baseW > 0) {
+    const computedZoom = window.innerWidth / baseW
+    zoomLevel.value = Math.max(0.01, Math.round(computedZoom * 100) / 100)
+  }
+}
 
 const onImageLoad = (e: Event): void => {
   const img = e.target as HTMLImageElement
   if (!img) return
   currentNaturalWidth = img.naturalWidth
   currentNaturalHeight = img.naturalHeight
-  applyFitSize()
+
+  // Calculate actual initial zoom relative to base 100% logical size
+  const dpr = window.devicePixelRatio || 1
+  const baseW = currentNaturalWidth / dpr
+  if (baseW > 0) {
+    zoomLevel.value = Math.round((window.innerWidth / baseW) * 100) / 100
+  }
 }
 
 const applyFitSize = (): void => {
   if (!currentNaturalWidth || !currentNaturalHeight) return
+  isProgrammaticResize = true
   window.electron.ipcRenderer.send('mt::pin-window-fit-size', {
     pinId: pinId.value,
     naturalWidth: currentNaturalWidth,
     naturalHeight: currentNaturalHeight,
     zoom: zoomLevel.value
   })
+  setTimeout(() => {
+    isProgrammaticResize = false
+  }, 120)
 }
 
-// Mouse Wheel Zoom
+// Mouse Wheel Zoom: Geometric proportional continuous zooming
 const onWheel = (e: WheelEvent): void => {
   e.preventDefault()
-  const delta = e.deltaY > 0 ? -0.1 : 0.1
-  const nextZoom = Math.min(Math.max(zoomLevel.value + delta, 0.2), 5.0)
+  if (Math.abs(e.deltaY) < 0.5) return
+
+  const clampedDelta = Math.min(Math.max(e.deltaY, -120), 120)
+  // Exponential scaling for consistent perceptual speed at any zoom level
+  const factor = Math.exp(-clampedDelta * 0.0015)
+  let nextZoom = zoomLevel.value * factor
+  nextZoom = Math.min(Math.max(nextZoom, 0.05), 10.0)
+
   zoomLevel.value = Math.round(nextZoom * 100) / 100
   applyFitSize()
 }
@@ -471,10 +506,13 @@ onMounted(async () => {
   window.addEventListener('click', () => {
     contextMenuVisible.value = false
   })
+
+  window.addEventListener('resize', onWindowResize)
 })
 
 onUnmounted(() => {
   if (removeDataSub) removeDataSub()
+  window.removeEventListener('resize', onWindowResize)
 })
 </script>
 
@@ -602,23 +640,82 @@ onUnmounted(() => {
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
 }
 
-/* Pinned Image */
+/* Permanent Subtle Pin Badge */
+.pin-badge-permanent {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  opacity: 0.55;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.theme-light .pin-badge-permanent {
+  background: rgba(255, 255, 255, 0.85);
+  color: #4b5563;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.theme-dark .pin-badge-permanent {
+  background: rgba(30, 32, 40, 0.85);
+  color: #94a3b8;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.pin-window-container:hover .pin-badge-permanent {
+  opacity: 0;
+}
+
+/* Pinned Image View with Crisp Borders and Subtle Shadows across All Platforms */
 .pinned-image-view {
   width: 100%;
   height: 100%;
   margin: 0;
   padding: 0;
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
+  box-sizing: border-box;
+  border-radius: 4px;
+  position: relative;
+}
+
+.theme-light .pinned-image-view {
+  /* Crisp Card Border: Semi-transparent dark outline + Inner crisp highlight + Depth shadow */
+  border: 1.5px solid rgba(0, 0, 0, 0.22);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.7),
+    inset 0 1px 3px rgba(0, 0, 0, 0.08),
+    0 4px 16px rgba(0, 0, 0, 0.16);
+  background: #ffffff;
+}
+
+.theme-dark .pinned-image-view {
+  /* Dark mode: Crisp light border + Deep shadows */
+  border: 1.5px solid rgba(255, 255, 255, 0.24);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.7),
+    inset 0 1px 3px rgba(0, 0, 0, 0.5),
+    0 6px 20px rgba(0, 0, 0, 0.55);
+  background: #18191d;
 }
 
 .pinned-img {
   width: 100%;
   height: 100%;
   display: block;
-  object-fit: fill;
-  border-radius: 0;
-  box-shadow: none;
+  object-fit: contain;
+  border-radius: 2.5px;
   margin: 0;
   padding: 0;
 }
