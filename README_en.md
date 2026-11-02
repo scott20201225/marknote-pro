@@ -3,8 +3,8 @@
 <h1 align="center">MarkNotePro</h1>
 
 <div align="center">
-  <strong>Local Markdown Notes & Knowledge Workbench with Git, Draw.io, GeoGebra, MindMap, KDBX Keystore (2FA & SSH) & PDF Annotation</strong><br>
-  Manage knowledge bases in local directories with native support for Markdown notes, Draw.io professional diagrams, GeoGebra math modeling, MindMap mind maps, KDBX encrypted keystores, and PDF annotations, using Git for version control, syncing, and recovery.<br>
+  <strong>Local Markdown Notes & Knowledge Workbench with Git, Draw.io, GeoGebra, MindMap, KDBX Keystore (2FA & SSH), PDF Annotation & Intelligent Screen Capture / Pinning</strong><br>
+  Manage knowledge bases in local directories with native support for Markdown notes, Draw.io professional diagrams, GeoGebra math modeling, MindMap mind maps, KDBX encrypted keystores, PDF annotations, and Lark-grade screen capture / scrolling screenshots / desktop pinning, using Git for version control, syncing, and recovery.<br>
   <sub>Supports Linux, macOS, and Windows.</sub>
 </div>
 
@@ -36,6 +36,8 @@
     <a href="#product-positioning">Product Positioning</a>
     <span> | </span>
     <a href="#core-capabilities">Core Capabilities</a>
+    <span> | </span>
+    <a href="#intelligent-screen-capture-scrolling-screenshots-clipboard-history--desktop-pinning">Screen Capture & Pinning</a>
     <span> | </span>
     <a href="#built-in-creation--security-engines-drawio-geogebra-mindmap-kdbx--pdf">Built-in Engines</a>
     <span> | </span>
@@ -133,10 +135,44 @@ Selection Guide:
 - **Built-in KDBX Encrypted Keystore (with 2FA & SSH Direct Connect)**: KeePass-compatible `.kdbx` keystores built on KDBXWeb; supports groups, entries, custom fields, tags, attachments, history, recycle bin, password reset, and encrypted import/export. Deeply integrates **TOTP 2FA Dynamic Codes** (QR code scanning, clipboard screenshot pasting, URI batch import, real-time countdown, anti-replay) and **SSH / Terminal Direct Connection** (**requires establishing a keystore**, launching sessions directly from entries with **automated 2FA verification**, graphical SFTP file manager drawer, and ZMODEM transfer).
 - **WYSIWYG Markdown Editing**: Headings, lists, task lists, tables, blockquotes, code blocks, math formulas, Mermaid diagrams, warning callouts, and common Markdown formatting.
 - **Enhanced Tables**: Bulk table editing, copy-pasting, and interoperability with Excel.
+- **Built-in Intelligent Screen Capture & Annotation**: Global shortcut `Control+Shift+1` (macOS) for instant zero-flicker launch, intelligent window and sub-element edge detection, multi-display and HiDPI Retina support; comprehensive vector annotation tools (rectangles, ellipses, arrows, freehand pen, text, blur/mosaic, numbered steps); one-click copy to clipboard or local saving.
+- **Panoramic Long Screenshot (Scrolling Capture)**: Dual-mode auto-scroll with bottom detection and smooth manual wheel scrolling; pixel-level feature alignment and seamless image stitching for long web pages, code listings, and chats.
+- **System-Wide Clipboard History & Fast Recall**: Global shortcut `Control+Shift+3` (macOS) to summon a frosted-glass popup; captures all text and images (including WeChat, Lark, and system screenshots); instant keyword search and press `Enter` to auto-paste directly into active apps.
+- **Desktop Pinning (Pin to Screen)**: Pin any screenshot or clipboard entry on top of the screen; wheel zoom (50%~200% with 1:1 reset), free dragging and edge snapping, light/dark adaptive toolbar, and highlighted code/text cards for immersive side-by-side reference.
 - **Workspace Attachments & Self-Contained Assets**: When Markdown resides within a workspace, local images copy to the workspace attachment directory with relative paths; images in GeoGebra and MindMap embed self-contained within documents without losing cross-platform links.
 - **Internal Link Jumping & Path Copying**: One-click copying of document relative paths or Markdown links from the sidebar for fast cross-document linking.
 - **Clean Sidebar Experience**: Automatically filters out `.git`, `.idea`, `.vscode`, `node_modules`, and irrelevant project directories, keeping only knowledge documents visible.
 - **Integrated Git Workspace**: Built-in Git interface supporting repository adding, cloning, diff viewing, commit, branch management, pull, push, and remote sync.
+
+## Intelligent Screen Capture, Scrolling Screenshots, Clipboard History & Desktop Pinning
+
+MarkNotePro provides an integrated, lightweight, and professional screen capture, clipboard history, and desktop pinning workflow, fully offline and deeply coupled with your note-taking experience:
+
+### 1. Smart Screen Capture & Vector Annotation
+- **Zero-Flicker Instant Launch**: Press global shortcut `Control+Shift+1` (macOS) to activate instantly with off-screen pre-rendering and multi-display coordinate mapping, eliminating white-screen flicker.
+- **Intelligent Edge & Element Detection**: Hover over application windows, title bars, sidebars, or buttons for auto-bounding and snap-selection, with free drag adjustment.
+- **Vector Annotation Tools**:
+  - **Shapes & Guides**: Rectangles, circles/ellipses, straight lines, and solid arrows with configurable stroke width and color palette;
+  - **Freehand Pen & Text**: Smooth doodle brush and rich-text input with customizable font size and background;
+  - **Numbered Step Badges**: Auto-incrementing step badges (①, ②, ③...), ideal for technical documentation, troubleshooting reports, and user guides;
+  - **Privacy Desensitization**: Brush mosaic and Gaussian blur for concealing sensitive data;
+  - **Fast Export**: Instant copy to clipboard, image saving to disk, or direct desktop pinning.
+
+### 2. Panoramic Long Screenshots (Scrolling Capture)
+- **Automatic & Manual Dual Mode**: Supports automatic constant-speed scrolling with bottom boundary detection, or manual mouse-wheel scroll control.
+- **Pixel-Level Feature Alignment**: Robust image feature matching stitches multi-screen captures smoothly without distortion or line duplication.
+
+### 3. System-Wide Clipboard History (`Control+Shift+3`)
+- **Global Capture & Persistence**: Passively monitors clipboard changes across the operating system, capturing internal markdown copies as well as external system, WeChat, and Lark screenshots and text snippets.
+- **Fast Modal Interaction**: Pops up near your cursor with instant fuzzy search, keyboard navigation, and press `Enter` to auto-type/paste directly into your active editor or external applications.
+
+### 4. Desktop Pinning (Pin to Screen)
+- **Top-Level Reference Floating**: Click "Pin" on any capture or clipboard history item to pin images or code/text cards on top of all windows.
+- **Intuitive Interactions & Adaptive Themes**:
+  - Free dragging with screen edge snapping;
+  - Direct mouse-wheel zoom (with `50%`, `100%`, `150%`, `200%` quick reset);
+  - Floating toolbar with light/dark frosted-glass theme adaptation for one-click copy, save-as, and close (`Esc` or double click);
+  - **Code/Text Card Pinning**: Float reference code snippets and memos on your desktop for maximum writing and coding productivity.
 
 ## Built-in Creation & Security Engines: Draw.io, GeoGebra, MindMap, KDBX & PDF
 

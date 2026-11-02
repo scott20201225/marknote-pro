@@ -10,6 +10,8 @@ MarkNotePro 是一款集成 Git、Draw.io、GeoGebra、MindMap 思维导图、KD
 - **MindMap 思维导图（.smm）**：本地离线集成专业思维导图工作台，原生支持思维导图、逻辑结构图、目录组织图、组织结构图、时间轴、鱼骨图等 6 种结构；支持节点富文本、LaTeX 公式、关联线、外框与大纲视图；支持直接导入 `.xmind`、`.md`、`.smm`、`.json`、`.mind` 并自动新建独立文件，支持导出多格式与系统打印。
 - **KDBX 加密密码库（.kdbx）**：基于 KDBXWeb 集成 KeePass 兼容的本地密码库读写能力。支持独立主密码、分组、密钥条目、自定义字段、标签、附件、历史记录、回收站、批量移动以及受提取码保护的批量导入导出。原生集成 **2FA 双因素动态口令**（支持二维码扫描、截图粘贴与 URI 批量导入，实时倒计时与防重放）以及 **SSH / 终端快捷直连**（一键打开终端、图形化 SFTP 文件管理器与 ZMODEM 传输）。
 - **PDF 阅读与批注引擎（.pdf）**：本地离线集成 Mozilla PDF.js 全功能引擎，支持页面流式阅读、目录大纲、缩略图、多语言字符检索与旋转缩放；深度集成丰富批注工具：**文本高亮**（多色标记与透明度控制）、**下划线/删除线**、**自由手绘涂鸦 (Ink)**、**文字批注**、**添加图片/图章**与**电子签名**；快捷键 `Cmd+S / Ctrl+S` 原地覆盖保存源文件（无需额外弹窗），修改红点精准双向同步，明暗主题自适应。
+- **飞书级智能截屏、全景长截图与屏幕贴图**：全局快捷键 `Control+Shift+1`（macOS）秒级零闪烁启动，支持智能感知窗口与子区域边缘；内置矩形、椭圆、箭头、画笔、文字、马赛克、自增步骤序号等全套矢量标注；支持**全景长截图（滚动拼缝）**自动与手动双模拼接；**屏幕贴图（Pin to Screen）**一键置顶显示，支持滚轮自由缩放、自适应毛玻璃工具栏与代码文本卡片贴图。
+- **系统级剪贴板历史与极速回溯**：全局快捷键 `Control+Shift+3`（macOS）唤起极速悬浮面板，全系统无感捕获文字、代码块与截图（含微信、飞书及系统原生截图），支持快速检索与一键回车智能插入当前程序。
 
 ### 与 MarkTextPro 的关系
 
@@ -48,6 +50,8 @@ MarkNotePro is a local-first structured Markdown note-taking and multimodal know
 - **MindMap Mind Mapping (.smm)**: 6 classic structures (mind map, logical, organization, timeline, fishbone), rich text, LaTeX, outline sync, and smart import/export.
 - **KDBX Encrypted Keystore (.kdbx)**: KeePass-compatible encrypted password database with groups, tags, history, custom fields, attachments, recycle bin, bulk import/export, master password reset, built-in **2FA TOTP**, and **SSH/terminal direct connection** (with graphical SFTP file drawer and ZMODEM).
 - **PDF Reader & Annotator (.pdf)**: Offline Mozilla PDF.js engine supporting outline navigation, search, **text highlight/underline**, **freehand drawing (Ink)**, **text comments**, **stamps/images**, **digital signatures**, and in-place overwrite saving via `Cmd+S / Ctrl+S`.
+- **Intelligent Screen Capture, Scrolling Screenshots & Desktop Pinning**: Global shortcut `Control+Shift+1` (macOS) with zero-flicker launch, intelligent window & edge detection, vector annotations (shapes, arrows, pen, text, blur, step counters), dual-mode **panoramic long screenshots** with feature alignment, and **top-level desktop pinning** with wheel zoom and adaptive themes.
+- **System-Wide Clipboard History (`Control+Shift+3`)**: Global hotkey to open a frosted-glass modal capturing system-wide copied text, code snippets, and external screenshots (WeChat, Lark, OS native), with fast fuzzy search and press `Enter` to auto-paste into active applications.
 
 ### Comparison with MarkTextPro
 
