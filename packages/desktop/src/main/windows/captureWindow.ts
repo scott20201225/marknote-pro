@@ -101,13 +101,13 @@ export class CaptureWindowManager {
 
       if (!dataUrl) {
         try {
-          // Native hardware resolution capture: pass 8192 to prevent Chromium from fractional downscaling
-          const maxDim = 8192
+          const reqW = Math.max(1, Math.round(bounds.width * scaleFactor))
+          const reqH = Math.max(1, Math.round(bounds.height * scaleFactor))
           const sources = await desktopCapturer.getSources({
             types: ['screen'],
             thumbnailSize: {
-              width: maxDim,
-              height: maxDim
+              width: reqW,
+              height: reqH
             }
           })
 
@@ -186,6 +186,15 @@ export class CaptureWindowManager {
           nodeIntegration: false
         }
       })
+
+      if (!isOsx) {
+        this._win.on('leave-html-full-screen', () => {
+          this.close()
+        })
+        this._win.on('leave-full-screen', () => {
+          this.close()
+        })
+      }
 
       // Zero-flicker: Avoid setting workspace flags on hidden windows,
       // which causes WindowServer to clear layers and trigger flashes.
@@ -350,6 +359,9 @@ export class CaptureWindowManager {
 
     if (this._win && !this._win.isDestroyed()) {
       try {
+        if (!isOsx && this._win.isFullScreen()) {
+          this._win.setFullScreen(false)
+        }
         this._win.setVisibleOnAllWorkspaces(false)
       } catch {}
       this._win.destroy()

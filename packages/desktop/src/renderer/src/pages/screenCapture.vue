@@ -1866,44 +1866,37 @@ const renderAll = (): void => {
   if (!ctx) return
 
   const dpr = window.devicePixelRatio || 1
-  const img = screenshotImage.value
-  const physicalW = img.naturalWidth || Math.round(window.innerWidth * dpr)
-  const physicalH = img.naturalHeight || Math.round(window.innerHeight * dpr)
-  const width = Math.round(window.innerWidth)
-  const height = Math.round(window.innerHeight)
-  // Generous overscan boundary for dark overlay to eliminate subpixel rounding gaps at edge bezels
-  const overlayW = width + 50
-  const overlayH = height + 50
+  const width = window.innerWidth
+  const height = window.innerHeight
+  const bufferW = Math.round(width * dpr)
+  const bufferH = Math.round(height * dpr)
 
-  if (canvas.width !== physicalW || canvas.height !== physicalH) {
-    canvas.width = physicalW
-    canvas.height = physicalH
+  if (canvas.width !== bufferW || canvas.height !== bufferH) {
+    canvas.width = bufferW
+    canvas.height = bufferH
+    canvas.style.width = `${width}px`
+    canvas.style.height = `${height}px`
   }
 
-  // 1. Raw screenshot background: 1:1 direct pixel-to-pixel mapping without scaling interpolation!
-  // Disabling imageSmoothing avoids blurry anti-aliasing on fonts and windows, completely eliminating scaling illusions.
-  ctx.save()
-  ctx.imageSmoothingEnabled = false
-  ctx.drawImage(img, 0, 0, physicalW, physicalH)
-  ctx.restore()
-
-  // 2. Vector annotations and selection mask: render in CSS logical point space
   ctx.save()
   ctx.scale(dpr, dpr)
-  ctx.imageSmoothingEnabled = true
 
+  // 1. Draw raw screenshot image covering the full logical viewport
+  ctx.drawImage(screenshotImage.value, 0, 0, width, height)
+
+  // 2. Vector annotations and selection mask: render in CSS logical point space
   if (hasSelection.value) {
     const sel = normSelection.value
 
     ctx.fillStyle = 'rgba(0, 0, 0, 0.45)'
     // Top
-    ctx.fillRect(0, 0, overlayW, sel.y)
+    ctx.fillRect(0, 0, width, sel.y)
     // Bottom
-    ctx.fillRect(0, sel.y + sel.height, overlayW, overlayH - (sel.y + sel.height))
+    ctx.fillRect(0, sel.y + sel.height, width, height - (sel.y + sel.height))
     // Left
     ctx.fillRect(0, sel.y, sel.x, sel.height)
     // Right
-    ctx.fillRect(sel.x + sel.width, sel.y, overlayW - (sel.x + sel.width), sel.height)
+    ctx.fillRect(sel.x + sel.width, sel.y, width - (sel.x + sel.width), sel.height)
 
     // Selection border (Lark signature blue #336df4)
     ctx.strokeStyle = '#336df4'
@@ -1949,22 +1942,24 @@ const renderAll = (): void => {
     // 4. Draw Lark Corner Handles & Edge Grips
     drawSelectionHandles(ctx, sel, hoveredHandle.value)
   } else {
-    // Dim the screen before selection (using overscan width/height to avoid bezel gaps)
+    // Dim the screen before selection
     ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'
-    ctx.fillRect(0, 0, overlayW, overlayH)
+    ctx.fillRect(0, 0, width, height)
 
     // Smart Auto-Selection Highlight (Lark / CleanShot signature smart selection)
     if (smartHoverRect.value && !isSelecting.value) {
       const sm = smartHoverRect.value
+      const ratioX = screenshotImage.value.naturalWidth ? screenshotImage.value.naturalWidth / width : dpr
+      const ratioY = screenshotImage.value.naturalHeight ? screenshotImage.value.naturalHeight / height : dpr
 
       // Clear dark mask inside the detected smart target so it shines through bright & crisp!
       ctx.clearRect(sm.x, sm.y, sm.width, sm.height)
       ctx.drawImage(
         screenshotImage.value,
-        sm.x * dpr,
-        sm.y * dpr,
-        sm.width * dpr,
-        sm.height * dpr,
+        sm.x * ratioX,
+        sm.y * ratioY,
+        sm.width * ratioX,
+        sm.height * ratioY,
         sm.x,
         sm.y,
         sm.width,
@@ -2817,6 +2812,11 @@ const getCroppedDataUrl = (): string | null => {
   if (sel.width <= 0 || sel.height <= 0) return null
 
   const dpr = window.devicePixelRatio || 1
+  const width = window.innerWidth
+  const height = window.innerHeight
+  const ratioX = screenshotImage.value.naturalWidth ? (screenshotImage.value.naturalWidth / width) : dpr
+  const ratioY = screenshotImage.value.naturalHeight ? (screenshotImage.value.naturalHeight / height) : dpr
+
   const cropCanvas = document.createElement('canvas')
   cropCanvas.width = Math.round(sel.width * dpr)
   cropCanvas.height = Math.round(sel.height * dpr)
@@ -2827,10 +2827,10 @@ const getCroppedDataUrl = (): string | null => {
 
   ctx.drawImage(
     screenshotImage.value,
-    sel.x * dpr,
-    sel.y * dpr,
-    sel.width * dpr,
-    sel.height * dpr,
+    sel.x * ratioX,
+    sel.y * ratioY,
+    sel.width * ratioX,
+    sel.height * ratioY,
     0,
     0,
     sel.width,
@@ -3065,22 +3065,20 @@ onUnmounted(() => {
 .capture-fullscreen-container {
   position: fixed;
   inset: 0;
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   margin: 0;
   padding: 0;
   overflow: hidden;
   user-select: none;
   outline: none;
-  background: #000000 !important;
+  background: transparent !important;
 }
 
 .main-canvas {
   position: absolute;
-  top: 0;
   left: 0;
-  width: 100vw;
-  height: 100vh;
+  top: 0;
   display: block;
 }
 
