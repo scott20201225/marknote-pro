@@ -1,6 +1,8 @@
 import path from 'path'
-import { app, BrowserWindow, dialog, nativeImage, clipboard, screen, nativeTheme } from 'electron'
+import url from 'url'
+import fs from 'fs'
 import fsPromises from 'fs/promises'
+import { app, BrowserWindow, dialog, nativeImage, clipboard, screen, nativeTheme } from 'electron'
 import log from 'electron-log'
 import type { PinWindowPayload } from '@shared/types/clipboard'
 import { isOsx } from '../config'
@@ -246,19 +248,37 @@ export class PinWindowManager {
     win.setAlwaysOnTop(flag, 'floating')
   }
 
-  public async saveImage(dataUrl: string, sourceWindow?: BrowserWindow): Promise<string | null> {
+  public async saveImage(content: string, sourceWindow?: BrowserWindow): Promise<string | null> {
     try {
+      if (!content) return null
       const targetWin = sourceWindow || BrowserWindow.getFocusedWindow() || undefined
+
+      const isText =
+        !content.startsWith('data:image/') &&
+        !content.startsWith('file://') &&
+        !fs.existsSync(content)
+
       const { filePath, canceled } = await dialog.showSaveDialog(targetWin!, {
-        title: '保存贴图',
-        defaultPath: `snipaste_${Date.now()}.png`,
-        filters: [{ name: 'Images', extensions: ['png', 'jpg'] }]
+        title: isText ? '保存文本' : '保存贴图',
+        defaultPath: isText ? `pin_${Date.now()}.txt` : `pin_${Date.now()}.png`,
+        filters: isText
+          ? [{ name: 'Text Document', extensions: ['txt'] }]
+          : [{ name: 'PNG Image', extensions: ['png'] }, { name: 'JPEG Image', extensions: ['jpg'] }]
       })
 
       if (canceled || !filePath) return null
 
-      const img = nativeImage.createFromDataURL(dataUrl)
-      await fsPromises.writeFile(filePath, img.toPNG())
+      if (content.startsWith('data:image/')) {
+        const img = nativeImage.createFromDataURL(content)
+        await fsPromises.writeFile(filePath, img.toPNG())
+      } else if (content.startsWith('file://')) {
+        const srcPath = url.fileURLToPath(content)
+        await fsPromises.copyFile(srcPath, filePath)
+      } else if (fs.existsSync(content)) {
+        await fsPromises.copyFile(content, filePath)
+      } else {
+        await fsPromises.writeFile(filePath, content, 'utf-8')
+      }
       return filePath
     } catch (err) {
       log.error('[PinWindowManager] Failed to save pinned image:', err)
@@ -266,10 +286,31 @@ export class PinWindowManager {
     }
   }
 
-  public copyImage(dataUrl: string): boolean {
+  public copyImage(content: string): boolean {
     try {
-      const img = nativeImage.createFromDataURL(dataUrl)
-      clipboard.writeImage(img)
+      if (!content) return false
+
+      let img = nativeImage.createEmpty()
+      if (content.startsWith('data:image/')) {
+        img = nativeImage.createFromDataURL(content)
+      } else if (content.startsWith('file://')) {
+        try {
+          const filePath = url.fileURLToPath(content)
+          img = nativeImage.createFromPath(filePath)
+        } catch {}
+      } else if (fs.existsSync(content)) {
+        img = nativeImage.createFromPath(content)
+      }
+
+      if (!img.isEmpty()) {
+        clipboard.writeImage(img)
+        log.info('[PinWindowManager] Successfully copied pinned image to clipboard')
+        return true
+      }
+
+      // Fallback for text/code pin
+      clipboard.writeText(content)
+      log.info('[PinWindowManager] Successfully copied pinned text to clipboard')
       return true
     } catch (err) {
       log.error('[PinWindowManager] Failed to copy pinned image:', err)

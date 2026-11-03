@@ -17,16 +17,24 @@
     </div>
 
     <!-- Hover Action Bar -->
-    <div class="hover-toolbar">
+    <div class="hover-toolbar" @mousedown.stop>
       <span class="zoom-badge">{{ Math.round(zoomLevel * 100) }}%</span>
       <button class="mini-btn zoom-btn" :title="tr('zoomReset')" @click.stop="resetZoom">1:1</button>
-      <button class="mini-btn" :title="tr('copyImage') + ' (⌘C)'" @click.stop="copyPin">
-        <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2">
+      <button
+        class="mini-btn"
+        :class="{ 'btn-success': copiedFeedback }"
+        :title="tr('copyImage') + (isOsx ? ' (⌘C)' : ' (Ctrl+C)')"
+        @click.stop="copyPin"
+      >
+        <svg v-if="copiedFeedback" viewBox="0 0 24 24" width="13" height="13" stroke="#22c55e" fill="none" stroke-width="2.5">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <svg v-else viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2">
           <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
           <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
         </svg>
       </button>
-      <button class="mini-btn" :title="tr('saveImage') + ' (⌘S)'" @click.stop="savePin">
+      <button class="mini-btn" :title="tr('saveImage') + (isOsx ? ' (⌘S)' : ' (Ctrl+S)')" @click.stop="savePin">
         <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
           <polyline points="7 10 12 15 17 10"></polyline>
@@ -40,6 +48,16 @@
         </svg>
       </button>
     </div>
+
+    <!-- Toast Feedback on Copy -->
+    <transition name="toast-fade">
+      <div v-if="copiedFeedback" class="pin-copy-toast" @mousedown.stop>
+        <svg viewBox="0 0 24 24" width="14" height="14" stroke="#22c55e" fill="none" stroke-width="2.5" style="margin-right: 6px;">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <span>{{ tr('copied') }}</span>
+      </div>
+    </transition>
 
     <!-- Pinned Image View -->
     <div v-if="payload?.type === 'image'" class="pinned-image-view">
@@ -123,7 +141,8 @@ const pinI18n: Record<string, Record<string, string>> = {
     zoom200: '缩放至 200%',
     alwaysOnTop: '置顶显示',
     copyCode: '复制代码',
-    loading: '加载贴图中...'
+    loading: '加载贴图中...',
+    copied: '已复制到剪贴板'
   },
   'zh-TW': {
     zoomReset: '恢復 100% (1:1)',
@@ -137,7 +156,8 @@ const pinI18n: Record<string, Record<string, string>> = {
     zoom200: '縮放至 200%',
     alwaysOnTop: '置頂顯示',
     copyCode: '複製代碼',
-    loading: '載入貼圖中...'
+    loading: '載入貼圖中...',
+    copied: '已複製至剪貼簿'
   },
   en: {
     zoomReset: 'Reset 100% (1:1)',
@@ -151,7 +171,8 @@ const pinI18n: Record<string, Record<string, string>> = {
     zoom200: 'Zoom to 200%',
     alwaysOnTop: 'Always on Top',
     copyCode: 'Copy Code',
-    loading: 'Loading pin...'
+    loading: 'Loading pin...',
+    copied: 'Copied to clipboard'
   },
   ja: {
     zoomReset: '100%に戻す (1:1)',
@@ -165,7 +186,8 @@ const pinI18n: Record<string, Record<string, string>> = {
     zoom200: '200%に拡大',
     alwaysOnTop: '常に最前面に表示',
     copyCode: 'コードをコピー',
-    loading: '読み込み中...'
+    loading: '読み込み中...',
+    copied: 'クリップボードにコピーしました'
   },
   ko: {
     zoomReset: '100% 초기화 (1:1)',
@@ -179,7 +201,8 @@ const pinI18n: Record<string, Record<string, string>> = {
     zoom200: '200% 확대',
     alwaysOnTop: '항상 위에 표시',
     copyCode: '코드 복사',
-    loading: '로딩 중...'
+    loading: '로딩 중...',
+    copied: '클립보드에 복사되었습니다'
   },
   de: {
     zoomReset: 'Auf 100% zurücksetzen (1:1)',
@@ -193,7 +216,8 @@ const pinI18n: Record<string, Record<string, string>> = {
     zoom200: 'Auf 200% zoomen',
     alwaysOnTop: 'Immer im Vordergrund',
     copyCode: 'Code kopieren',
-    loading: 'Laden...'
+    loading: 'Laden...',
+    copied: 'In die Zwischenablage kopiert'
   },
   fr: {
     zoomReset: 'Réinitialiser 100% (1:1)',
@@ -207,7 +231,8 @@ const pinI18n: Record<string, Record<string, string>> = {
     zoom200: 'Zoomer à 200%',
     alwaysOnTop: 'Toujours au premier plan',
     copyCode: 'Copier le code',
-    loading: 'Chargement...'
+    loading: 'Chargement...',
+    copied: 'Copié dans le presse-papiers'
   },
   es: {
     zoomReset: 'Restablecer 100% (1:1)',
@@ -221,7 +246,8 @@ const pinI18n: Record<string, Record<string, string>> = {
     zoom200: 'Zoom al 200%',
     alwaysOnTop: 'Siempre al frente',
     copyCode: 'Copiar código',
-    loading: 'Cargando...'
+    loading: 'Cargando...',
+    copied: 'Copiado al portapapeles'
   }
 }
 
@@ -263,6 +289,9 @@ const pinId = ref('')
 const zoomLevel = ref(1.0)
 const windowOpacity = ref(1.0)
 const isAlwaysOnTop = ref(true)
+const copiedFeedback = ref(false)
+let copiedTimer: NodeJS.Timeout | null = null
+const isOsx = window.marknotepro?.isOsx ?? /Mac|iPod|iPhone|iPad/.test(navigator.platform)
 
 // Drag tracking
 let isDragging = false
@@ -391,8 +420,19 @@ const closePin = (): void => {
 
 const copyPin = async (): Promise<void> => {
   if (!payload.value) return
-  await window.electron.ipcRenderer.invoke('mt::pin-window-copy', payload.value.content)
   contextMenuVisible.value = false
+  try {
+    const success = await window.electron.ipcRenderer.invoke('mt::pin-window-copy', payload.value.content)
+    if (success !== false) {
+      copiedFeedback.value = true
+      if (copiedTimer) clearTimeout(copiedTimer)
+      copiedTimer = setTimeout(() => {
+        copiedFeedback.value = false
+      }, 1600)
+    }
+  } catch (err) {
+    console.error('Failed to copy pin content:', err)
+  }
 }
 
 const savePin = async (): Promise<void> => {
@@ -508,11 +548,14 @@ onMounted(async () => {
   })
 
   window.addEventListener('resize', onWindowResize)
+  window.addEventListener('keydown', onKeydown)
 })
 
 onUnmounted(() => {
   if (removeDataSub) removeDataSub()
+  if (copiedTimer) clearTimeout(copiedTimer)
   window.removeEventListener('resize', onWindowResize)
+  window.removeEventListener('keydown', onKeydown)
 })
 </script>
 
@@ -628,6 +671,43 @@ onUnmounted(() => {
   justify-content: center;
   line-height: 1;
   transition: all 0.12s ease;
+}
+
+.mini-btn.btn-success {
+  color: #22c55e !important;
+  background: rgba(34, 197, 94, 0.16) !important;
+}
+
+.pin-copy-toast {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(24, 26, 32, 0.92);
+  color: #ffffff;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  z-index: 2000;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.toast-fade-enter-active,
+.toast-fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.toast-fade-enter-from,
+.toast-fade-leave-to {
+  opacity: 0;
+  transform: translate(-50%, -40%);
 }
 
 .mini-btn svg {
