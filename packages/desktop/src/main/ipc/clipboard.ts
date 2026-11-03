@@ -101,7 +101,7 @@ export const registerClipboardIpcHandlers = (): void => {
   })
 
   ipcMain.on('mt::clipboard-hide-modal', () => {
-    clipboardModal.hide(true)
+    clipboardModal.hide()
   })
 
   // 2. Screen Capture

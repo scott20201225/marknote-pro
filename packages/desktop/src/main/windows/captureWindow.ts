@@ -36,7 +36,8 @@ export class CaptureWindowManager {
   }
 
   public async startCapture(): Promise<void> {
-    console.log('[CaptureWindowManager] startCapture called!')
+    log.info('[CaptureWindowManager] startCapture called!')
+    this._isClosing = false
     this._isCapturing = true
 
     // Check whether MarkNotePro was the active window on this EXACT display when shortcut was triggered
@@ -53,7 +54,9 @@ export class CaptureWindowManager {
     }
 
     if (this._win && !this._win.isDestroyed()) {
-      this._win.destroy()
+      try {
+        this._win.destroy()
+      } catch {}
       this._win = null
     }
 
@@ -165,6 +168,7 @@ export class CaptureWindowManager {
             )
           }
         }
+        this.close()
         return
       }
 
@@ -266,6 +270,8 @@ export class CaptureWindowManager {
         } catch {}
         this._win = null
         this._isCapturing = false
+        this._isClosing = false
+        this._currentPayload = null
       })
     } catch (err) {
       try {
@@ -376,42 +382,33 @@ export class CaptureWindowManager {
     this._isClosing = true
     this._isCapturing = false
 
-    if (this._fallbackTimer) {
-      clearTimeout(this._fallbackTimer)
-      this._fallbackTimer = null
-    }
-
     try {
-      globalShortcut.unregister('Escape')
-      globalShortcut.unregister('CommandOrControl+Escape')
-    } catch {}
-
-    const wasEditorActive = this._wasEditorActive
-    this._wasEditorActive = false
-
-    if (this._win && !this._win.isDestroyed()) {
-      try {
-        this._win.setVisibleOnAllWorkspaces(false)
-      } catch {}
-      this._win.destroy()
-      this._win = null
-    }
-
-    // Completely release the large screenshot image data from memory
-    this._currentPayload = null
-
-    this._isClosing = false
-
-    // Natural Focus Restoration:
-    // If MarkNotePro was the active application on this EXACT screen before capture started, gently return focus to editor.
-    // If editorWin was in native full-screen, macOS naturally returns focus to the underlying window without forced AppKit transitions.
-    if (wasEditorActive) {
-      const allWins = BrowserWindow.getAllWindows()
-      const editorWin = allWins.find((w) => !w.isDestroyed() && w !== this._win && w.isVisible())
-      if (editorWin && !editorWin.isFullScreen()) {
-        editorWin.focus()
-        editorWin.webContents?.focus()
+      if (this._fallbackTimer) {
+        clearTimeout(this._fallbackTimer)
+        this._fallbackTimer = null
       }
+
+      try {
+        globalShortcut.unregister('Escape')
+        globalShortcut.unregister('CommandOrControl+Escape')
+      } catch {}
+
+      this._wasEditorActive = false
+
+      if (this._win && !this._win.isDestroyed()) {
+        try {
+          this._win.setVisibleOnAllWorkspaces(false)
+        } catch {}
+        this._win.destroy()
+        this._win = null
+      }
+    } catch (e) {
+      log.error('[CaptureWindowManager] Error closing window:', e)
+    } finally {
+      // Completely release the large screenshot image data from memory
+      this._currentPayload = null
+      this._isClosing = false
+      this._isCapturing = false
     }
   }
 

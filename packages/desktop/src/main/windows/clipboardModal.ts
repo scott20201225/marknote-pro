@@ -91,7 +91,7 @@ export class ClipboardModalWindow {
 
     this._win.on('blur', () => {
       if (this._win && !this._win.isDestroyed() && this._win.isVisible()) {
-        this.hide(this._wasMarkNoteActive)
+        this.hide()
       }
     })
 
@@ -166,33 +166,14 @@ export class ClipboardModalWindow {
     })
   }
 
-  public hide(restoreFocusToEditor?: boolean): void {
-    const shouldRestore = restoreFocusToEditor ?? this._wasMarkNoteActive
+  public hide(): void {
     if (this._win && !this._win.isDestroyed() && this._win.isVisible()) {
       this._win.hide()
-    }
-    if (shouldRestore) {
-      this.restoreEditorFocus()
     }
   }
 
   public restoreEditorFocus(): void {
-    const allWindows = BrowserWindow.getAllWindows()
-    const editorWin = allWindows.find(
-      (w) => w !== this._win && !w.isDestroyed() && w.isVisible()
-    )
-    if (editorWin) {
-      const editorDisplay = screen.getDisplayMatching(editorWin.getBounds())
-      // ONLY restore focus if editor is on the EXACT SAME display where clipboard modal was opened!
-      // If editor is on another screen, NEVER steal focus across displays to avoid switching spaces.
-      if (this._activeDisplayId !== null && editorDisplay.id === this._activeDisplayId) {
-        if (isOsx) {
-          app.focus({ steal: true })
-        }
-        editorWin.focus()
-        editorWin.webContents?.focus()
-      }
-    }
+    // Intentionally no-op: auxiliary window close/hide must never steal focus or switch spaces to MarkNotePro!
   }
 
   public toggle(): void {

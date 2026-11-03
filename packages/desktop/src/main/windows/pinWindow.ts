@@ -119,7 +119,11 @@ export class PinWindowManager {
     const showAndFocus = (): void => {
       if (win.isDestroyed()) return
       if (!win.isVisible()) {
-        win.show()
+        if (isOsx) {
+          win.showInactive()
+        } else {
+          win.show()
+        }
       }
       win.focus()
       win.webContents.send('mt::pin-window-data', payload)
@@ -155,19 +159,7 @@ export class PinWindowManager {
         return
       }
     }
-
-    // Otherwise restore focus to the main MarkNotePro editor window
-    const allWindows = BrowserWindow.getAllWindows()
-    const editorWin = allWindows.find(
-      (w) =>
-        !w.isDestroyed() &&
-        w.isVisible() &&
-        w !== excludeWin &&
-        !this._winToPinId.has(w.id)
-    )
-    if (editorWin) {
-      editorWin.focus()
-    }
+    // When all pin windows are closed, never steal focus or switch Space to MarkNotePro!
   }
 
   public getPayload(pinId?: string, sourceWindow?: BrowserWindow): PinWindowPayload | null {
