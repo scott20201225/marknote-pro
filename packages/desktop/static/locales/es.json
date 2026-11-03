@@ -300,7 +300,9 @@
       "settings": "Configuración",
       "git": "Gestión de Git",
       "expandWorkspace": "Expandir espacio de trabajo",
-      "collapseWorkspace": "Contraer espacio de trabajo"
+      "collapseWorkspace": "Contraer espacio de trabajo",
+      "screenCapture": "Captura de pantalla",
+      "clipboardHistory": "Historial del portapapeles"
     }
   },
   "commandPalette": {

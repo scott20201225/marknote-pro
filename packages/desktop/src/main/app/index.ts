@@ -16,6 +16,7 @@ import { normalizeAndResolvePath } from '../filesystem'
 import { normalizeIpcPath } from '../ipc/fs'
 import { normalizeMarkdownPath } from '../filesystem/markdown'
 import { registerKeyboardListeners } from '../keyboard'
+import { registerGlobalShortcuts } from '../keyboard/globalShortcuts'
 import { selectTheme } from '../menu/actions/theme'
 import { dockMenu } from '../menu/templates'
 import registerSpellcheckerListeners from '../spellchecker'
@@ -423,6 +424,12 @@ class App {
     } else {
       // Create immediately on Windows/macOS
       createWindow()
+    }
+
+    try {
+      registerGlobalShortcuts()
+    } catch (err) {
+      log.error('[App] Failed to register global shortcuts:', err)
     }
 
     // this.shortcutCapture = new ShortcutCapture()

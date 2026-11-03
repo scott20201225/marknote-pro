@@ -18,6 +18,7 @@
  */
 
 import type { IKeyboardLayoutInfo, IKeyboardMapping } from 'native-keymap'
+import type { ClipboardItemRecord, PinWindowPayload, ScreenCaptureDisplayInfo } from './clipboard'
 import type {
   MarkdownDocument,
   TabOptions,
@@ -130,6 +131,26 @@ export interface DrawioExportPayload {
 // =================================================================
 
 export interface IpcInvokeChannels {
+  'mt::clipboard-get-history': { args: []; ret: ClipboardItemRecord[] }
+  'mt::clipboard-delete-item': { args: [id: string]; ret: boolean }
+  'mt::clipboard-clear-history': { args: []; ret: boolean }
+  'mt::clipboard-copy-item': { args: [item: ClipboardItemRecord]; ret: boolean }
+  'mt::clipboard-paste-item': { args: [item: ClipboardItemRecord]; ret: void }
+  'mt::clipboard-pin-item': { args: [item: ClipboardItemRecord]; ret: void }
+  'mt::capture-get-data': { args: []; ret: ScreenCaptureDisplayInfo | null }
+  'mt::capture-copy': { args: [dataUrl: string]; ret: boolean }
+  'mt::capture-save': { args: [dataUrl: string]; ret: string | null }
+  'mt::capture-pin': {
+    args: [dataUrl: string, bounds?: { x: number; y: number; width: number; height: number }]
+    ret: void
+  }
+  'mt::pin-window-get-payload': { args: [pinId?: string]; ret: PinWindowPayload | null }
+  'mt::pin-window-get-bounds': {
+    args: [pinId?: string]
+    ret: { x: number; y: number; width: number; height: number } | null
+  }
+  'mt::pin-window-copy': { args: [dataUrl: string]; ret: boolean }
+  'mt::pin-window-save': { args: [dataUrl: string]; ret: string | null }
   'mt::ask-for-image-path': { args: []; ret: string[] }
   'mt::boot-info-async': { args: []; ret: BootInfo }
   'mt::clipboard::guess-file-path': { args: []; ret: string | null }
@@ -441,6 +462,24 @@ export interface IpcSendChannels {
   'mt::mindmap::set-bounds': [bounds: DrawioBounds]
   'mt::mindmap::state': [payload: { modified?: boolean; data?: unknown }]
   'mt::drawio::set-bounds': [bounds: DrawioBounds]
+  'mt::trigger-screen-capture': []
+  'mt::trigger-clipboard-history': []
+  'mt::clipboard-hide-modal': []
+  'mt::capture-close': []
+  'mt::capture-first-frame-ready': []
+  'mt::capture-text-mode': [active: boolean]
+  'mt::pin-window-close': [pinId?: string]
+  'mt::pin-window-drag': [payload: { dx: number; dy: number; pinId?: string }]
+  'mt::pin-window-resize': [
+    payload: {
+      bounds: { x: number; y: number; width: number; height: number }
+      pinId?: string
+    }
+  ]
+  'mt::pin-window-set-always-on-top': [flag: boolean, pinId?: string]
+  'mt::pin-window-fit-size': [
+    payload: { pinId?: string; naturalWidth: number; naturalHeight: number; zoom?: number }
+  ]
   'mt::drawio-autosave-changed': [enabled: boolean]
   'mt::window::drop': [payload: unknown]
   'screen-capture': [payload: unknown]
@@ -476,6 +515,10 @@ export interface IpcSyncChannels {
 // =================================================================
 
 export interface IpcMainEventChannels {
+  'mt::clipboard-modal-show': [history: ClipboardItemRecord[]]
+  'mt::clipboard-history-updated': [history: ClipboardItemRecord[]]
+  'mt::capture-data-ready': [info: ScreenCaptureDisplayInfo]
+  'mt::pin-window-data': [payload: PinWindowPayload]
   'language-changed': [language: string]
   'mt::CHECKING_FOR_UPDATE': []
   'mt::UPDATE_AVAILABLE': [info?: unknown]

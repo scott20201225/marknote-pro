@@ -4,6 +4,9 @@ import type { RouteRecordRaw } from 'vue-router'
 // runtime, but vue-tsc needs the suffix.
 import App from '@/pages/app.vue'
 import Preference from '@/pages/preference.vue'
+import ClipboardModal from '@/pages/clipboardModal.vue'
+import ScreenCapture from '@/pages/screenCapture.vue'
+import PinWindow from '@/pages/pinWindow.vue'
 import General from '@/prefComponents/general/index.vue'
 import Editor from '@/prefComponents/editor/index.vue'
 import Markdown from '@/prefComponents/markdown/index.vue'
@@ -21,14 +24,34 @@ const parseSettingsPage = (type: string | null | undefined): string => {
   return pageUrl
 }
 
+const parseInitialRoute = (type: string | null | undefined): string => {
+  if (type === 'editor') return '/editor'
+  if (type === 'clipboard') return '/clipboard'
+  if (type === 'capture') return '/capture'
+  if (type === 'pin') return '/pin'
+  return parseSettingsPage(type)
+}
+
 const routes = (type: string | null | undefined): RouteRecordRaw[] => [
   {
     path: '/',
-    redirect: type === 'editor' ? '/editor' : parseSettingsPage(type)
+    redirect: parseInitialRoute(type)
   },
   {
     path: '/editor',
     component: App
+  },
+  {
+    path: '/clipboard',
+    component: ClipboardModal
+  },
+  {
+    path: '/capture',
+    component: ScreenCapture
+  },
+  {
+    path: '/pin',
+    component: PinWindow
   },
   {
     path: '/preference',

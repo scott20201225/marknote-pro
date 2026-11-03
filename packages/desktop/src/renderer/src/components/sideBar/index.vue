@@ -271,6 +271,16 @@ onBeforeUnmount(() => {
 })
 
 const handleLeftIconClick = (name: string): void => {
+  hideSidebarTooltip()
+  if (name === 'screenCapture') {
+    window.electron.ipcRenderer.send('mt::trigger-screen-capture')
+    return
+  }
+  if (name === 'clipboardHistory') {
+    window.electron.ipcRenderer.send('mt::trigger-clipboard-history')
+    return
+  }
+
   if (rightColumn.value === name) {
     const widthToPersist = sideBarViewWidth.value
     layoutStore.SET_LAYOUT({ rightColumn: '' })

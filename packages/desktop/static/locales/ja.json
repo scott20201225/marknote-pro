@@ -300,7 +300,9 @@
       "settings": "設定",
       "git": "Git管理",
       "expandWorkspace": "ワークスペースを展開",
-      "collapseWorkspace": "ワークスペースを折りたたむ"
+      "collapseWorkspace": "ワークスペースを折りたたむ",
+      "screenCapture": "画面キャプチャ",
+      "clipboardHistory": "クリップボード履歴"
     }
   },
   "commandPalette": {

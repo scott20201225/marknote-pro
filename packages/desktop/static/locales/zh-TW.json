@@ -328,7 +328,9 @@
       "settings": "設定",
       "git": "Git管理",
       "expandWorkspace": "展開工作區",
-      "collapseWorkspace": "折疊工作區"
+      "collapseWorkspace": "折疊工作區",
+      "screenCapture": "螢幕截圖",
+      "clipboardHistory": "剪貼簿歷史"
     }
   },
   "commandPalette": {

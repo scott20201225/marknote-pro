@@ -300,7 +300,9 @@
       "settings": "Ayarlar",
       "git": "Git Yönetimi",
       "expandWorkspace": "Çalışma alanını genişlet",
-      "collapseWorkspace": "Çalışma alanını daralt"
+      "collapseWorkspace": "Çalışma alanını daralt",
+      "screenCapture": "Ekran Görüntüsü",
+      "clipboardHistory": "Pano Geçmişi"
     }
   },
   "commandPalette": {

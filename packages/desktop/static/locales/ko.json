@@ -300,7 +300,9 @@
       "settings": "설정",
       "git": "Git 관리",
       "expandWorkspace": "작업 영역 확장",
-      "collapseWorkspace": "작업 영역 축소"
+      "collapseWorkspace": "작업 영역 축소",
+      "screenCapture": "화면 캡처",
+      "clipboardHistory": "클립보드 기록"
     }
   },
   "commandPalette": {

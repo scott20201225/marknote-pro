@@ -336,7 +336,9 @@
       "git": "Git Management",
       "settings": "Settings",
       "expandWorkspace": "Expand Workspace",
-      "collapseWorkspace": "Collapse Workspace"
+      "collapseWorkspace": "Collapse Workspace",
+      "screenCapture": "Screen Capture",
+      "clipboardHistory": "Clipboard History"
     }
   },
   "commandPalette": {

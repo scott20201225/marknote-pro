@@ -1,9 +1,9 @@
 import path from 'path'
-import type { BrowserWindow } from 'electron'
+import { app, type BrowserWindow } from 'electron'
 import { TypedEmitter } from '@shared/types/typedEmitter'
 import type Accessor from '../app/accessor'
 import { getThemeBackgroundColor } from '../../common/theme'
-import { isWindows } from '../config'
+import { isWindows, isOsx } from '../config'
 
 /**
  * A MarkNotePro window.
@@ -86,10 +86,14 @@ class BaseWindow extends TypedEmitter<BaseWindowEvents> {
 
   bringToFront(): void {
     const { browserWindow: win } = this
-    if (!win) return
+    if (!win || win.isDestroyed()) return
+    if (isOsx) {
+      app.focus({ steal: true })
+    }
     if (win.isMinimized()) win.restore()
     if (!win.isVisible()) win.show()
     win.focus()
+    win.webContents?.focus()
     win.moveTop()
   }
 
