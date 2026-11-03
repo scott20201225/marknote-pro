@@ -245,6 +245,7 @@ mac:
   entitlements: build/mac/entitlements.mac.plist
   entitlementsInherit: build/mac/entitlements.mac.plist
   extendInfo:
+    NSScreenCaptureUsageDescription: "MarkNotePro 需要访问屏幕录制权限以支持截屏与取色功能。"
     NSCameraUsageDescription: "Application requests access to the device's camera."
     NSMicrophoneUsageDescription: "MarkNotePro 需要访问麦克风以支持语音与音频录制功能。"
     NSAudioCaptureUsageDescription: "MarkNotePro 需要访问音频捕获以支持录屏与音频录制功能。"

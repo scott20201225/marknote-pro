@@ -39,9 +39,13 @@ export class CaptureWindowManager {
     console.log('[CaptureWindowManager] startCapture called!')
     this._isCapturing = true
 
-    // Check whether MarkNotePro was the active window when shortcut was triggered
+    // Check whether MarkNotePro was the active window on this EXACT display when shortcut was triggered
     const activeWin = BrowserWindow.getFocusedWindow()
-    this._wasEditorActive = activeWin !== null && !activeWin.isDestroyed()
+    const cursorPoint = screen.getCursorScreenPoint()
+    const currentDisplay = screen.getDisplayNearestPoint(cursorPoint)
+    const activeDisplay =
+      activeWin && !activeWin.isDestroyed() ? screen.getDisplayMatching(activeWin.getBounds()) : null
+    this._wasEditorActive = activeDisplay !== null && activeDisplay.id === currentDisplay.id
 
     if (this._fallbackTimer) {
       clearTimeout(this._fallbackTimer)
@@ -54,8 +58,6 @@ export class CaptureWindowManager {
     }
 
     try {
-      const cursorPoint = screen.getCursorScreenPoint()
-      const currentDisplay = screen.getDisplayNearestPoint(cursorPoint)
       const bounds = currentDisplay.bounds
       const scaleFactor = currentDisplay.scaleFactor || 1
 
@@ -119,6 +121,13 @@ export class CaptureWindowManager {
               s.id === `screen:${dispIdStr}` ||
               s.id.startsWith(`screen:${dispIdStr}:`)
           )
+          if (!targetSource) {
+            const allDisplays = screen.getAllDisplays()
+            const dispIndex = allDisplays.findIndex((d) => d.id === currentDisplay.id)
+            if (dispIndex >= 0 && sources[dispIndex]) {
+              targetSource = sources[dispIndex]
+            }
+          }
           if (!targetSource && sources.length > 0) {
             targetSource = sources[0]
           }
@@ -263,25 +272,25 @@ export class CaptureWindowManager {
     }
     if (!this._win || this._win.isDestroyed() || this._win.isVisible()) return
 
-    // Apply alwaysOnTop and workspace visibility at the exact moment of display
+    // Apply bounds and window levels onto target display
     try {
+      if (this._currentPayload?.bounds) {
+        this._win.setBounds({
+          x: this._currentPayload.bounds.x,
+          y: this._currentPayload.bounds.y,
+          width: this._currentPayload.bounds.width,
+          height: this._currentPayload.bounds.height
+        })
+      }
+
       if (isOsx) {
         // macOS: Use 'status' (level 25) with relativeLevel 1 (level 26) to cover Menu Bar (24) and Dock (20),
         // while strictly staying BELOW IME candidate pop-up windows (level 101) so candidates are visible!
         this._win.setAlwaysOnTop(true, 'status', 1)
         this._win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
-        app.focus({ steal: true })
       } else {
         // Windows / Linux:
         // Position window onto target display exact bounds and place above Taskbar with 'screen-saver'
-        if (this._currentPayload?.bounds) {
-          this._win.setBounds({
-            x: this._currentPayload.bounds.x,
-            y: this._currentPayload.bounds.y,
-            width: this._currentPayload.bounds.width,
-            height: this._currentPayload.bounds.height
-          })
-        }
         this._win.setAlwaysOnTop(true, 'screen-saver')
         this._win.setVisibleOnAllWorkspaces(true)
       }
@@ -312,9 +321,6 @@ export class CaptureWindowManager {
         log.warn('[CaptureWindowManager] setAlwaysOnTop floating error:', e)
       }
 
-      if (isOsx) {
-        app.focus({ steal: true })
-      }
       this._win.focus()
       this._win.webContents?.focus()
     } else {
@@ -363,14 +369,14 @@ export class CaptureWindowManager {
     this._isClosing = false
 
     // Natural Focus Restoration:
-    // If MarkNotePro was the active application before capture started, gently return focus to editor.
-    // If the user was in an external third-party application (e.g. Lark, Chrome, Terminal),
-    // NEVER steal or hijack focus back to MarkNotePro. Let macOS return focus to the previous app naturally!
+    // If MarkNotePro was the active application on this EXACT screen before capture started, gently return focus to editor.
+    // If the user was on another display or in an external application, NEVER steal focus across screens!
     if (wasEditorActive) {
       const allWins = BrowserWindow.getAllWindows()
       const editorWin = allWins.find((w) => !w.isDestroyed() && w !== this._win && w.isVisible())
       if (editorWin) {
         editorWin.focus()
+        editorWin.webContents?.focus()
       }
     }
   }

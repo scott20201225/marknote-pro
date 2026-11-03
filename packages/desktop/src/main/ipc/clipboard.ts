@@ -56,7 +56,7 @@ export const registerClipboardIpcHandlers = (): void => {
   ipcMain.handle('mt::clipboard-paste-item', async (_event, item: ClipboardItemRecord) => {
     try {
       clipboardService.pasteItem(item)
-      clipboardModal.hide(true)
+      clipboardModal.hide()
       await clipboardService.simulatePaste()
       return true
     } catch (err) {
