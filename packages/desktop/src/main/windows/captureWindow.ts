@@ -397,15 +397,18 @@ export class CaptureWindowManager {
       this._win = null
     }
 
+    // Completely release the large screenshot image data from memory
+    this._currentPayload = null
+
     this._isClosing = false
 
     // Natural Focus Restoration:
     // If MarkNotePro was the active application on this EXACT screen before capture started, gently return focus to editor.
-    // If the user was on another display or in an external application, NEVER steal focus across screens!
+    // If editorWin was in native full-screen, macOS naturally returns focus to the underlying window without forced AppKit transitions.
     if (wasEditorActive) {
       const allWins = BrowserWindow.getAllWindows()
       const editorWin = allWins.find((w) => !w.isDestroyed() && w !== this._win && w.isVisible())
-      if (editorWin) {
+      if (editorWin && !editorWin.isFullScreen()) {
         editorWin.focus()
         editorWin.webContents?.focus()
       }

@@ -87,28 +87,8 @@ class Keybindings {
       }
     }
 
-    // Direct registration for screenshot and clipboard modal inside editor windows
-    const screenshotKeys = ['Control+Shift+F1', 'Command+Shift+F1', 'Control+Shift+1', 'Command+Shift+1']
-    for (const acc of screenshotKeys) {
-      try {
-        this.registerAccelerator(win, acc, () => {
-          this.commandManager.execute(COMMANDS.EDIT_SCREENSHOT, win)
-        })
-      } catch (e) {
-        // Ignore duplicate registration
-      }
-    }
-
-    const clipboardKeys = ['Control+Shift+F3', 'Command+Shift+F3', 'Control+Shift+3']
-    for (const acc of clipboardKeys) {
-      try {
-        this.registerAccelerator(win, acc, () => {
-          clipboardHistory()
-        })
-      } catch (e) {
-        // Ignore duplicate registration
-      }
-    }
+    // Direct registration for screenshot and clipboard is removed here to prevent duplicate simultaneous executions.
+    // All screenshot and clipboard shortcuts are exclusively handled via globalShortcuts!
   }
 
   openConfigInFileManager(): void {

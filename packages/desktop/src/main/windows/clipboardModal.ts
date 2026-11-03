@@ -38,8 +38,12 @@ export class ClipboardModalWindow {
     this._win = new BrowserWindow({
       width: winWidth,
       height: winHeight,
-      x: initX,
-      y: initY,
+      minWidth: winWidth,
+      maxWidth: winWidth,
+      minHeight: winHeight,
+      maxHeight: winHeight,
+      fullscreen: false,
+      fullscreenable: false,
       type: isOsx ? 'panel' : undefined,
       frame: false,
       resizable: false,
@@ -127,6 +131,11 @@ export class ClipboardModalWindow {
       await clipboardService.checkClipboardNow()
     } catch (err) {
       log.warn('[ClipboardModal] checkClipboardNow error:', err as Error)
+    }
+
+    // Safety: ensure history modal never stays in full-screen state
+    if (this._win.isFullScreen()) {
+      this._win.setFullScreen(false)
     }
 
     // Set bounds accurately onto cursor display workArea
