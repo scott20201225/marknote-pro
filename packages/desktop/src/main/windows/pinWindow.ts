@@ -59,6 +59,7 @@ export class PinWindowManager {
       height: Math.round(height),
       x: Math.round(posX),
       y: Math.round(posY),
+      type: isOsx ? 'panel' : undefined,
       frame: false,
       titleBarStyle: isOsx ? 'hidden' : undefined,
       trafficLightPosition: isOsx ? { x: -100, y: -100 } : undefined,
@@ -93,7 +94,10 @@ export class PinWindowManager {
     // Pin windows stay above normal apps, but below the Clipboard History modal (which uses 'screen-saver')
     const topLevel = 'floating'
     win.setAlwaysOnTop(true, topLevel)
-    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+    win.setVisibleOnAllWorkspaces(true, {
+      visibleOnFullScreen: true,
+      skipTransformProcessType: true
+    })
 
     const baseUrl =
       process.env.NODE_ENV === 'development'

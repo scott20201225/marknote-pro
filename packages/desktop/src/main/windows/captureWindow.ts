@@ -173,6 +173,7 @@ export class CaptureWindowManager {
         y: bounds.y,
         width: bounds.width,
         height: bounds.height,
+        type: isOsx ? 'panel' : undefined,
         useContentSize: false,
         frame: false,
         resizable: false,
@@ -184,8 +185,12 @@ export class CaptureWindowManager {
         alwaysOnTop: true,
         skipTaskbar: true,
         enableLargerThanScreen: true,
-        fullscreen: false,
-        fullscreenable: false,
+        // CRITICAL macOS Full-Screen Fix:
+        // NEVER set fullscreenable: false or fullscreen: false here!
+        // In macOS AppKit, fullscreenable: false applies NSWindowCollectionBehaviorFullScreenNone (512),
+        // which strictly forbids the window from participating in ANY Space containing a full-screen window.
+        // That was the exact root cause why taking a screenshot while MarkNotePro or any other app was full-screen
+        // forced the app to abruptly exit full-screen mode, broke titlebar traffic light buttons, and switched Spaces!
         transparent: false, // 实体不透明全屏窗口，杜绝任何透底与 DWM 混合导致的重影/双任务栏
         backgroundColor: '#000000',
         hasShadow: false,
@@ -198,8 +203,16 @@ export class CaptureWindowManager {
         }
       })
 
-      // Zero-flicker: Avoid setting workspace flags on hidden windows,
-      // which causes WindowServer to clear layers and trigger flashes.
+      // Auxiliary full-screen behavior:
+      // Must set visibleOnFullScreen immediately upon creation so macOS attaches this overlay
+      // to the current Space (including full-screen spaces) without jumping to Desktop 1!
+      if (isOsx) {
+        this._win.setAlwaysOnTop(true, 'status', 1)
+        this._win.setVisibleOnAllWorkspaces(true, {
+          visibleOnFullScreen: true,
+          skipTransformProcessType: true
+        })
+      }
 
       try {
         globalShortcut.register('Escape', () => {
@@ -287,20 +300,26 @@ export class CaptureWindowManager {
         // macOS: Use 'status' (level 25) with relativeLevel 1 (level 26) to cover Menu Bar (24) and Dock (20),
         // while strictly staying BELOW IME candidate pop-up windows (level 101) so candidates are visible!
         this._win.setAlwaysOnTop(true, 'status', 1)
-        this._win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+        this._win.setVisibleOnAllWorkspaces(true, {
+          visibleOnFullScreen: true,
+          skipTransformProcessType: true
+        })
+        // Crucial: showInactive() displays the overlay on the current Space (including full-screen spaces)
+        // WITHOUT activating the app or switching Spaces!
+        this._win.showInactive()
+        this._win.webContents?.focus()
       } else {
         // Windows / Linux:
         // Position window onto target display exact bounds and place above Taskbar with 'screen-saver'
         this._win.setAlwaysOnTop(true, 'screen-saver')
         this._win.setVisibleOnAllWorkspaces(true)
+        this._win.show()
+        this._win.focus()
+        this._win.webContents?.focus()
       }
     } catch (e) {
       log.warn('[CaptureWindowManager] setAlwaysOnTop error:', e)
     }
-
-    this._win.show()
-    this._win.focus()
-    this._win.webContents?.focus()
   }
 
   public setTextEditingMode(active: boolean): void {
@@ -317,6 +336,12 @@ export class CaptureWindowManager {
       // 2. Adjust window level to 'floating' (3) so all IME candidate popups (101) stay reliably on top
       try {
         this._win.setAlwaysOnTop(true, 'floating')
+        if (isOsx) {
+          this._win.setVisibleOnAllWorkspaces(true, {
+            visibleOnFullScreen: true,
+            skipTransformProcessType: true
+          })
+        }
       } catch (e) {
         log.warn('[CaptureWindowManager] setAlwaysOnTop floating error:', e)
       }
@@ -336,6 +361,12 @@ export class CaptureWindowManager {
 
       try {
         this._win.setAlwaysOnTop(true, isOsx ? 'status' : 'screen-saver', isOsx ? 1 : 0)
+        if (isOsx) {
+          this._win.setVisibleOnAllWorkspaces(true, {
+            visibleOnFullScreen: true,
+            skipTransformProcessType: true
+          })
+        }
       } catch {}
     }
   }

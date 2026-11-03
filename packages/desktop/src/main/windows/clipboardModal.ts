@@ -40,6 +40,7 @@ export class ClipboardModalWindow {
       height: winHeight,
       x: initX,
       y: initY,
+      type: isOsx ? 'panel' : undefined,
       frame: false,
       resizable: false,
       movable: true,
@@ -63,7 +64,10 @@ export class ClipboardModalWindow {
 
     const topLevel = 'floating'
     this._win.setAlwaysOnTop(true, topLevel)
-    this._win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+    this._win.setVisibleOnAllWorkspaces(true, {
+      visibleOnFullScreen: true,
+      skipTransformProcessType: true
+    })
 
     const baseUrl =
       process.env.NODE_ENV === 'development'
@@ -129,10 +133,23 @@ export class ClipboardModalWindow {
     this._win.setBounds({ x: posX, y: posY, width: winWidth, height: winHeight })
     const topLevel = 'floating'
     this._win.setAlwaysOnTop(true, topLevel)
+    this._win.setVisibleOnAllWorkspaces(true, {
+      visibleOnFullScreen: true,
+      skipTransformProcessType: true
+    })
     this._win.moveTop()
-    this._win.show()
-    this._win.focus()
-    this._win.webContents?.focus()
+
+    if (isOsx) {
+      // Crucial: showInactive() displays on top of native full-screen apps without triggering
+      // macOS application activation or space jumping!
+      this._win.showInactive()
+      this._win.focus()
+      this._win.webContents?.focus()
+    } else {
+      this._win.show()
+      this._win.focus()
+      this._win.webContents?.focus()
+    }
 
     this._win.webContents.send('mt::clipboard-modal-show', {
       history: clipboardService.history,
