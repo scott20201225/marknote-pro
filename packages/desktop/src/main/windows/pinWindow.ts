@@ -74,7 +74,8 @@ export class PinWindowManager {
       skipTaskbar: true,
       enableLargerThanScreen: true,
       transparent: true,
-      hasShadow: true,
+      hasShadow: isOsx,
+      thickFrame: isOsx ? undefined : false,
       show: false,
       webPreferences: {
         preload: path.join(__dirname, '../preload/index.js'),

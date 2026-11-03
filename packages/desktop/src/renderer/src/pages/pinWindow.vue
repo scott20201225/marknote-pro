@@ -1,6 +1,10 @@
 <template>
   <div
-    :class="['pin-window-container', isDarkTheme ? 'theme-dark' : 'theme-light']"
+    :class="[
+      'pin-window-container',
+      isDarkTheme ? 'theme-dark' : 'theme-light',
+      isOsx ? 'platform-mac' : 'platform-other'
+    ]"
     :style="{ opacity: windowOpacity }"
     @mousedown="onMouseDown"
     @wheel="onWheel"
@@ -691,22 +695,39 @@ onUnmounted(() => {
 
 <style scoped>
 .pin-window-container {
-  width: 100%;
-  height: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
   margin: 0;
   padding: 0;
   display: block;
   background: transparent;
   user-select: none;
   overflow: hidden;
-  position: relative;
   outline: none;
-  cursor: grab;
   box-sizing: border-box;
 }
 
-.pin-window-container:active {
+/* macOS: Keep original grab & grabbing */
+.platform-mac.pin-window-container {
+  cursor: grab;
+}
+
+.platform-mac.pin-window-container:active {
   cursor: grabbing;
+}
+
+/* Windows & Linux: Use native hardware move cursor to prevent invisible software cursor */
+.platform-other.pin-window-container {
+  cursor: move;
+}
+
+.platform-other.pin-window-container:active {
+  cursor: move;
 }
 
 /* Hover Action Bar */
@@ -852,6 +873,11 @@ onUnmounted(() => {
 
 /* Pinned Image View with Crisp Borders and Subtle Shadows across All Platforms */
 .pinned-image-view {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   width: 100%;
   height: 100%;
   margin: 0;
@@ -862,7 +888,7 @@ onUnmounted(() => {
   overflow: hidden;
   box-sizing: border-box;
   border-radius: 4px;
-  position: relative;
+  cursor: inherit;
 }
 
 .theme-light .pinned-image-view {
@@ -888,11 +914,14 @@ onUnmounted(() => {
 .pinned-img {
   width: 100%;
   height: 100%;
+  max-width: 100%;
+  max-height: 100%;
   display: block;
   object-fit: contain;
   border-radius: 2.5px;
   margin: 0;
   padding: 0;
+  cursor: inherit;
 }
 
 /* Pinned Text View */
