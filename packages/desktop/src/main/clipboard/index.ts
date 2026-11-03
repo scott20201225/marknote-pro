@@ -38,6 +38,7 @@ export class ClipboardService extends TypedEmitter<ClipboardServiceEvents> {
     this._historyFilePath = path.join(this._storageDir, 'history.json')
     this._ensureDirs()
     this._loadHistoryFromDisk()
+    this._cleanOrphanImages()
     this._watchHistoryFile()
   }
 
@@ -104,6 +105,28 @@ export class ClipboardService extends TypedEmitter<ClipboardServiceEvents> {
     } catch (err) {
       log.error('[ClipboardService] Failed to load history from disk:', err)
       this._history = []
+    }
+  }
+
+  private async _cleanOrphanImages(): Promise<void> {
+    try {
+      if (!fs.existsSync(this._imagesDir)) return
+      const validFileNames = new Set(
+        this._history
+          .map((item) => item.imagePath)
+          .filter(Boolean)
+          .map((p) => path.basename(p!))
+      )
+      const files = await fsPromises.readdir(this._imagesDir)
+      for (const file of files) {
+        if (!validFileNames.has(file)) {
+          try {
+            await fsPromises.unlink(path.join(this._imagesDir, file))
+          } catch {}
+        }
+      }
+    } catch (err) {
+      log.warn('[ClipboardService] Failed to clean orphan images:', err)
     }
   }
 
@@ -339,7 +362,14 @@ export class ClipboardService extends TypedEmitter<ClipboardServiceEvents> {
     this._history.unshift(item)
 
     if (this._history.length > MAX_HISTORY_ITEMS) {
+      const evicted = this._history.slice(MAX_HISTORY_ITEMS)
       this._history = this._history.slice(0, MAX_HISTORY_ITEMS)
+      // Clean up physical disk files for evicted items
+      for (const ev of evicted) {
+        if (ev.imagePath && !ev.pinned && fs.existsSync(ev.imagePath)) {
+          fsPromises.unlink(ev.imagePath).catch(() => {})
+        }
+      }
     }
 
     this._saveHistoryToDisk()
@@ -393,8 +423,32 @@ export class ClipboardService extends TypedEmitter<ClipboardServiceEvents> {
   }
 
   public async clearHistory(): Promise<boolean> {
+    try {
+      // 1. Delete all tracked physical image files
+      for (const item of this._history) {
+        if (item.imagePath && fs.existsSync(item.imagePath)) {
+          try {
+            await fsPromises.unlink(item.imagePath)
+          } catch {}
+        }
+      }
+      // 2. Clean up any leftover orphan files in the images cache directory
+      if (fs.existsSync(this._imagesDir)) {
+        const files = await fsPromises.readdir(this._imagesDir)
+        for (const file of files) {
+          try {
+            await fsPromises.unlink(path.join(this._imagesDir, file))
+          } catch {}
+        }
+      }
+      log.info('[ClipboardService] Successfully purged all cached image files on clearHistory')
+    } catch (err) {
+      log.error('[ClipboardService] Failed to clean up images directory on clearHistory:', err)
+    }
+
     this._history = []
     this._lastHash = ''
+    this._lastImageFingerprint = ''
     await this._saveHistoryToDisk()
     this.emit('history-updated', this.history)
     return true
