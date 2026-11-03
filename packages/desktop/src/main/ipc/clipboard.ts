@@ -163,9 +163,8 @@ export const registerClipboardIpcHandlers = (): void => {
         const img = nativeImage.createFromDataURL(dataUrl)
         const size = img.getSize()
         await clipboardService.addCapturedImage(dataUrl, size.width, size.height)
-        captureManager.close()
 
-        pinManager.createPinWindow({
+        const pinWin = pinManager.createPinWindow({
           id: `pin_${Date.now()}`,
           type: 'image',
           content: dataUrl,
@@ -175,8 +174,13 @@ export const registerClipboardIpcHandlers = (): void => {
           y: bounds?.y,
           title: '屏幕贴图'
         })
+
+        captureManager.close()
+        return !!pinWin
       } catch (err) {
         log.error('[Capture] Failed to pin capture:', err)
+        captureManager.close()
+        return false
       }
     }
   )

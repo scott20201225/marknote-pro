@@ -23,6 +23,7 @@ export class CaptureWindowManager {
   private _win: BrowserWindow | null = null
   private _currentPayload: ScreenCaptureDisplayInfo | null = null
   private _isCapturing = false
+  private _isClosing = false
   private _wasEditorActive = false
   private _fallbackTimer: NodeJS.Timeout | null = null
 
@@ -167,14 +168,15 @@ export class CaptureWindowManager {
         frame: false,
         resizable: false,
         movable: false,
+        thickFrame: false,
         minimizable: false,
         maximizable: false,
         closable: true,
         alwaysOnTop: true,
         skipTaskbar: true,
         enableLargerThanScreen: true,
-        fullscreen: !isOsx, // Windows / Linux: Native fullscreen covers 100% of the screen including taskbars!
-        fullscreenable: true,
+        fullscreen: false,
+        fullscreenable: false,
         transparent: false, // 实体不透明全屏窗口，杜绝任何透底与 DWM 混合导致的重影/双任务栏
         backgroundColor: '#000000',
         hasShadow: false,
@@ -186,15 +188,6 @@ export class CaptureWindowManager {
           nodeIntegration: false
         }
       })
-
-      if (!isOsx) {
-        this._win.on('leave-html-full-screen', () => {
-          this.close()
-        })
-        this._win.on('leave-full-screen', () => {
-          this.close()
-        })
-      }
 
       // Zero-flicker: Avoid setting workspace flags on hidden windows,
       // which causes WindowServer to clear layers and trigger flashes.
@@ -280,7 +273,7 @@ export class CaptureWindowManager {
         app.focus({ steal: true })
       } else {
         // Windows / Linux:
-        // Position window onto target display before entering native full screen to cover taskbars and bezels
+        // Position window onto target display exact bounds and place above Taskbar with 'screen-saver'
         if (this._currentPayload?.bounds) {
           this._win.setBounds({
             x: this._currentPayload.bounds.x,
@@ -291,7 +284,6 @@ export class CaptureWindowManager {
         }
         this._win.setAlwaysOnTop(true, 'screen-saver')
         this._win.setVisibleOnAllWorkspaces(true)
-        this._win.setFullScreen(true)
       }
     } catch (e) {
       log.warn('[CaptureWindowManager] setAlwaysOnTop error:', e)
@@ -343,11 +335,14 @@ export class CaptureWindowManager {
   }
 
   public close(): void {
+    if (this._isClosing) return
+    this._isClosing = true
+    this._isCapturing = false
+
     if (this._fallbackTimer) {
       clearTimeout(this._fallbackTimer)
       this._fallbackTimer = null
     }
-    this._isCapturing = false
 
     try {
       globalShortcut.unregister('Escape')
@@ -359,14 +354,13 @@ export class CaptureWindowManager {
 
     if (this._win && !this._win.isDestroyed()) {
       try {
-        if (!isOsx && this._win.isFullScreen()) {
-          this._win.setFullScreen(false)
-        }
         this._win.setVisibleOnAllWorkspaces(false)
       } catch {}
       this._win.destroy()
       this._win = null
     }
+
+    this._isClosing = false
 
     // Natural Focus Restoration:
     // If MarkNotePro was the active application before capture started, gently return focus to editor.
