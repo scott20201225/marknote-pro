@@ -685,6 +685,7 @@ const tagDirectionLabel = computed(() => {
 const toggleTool = (tool: string): void => {
   const next = activeTool.value === tool ? 'none' : tool
   sendAction('setTool', { tool: next })
+  window.electron.ipcRenderer.send('mt::pin-window-focus', pinId.value)
 }
 
 const toggleWatermark = (): void => {

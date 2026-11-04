@@ -13,6 +13,16 @@ export class PinWindowManager {
   private _winToPinId: Map<number, string> = new Map()
   private _toolbarWindows: Map<string, BrowserWindow> = new Map()
 
+  constructor() {
+    app.whenReady().then(() => {
+      screen.on('display-metrics-changed', () => {
+        for (const [pinId] of this._toolbarWindows.entries()) {
+          this.repositionToolbar(pinId)
+        }
+      })
+    })
+  }
+
   public createPinWindow(payload: PinWindowPayload): BrowserWindow {
     const pinId = payload.id || `pin_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
     payload.id = pinId
@@ -123,7 +133,13 @@ export class PinWindowManager {
         height: Math.round(height)
       })
       if (!win.isVisible()) {
-        win.show()
+        // On macOS, attach an auxiliary pin window to the current full-screen
+        // Space before giving its text input focus to the renderer.
+        if (isOsx) {
+          win.showInactive()
+        } else {
+          win.show()
+        }
         win.focus()
         win.webContents?.focus()
       } else {
@@ -155,7 +171,18 @@ export class PinWindowManager {
 
     win.loadURL(url.toString())
 
+    const syncToolbar = (): void => {
+      const actualPinId = this._winToPinId.get(win.id)
+      if (actualPinId && this._toolbarWindows.has(actualPinId)) {
+        this.repositionToolbar(actualPinId)
+      }
+    }
+    win.on('move', syncToolbar)
+    win.on('moved', syncToolbar)
+    win.on('resize', syncToolbar)
+
     win.on('closed', () => {
+      this.closeEditToolbar(pinId)
       this._windows.delete(pinId)
       this._payloads.delete(pinId)
       this._winToPinId.delete(win.id)
@@ -330,6 +357,18 @@ export class PinWindowManager {
       try {
         win.setAlwaysOnTop(true, 'floating')
       } catch {}
+      if (isOsx) {
+        // Re-attach before focusing the textarea. A normal show/focus sequence
+        // can leave the IME candidate panel in MarkNotePro's original Space.
+        try {
+          win.setVisibleOnAllWorkspaces(true, {
+            visibleOnFullScreen: true,
+            skipTransformProcessType: true
+          })
+          win.showInactive()
+          win.moveTop()
+        } catch {}
+      }
       win.focus()
       win.webContents?.focus()
     }
@@ -413,15 +452,13 @@ export class PinWindowManager {
     if (!tbWin || tbWin.isDestroyed()) return
 
     const pinWin = this._windows.get(pinId)
-    const pinBounds =
-      bounds ||
-      (pinWin && !pinWin.isDestroyed()
-        ? pinWin.getBounds()
-        : null)
+    if (!pinWin || pinWin.isDestroyed()) return
+
+    const pinBounds = bounds || pinWin.getBounds()
     if (!pinBounds) return
 
     const [tbWidth, tbHeight] = tbWin.getSize()
-    const currentDisplay = screen.getDisplayNearestPoint({ x: pinBounds.x, y: pinBounds.y })
+    const currentDisplay = screen.getDisplayMatching(pinBounds)
     const workArea = currentDisplay.workArea
 
     let posX = Math.round(pinBounds.x + (pinBounds.width - tbWidth) / 2)
@@ -459,7 +496,7 @@ export class PinWindowManager {
     const tbWidth = 780
     const tbHeight = 140
 
-    const currentDisplay = screen.getDisplayNearestPoint({ x: pinBounds.x, y: pinBounds.y })
+    const currentDisplay = screen.getDisplayMatching(pinBounds)
     const workArea = currentDisplay.workArea
 
     let posX = Math.round(pinBounds.x + (pinBounds.width - tbWidth) / 2)
@@ -476,6 +513,7 @@ export class PinWindowManager {
       height: tbHeight,
       x: posX,
       y: posY,
+      type: isOsx ? 'panel' : undefined,
       frame: false,
       transparent: true,
       resizable: false,

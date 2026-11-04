@@ -95,7 +95,7 @@
           ref="annotationCanvasRef"
           class="pin-annotation-canvas"
           :style="{ cursor: annotationCursor }"
-          @mousedown="onCanvasMouseDown"
+          @mousedown.stop="onCanvasMouseDown"
           @mousemove="onCanvasMouseMove"
           @mouseup="onCanvasMouseUp"
         ></canvas>
@@ -1302,6 +1302,9 @@ const renderCanvas = (): void => {
 }
 
 const onCanvasMouseDown = (e: MouseEvent): void => {
+  // The root handler owns window dragging. Keep canvas interactions local so
+  // opening a text/tag editor is not immediately committed by that handler.
+  e.stopPropagation()
   if (!isEditing.value) return
   if (e.button !== 0 && e.button !== 1) return
 
@@ -1516,6 +1519,7 @@ const openTextEditor = (
   }
   nextTick(focusInput)
   requestAnimationFrame(focusInput)
+  setTimeout(focusInput, 60)
 }
 
 const onCompositionStart = (): void => {
