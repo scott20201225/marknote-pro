@@ -5,7 +5,7 @@
 }
 
 .mu-image-toolbar {
-    width: 240px;
+    width: 236px;
     height: 30px;
 }
 
@@ -38,18 +38,14 @@
 }
 
 .mu-image-toolbar li.item.edit {
-    margin-right: 21px;
-    margin-left: 10px;
+    margin-right: 18px;
+    margin-left: 6px;
 }
 
-.mu-image-toolbar li.item.inline {
-    margin-right: 8px;
-}
-
-.mu-image-toolbar li.item:first-of-type::before {
+.mu-image-toolbar li.item.edit::after {
     position: absolute;
     top: 7px;
-    right: -10px;
+    right: -9px;
 
     width: 1px;
     height: 16px;
@@ -57,6 +53,10 @@
     background: var(--editor-color-10);
 
     content: '';
+}
+
+.mu-image-toolbar li.item.inline {
+    margin-right: 8px;
 }
 
 .mu-image-toolbar li.item.delete {

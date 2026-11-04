@@ -151,6 +151,7 @@ export interface IpcInvokeChannels {
   }
   'mt::pin-window-copy': { args: [dataUrl: string]; ret: boolean }
   'mt::pin-window-save': { args: [dataUrl: string]; ret: string | null }
+  'mt::pin-markdown-update': { args: [payload: any]; ret: any }
   'mt::ask-for-image-path': { args: []; ret: string[] }
   'mt::boot-info-async': { args: []; ret: BootInfo }
   'mt::clipboard::guess-file-path': { args: []; ret: string | null }
@@ -468,6 +469,14 @@ export interface IpcSendChannels {
   'mt::capture-close': []
   'mt::capture-first-frame-ready': []
   'mt::capture-text-mode': [active: boolean]
+  'mt::pin-text-mode': [active: boolean, pinId?: string]
+  'mt::pin-edit-toolbar-open': [payload: { pinId: string; bounds?: { x: number; y: number; width: number; height: number } }]
+  'mt::pin-edit-toolbar-close': [pinId: string]
+  'mt::pin-edit-action': [payload: any]
+  'mt::pin-edit-state-sync': [payload: any]
+  'mt::pin-toolbar-drag': [payload: { pinId: string; dx: number; dy: number }]
+  'mt::pin-toolbar-focus': [pinId?: string]
+  'mt::pin-window-focus': [pinId?: string]
   'mt::pin-window-close': [pinId?: string]
   'mt::pin-window-drag': [payload: { dx: number; dy: number; pinId?: string }]
   'mt::pin-window-resize': [
@@ -519,6 +528,8 @@ export interface IpcMainEventChannels {
   'mt::clipboard-history-updated': [history: ClipboardItemRecord[]]
   'mt::capture-data-ready': [info: ScreenCaptureDisplayInfo]
   'mt::pin-window-data': [payload: PinWindowPayload]
+  'mt::pin-edit-action': [payload: any]
+  'mt::pin-edit-state-sync': [payload: any]
   'language-changed': [language: string]
   'mt::CHECKING_FOR_UPDATE': []
   'mt::UPDATE_AVAILABLE': [info?: unknown]

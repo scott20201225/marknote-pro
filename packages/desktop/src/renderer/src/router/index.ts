@@ -7,6 +7,7 @@ import Preference from '@/pages/preference.vue'
 import ClipboardModal from '@/pages/clipboardModal.vue'
 import ScreenCapture from '@/pages/screenCapture.vue'
 import PinWindow from '@/pages/pinWindow.vue'
+import PinToolbar from '@/pages/pinToolbar.vue'
 import General from '@/prefComponents/general/index.vue'
 import Editor from '@/prefComponents/editor/index.vue'
 import Markdown from '@/prefComponents/markdown/index.vue'
@@ -29,6 +30,7 @@ const parseInitialRoute = (type: string | null | undefined): string => {
   if (type === 'clipboard') return '/clipboard'
   if (type === 'capture') return '/capture'
   if (type === 'pin') return '/pin'
+  if (type === 'pin-toolbar') return '/pin-toolbar'
   return parseSettingsPage(type)
 }
 
@@ -52,6 +54,10 @@ const routes = (type: string | null | undefined): RouteRecordRaw[] => [
   {
     path: '/pin',
     component: PinWindow
+  },
+  {
+    path: '/pin-toolbar',
+    component: PinToolbar
   },
   {
     path: '/preference',

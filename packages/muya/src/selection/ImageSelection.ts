@@ -16,6 +16,7 @@ class ImageSelection {
 
     attach(): void {
         const { eventCenter, domNode } = this._muya;
+        eventCenter.attachDOMEvent(domNode, 'mousedown', this._handleMousedown);
         eventCenter.attachDOMEvent(domNode, 'click', this._handleClick);
         eventCenter.attachDOMEvent(document, 'click', this._handleDocClick);
         eventCenter.attachDOMEvent(document, 'keydown', this._handleKeydown);
@@ -29,9 +30,17 @@ class ImageSelection {
         this.selected = null;
     };
 
+    private _handleMousedown = (event: Event): void => {
+        const { target } = event;
+        if (target instanceof Element && target.closest('.mu-image-icon-pin')) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+    };
+
     private _handleClick = (event: Event): void => {
         const { target } = event;
-        if (!isHTMLElement(target))
+        if (!target || !(target instanceof Element))
             return;
         const imageWrapper = target.closest<HTMLElement>(`.${CLASS_NAMES.MU_INLINE_IMAGE}`);
         this.selected = null;
@@ -86,20 +95,81 @@ class ImageSelection {
     private _handleClickInlineImage(event: Event, imageWrapper: HTMLElement) {
         event.preventDefault();
         event.stopPropagation();
-        const { eventCenter } = this._muya;
-        const imageInfo = getImageInfo(imageWrapper);
         const { target } = event;
-        if (!(target instanceof Node))
+        if (!target || !(target instanceof Element))
             return;
-        const deleteContainer = isHTMLElement(target)
-            ? target.closest('.mu-image-icon-close')
-            : null;
+
+        const pinContainer = target.closest('.mu-image-icon-pin');
+        if (pinContainer) {
+            const img = imageWrapper.querySelector('img');
+            const tokenSrc = imageWrapper.getAttribute('data-raw') || '';
+            const rawSrc = img?.getAttribute('src') || '';
+            const width = Math.max(300, img?.naturalWidth || img?.clientWidth || 600);
+            const height = Math.max(200, img?.naturalHeight || img?.clientHeight || 400);
+
+            if (!rawSrc && !tokenSrc)
+                return;
+
+            const currentSrc = img?.currentSrc || img?.src || rawSrc;
+            let contentUrl = currentSrc || rawSrc;
+            try {
+                if (img && img.naturalWidth > 0 && img.naturalHeight > 0) {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.naturalWidth;
+                    canvas.height = img.naturalHeight;
+                    const ctx = canvas.getContext('2d');
+                    if (ctx) {
+                        ctx.drawImage(img, 0, 0);
+                        contentUrl = canvas.toDataURL('image/png');
+                    }
+                }
+            }
+            catch {
+                contentUrl = currentSrc || rawSrc;
+            }
+
+            let markdownMeta: any;
+            try {
+                const imageInfo = getImageInfo(imageWrapper);
+                const contentDom = findContentDOM(imageWrapper);
+                const contentBlock = contentDom ? (contentDom[BLOCK_DOM_PROPERTY] as Format) : null;
+                markdownMeta = {
+                    blockId: contentBlock?.id,
+                    raw: imageInfo.token.raw,
+                    start: imageInfo.token.range?.start,
+                    end: imageInfo.token.range?.end,
+                    alt: imageInfo.token.attrs?.alt,
+                    title: imageInfo.token.attrs?.title,
+                    originalSrc: imageInfo.token.attrs?.src,
+                    resolvedSrc: rawSrc,
+                };
+            }
+            catch (err) {
+                console.warn('[ImageSelection] Failed to extract markdownMeta for pin:', err);
+            }
+
+            if ((window as any).electron?.ipcRenderer?.invoke) {
+                (window as any).electron.ipcRenderer.invoke('mt::pin-create', {
+                    type: 'image',
+                    content: contentUrl,
+                    width,
+                    height,
+                    title: (img?.getAttribute('alt')) || imageWrapper.getAttribute('title') || 'Markdown 图片',
+                    markdownMeta,
+                });
+            }
+
+            return;
+        }
+
+        const deleteContainer = target.closest('.mu-image-icon-close');
         const contentDom = findContentDOM(target);
 
         if (!contentDom)
             return;
 
         const contentBlock = contentDom[BLOCK_DOM_PROPERTY] as Format;
+        const imageInfo = getImageInfo(imageWrapper);
 
         if (deleteContainer) {
             contentBlock.deleteImage(imageInfo);

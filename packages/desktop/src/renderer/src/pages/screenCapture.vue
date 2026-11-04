@@ -34,24 +34,23 @@
       </span>
     </div>
 
-    <!-- Active Text Editing Box with Lark-Style Blue Border and 4 Corner Handles -->
+    <!-- Active Text / Tag Editing Box with Lark-Style Focus Ring -->
     <!-- IMMEDIATELY AUTO-FOCUSED ON CLICK, NO EXTRA CLICK REQUIRED -->
     <div
       v-if="textInputState.active"
-      class="lark-active-textbox"
-      :style="{
-        left: `${textInputState.x}px`,
-        top: `${textInputState.y}px`
-      }"
+      :class="['lark-active-textbox', { 'is-tag-bubble': textInputState.isTag }]"
+      :style="activeEditorPositionStyle"
       @mousedown.stop
       @mouseup.stop
       @click.stop
     >
-      <!-- 4 Corner Dots -->
-      <div class="textbox-handle nw"></div>
-      <div class="textbox-handle ne"></div>
-      <div class="textbox-handle se"></div>
-      <div class="textbox-handle sw"></div>
+      <!-- 4 Corner Dots (Only shown for normal text, hidden for tag bubble) -->
+      <template v-if="!textInputState.isTag">
+        <div class="textbox-handle nw"></div>
+        <div class="textbox-handle ne"></div>
+        <div class="textbox-handle se"></div>
+        <div class="textbox-handle sw"></div>
+      </template>
 
       <!-- If it's a Step Note, display the non-editable step badge on the left -->
       <div
@@ -67,20 +66,9 @@
         ref="textInputRef"
         v-focus
         v-model="textInputState.text"
-        :class="['lark-textarea', textStyle]"
-        :style="{
-          color: textStyle === 'filled' ? (isLightActiveColor ? '#0f172a' : '#ffffff') : activeColor,
-          backgroundColor:
-            textStyle === 'filled'
-              ? activeColor
-              : textStyle === 'bordered'
-                ? 'rgba(0, 0, 0, 0.45)'
-                : 'transparent',
-          fontSize: `${fontSizeVal}px`,
-          lineHeight: '1.35',
-          caretColor: textStyle === 'filled' ? (isLightActiveColor ? '#0f172a' : '#ffffff') : activeColor
-        }"
-        :placeholder="textInputState.isStepNote ? tr('stepNotePlaceholder') : tr('textPlaceholder')"
+        :class="['lark-textarea', textInputState.isTag ? 'tag-bubble-input' : textStyle]"
+        :style="textareaComputedStyle"
+        :placeholder="textInputState.isStepNote ? tr('stepNotePlaceholder') : (textInputState.isTag ? tr('tagPlaceholder') : tr('textPlaceholder'))"
         rows="1"
         autofocus
         spellcheck="false"
@@ -103,13 +91,13 @@
       class="lark-toolbar-wrapper"
       :style="toolbarPositionStyle"
       @mousedown.stop
-      @mouseup.stop
       @click.stop
     >
       <!-- Row 1: Primary Tool Palette (Lark Scale: Generous, Comfortable, High Affordance) -->
       <div class="lark-primary-toolbar">
         <div
           class="toolbar-drag-grip"
+          @mousedown.stop.prevent="onToolbarDragStart"
           @mouseenter="showTooltip($event, tr('toolbarDrag'))"
           @mouseleave="hideTooltip"
         >
@@ -199,6 +187,21 @@
           @click="setTool('text'); hideTooltip()"
         >
           <span class="text-btn-label">T</span>
+        </button>
+
+        <!-- 7. Tag 🏷️ (标签 / 气泡标签) -->
+        <button
+          ref="toolBtnTag"
+          :class="['lark-tool-btn', { active: activeTool === 'tag' }]"
+          @mouseenter="showTooltip($event, tr('tag'), 'G')"
+          @mouseleave="hideTooltip"
+          @click="setTool('tag'); hideTooltip()"
+        >
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8">
+            <circle cx="5" cy="19" r="2.5" fill="currentColor"></circle>
+            <path d="M7 17l4.5-4.5h5.5a3 3 0 0 0 3-3v0a3 3 0 0 0-3-3h-4a3 3 0 0 0-3 3v1" stroke-linecap="round" stroke-linejoin="round"></path>
+            <circle cx="17.5" cy="9.5" r="1.2" fill="currentColor"></circle>
+          </svg>
         </button>
 
         <!-- 7. Step Badge ① (纯序号) -->
@@ -411,6 +414,35 @@
               <option :value="22">18pt</option>
               <option :value="28">24pt</option>
               <option :value="36">32pt</option>
+            </select>
+          </div>
+        </template>
+
+        <!-- A2. Tag Tool Settings: Direction Toggle, Font Size -->
+        <template v-else-if="activeTool === 'tag'">
+          <div class="text-style-group">
+            <button
+              class="sub-mode-btn"
+              :title="tr('tagDirection')"
+              @mouseenter="showTooltip($event, tr('tagDirection'))"
+              @mouseleave="hideTooltip"
+              @click="cycleTagDirection(); hideTooltip()"
+            >
+              <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor">
+                <path v-if="tagDirection === 'top-right'" d="M5 15l10-10M8 5h7v7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path>
+                <path v-else-if="tagDirection === 'bottom-right'" d="M5 5l10 10M15 8v7H8" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path>
+                <path v-else-if="tagDirection === 'bottom-left'" d="M15 5L5 15M12 15H5V8" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path>
+                <path v-else d="M15 15L5 5M5 12V5h7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+            </button>
+          </div>
+
+          <div class="font-size-wrapper">
+            <select v-model="fontSizeVal" class="font-size-select">
+              <option :value="12">12pt</option>
+              <option :value="14">14pt</option>
+              <option :value="16">16pt</option>
+              <option :value="18">18pt</option>
             </select>
           </div>
         </template>
@@ -660,6 +692,9 @@ const captureI18n: Record<string, Record<string, string>> = {
     stepResetTooltip: '重置序号为 1',
     stepNotePlaceholder: '输入步骤说明...',
     textPlaceholder: '输入文字...',
+    tag: '标签 (气泡标签)',
+    tagPlaceholder: '输入标签内容...',
+    tagDirection: '切换标签方向',
     wmInternalOnly: '内部资料 · 严禁外传',
     wmConfidential: '机密文件',
     wmForReview: '仅供审核',
@@ -704,6 +739,9 @@ const captureI18n: Record<string, Record<string, string>> = {
     stepResetTooltip: '重設序號為 1',
     stepNotePlaceholder: '輸入步驟說明...',
     textPlaceholder: '輸入文字...',
+    tag: '標籤 (氣泡標籤)',
+    tagPlaceholder: '輸入標籤內容...',
+    tagDirection: '切換標籤方向',
     wmInternalOnly: '內部資料 · 嚴禁外傳',
     wmConfidential: '機密文件',
     wmForReview: '僅供審核',
@@ -748,6 +786,9 @@ const captureI18n: Record<string, Record<string, string>> = {
     stepResetTooltip: 'Reset counter to 1',
     stepNotePlaceholder: 'Enter step note...',
     textPlaceholder: 'Enter text...',
+    tag: 'Tag (Callout)',
+    tagPlaceholder: 'Enter tag...',
+    tagDirection: 'Toggle Tag Direction',
     wmInternalOnly: 'INTERNAL ONLY',
     wmConfidential: 'CONFIDENTIAL',
     wmForReview: 'FOR REVIEW ONLY',
@@ -792,6 +833,9 @@ const captureI18n: Record<string, Record<string, string>> = {
     stepResetTooltip: '番号を 1 にリセット',
     stepNotePlaceholder: 'ステップ説明を入力...',
     textPlaceholder: 'テキストを入力...',
+    tag: 'タグ (吹き出し)',
+    tagPlaceholder: 'タグを入力...',
+    tagDirection: 'タグの方向を切り替え',
     wmInternalOnly: '社外秘',
     wmConfidential: '機密',
     wmForReview: '確認用',
@@ -837,6 +881,9 @@ const captureI18n: Record<string, Record<string, string>> = {
     stepResetTooltip: '번호를 1로 초기화',
     stepNotePlaceholder: '단계 설명 입력...',
     textPlaceholder: '텍스트 입력...',
+    tag: '태그 (말풍선)',
+    tagPlaceholder: '태그 입력...',
+    tagDirection: '태그 방향 전환',
     wmInternalOnly: '대외비 · 유출금지',
     wmConfidential: '기밀문서',
     wmForReview: '검토용',
@@ -882,6 +929,9 @@ const captureI18n: Record<string, Record<string, string>> = {
     stepResetTooltip: 'Zähler auf 1 zurücksetzen',
     stepNotePlaceholder: 'Schritt-Beschreibung eingeben...',
     textPlaceholder: 'Text eingeben...',
+    tag: 'Tag (Hinweis)',
+    tagPlaceholder: 'Tag eingeben...',
+    tagDirection: 'Tag-Richtung ändern',
     wmInternalOnly: 'NUR INTERN',
     wmConfidential: 'VERTRAULICH',
     wmForReview: 'ZUR PRÜFUNG',
@@ -927,6 +977,9 @@ const captureI18n: Record<string, Record<string, string>> = {
     stepResetTooltip: 'Réinitialiser le compteur à 1',
     stepNotePlaceholder: 'Entrez la description de l\'étape...',
     textPlaceholder: 'Entrez du texte...',
+    tag: 'Étiquette',
+    tagPlaceholder: 'Entrez l\'étiquette...',
+    tagDirection: 'Changer de direction',
     wmInternalOnly: 'INTERNE UNIQUEMENT',
     wmConfidential: 'CONFIDENTIEL',
     wmForReview: 'POUR RÉVISION',
@@ -972,6 +1025,9 @@ const captureI18n: Record<string, Record<string, string>> = {
     stepResetTooltip: 'Restablecer contador a 1',
     stepNotePlaceholder: 'Ingrese nota del paso...',
     textPlaceholder: 'Ingrese texto...',
+    tag: 'Etiqueta',
+    tagPlaceholder: 'Ingrese etiqueta...',
+    tagDirection: 'Cambiar dirección',
     wmInternalOnly: 'SOLO USO INTERNO',
     wmConfidential: 'CONFIDENCIAL',
     wmForReview: 'SOLO REVISIÓN',
@@ -1106,12 +1162,14 @@ type ToolType =
   | 'marker'
   | 'mosaic'
   | 'text'
+  | 'tag'
   | 'step'
   | 'stepNote'
   | 'watermark'
 
 type TextStyle = 'normal' | 'bordered' | 'filled'
 type MosaicMode = 'brush' | 'rect'
+type TagDirection = 'top-right' | 'bottom-right' | 'bottom-left' | 'top-left'
 
 interface Annotation {
   id: string
@@ -1126,6 +1184,7 @@ interface Annotation {
   text?: string
   textStyle?: TextStyle
   fontSize?: number
+  tagDirection?: TagDirection
   stepNumber?: number
   mosaicMode?: MosaicMode
   mosaicStyle?: 'pixel' | 'blur'
@@ -1161,9 +1220,19 @@ const toolBtnPencil = ref<HTMLButtonElement | null>(null)
 const toolBtnHighlight = ref<HTMLButtonElement | null>(null)
 const toolBtnMarker = ref<HTMLButtonElement | null>(null)
 const toolBtnText = ref<HTMLButtonElement | null>(null)
+const toolBtnTag = ref<HTMLButtonElement | null>(null)
 const toolBtnStep = ref<HTMLButtonElement | null>(null)
 const toolBtnStepNote = ref<HTMLButtonElement | null>(null)
 const toolBtnWatermark = ref<HTMLButtonElement | null>(null)
+
+const tagDirection = ref<TagDirection>('top-right')
+
+const cycleTagDirection = (): void => {
+  const dirs: TagDirection[] = ['top-right', 'bottom-right', 'bottom-left', 'top-left']
+  const idx = dirs.indexOf(tagDirection.value)
+  tagDirection.value = dirs[(idx + 1) % dirs.length]
+  renderAll()
+}
 
 // Marker & Mosaic State
 const markerMode = ref<'rect' | 'brush'>('rect')
@@ -1389,12 +1458,161 @@ const textInputState = ref({
   active: false,
   editingId: null as string | null,
   isStepNote: false,
+  isTag: false,
   stepNumber: 1,
   x: 0,
   y: 0,
   text: ''
 })
 const isComposing = ref(false)
+
+interface TagLayout {
+  dotX: number
+  dotY: number
+  dotRadius: number
+  bubbleX: number
+  bubbleY: number
+  bubbleWidth: number
+  bubbleHeight: number
+  notchPoints: {
+    tip: { x: number; y: number }
+    p1: { x: number; y: number }
+    p2: { x: number; y: number }
+  }
+}
+
+const computeTagLayout = (
+  startX: number,
+  startY: number,
+  dir: string,
+  contentWidth: number,
+  fontSize: number
+): TagLayout => {
+  const dotRadius = 4.5
+  const padX = 10
+  const padY = 5
+  const bubbleHeight = Math.max(28, fontSize + padY * 2)
+  const bubbleWidth = Math.max(42, contentWidth + padX * 2)
+  const gap = 5
+  const notchLen = 7
+  const notchHalfBase = 5
+
+  let bubbleX = 0
+  let bubbleY = 0
+  let tipX = 0
+  let tipY = 0
+  let p1X = 0
+  let p1Y = 0
+  let p2X = 0
+  let p2Y = 0
+
+  if (dir === 'bottom-right') {
+    tipX = startX
+    tipY = startY + gap
+    bubbleX = startX - bubbleWidth / 2
+    bubbleY = tipY + notchLen
+    p1X = startX - notchHalfBase
+    p1Y = bubbleY
+    p2X = startX + notchHalfBase
+    p2Y = bubbleY
+  } else if (dir === 'bottom-left') {
+    tipX = startX - gap
+    tipY = startY
+    bubbleX = tipX - notchLen - bubbleWidth
+    bubbleY = startY - bubbleHeight / 2
+    p1X = bubbleX + bubbleWidth
+    p1Y = startY - notchHalfBase
+    p2X = bubbleX + bubbleWidth
+    p2Y = startY + notchHalfBase
+  } else if (dir === 'top-left') {
+    tipX = startX
+    tipY = startY - gap
+    bubbleX = startX - bubbleWidth / 2
+    bubbleY = tipY - notchLen - bubbleHeight
+    p1X = startX - notchHalfBase
+    p1Y = bubbleY + bubbleHeight
+    p2X = startX + notchHalfBase
+    p2Y = bubbleY + bubbleHeight
+  } else {
+    // 'top-right' (default): bubble is to the right
+    tipX = startX + gap
+    tipY = startY
+    bubbleX = tipX + notchLen
+    bubbleY = startY - bubbleHeight / 2
+    p1X = bubbleX
+    p1Y = startY - notchHalfBase
+    p2X = bubbleX
+    p2Y = startY + notchHalfBase
+  }
+
+  return {
+    dotX: startX,
+    dotY: startY,
+    dotRadius,
+    bubbleX,
+    bubbleY,
+    bubbleWidth,
+    bubbleHeight,
+    notchPoints: {
+      tip: { x: tipX, y: tipY },
+      p1: { x: p1X, y: p1Y },
+      p2: { x: p2X, y: p2Y }
+    }
+  }
+}
+
+const activeTagLayout = computed(() => {
+  if (!textInputState.value.active || !textInputState.value.isTag) return null
+  const text = textInputState.value.text || ''
+  const fSize = fontSizeVal.value
+  const charWidth = fSize * 0.72
+  const textW = Math.max(28, Math.ceil(text.length * charWidth))
+  return computeTagLayout(
+    textInputState.value.x,
+    textInputState.value.y,
+    tagDirection.value,
+    textW,
+    fSize
+  )
+})
+
+const activeEditorPositionStyle = computed(() => {
+  if (!textInputState.value.active) return {}
+  if (textInputState.value.isTag && activeTagLayout.value) {
+    return {
+      left: `${activeTagLayout.value.bubbleX}px`,
+      top: `${activeTagLayout.value.bubbleY}px`
+    }
+  }
+  return {
+    left: `${textInputState.value.x}px`,
+    top: `${textInputState.value.y}px`
+  }
+})
+
+const textareaComputedStyle = computed(() => {
+  if (textInputState.value.isTag) {
+    return {
+      color: '#ffffff',
+      backgroundColor: 'transparent',
+      fontSize: `${fontSizeVal.value}px`,
+      lineHeight: '1.35',
+      caretColor: '#ffffff'
+    }
+  }
+  return {
+    color: textStyle.value === 'filled' ? (isLightActiveColor.value ? '#0f172a' : '#ffffff') : activeColor.value,
+    backgroundColor:
+      textStyle.value === 'filled'
+        ? activeColor.value
+        : textStyle.value === 'bordered'
+          ? 'rgba(0, 0, 0, 0.45)'
+          : 'transparent',
+    fontSize: `${fontSizeVal.value}px`,
+    lineHeight: '1.35',
+    caretColor: textStyle.value === 'filled' ? (isLightActiveColor.value ? '#0f172a' : '#ffffff') : activeColor.value
+  }
+})
 
 // -------------------------------------------------------------
 // Sub-toolbar Caret X Coordinate Calculation
@@ -1425,6 +1643,9 @@ const subToolbarCaretX = computed(() => {
       break
     case 'text':
       targetBtn = toolBtnText.value
+      break
+    case 'tag':
+      targetBtn = toolBtnTag.value
       break
     case 'step':
       targetBtn = toolBtnStep.value
@@ -1494,12 +1715,14 @@ const openTextEditor = (
   existingId: string | null = null,
   initialText = '',
   isStep = false,
-  stepNum = 1
+  stepNum = 1,
+  isTag = false
 ) => {
   textInputState.value = {
     active: true,
     editingId: existingId,
     isStepNote: isStep,
+    isTag,
     stepNumber: stepNum,
     x,
     y,
@@ -1562,8 +1785,11 @@ const autoResizeTextarea = (): void => {
   el.style.width = 'auto'
   el.style.height = 'auto'
   const fSize = fontSizeVal.value
-  el.style.width = `${Math.max(60, el.scrollWidth + 12)}px`
+  el.style.width = `${Math.max(textInputState.value.isTag ? 40 : 60, el.scrollWidth + 12)}px`
   el.style.height = `${Math.max(Math.round(fSize * 1.4), el.scrollHeight)}px`
+  if (textInputState.value.isTag) {
+    renderAll()
+  }
 }
 
 const commitTextInput = (): void => {
@@ -1571,6 +1797,7 @@ const commitTextInput = (): void => {
 
   const rawText = textInputState.value.text.trim()
   const isStep = textInputState.value.isStepNote
+  const isTag = textInputState.value.isTag
   const stepNum = textInputState.value.stepNumber
 
   if (!rawText) {
@@ -1587,12 +1814,15 @@ const commitTextInput = (): void => {
         target.strokeWidth = strokeWidth.value
         target.textStyle = textStyle.value
         target.fontSize = fontSizeVal.value
+        if (target.tool === 'tag') {
+          target.tagDirection = tagDirection.value
+        }
         pushHistorySnapshot()
       }
     } else {
       pushAnnotation({
         id: `ann_${Date.now()}`,
-        tool: isStep ? 'stepNote' : 'text',
+        tool: isTag ? 'tag' : isStep ? 'stepNote' : 'text',
         color: activeColor.value,
         strokeWidth: strokeWidth.value,
         startX: textInputState.value.x,
@@ -1602,6 +1832,7 @@ const commitTextInput = (): void => {
         text: textInputState.value.text,
         textStyle: textStyle.value,
         fontSize: fontSizeVal.value,
+        tagDirection: isTag ? tagDirection.value : undefined,
         stepNumber: isStep ? stepNum : undefined
       })
       if (isStep) {
@@ -1628,7 +1859,7 @@ const cancelTextInput = (): void => {
 const findTextAnnotationAt = (x: number, y: number): Annotation | null => {
   for (let i = annotations.value.length - 1; i >= 0; i--) {
     const ann = annotations.value[i]
-    if ((ann.tool === 'text' || ann.tool === 'stepNote') && ann.box) {
+    if ((ann.tool === 'text' || ann.tool === 'stepNote' || ann.tool === 'tag') && ann.box) {
       if (
         x >= ann.box.x &&
         x <= ann.box.x + ann.box.width &&
@@ -1704,7 +1935,86 @@ const currentCursor = computed(() => {
 })
 
 // Lark Toolbar Position Style (Smart collision with Dock, Menubar, and Screen Edges)
+const toolbarCustomPos = ref<{ x: number; y: number } | null>(null)
+let isDraggingToolbar = false
+let toolbarDragStartMouse = { x: 0, y: 0 }
+let toolbarDragStartPos = { x: 0, y: 0 }
+
+const onToolbarDragStart = (e: MouseEvent): void => {
+  if (e.button !== 0) return
+  e.preventDefault()
+  e.stopPropagation()
+  hideTooltip()
+  isDraggingToolbar = true
+  toolbarDragStartMouse = { x: e.clientX, y: e.clientY }
+
+  let currentX = 0
+  let currentY = 0
+
+  if (toolbarRef.value) {
+    const rect = toolbarRef.value.getBoundingClientRect()
+    currentX = rect.left
+    currentY = rect.top
+  } else if (toolbarCustomPos.value) {
+    currentX = toolbarCustomPos.value.x
+    currentY = toolbarCustomPos.value.y
+  } else {
+    const sel = normSelection.value
+    const toolbarWidth = 790
+    currentX = sel.x + sel.width - toolbarWidth
+    currentY = sel.y + sel.height + 10
+  }
+
+  const screenH = window.innerHeight
+  const screenW = window.innerWidth
+  const tbEl = toolbarRef.value
+  const toolbarWidth = tbEl ? tbEl.offsetWidth : 790
+  const toolbarHeight = tbEl ? tbEl.offsetHeight : (activeTool.value === 'none' ? 52 : 110)
+
+  currentX = Math.max(10, Math.min(screenW - toolbarWidth - 10, currentX))
+  currentY = Math.max(10, Math.min(screenH - toolbarHeight - 10, currentY))
+  toolbarDragStartPos = { x: currentX, y: currentY }
+  toolbarCustomPos.value = { x: currentX, y: currentY }
+
+  window.addEventListener('mousemove', onToolbarDragMove)
+  window.addEventListener('mouseup', onToolbarDragEnd, { capture: true })
+}
+
+const onToolbarDragMove = (e: MouseEvent): void => {
+  if (!isDraggingToolbar) return
+  if ((e.buttons & 1) === 0) {
+    onToolbarDragEnd()
+    return
+  }
+  e.preventDefault()
+  const dx = e.clientX - toolbarDragStartMouse.x
+  const dy = e.clientY - toolbarDragStartMouse.y
+  const tbEl = toolbarRef.value
+  const toolbarWidth = tbEl ? tbEl.offsetWidth : 790
+  const toolbarHeight = tbEl ? tbEl.offsetHeight : (activeTool.value === 'none' ? 52 : 110)
+  const screenW = window.innerWidth
+  const screenH = window.innerHeight
+
+  const newX = Math.max(10, Math.min(screenW - toolbarWidth - 10, toolbarDragStartPos.x + dx))
+  const newY = Math.max(10, Math.min(screenH - toolbarHeight - 10, toolbarDragStartPos.y + dy))
+
+  toolbarCustomPos.value = { x: newX, y: newY }
+}
+
+const onToolbarDragEnd = (): void => {
+  isDraggingToolbar = false
+  window.removeEventListener('mousemove', onToolbarDragMove)
+  window.removeEventListener('mouseup', onToolbarDragEnd, { capture: true })
+}
+
 const toolbarPositionStyle = computed(() => {
+  if (toolbarCustomPos.value) {
+    return {
+      top: `${Math.round(toolbarCustomPos.value.y)}px`,
+      left: `${Math.round(toolbarCustomPos.value.x)}px`
+    }
+  }
+
   const sel = normSelection.value
   const toolbarWidth = 790
   const toolbarHeight = activeTool.value === 'none' ? 52 : 110
@@ -1951,6 +2261,30 @@ const renderAll = (): void => {
     }
     if (currentAnnotation.value) {
       drawSingleAnnotation(ctx, currentAnnotation.value)
+    }
+
+    // Live Tag Anchor and Notch while actively typing in tag editor
+    if (textInputState.value.active && textInputState.value.isTag && activeTagLayout.value) {
+      const l = activeTagLayout.value
+      ctx.save()
+      // Anchor dot
+      ctx.beginPath()
+      ctx.arc(l.dotX, l.dotY, l.dotRadius, 0, Math.PI * 2)
+      ctx.fillStyle = activeColor.value
+      ctx.fill()
+      ctx.lineWidth = 1.5
+      ctx.strokeStyle = '#ffffff'
+      ctx.stroke()
+
+      // Triangular Notch
+      ctx.beginPath()
+      ctx.moveTo(l.notchPoints.tip.x, l.notchPoints.tip.y)
+      ctx.lineTo(l.notchPoints.p1.x, l.notchPoints.p1.y)
+      ctx.lineTo(l.notchPoints.p2.x, l.notchPoints.p2.y)
+      ctx.closePath()
+      ctx.fillStyle = '#2b2f3a'
+      ctx.fill()
+      ctx.restore()
     }
 
     if (isWatermarkActive.value) {
@@ -2403,6 +2737,8 @@ const drawSingleAnnotation = (ctx: CanvasRenderingContext2D, ann: Annotation): v
         ctx.fillText(line, textStartX, lineY)
       }
     })
+  } else if (ann.tool === 'tag' && ann.text) {
+    drawTagAnnotation(ctx, ann)
   } else if (ann.tool === 'step') {
     const radius = 11 // Exact same 22px diameter
     ctx.beginPath()
@@ -2413,6 +2749,78 @@ const drawSingleAnnotation = (ctx: CanvasRenderingContext2D, ann: Annotation): v
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillText(String(ann.stepNumber || 1), ann.startX, ann.startY)
+  }
+
+  ctx.restore()
+}
+
+const drawTagAnnotation = (ctx: CanvasRenderingContext2D, ann: Annotation): void => {
+  if (ann.id === textInputState.value.editingId) {
+    return
+  }
+
+  const fontSize = ann.fontSize || 14
+  ctx.save()
+  ctx.font = `500 ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`
+  const textMetrics = ctx.measureText(ann.text || '')
+  const textWidth = Math.ceil(textMetrics.width)
+
+  const layout = computeTagLayout(
+    ann.startX,
+    ann.startY,
+    ann.tagDirection || 'top-right',
+    textWidth,
+    fontSize
+  )
+
+  ann.box = {
+    x: Math.min(layout.dotX - layout.dotRadius, layout.bubbleX),
+    y: Math.min(layout.dotY - layout.dotRadius, layout.bubbleY),
+    width: Math.max(layout.dotX + layout.dotRadius, layout.bubbleX + layout.bubbleWidth) - Math.min(layout.dotX - layout.dotRadius, layout.bubbleX),
+    height: Math.max(layout.dotY + layout.dotRadius, layout.bubbleY + layout.bubbleHeight) - Math.min(layout.dotY - layout.dotRadius, layout.bubbleY)
+  }
+
+  // 1. Anchor point (solid colored dot with clean white ring)
+  ctx.beginPath()
+  ctx.arc(layout.dotX, layout.dotY, layout.dotRadius, 0, Math.PI * 2)
+  ctx.fillStyle = ann.color
+  ctx.fill()
+  ctx.lineWidth = 1.5
+  ctx.strokeStyle = '#ffffff'
+  ctx.stroke()
+
+  // 2. Triangular Notch (seamless with bubble)
+  ctx.beginPath()
+  ctx.moveTo(layout.notchPoints.tip.x, layout.notchPoints.tip.y)
+  ctx.lineTo(layout.notchPoints.p1.x, layout.notchPoints.p1.y)
+  ctx.lineTo(layout.notchPoints.p2.x, layout.notchPoints.p2.y)
+  ctx.closePath()
+  ctx.fillStyle = '#2b2f3a'
+  ctx.fill()
+
+  // 3. Rounded Rect Callout Bubble (Lark Charcoal #2b2f3a)
+  ctx.beginPath()
+  ctx.roundRect(layout.bubbleX, layout.bubbleY, layout.bubbleWidth, layout.bubbleHeight, 6)
+  ctx.fillStyle = '#2b2f3a'
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.35)'
+  ctx.shadowBlur = 8
+  ctx.shadowOffsetY = 2
+  ctx.fill()
+  ctx.shadowColor = 'transparent'
+
+  // 4. White text
+  ctx.fillStyle = '#ffffff'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(ann.text || '', layout.bubbleX + layout.bubbleWidth / 2, layout.bubbleY + layout.bubbleHeight / 2)
+
+  // 5. Hover outline (Lark blue)
+  if (hoveredTextAnnId.value === ann.id && !isDragging.value) {
+    ctx.strokeStyle = '#3370ff'
+    ctx.lineWidth = 1.5
+    ctx.beginPath()
+    ctx.roundRect(layout.bubbleX - 2, layout.bubbleY - 2, layout.bubbleWidth + 4, layout.bubbleHeight + 4, 8)
+    ctx.stroke()
   }
 
   ctx.restore()
@@ -2493,6 +2901,12 @@ const onMouseDown = (e: MouseEvent): void => {
         if (activeTool.value === 'text') {
           e.preventDefault()
           openTextEditor(x, y, null, '', false, 1)
+          return
+        }
+
+        if (activeTool.value === 'tag') {
+          e.preventDefault()
+          openTextEditor(x, y, null, '', false, 1, true)
           return
         }
 
@@ -2714,12 +3128,16 @@ const onMouseUp = (): void => {
         ann.id,
         ann.text || '',
         ann.tool === 'stepNote',
-        ann.stepNumber || 1
+        ann.stepNumber || 1,
+        ann.tool === 'tag'
       )
       activeColor.value = ann.color
       strokeWidth.value = ann.strokeWidth
       textStyle.value = ann.textStyle || 'normal'
       fontSizeVal.value = ann.fontSize || 14
+      if (ann.tool === 'tag' && ann.tagDirection) {
+        tagDirection.value = ann.tagDirection
+      }
       renderAll()
     } else {
       pushHistorySnapshot()
@@ -2781,6 +3199,7 @@ const onContextMenu = (): void => {
     annotations.value = []
     activeTool.value = 'none'
     smartHoverRect.value = null
+    toolbarCustomPos.value = null
     renderAll()
   } else {
     closeCapture()
@@ -3078,6 +3497,8 @@ onUnmounted(() => {
   if (tooltipTimer) clearTimeout(tooltipTimer)
   if (smartRenderRaf) cancelAnimationFrame(smartRenderRaf)
   window.removeEventListener('resize', renderAll)
+  window.removeEventListener('mousemove', onToolbarDragMove)
+  window.removeEventListener('mouseup', onToolbarDragEnd, { capture: true })
 })
 </script>
 
@@ -3156,6 +3577,29 @@ onUnmounted(() => {
   align-items: center;
   gap: 6px;
   box-sizing: border-box;
+}
+
+/* Lark-Style Active Callout Tag Bubble */
+.lark-active-textbox.is-tag-bubble {
+  border: none !important;
+  background: #2b2f3a !important;
+  border-radius: 6px !important;
+  padding: 4px 10px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45) !important;
+  outline: 1.5px solid #3370ff !important;
+  outline-offset: 3px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0 !important;
+}
+
+.lark-textarea.tag-bubble-input {
+  background: transparent !important;
+  color: #ffffff !important;
+  caret-color: #ffffff !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  text-align: center !important;
 }
 
 .textbox-handle {

@@ -5,6 +5,8 @@ import type { Muya } from '../../index';
 
 import type { ImageToken } from '../../inlineRenderer/types';
 import type { Icon } from './config';
+import { CLASS_NAMES } from '../../config';
+import { getImageSrc } from '../../utils/image';
 import { h, patch } from '../../utils/snabbdom';
 import BaseFloat from '../baseFloat';
 import icons from './config';
@@ -136,7 +138,7 @@ export class ImageToolBar extends BaseFloat {
 
                 return this.hide();
 
-                // Edit image, for example: editor alt and title, replace image.
+            // Edit image, for example: editor alt and title, replace image.
             case 'edit': {
                 const rect = this._reference!.getBoundingClientRect();
                 const reference = {

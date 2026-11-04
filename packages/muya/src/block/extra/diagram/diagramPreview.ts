@@ -291,16 +291,132 @@ class DiagramPreview extends Parent {
             applyTransform(true);
         }, '适应宽度');
 
+        let isDockedOutside = false;
+        const blockNode = (target.closest('.mu-diagram-block') as HTMLElement) || target;
+
+        const popoutBtn = createBtn('mermaid-popout-btn', DIAGRAM_ICONS.popout, async () => {
+            try {
+                const svgRect = svg.getBoundingClientRect();
+                const width = Math.max(300, Math.round(svgRect.width)) || 800;
+                const height = Math.max(200, Math.round(svgRect.height)) || 600;
+
+                const clone = svg.cloneNode(true) as SVGSVGElement;
+                clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+                clone.setAttribute('width', `${width}`);
+                clone.setAttribute('height', `${height}`);
+
+                const svgString = new XMLSerializer().serializeToString(clone);
+                const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+                const blobUrl = URL.createObjectURL(svgBlob);
+
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => {
+                    const scale = window.devicePixelRatio || 2;
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width * scale;
+                    canvas.height = height * scale;
+                    const ctx = canvas.getContext('2d');
+                    if (ctx) {
+                        ctx.scale(scale, scale);
+                        ctx.drawImage(img, 0, 0, width, height);
+                        URL.revokeObjectURL(blobUrl);
+                        const pngDataUrl = canvas.toDataURL('image/png');
+                        if ((window as any).electron?.ipcRenderer?.invoke) {
+                            (window as any).electron.ipcRenderer.invoke('mt::pin-create', {
+                                type: 'image',
+                                content: pngDataUrl,
+                                width,
+                                height,
+                                title: 'Mermaid 图表'
+                            });
+                        }
+                    }
+                };
+                img.onerror = () => {
+                    URL.revokeObjectURL(blobUrl);
+                    const fallbackDataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgString)}`;
+                    if ((window as any).electron?.ipcRenderer?.invoke) {
+                        (window as any).electron.ipcRenderer.invoke('mt::pin-create', {
+                            type: 'image',
+                            content: fallbackDataUrl,
+                            width,
+                            height,
+                            title: 'Mermaid 图表'
+                        });
+                    }
+                };
+                img.src = blobUrl;
+            } catch (err) {
+                console.error('[Mermaid Popout] Failed to pop out diagram:', err);
+            }
+        }, '独立窗口展示 (置顶贴图)');
+
+        const updateDockState = () => {
+            if (isDockedOutside) {
+                panel.classList.add('dock-outside');
+                popoutBtn.classList.add('dock-outside');
+                blockNode.classList.add('has-docked-outside');
+                if (panel.parentElement !== blockNode) {
+                    blockNode.appendChild(panel);
+                }
+                if (popoutBtn.parentElement !== blockNode) {
+                    blockNode.appendChild(popoutBtn);
+                }
+                dockBtn.innerHTML = DIAGRAM_ICONS.dockInside;
+                dockBtn.setAttribute('title', '移到内部');
+                dockBtn.setAttribute('aria-label', '移到内部');
+            } else {
+                panel.classList.remove('dock-outside');
+                popoutBtn.classList.remove('dock-outside');
+                blockNode.classList.remove('has-docked-outside');
+                if (panel.parentElement !== target) {
+                    target.appendChild(panel);
+                }
+                if (popoutBtn.parentElement !== target) {
+                    target.appendChild(popoutBtn);
+                }
+                dockBtn.innerHTML = DIAGRAM_ICONS.dockOutside;
+                dockBtn.setAttribute('title', '移到外部');
+                dockBtn.setAttribute('aria-label', '移到外部');
+            }
+        };
+
+        const dockBtn = createBtn('dock-toggle', DIAGRAM_ICONS.dockOutside, () => {
+            isDockedOutside = !isDockedOutside;
+            updateDockState();
+        }, '移到外部');
+
         panel.appendChild(fitBtn);
         panel.appendChild(createBtn('up', DIAGRAM_ICONS.chevronUp, () => pan(0, 100), '向上平移'));
         panel.appendChild(createBtn('zoom-in', DIAGRAM_ICONS.zoomIn, () => zoom(0.2), '放大'));
         panel.appendChild(createBtn('left', DIAGRAM_ICONS.chevronLeft, () => pan(100, 0), '向左平移'));
         panel.appendChild(createBtn('reset', DIAGRAM_ICONS.reset, () => reset(), '重置视图'));
         panel.appendChild(createBtn('right', DIAGRAM_ICONS.chevronRight, () => pan(-100, 0), '向右平移'));
+        panel.appendChild(dockBtn);
         panel.appendChild(createBtn('down', DIAGRAM_ICONS.chevronDown, () => pan(0, -100), '向下平移'));
         panel.appendChild(createBtn('zoom-out', DIAGRAM_ICONS.zoomOut, () => zoom(-0.2), '缩小'));
 
+        const updatePanelScale = () => {
+            if (!target || !panel) return;
+            const w = target.clientWidth || 0;
+            const h = target.clientHeight || 0;
+            if (w > 0 && h > 0) {
+                const availableW = Math.max(20, w - 16);
+                const availableH = Math.max(20, h - 16);
+                const scaleFactor = Math.min(1.0, Math.max(0.42, Math.min(availableW / 92, availableH / 92)));
+                panel.style.setProperty('--panel-scale', scaleFactor.toFixed(3));
+            }
+        };
+
+        updatePanelScale();
+        const ro = new ResizeObserver(() => {
+            updatePanelScale();
+        });
+        ro.observe(target);
+
         target.appendChild(panel);
+        target.appendChild(popoutBtn);
 
         let isDragging = false;
         let startX = 0;
@@ -312,7 +428,7 @@ class DiagramPreview extends Parent {
         const onMouseDown = (e: MouseEvent) => {
             if (e.button !== 0)
                 return;
-            if ((e.target as HTMLElement).closest('.mermaid-viewer-control-panel'))
+            if ((e.target as HTMLElement).closest('.mermaid-viewer-control-panel') || (e.target as HTMLElement).closest('.mermaid-popout-btn'))
                 return;
 
             isDragging = true;
@@ -376,7 +492,10 @@ class DiagramPreview extends Parent {
             target.removeEventListener('wheel', onWheel);
             window.removeEventListener('mousemove', onMouseMove);
             window.removeEventListener('mouseup', onMouseUp);
+            ro.disconnect();
+            blockNode.classList.remove('has-docked-outside');
             panel.remove();
+            popoutBtn.remove();
             target.classList.remove('mu-diagram-interactive', 'mu-diagram-fullwidth');
             target.style.cursor = '';
         };

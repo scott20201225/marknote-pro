@@ -18,6 +18,17 @@ export interface ClipboardItemRecord {
   sourceApp?: string
 }
 
+export interface MarkdownImageMeta {
+  blockId?: string
+  raw?: string
+  start?: number
+  end?: number
+  alt?: string
+  title?: string
+  originalSrc?: string
+  resolvedSrc?: string
+}
+
 export interface PinWindowPayload {
   id: string
   type: 'image' | 'text'
@@ -27,6 +38,7 @@ export interface PinWindowPayload {
   x?: number
   y?: number
   title?: string
+  markdownMeta?: MarkdownImageMeta
 }
 
 export interface ScreenCaptureDisplayInfo {

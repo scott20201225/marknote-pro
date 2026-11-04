@@ -1008,14 +1008,14 @@ const imageAction = async (
   const workspaceRootPath = projectTree.value?.pathname ?? null
   const attachmentDirectoryPath = workspaceRootPath
     ? window.path.join(workspaceRootPath, NOTE_ATTACHMENTS_DIRECTORY)
-    : null
+    : (currentPathname ? window.path.join(window.path.dirname(currentPathname), NOTE_ATTACHMENTS_DIRECTORY) : null)
   const clipboardScreenshot = typeof image === 'string' ? dataUriToImageFile(image) : null
-  if (clipboardScreenshot && screenshotSaveMethod.value === 'base64') return image
+  if (clipboardScreenshot && !workspaceRootPath && screenshotSaveMethod.value === 'base64') return image
 
   const isAppScreenshot =
     typeof image === 'string' &&
     /^\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}-screenshot\.png$/i.test(window.path.basename(image))
-  if (isAppScreenshot && screenshotSaveMethod.value === 'base64') {
+  if (isAppScreenshot && !workspaceRootPath && screenshotSaveMethod.value === 'base64') {
     const dataUri = await imagePathToDataUri(image)
     if (dataUri) return dataUri
   }
@@ -2124,9 +2124,58 @@ onMounted(() => {
   document.addEventListener('keyup', keyup)
 
   setEditorWidth(editorLineWidth.value)
+
+  unlistenPinUpdate = window.electron.ipcRenderer.on(
+    'mt::pin-image-updated-in-markdown',
+    (_event, payload: any) => {
+      const { markdownMeta, newContent, localFilePath } = payload || {}
+      if (!editor.value) return
+
+      try {
+        if (typeof (editor.value as any).invalidateImageCache === 'function') {
+          ;(editor.value as any).invalidateImageCache()
+        }
+        if ((editor.value as any).renderer?.loadImageMap) {
+          ;(editor.value as any).renderer.loadImageMap.clear()
+        }
+      } catch {}
+
+      if (markdownMeta?.blockId) {
+        try {
+          const block = (editor.value as any).find(markdownMeta.blockId)
+          if (block) {
+            if (!localFilePath && newContent) {
+              const oldText = block.text || ''
+              const raw = markdownMeta.raw || ''
+              const idx = oldText.indexOf(raw)
+              if (idx !== -1) {
+                const alt = markdownMeta.alt || ''
+                const title = markdownMeta.title ? ` "${markdownMeta.title}"` : ''
+                const newRaw = `![${alt}](${newContent}${title})`
+                block.text = oldText.substring(0, idx) + newRaw + oldText.substring(idx + raw.length)
+              }
+            }
+            block.update()
+          }
+        } catch (bErr) {
+          console.warn('[Editor] Failed to update block for pinned image:', bErr)
+        }
+      } else {
+        try {
+          ;(editor.value as any).renderer?.forceRender?.()
+        } catch {}
+      }
+    }
+  )
 })
 
+let unlistenPinUpdate: (() => void) | null = null
+
 onBeforeUnmount(() => {
+  if (unlistenPinUpdate) {
+    unlistenPinUpdate()
+    unlistenPinUpdate = null
+  }
   const appWindow = window as MarkNoteProWindow
   if (appWindow.__MARKNOTEPRO_GET_EDITOR_CONTEXT_STATE__ === getEditorContextState) {
     delete appWindow.__MARKNOTEPRO_GET_EDITOR_CONTEXT_STATE__

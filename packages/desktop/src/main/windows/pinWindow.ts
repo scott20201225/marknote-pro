@@ -11,6 +11,7 @@ export class PinWindowManager {
   private _windows: Map<string, BrowserWindow> = new Map()
   private _payloads: Map<string, PinWindowPayload> = new Map()
   private _winToPinId: Map<number, string> = new Map()
+  private _toolbarWindows: Map<string, BrowserWindow> = new Map()
 
   public createPinWindow(payload: PinWindowPayload): BrowserWindow {
     const pinId = payload.id || `pin_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
@@ -122,13 +123,13 @@ export class PinWindowManager {
         height: Math.round(height)
       })
       if (!win.isVisible()) {
-        if (isOsx) {
-          win.showInactive()
-        } else {
-          win.show()
-        }
+        win.show()
+        win.focus()
+        win.webContents?.focus()
+      } else {
+        win.focus()
+        win.webContents?.focus()
       }
-      win.focus()
       win.webContents.send('mt::pin-window-data', payload)
     }
 
@@ -167,11 +168,13 @@ export class PinWindowManager {
   }
 
   public restoreEditorFocus(excludeWin?: BrowserWindow): void {
-    // If there is another pin window open, focus that pin window
-    for (const [, pinWin] of this._windows.entries()) {
-      if (pinWin !== excludeWin && !pinWin.isDestroyed() && pinWin.isVisible()) {
-        pinWin.focus()
-        return
+    // If there is another pin window open, focus that pin window (on Windows/Linux only to prevent macOS space jump)
+    if (!isOsx) {
+      for (const [, pinWin] of this._windows.entries()) {
+        if (pinWin !== excludeWin && !pinWin.isDestroyed() && pinWin.isVisible()) {
+          pinWin.focus()
+          return
+        }
       }
     }
     // When all pin windows are closed, never steal focus or switch Space to MarkNotePro!
@@ -189,8 +192,23 @@ export class PinWindowManager {
   }
 
   public closePin(pinId?: string, sourceWindow?: BrowserWindow): void {
-    const win = (pinId ? this._windows.get(pinId) : sourceWindow) || sourceWindow
+    let win = (pinId ? this._windows.get(pinId) : sourceWindow) || sourceWindow
+    if (!win && pinId) {
+      for (const [wId, pId] of this._winToPinId.entries()) {
+        if (pId === pinId) {
+          win = BrowserWindow.fromId(wId) || undefined
+          break
+        }
+      }
+    }
     if (win) {
+      const actualPinId = pinId || this._winToPinId.get(win.id)
+      if (actualPinId) {
+        this.closeEditToolbar(actualPinId)
+        this._windows.delete(actualPinId)
+        this._payloads.delete(actualPinId)
+      }
+      this._winToPinId.delete(win.id)
       this.restoreEditorFocus(win)
       if (!win.isDestroyed()) {
         try {
@@ -198,12 +216,6 @@ export class PinWindowManager {
         } catch {}
         win.destroy()
       }
-      if (pinId) {
-        this._windows.delete(pinId)
-        this._payloads.delete(pinId)
-      }
-      this._winToPinId.delete(win.id)
-      this.restoreEditorFocus()
     }
   }
 
@@ -212,6 +224,15 @@ export class PinWindowManager {
     if (!win || win.isDestroyed()) return
     const [currX, currY] = win.getPosition()
     win.setPosition(Math.round(currX + dx), Math.round(currY + dy))
+
+    const actualPinId = pinId || this._winToPinId.get(win.id)
+    if (actualPinId) {
+      const tbWin = this._toolbarWindows.get(actualPinId)
+      if (tbWin && !tbWin.isDestroyed()) {
+        const [tbX, tbY] = tbWin.getPosition()
+        tbWin.setPosition(Math.round(tbX + dx), Math.round(tbY + dy))
+      }
+    }
   }
 
   public getBounds(
@@ -238,6 +259,11 @@ export class PinWindowManager {
       width: Math.max(20, Math.round(bounds.width)),
       height: Math.max(20, Math.round(bounds.height))
     })
+
+    const actualPinId = pinId || this._winToPinId.get(win.id)
+    if (actualPinId) {
+      this.repositionToolbar(actualPinId, bounds)
+    }
   }
 
   public fitSize(
@@ -268,18 +294,45 @@ export class PinWindowManager {
     const newX = Math.round(centerX - targetW / 2)
     const newY = Math.round(centerY - targetH / 2)
 
-    win.setBounds({
+    const newBounds = {
       x: newX,
       y: newY,
       width: targetW,
       height: targetH
-    })
+    }
+    win.setBounds(newBounds)
+
+    const actualPinId = pinId || this._winToPinId.get(win.id)
+    if (actualPinId) {
+      this.repositionToolbar(actualPinId, newBounds)
+    }
   }
 
   public setAlwaysOnTop(flag: boolean, pinId?: string, sourceWindow?: BrowserWindow): void {
     const win = (pinId ? this._windows.get(pinId) : sourceWindow) || sourceWindow
     if (!win || win.isDestroyed()) return
     win.setAlwaysOnTop(flag, 'floating')
+  }
+
+  public focusPinWindow(pinId: string): void {
+    const win = this._windows.get(pinId)
+    if (win && !win.isDestroyed()) {
+      win.focus()
+      win.webContents?.focus()
+    }
+  }
+
+  public setTextEditingMode(active: boolean, pinId?: string, sourceWindow?: BrowserWindow): void {
+    const win = (pinId ? this._windows.get(pinId) : sourceWindow) || sourceWindow
+    if (!win || win.isDestroyed()) return
+
+    if (active) {
+      try {
+        win.setAlwaysOnTop(true, 'floating')
+      } catch {}
+      win.focus()
+      win.webContents?.focus()
+    }
   }
 
   public async saveImage(content: string, sourceWindow?: BrowserWindow): Promise<string | null> {
@@ -349,6 +402,158 @@ export class PinWindowManager {
     } catch (err) {
       log.error('[PinWindowManager] Failed to copy pinned image:', err)
       return false
+    }
+  }
+
+  public repositionToolbar(
+    pinId: string,
+    bounds?: { x: number; y: number; width: number; height: number }
+  ): void {
+    const tbWin = this._toolbarWindows.get(pinId)
+    if (!tbWin || tbWin.isDestroyed()) return
+
+    const pinWin = this._windows.get(pinId)
+    const pinBounds =
+      bounds ||
+      (pinWin && !pinWin.isDestroyed()
+        ? pinWin.getBounds()
+        : null)
+    if (!pinBounds) return
+
+    const [tbWidth, tbHeight] = tbWin.getSize()
+    const currentDisplay = screen.getDisplayNearestPoint({ x: pinBounds.x, y: pinBounds.y })
+    const workArea = currentDisplay.workArea
+
+    let posX = Math.round(pinBounds.x + (pinBounds.width - tbWidth) / 2)
+    posX = Math.max(workArea.x + 10, Math.min(posX, workArea.x + workArea.width - tbWidth - 10))
+
+    let posY = Math.round(pinBounds.y + pinBounds.height + 2)
+    const isTop = posY + tbHeight > workArea.y + workArea.height
+    if (isTop) {
+      posY = Math.round(pinBounds.y - tbHeight - 2)
+    }
+
+    tbWin.setPosition(posX, posY)
+    try {
+      tbWin.webContents.send('mt::pin-toolbar-placement', isTop ? 'top' : 'bottom')
+    } catch {}
+  }
+
+  public openEditToolbar(
+    pinId: string,
+    bounds?: { x: number; y: number; width: number; height: number }
+  ): BrowserWindow {
+    const existing = this._toolbarWindows.get(pinId)
+    if (existing && !existing.isDestroyed()) {
+      existing.show()
+      return existing
+    }
+
+    const pinWin = this._windows.get(pinId)
+    const pinBounds =
+      bounds ||
+      (pinWin && !pinWin.isDestroyed()
+        ? pinWin.getBounds()
+        : { x: 200, y: 200, width: 400, height: 300 })
+
+    const tbWidth = 780
+    const tbHeight = 140
+
+    const currentDisplay = screen.getDisplayNearestPoint({ x: pinBounds.x, y: pinBounds.y })
+    const workArea = currentDisplay.workArea
+
+    let posX = Math.round(pinBounds.x + (pinBounds.width - tbWidth) / 2)
+    posX = Math.max(workArea.x + 10, Math.min(posX, workArea.x + workArea.width - tbWidth - 10))
+
+    let posY = Math.round(pinBounds.y + pinBounds.height + 2)
+    const isTop = posY + tbHeight > workArea.y + workArea.height
+    if (isTop) {
+      posY = Math.round(pinBounds.y - tbHeight - 2)
+    }
+
+    const tbWin = new BrowserWindow({
+      width: tbWidth,
+      height: tbHeight,
+      x: posX,
+      y: posY,
+      frame: false,
+      transparent: true,
+      resizable: false,
+      movable: true,
+      minimizable: false,
+      maximizable: false,
+      closable: true,
+      fullscreen: false,
+      fullscreenable: false,
+      alwaysOnTop: true,
+      skipTaskbar: true,
+      hasShadow: false,
+      backgroundColor: '#00000000',
+      webPreferences: {
+        preload: path.join(__dirname, '../preload/index.js'),
+        sandbox: true,
+        contextIsolation: true,
+        nodeIntegration: false
+      }
+    })
+
+    tbWin.setAlwaysOnTop(true, 'floating', 1)
+    if (isOsx) {
+      tbWin.setVisibleOnAllWorkspaces(true, {
+        visibleOnFullScreen: true,
+        skipTransformProcessType: true
+      })
+    }
+
+    const baseUrl =
+      process.env.NODE_ENV === 'development'
+        ? process.env['ELECTRON_RENDERER_URL']!
+        : `file://${path.join(__dirname, '../renderer/index.html')}`
+
+    const tbUrl = new URL(baseUrl)
+    tbUrl.searchParams.set('type', 'pin-toolbar')
+    tbUrl.searchParams.set('pinId', pinId)
+    tbUrl.searchParams.set('wid', String(tbWin.id))
+    tbUrl.searchParams.set('theme', nativeTheme.shouldUseDarkColors ? 'dark' : 'light')
+    tbUrl.searchParams.set('placement', isTop ? 'top' : 'bottom')
+    try {
+      tbUrl.searchParams.set('udp', app.getPath('userData'))
+    } catch {}
+    tbUrl.hash = `/pin-toolbar?pinId=${pinId}`
+
+    tbWin.loadURL(tbUrl.toString())
+    tbWin.show()
+
+    this._toolbarWindows.set(pinId, tbWin)
+
+    tbWin.on('closed', () => {
+      this._toolbarWindows.delete(pinId)
+    })
+
+    return tbWin
+  }
+
+  public closeEditToolbar(pinId: string): void {
+    const tbWin = this._toolbarWindows.get(pinId)
+    if (tbWin && !tbWin.isDestroyed()) {
+      tbWin.destroy()
+    }
+    this._toolbarWindows.delete(pinId)
+  }
+
+  public getPinWindow(pinId: string): BrowserWindow | undefined {
+    return this._windows.get(pinId)
+  }
+
+  public getToolbarWindow(pinId: string): BrowserWindow | undefined {
+    return this._toolbarWindows.get(pinId)
+  }
+
+  public focusToolbarWindow(pinId: string): void {
+    const tbWin = this._toolbarWindows.get(pinId)
+    if (tbWin && !tbWin.isDestroyed()) {
+      tbWin.focus()
+      tbWin.webContents?.focus()
     }
   }
 }

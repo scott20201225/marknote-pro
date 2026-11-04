@@ -1,4 +1,5 @@
 import { ipcMain, dialog, nativeImage, clipboard, BrowserWindow, app } from 'electron'
+import path from 'path'
 import fs from 'fs'
 import fsPromises from 'fs/promises'
 import log from 'electron-log'
@@ -271,6 +272,146 @@ export const registerClipboardIpcHandlers = (): void => {
         payload.zoom,
         senderWin
       )
+    }
+  )
+
+  ipcMain.on('mt::pin-text-mode', (event, arg1: boolean | { active: boolean; pinId?: string }, arg2?: string) => {
+    const active = typeof arg1 === 'boolean' ? arg1 : !!arg1?.active
+    const pinId = typeof arg1 === 'object' && arg1?.pinId ? arg1.pinId : arg2
+    const senderWin = BrowserWindow.fromWebContents(event.sender) || undefined
+    pinManager.setTextEditingMode(active, pinId, senderWin)
+  })
+
+  ipcMain.on(
+    'mt::pin-edit-toolbar-open',
+    (_event, data: { pinId: string; bounds?: { x: number; y: number; width: number; height: number } }) => {
+      pinManager.openEditToolbar(data.pinId, data.bounds)
+    }
+  )
+
+  ipcMain.on('mt::pin-edit-toolbar-close', (_event, pinId: string) => {
+    pinManager.closeEditToolbar(pinId)
+  })
+
+  ipcMain.on('mt::pin-window-focus', (_event, pinId: string) => {
+    pinManager.focusPinWindow(pinId)
+  })
+
+  ipcMain.on('mt::pin-toolbar-focus', (_event, pinId: string) => {
+    pinManager.focusToolbarWindow(pinId)
+  })
+
+  ipcMain.on(
+    'mt::pin-edit-action',
+    (_event, data: { pinId: string; action: string; [key: string]: any }) => {
+      const pinWin = pinManager.getPinWindow(data.pinId)
+      if (pinWin && !pinWin.isDestroyed()) {
+        pinWin.webContents.send('mt::pin-edit-action', data)
+      }
+    }
+  )
+
+  ipcMain.on(
+    'mt::pin-edit-state-sync',
+    (_event, data: { pinId: string; [key: string]: any }) => {
+      const tbWin = pinManager.getToolbarWindow(data.pinId)
+      if (tbWin && !tbWin.isDestroyed()) {
+        tbWin.webContents.send('mt::pin-edit-state-sync', data)
+      }
+    }
+  )
+
+  ipcMain.on(
+    'mt::pin-toolbar-drag',
+    (_event, data: { pinId: string; dx: number; dy: number }) => {
+      const tbWin = pinManager.getToolbarWindow(data.pinId)
+      if (tbWin && !tbWin.isDestroyed()) {
+        const [x, y] = tbWin.getPosition()
+        tbWin.setPosition(Math.round(x + data.dx), Math.round(y + data.dy))
+      }
+    }
+  )
+
+  ipcMain.handle(
+    'mt::pin-create',
+    async (
+      _event,
+      payload: {
+        type?: 'image' | 'text'
+        content: string
+        width?: number
+        height?: number
+        x?: number
+        y?: number
+        title?: string
+        markdownMeta?: import('@shared/types/clipboard').MarkdownImageMeta
+      }
+    ) => {
+      try {
+        const pinWin = pinManager.createPinWindow({
+          id: `pin_${Date.now()}`,
+          type: payload.type || 'image',
+          content: payload.content,
+          width: payload.width || 500,
+          height: payload.height || 400,
+          x: payload.x,
+          y: payload.y,
+          title: payload.title || '独立展示',
+          markdownMeta: payload.markdownMeta
+        })
+        return !!pinWin
+      } catch (err) {
+        log.error('[PinWindowManager] Failed to create pin window via mt::pin-create:', err)
+        return false
+      }
+    }
+  )
+
+  ipcMain.handle(
+    'mt::pin-markdown-update',
+    async (
+      _event,
+      data: {
+        markdownMeta: import('@shared/types/clipboard').MarkdownImageMeta
+        newContent: string
+      }
+    ) => {
+      const { markdownMeta, newContent } = data
+      let localFilePath: string | null = null
+
+      const srcToCheck = markdownMeta.resolvedSrc || markdownMeta.originalSrc || ''
+      if (srcToCheck.startsWith('file://')) {
+        try {
+          const parsedUrl = new URL(srcToCheck)
+          localFilePath = decodeURIComponent(parsedUrl.pathname)
+        } catch {
+          localFilePath = srcToCheck.replace(/^file:\/\//, '')
+        }
+      } else if (path.isAbsolute(srcToCheck)) {
+        localFilePath = srcToCheck
+      }
+
+      if (localFilePath && fs.existsSync(localFilePath)) {
+        try {
+          const base64Data = newContent.replace(/^data:image\/\w+;base64,/, '')
+          const buffer = Buffer.from(base64Data, 'base64')
+          await fsPromises.writeFile(localFilePath, buffer)
+          log.info('[PinWindow] Overwrote local image file on disk:', localFilePath)
+        } catch (wErr) {
+          log.warn('[PinWindow] Failed to overwrite local image file:', wErr)
+        }
+      }
+
+      for (const win of BrowserWindow.getAllWindows()) {
+        if (!win.isDestroyed()) {
+          win.webContents.send('mt::pin-image-updated-in-markdown', {
+            markdownMeta,
+            newContent,
+            localFilePath
+          })
+        }
+      }
+      return { success: true, localFilePath }
     }
   )
 }

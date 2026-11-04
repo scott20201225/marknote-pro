@@ -182,3 +182,9 @@ export const copyImageToFolder = async(
     return toResult(imagePath)
   }
 }
+
+export const moveImageToFolder = copyImageToFolder
+
+export const isFileExecutable = (filepath: string): Promise<boolean> =>
+  window.fileUtils.isExecutable(filepath)
+

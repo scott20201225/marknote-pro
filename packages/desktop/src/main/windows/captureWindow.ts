@@ -375,6 +375,12 @@ export class CaptureWindowManager {
 
       try {
         this._win.setAlwaysOnTop(true, isOsx ? 'status' : 'screen-saver', isOsx ? 1 : 0)
+        if (isOsx) {
+          this._win.setVisibleOnAllWorkspaces(true, {
+            visibleOnFullScreen: true,
+            skipTransformProcessType: true
+          })
+        }
       } catch {}
     }
   }
