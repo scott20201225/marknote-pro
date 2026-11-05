@@ -239,7 +239,7 @@ export class PinWindowManager {
       this.restoreEditorFocus(win)
       if (!win.isDestroyed()) {
         try {
-          win.setVisibleOnAllWorkspaces(false)
+          win.setVisibleOnAllWorkspaces(false, { skipTransformProcessType: true })
         } catch {}
         win.destroy()
       }
@@ -365,7 +365,7 @@ export class PinWindowManager {
             visibleOnFullScreen: true,
             skipTransformProcessType: true
           })
-          win.showInactive()
+          win.show()
           win.moveTop()
         } catch {}
       }

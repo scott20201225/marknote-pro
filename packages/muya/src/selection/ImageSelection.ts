@@ -95,6 +95,7 @@ class ImageSelection {
     private _handleClickInlineImage(event: Event, imageWrapper: HTMLElement) {
         event.preventDefault();
         event.stopPropagation();
+        const { eventCenter } = this._muya;
         const { target } = event;
         if (!target || !(target instanceof Element))
             return;
