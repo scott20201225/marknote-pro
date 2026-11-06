@@ -502,7 +502,12 @@
               @mouseenter="showTooltip($event, getColorName(c))"
               @mouseleave="hideTooltip"
               @click="onColorSelect(c.hex)"
-            ></div>
+            >
+              <span
+                v-if="(activeTool === 'watermark' ? watermarkColor : activeColor).toLowerCase() === c.hex.toLowerCase()"
+                :class="['color-check', { darkText: c.hex === '#ffffff' || c.hex === '#ffc60c' }]"
+              >✓</span>
+            </div>
           </div>
         </template>
       </div>
@@ -1173,6 +1178,21 @@ onUnmounted(() => {
   border: 1.5px solid rgba(0, 0, 0, 0.15);
   transition: transform 0.12s ease;
   box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.color-check {
+  font-size: 11px;
+  color: #ffffff;
+  font-weight: 900;
+  line-height: 1;
+  user-select: none;
+}
+
+.color-check.darkText {
+  color: #1f2329;
 }
 
 .color-swatch-btn:hover {

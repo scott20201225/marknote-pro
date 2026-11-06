@@ -1590,7 +1590,8 @@ const activeEditorPositionStyle = computed(() => {
   if (textInputState.value.isTag && activeTagLayout.value) {
     return {
       left: `${activeTagLayout.value.bubbleX}px`,
-      top: `${activeTagLayout.value.bubbleY}px`
+      top: `${activeTagLayout.value.bubbleY}px`,
+      color: activeColor.value
     }
   }
   return {
@@ -3651,8 +3652,6 @@ onUnmounted(() => {
 
 .lark-textarea.tag-bubble-input {
   background: transparent !important;
-  color: inherit !important;
-  caret-color: inherit !important;
   padding: 0 !important;
   margin: 0 !important;
   text-align: center !important;
