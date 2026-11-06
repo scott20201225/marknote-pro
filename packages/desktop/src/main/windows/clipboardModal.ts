@@ -7,8 +7,13 @@ import { isOsx } from '../config'
 export class ClipboardModalWindow {
   private _win: BrowserWindow | null = null
   private _isReady: boolean = false
+  private _isNativeMode: boolean = false
   private _wasMarkNoteActive: boolean = false
   private _activeDisplayId: number | null = null
+
+  public get isNativeMode(): boolean {
+    return this._isNativeMode
+  }
 
   constructor() {
     // Pure lazy loading: do not eagerly create floating window at application startup,
@@ -105,7 +110,8 @@ export class ClipboardModalWindow {
     })
   }
 
-  public async show(): Promise<void> {
+  public async show(isNativeMode: boolean = false): Promise<void> {
+    this._isNativeMode = isNativeMode
     const cursorPoint = screen.getCursorScreenPoint()
     const currentDisplay = screen.getDisplayNearestPoint(cursorPoint)
     const { x: dispX, y: dispY, width: dispW, height: dispH } = currentDisplay.workArea
@@ -180,11 +186,12 @@ export class ClipboardModalWindow {
     // Intentionally no-op: auxiliary window close/hide must never steal focus or switch spaces to MarkNotePro!
   }
 
-  public toggle(): void {
+  public toggle(isNativeMode: boolean = false): void {
+    this._isNativeMode = isNativeMode
     if (this._win && !this._win.isDestroyed() && this._win.isVisible()) {
       this.hide()
     } else {
-      this.show()
+      this.show(isNativeMode)
     }
   }
 

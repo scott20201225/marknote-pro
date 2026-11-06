@@ -7,6 +7,8 @@ import { getClipboardService } from '../clipboard'
 import { getClipboardModalWindow } from '../windows/clipboardModal'
 import { getCaptureWindowManager } from '../windows/captureWindow'
 import { getPinWindowManager } from '../windows/pinWindow'
+import { getMacNativeHelper } from '../windows/macNativeHelper'
+import { isOsx } from '../config'
 import type { ClipboardItemRecord } from '@shared/types/clipboard'
 
 export const registerClipboardIpcHandlers = (): void => {
@@ -24,11 +26,19 @@ export const registerClipboardIpcHandlers = (): void => {
 
   // Trigger from sidebar or UI
   ipcMain.on('mt::trigger-screen-capture', () => {
-    captureManager.startCapture()
+    if (isOsx) {
+      getMacNativeHelper().startCapture()
+    } else {
+      captureManager.startCapture()
+    }
   })
 
   ipcMain.on('mt::trigger-clipboard-history', () => {
-    clipboardModal.toggle()
+    if (isOsx) {
+      getMacNativeHelper().toggleClipboard()
+    } else {
+      clipboardModal.toggle()
+    }
   })
 
   // 1. Clipboard History Modal
@@ -70,6 +80,7 @@ export const registerClipboardIpcHandlers = (): void => {
     try {
       clipboardModal.hide()
       const pinId = `pin_${item.id}_${Date.now()}`
+      const isNative = clipboardModal.isNativeMode
       if (item.type === 'image') {
         const imageContent =
           item.imagePath && fs.existsSync(item.imagePath)
@@ -83,7 +94,7 @@ export const registerClipboardIpcHandlers = (): void => {
           width: item.width || 400,
           height: item.height || 300,
           title: item.previewText || '历史截图'
-        })
+        }, isNative)
       } else {
         pinManager.createPinWindow({
           id: pinId,
@@ -92,7 +103,7 @@ export const registerClipboardIpcHandlers = (): void => {
           width: 480,
           height: 280,
           title: item.previewText || '剪贴板文本'
-        })
+        }, isNative)
       }
       return true
     } catch (err) {
@@ -165,7 +176,8 @@ export const registerClipboardIpcHandlers = (): void => {
         const size = img.getSize()
         await clipboardService.addCapturedImage(dataUrl, size.width, size.height)
 
-        const pinWin = pinManager.createPinWindow({
+        const isNative = captureManager.isNativeMode
+        pinManager.createPinWindow({
           id: `pin_${Date.now()}`,
           type: 'image',
           content: dataUrl,
@@ -174,10 +186,10 @@ export const registerClipboardIpcHandlers = (): void => {
           x: bounds?.x,
           y: bounds?.y,
           title: '屏幕贴图'
-        })
+        }, isNative)
 
         captureManager.close()
-        return !!pinWin
+        return true
       } catch (err) {
         log.error('[Capture] Failed to pin capture:', err)
         captureManager.close()
@@ -359,7 +371,7 @@ export const registerClipboardIpcHandlers = (): void => {
           title: payload.title || '独立展示',
           markdownMeta: payload.markdownMeta
         })
-        return !!pinWin
+        return isOsx ? true : !!pinWin
       } catch (err) {
         log.error('[PinWindowManager] Failed to create pin window via mt::pin-create:', err)
         return false

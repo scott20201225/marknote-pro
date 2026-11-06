@@ -33,10 +33,19 @@ exports.default = async function (context) {
       run(`codesign --force --sign - "${crashpad}"`)
     }
 
-    // 2. Sign bundled CLI tools (e.g. mac-scroll)
-    const staticBin = path.join(appPath, 'Contents/Resources/static/bin/mac-scroll')
-    if (fs.existsSync(staticBin)) {
-      run(`codesign --force --sign - "${staticBin}"`)
+    // 2. Sign bundled CLI tools (e.g. mac-scroll, mac-pin-helper)
+    const staticBinDir = path.join(appPath, 'Contents/Resources/static/bin')
+    if (fs.existsSync(staticBinDir)) {
+      const binEntries = fs.readdirSync(staticBinDir)
+      for (const entry of binEntries) {
+        if (!entry.endsWith('.m') && !entry.startsWith('.')) {
+          const binPath = path.join(staticBinDir, entry)
+          const helperId = (entry === 'mac-pin-helper' || entry === 'MarkNoteProPinHelper')
+            ? 'com.scott20201225.marknotepro.pinhelper'
+            : `com.scott20201225.marknotepro.${entry}`
+          run(`codesign --force --sign - -i "${helperId}" --entitlements "${entitlementsPath}" "${binPath}"`)
+        }
+      }
     }
 
     // 3. Sign nested frameworks

@@ -24,6 +24,7 @@ export class CaptureWindowManager {
   private _currentPayload: ScreenCaptureDisplayInfo | null = null
   private _isCapturing = false
   private _isClosing = false
+  private _isNativeMode = false
   private _wasEditorActive = false
   private _fallbackTimer: NodeJS.Timeout | null = null
   private _hasPromptedSystemPermission = false
@@ -36,10 +37,15 @@ export class CaptureWindowManager {
     return this._isCapturing
   }
 
-  public async startCapture(): Promise<void> {
-    log.info('[CaptureWindowManager] startCapture called!')
+  public get isNativeMode(): boolean {
+    return this._isNativeMode
+  }
+
+  public async startCapture(isNativeMode: boolean = false): Promise<void> {
+    log.info(`[CaptureWindowManager] startCapture called! (isNativeMode=${isNativeMode})`)
     this._isClosing = false
     this._isCapturing = true
+    this._isNativeMode = isNativeMode
 
     // Check whether MarkNotePro was the active window on this EXACT display when shortcut was triggered
     const activeWin = BrowserWindow.getFocusedWindow()

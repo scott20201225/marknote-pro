@@ -880,6 +880,8 @@ onUnmounted(() => {
 
 /* Header */
 .search-header {
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
   padding: 12px 18px;
@@ -896,6 +898,7 @@ onUnmounted(() => {
 
 .search-input {
   flex: 1;
+  min-width: 0;
   background: transparent;
   border: none;
   outline: none;

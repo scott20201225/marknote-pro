@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleIdentifier</key>
+    <string>com.scott20201225.marknotepro.pinhelper</string>
+    <key>CFBundleName</key>
+    <string>MarkNoteProPinHelper</string>
+    <key>CFBundleDisplayName</key>
+    <string>MarkNoteProPinHelper</string>
+    <key>CFBundleExecutable</key>
+    <string>MarkNoteProPinHelper</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.2.7</string>
+    <key>NSScreenCaptureUsageDescription</key>
+    <string>MarkNoteProPinHelper 需要屏幕录制权限以捕获屏幕画面和支持智能截图与贴图功能。</string>
+    <key>NSAccessibilityUsageDescription</key>
+    <string>MarkNoteProPinHelper 需要辅助功能权限以支持全局快捷键与跨应用截图贴图协同。</string>
+</dict>
+</plist>

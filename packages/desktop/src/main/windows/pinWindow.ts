@@ -6,6 +6,7 @@ import { app, BrowserWindow, dialog, nativeImage, clipboard, screen, nativeTheme
 import log from 'electron-log'
 import type { PinWindowPayload } from '@shared/types/clipboard'
 import { isOsx } from '../config'
+import { getMacNativeHelper } from './macNativeHelper'
 
 export class PinWindowManager {
   private _windows: Map<string, BrowserWindow> = new Map()
@@ -14,6 +15,25 @@ export class PinWindowManager {
   private _toolbarWindows: Map<string, BrowserWindow> = new Map()
 
   constructor() {
+    if (isOsx) {
+      try {
+        const helper = getMacNativeHelper()
+        helper.addEventListener((event) => {
+          if (event.event === 'edit' && event.pinId) {
+            const payload = this._payloads.get(event.pinId)
+            if (payload) {
+              log.info(`[PinWindowManager] User requested edit on native pin: ${event.pinId}`)
+              this.createElectronPinWindow(payload)
+            }
+          } else if (event.event === 'closed' && event.pinId) {
+            this._payloads.delete(event.pinId)
+          }
+        })
+      } catch (err) {
+        log.warn('[PinWindowManager] Failed to initialize MacNativeHelper listener:', err)
+      }
+    }
+
     app.whenReady().then(() => {
       screen.on('display-metrics-changed', () => {
         for (const [pinId] of this._toolbarWindows.entries()) {
@@ -23,7 +43,82 @@ export class PinWindowManager {
     })
   }
 
-  public createPinWindow(payload: PinWindowPayload): BrowserWindow {
+  public createPinWindow(payload: PinWindowPayload, forceNative?: boolean): BrowserWindow | null {
+    const pinId = payload.id || `pin_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+    payload.id = pinId
+    this._payloads.set(pinId, payload)
+
+    // On macOS, always use Lark-style native Cocoa pin mode for images (markdown pin, clipboard pin, capture pin)!
+    if (isOsx && payload.type === 'image') {
+      const cursorPoint = screen.getCursorScreenPoint()
+      const currentDisplay = screen.getDisplayNearestPoint(cursorPoint)
+      const scaleFactor = currentDisplay.scaleFactor || 1
+
+      const maxW = Math.round(currentDisplay.workArea.width * 0.95)
+      const maxH = Math.round(currentDisplay.workArea.height * 0.95)
+      let w = payload.width || 400
+      let h = payload.height || 300
+
+      if (scaleFactor > 1 && (w > maxW || h > maxH)) {
+        w = Math.round(w / scaleFactor)
+        h = Math.round(h / scaleFactor)
+      }
+
+      if (w > maxW || h > maxH) {
+        const scale = Math.min(maxW / w, maxH / h)
+        w = Math.round(w * scale)
+        h = Math.round(h * scale)
+      }
+
+      const width = Math.min(Math.max(w, 20), currentDisplay.workArea.width)
+      const height = Math.min(Math.max(h, 20), currentDisplay.workArea.height)
+
+      const posX =
+        payload.x !== undefined
+          ? payload.x
+          : Math.round(currentDisplay.workArea.x + (currentDisplay.workArea.width - width) / 2)
+      const posY =
+        payload.y !== undefined
+          ? payload.y
+          : Math.round(currentDisplay.workArea.y + (currentDisplay.workArea.height - height) / 2)
+
+      let imagePath = ''
+      let base64 = ''
+      let candidatePath = payload.content || ''
+      if (candidatePath.startsWith('file://')) {
+        try {
+          candidatePath = decodeURIComponent(candidatePath.replace(/^file:\/\//, ''))
+        } catch {}
+      }
+      if (candidatePath.startsWith('data:image')) {
+        base64 = candidatePath
+      } else if (fs.existsSync(candidatePath)) {
+        imagePath = candidatePath
+      } else {
+        base64 = candidatePath
+      }
+
+      const helper = getMacNativeHelper()
+      const ok = helper.pin({
+        pinId,
+        imagePath,
+        base64,
+        x: posX,
+        y: posY,
+        width,
+        height,
+        markdownMeta: payload.markdownMeta
+      })
+      if (ok) {
+        log.info(`[PinWindowManager] Spawned native Cocoa pin: ${pinId}`)
+        return null
+      }
+    }
+
+    return this.createElectronPinWindow(payload)
+  }
+
+  public createElectronPinWindow(payload: PinWindowPayload): BrowserWindow {
     const pinId = payload.id || `pin_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
     payload.id = pinId
     this._payloads.set(pinId, payload)
@@ -219,6 +314,11 @@ export class PinWindowManager {
   }
 
   public closePin(pinId?: string, sourceWindow?: BrowserWindow): void {
+    if (isOsx && pinId) {
+      try {
+        getMacNativeHelper().closePin(pinId)
+      } catch {}
+    }
     let win = (pinId ? this._windows.get(pinId) : sourceWindow) || sourceWindow
     if (!win && pinId) {
       for (const [wId, pId] of this._winToPinId.entries()) {

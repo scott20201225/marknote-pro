@@ -49,6 +49,7 @@ extraResources:
     to: static
     filter:
       - '**/*'
+      - '!bin/**'
       - '!locales/**/!(*.min).json'
   - from: src/githubDesktop/out
     to: githubDesktop/out
@@ -241,6 +242,11 @@ nsis:
   perMachine: false
   include: windows/installer.nsh
 mac:
+  extraResources:
+    - from: static/bin
+      to: static/bin
+      filter:
+        - '**/*'
   artifactName: 'marknotepro-mac-${arch}-${version}.${ext}'
   entitlements: build/mac/entitlements.mac.plist
   entitlementsInherit: build/mac/entitlements.mac.plist
@@ -253,6 +259,8 @@ mac:
     NSDownloadsFolderUsageDescription: "Application requests access to the user's Downloads folder."
     NSDesktopFolderUsageDescription: "Application requests access to the user's Desktop folder."
     NSLocalNetworkUsageDescription: "MarkNotePro 需要访问本地网络以连接 SSH/SFTP 终端服务器及本地网络服务。"
+    NSAppleEventsUsageDescription: "MarkNotePro 需要 Apple Events 权限以支持自动化和多应用协同。"
+    NSAccessibilityUsageDescription: "MarkNotePro 需要辅助功能权限以支持全局快捷键与跨应用截图贴图协同。"
   icon: static/icon.icns
   notarize: false
   target:
