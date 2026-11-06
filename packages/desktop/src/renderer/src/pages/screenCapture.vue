@@ -622,16 +622,16 @@
             <div
               v-for="color in larkPalette"
               :key="color.hex"
-              :class="['color-swatch-box', { active: activeColor === color.hex }]"
+              :class="['color-swatch-box', { active: (activeTool === 'watermark' ? watermarkColor : activeColor) === color.hex }]"
               :style="{
                 backgroundColor: color.hex,
                 borderColor: color.border || 'transparent'
               }"
               @mouseenter="showTooltip($event, getColorName(color))"
               @mouseleave="hideTooltip"
-              @click="activeColor = color.hex"
+              @click="onColorSelect(color.hex)"
             >
-              <span v-if="activeColor === color.hex" :class="['color-check', { darkText: color.hex === '#ffffff' || color.hex === '#ffc60c' }]">✓</span>
+              <span v-if="(activeTool === 'watermark' ? watermarkColor : activeColor) === color.hex" :class="['color-check', { darkText: color.hex === '#ffffff' || color.hex === '#ffc60c' }]">✓</span>
             </div>
           </div>
         </template>
@@ -1241,11 +1241,12 @@ const mosaicStyle = ref<'pixel' | 'blur'>('pixel')
 // Watermark State
 const isWatermarkActive = ref(false)
 const watermarkText = ref('')
+const watermarkColor = ref('#8f959e')
 const watermarkPresets = computed(() => [
   tr('wmInternalOnly'),
   tr('wmConfidential'),
   tr('wmForReview'),
-  'MarkNotePro'
+  window.location.href.includes('marktext') ? 'MarkTextPro' : 'MarkNotePro'
 ])
 
 const onWatermarkInputFocus = (): void => {
@@ -1366,6 +1367,14 @@ const getColorName = (color: { key?: string; name: string }): string => {
 }
 
 const activeColor = ref('#f64b45')
+const onColorSelect = (hex: string): void => {
+  if (activeTool.value === 'watermark') {
+    watermarkColor.value = hex
+  } else {
+    activeColor.value = hex
+  }
+  renderAll()
+}
 const presetSizes = [2, 4, 6, 8]
 const strokeWidth = ref(4)
 
@@ -1593,11 +1602,11 @@ const activeEditorPositionStyle = computed(() => {
 const textareaComputedStyle = computed(() => {
   if (textInputState.value.isTag) {
     return {
-      color: '#ffffff',
+      color: activeColor.value,
       backgroundColor: 'transparent',
       fontSize: `${fontSizeVal.value}px`,
       lineHeight: '1.35',
-      caretColor: '#ffffff'
+      caretColor: activeColor.value
     }
   }
   return {
@@ -2282,8 +2291,13 @@ const renderAll = (): void => {
       ctx.lineTo(l.notchPoints.p1.x, l.notchPoints.p1.y)
       ctx.lineTo(l.notchPoints.p2.x, l.notchPoints.p2.y)
       ctx.closePath()
-      ctx.fillStyle = '#2b2f3a'
+      ctx.fillStyle = isDarkTheme.value ? '#2b2f3a' : '#ffffff'
       ctx.fill()
+      if (!isDarkTheme.value) {
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.12)'
+        ctx.lineWidth = 1
+        ctx.stroke()
+      }
       ctx.restore()
     }
 
@@ -2380,6 +2394,17 @@ const renderAll = (): void => {
   ctx.restore()
 }
 
+const hexToRgb = (hex: string): { r: number; g: number; b: number } | null => {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex.trim())
+  return m
+    ? {
+        r: parseInt(m[1], 16),
+        g: parseInt(m[2], 16),
+        b: parseInt(m[3], 16)
+      }
+    : null
+}
+
 const drawWatermark = (ctx: CanvasRenderingContext2D, bounds: { x: number; y: number; width: number; height: number }): void => {
   if (!isWatermarkActive.value) return
   ctx.save()
@@ -2387,7 +2412,19 @@ const drawWatermark = (ctx: CanvasRenderingContext2D, bounds: { x: number; y: nu
   ctx.rect(bounds.x, bounds.y, bounds.width, bounds.height)
   ctx.clip()
 
-  ctx.fillStyle = activeColor.value === '#ffffff' ? 'rgba(255, 255, 255, 0.22)' : 'rgba(148, 163, 184, 0.3)'
+  const hex = watermarkColor.value || '#8f959e'
+  const rgb = hexToRgb(hex) || { r: 143, g: 149, b: 158 }
+  const isWhite = rgb.r > 240 && rgb.g > 240 && rgb.b > 240
+
+  if (isWhite) {
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.45)'
+    ctx.shadowBlur = 3
+    ctx.shadowOffsetX = 1
+    ctx.shadowOffsetY = 1
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.35)'
+  } else {
+    ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.32)`
+  }
   ctx.font = 'bold 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
@@ -2789,27 +2826,40 @@ const drawTagAnnotation = (ctx: CanvasRenderingContext2D, ann: Annotation): void
   ctx.strokeStyle = '#ffffff'
   ctx.stroke()
 
+  const tagBg = isDarkTheme.value ? '#2b2f3a' : '#ffffff'
+
   // 2. Triangular Notch (seamless with bubble)
   ctx.beginPath()
   ctx.moveTo(layout.notchPoints.tip.x, layout.notchPoints.tip.y)
   ctx.lineTo(layout.notchPoints.p1.x, layout.notchPoints.p1.y)
   ctx.lineTo(layout.notchPoints.p2.x, layout.notchPoints.p2.y)
   ctx.closePath()
-  ctx.fillStyle = '#2b2f3a'
+  ctx.fillStyle = tagBg
   ctx.fill()
+  if (!isDarkTheme.value) {
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.12)'
+    ctx.lineWidth = 1
+    ctx.stroke()
+  }
 
-  // 3. Rounded Rect Callout Bubble (Lark Charcoal #2b2f3a)
+  // 3. Rounded Rect Callout Bubble
   ctx.beginPath()
   ctx.roundRect(layout.bubbleX, layout.bubbleY, layout.bubbleWidth, layout.bubbleHeight, 6)
-  ctx.fillStyle = '#2b2f3a'
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.35)'
+  ctx.fillStyle = tagBg
+  ctx.shadowColor = isDarkTheme.value ? 'rgba(0, 0, 0, 0.35)' : 'rgba(0, 0, 0, 0.12)'
   ctx.shadowBlur = 8
   ctx.shadowOffsetY = 2
   ctx.fill()
   ctx.shadowColor = 'transparent'
 
-  // 4. White text
-  ctx.fillStyle = '#ffffff'
+  if (!isDarkTheme.value) {
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.12)'
+    ctx.lineWidth = 1
+    ctx.stroke()
+  }
+
+  // 4. Colored text (matches selected color!)
+  ctx.fillStyle = ann.color || '#f64b45'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.fillText(ann.text || '', layout.bubbleX + layout.bubbleWidth / 2, layout.bubbleY + layout.bubbleHeight / 2)
@@ -3581,11 +3631,11 @@ onUnmounted(() => {
 
 /* Lark-Style Active Callout Tag Bubble */
 .lark-active-textbox.is-tag-bubble {
-  border: none !important;
-  background: #2b2f3a !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+  background: #ffffff !important;
   border-radius: 6px !important;
   padding: 4px 10px !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
   outline: 1.5px solid #3370ff !important;
   outline-offset: 3px !important;
   display: inline-flex !important;
@@ -3593,10 +3643,16 @@ onUnmounted(() => {
   gap: 0 !important;
 }
 
+.theme-dark .lark-active-textbox.is-tag-bubble {
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  background: #2b2f3a !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45) !important;
+}
+
 .lark-textarea.tag-bubble-input {
   background: transparent !important;
-  color: #ffffff !important;
-  caret-color: #ffffff !important;
+  color: inherit !important;
+  caret-color: inherit !important;
   padding: 0 !important;
   margin: 0 !important;
   text-align: center !important;

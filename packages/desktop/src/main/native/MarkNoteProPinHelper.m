@@ -1339,6 +1339,22 @@ typedef NS_ENUM(NSInteger, HandleHitType) {
     HitOutside
 };
 
+static NSArray<NSColor *> *getPaletteColors(void) {
+    static NSArray<NSColor *> *palette = nil;
+    if (!palette) {
+        palette = @[
+            [NSColor colorWithSRGBRed:0.96 green:0.29 blue:0.27 alpha:1.0], // 0: #f64b45 Red
+            [NSColor colorWithSRGBRed:1.00 green:0.78 blue:0.05 alpha:1.0], // 1: #ffc60c Yellow
+            [NSColor colorWithSRGBRed:0.20 green:0.75 blue:0.29 alpha:1.0], // 2: #34be4b Green
+            [NSColor colorWithSRGBRed:0.20 green:0.43 blue:0.96 alpha:1.0], // 3: #336df4 Blue
+            [NSColor colorWithSRGBRed:0.12 green:0.14 blue:0.16 alpha:1.0], // 4: #1f2329 Black
+            [NSColor colorWithSRGBRed:0.56 green:0.58 blue:0.62 alpha:1.0], // 5: #8f959e Gray
+            [NSColor colorWithSRGBRed:1.00 green:1.00 blue:1.00 alpha:1.0]  // 6: #ffffff White (explicit sRGB 4-component)
+        ];
+    }
+    return palette;
+}
+
 @interface AnnotationItem : NSObject
 @property (nonatomic, assign) AnnotationToolType toolType;
 @property (nonatomic, assign) AnnotationTextStyle textStyle;
@@ -1423,7 +1439,8 @@ typedef NS_ENUM(NSInteger, HandleHitType) {
     // Initial size: 4 Chinese characters length (~80px), 1 line height (~30px)
     CGFloat initialW = (toolType == ToolStepNote) ? 120.0 : ((toolType == ToolTag) ? 84.0 : 80.0);
     CGFloat initialH = 30.0;
-    NSRect initialFrame = NSMakeRect(center.x, center.y - initialH / 2.0, initialW, initialH);
+    CGFloat initialX = (toolType == ToolTag) ? (center.x + 14.0) : center.x;
+    NSRect initialFrame = NSMakeRect(initialX, center.y - initialH / 2.0, initialW, initialH);
 
     self = [super initWithFrame:initialFrame];
     if (self) {
@@ -1440,21 +1457,25 @@ typedef NS_ENUM(NSInteger, HandleHitType) {
         self.layer.cornerRadius = 6.0;
 
         if (toolType == ToolTag) {
-            // Tag bubble: Charcoal #2b2f3a with subtle shadow
-            self.layer.backgroundColor = [[NSColor colorWithSRGBRed:0.17 green:0.18 blue:0.23 alpha:0.96] CGColor];
+            // Tag bubble: theme-adaptive
+            NSColor *tagBg = AppTheme.currentTheme.isDark ? [NSColor colorWithSRGBRed:0.17 green:0.18 blue:0.23 alpha:0.96] : [NSColor colorWithSRGBRed:0.96 green:0.96 blue:0.98 alpha:0.98];
+            NSColor *tagBorder = AppTheme.currentTheme.isDark ? [NSColor colorWithWhite:1.0 alpha:0.2] : [NSColor colorWithWhite:0.0 alpha:0.15];
+            self.layer.backgroundColor = [tagBg CGColor];
             self.layer.borderWidth = 1.0;
-            self.layer.borderColor = [[NSColor colorWithWhite:1.0 alpha:0.2] CGColor];
+            self.layer.borderColor = [tagBorder CGColor];
         } else if (textStyle == TextStyleFilled) {
             self.layer.backgroundColor = [color CGColor];
             self.layer.borderWidth = 1.0;
             self.layer.borderColor = [[NSColor colorWithWhite:1.0 alpha:0.3] CGColor];
         } else if (textStyle == TextStyleBordered) {
-            self.layer.backgroundColor = [[NSColor colorWithWhite:0.0 alpha:0.55] CGColor];
+            NSColor *borderBg = AppTheme.currentTheme.isDark ? [NSColor colorWithWhite:0.0 alpha:0.55] : [NSColor colorWithWhite:1.0 alpha:0.88];
+            self.layer.backgroundColor = [borderBg CGColor];
             self.layer.borderWidth = 1.5;
             self.layer.borderColor = [color CGColor];
         } else {
-            // Normal: subtle focus frame during edit
-            self.layer.backgroundColor = [[NSColor colorWithSRGBRed:0.12 green:0.14 blue:0.18 alpha:0.92] CGColor];
+            // Normal text / ordered text: subtle translucent background adapted to theme for input visibility
+            NSColor *normalBg = AppTheme.currentTheme.isDark ? [NSColor colorWithSRGBRed:0.12 green:0.14 blue:0.18 alpha:0.92] : [NSColor colorWithWhite:1.0 alpha:0.90];
+            self.layer.backgroundColor = [normalBg CGColor];
             self.layer.borderWidth = 1.5;
             self.layer.borderColor = [[NSColor colorWithSRGBRed:0.20 green:0.43 blue:0.96 alpha:1.0] CGColor]; // Lark Blue focus ring
         }
@@ -1475,7 +1496,17 @@ typedef NS_ENUM(NSInteger, HandleHitType) {
         _textView = [[NSTextView alloc] initWithFrame:textRect];
         _textView.delegate = self;
         _textView.font = [NSFont systemFontOfSize:_fontSize weight:NSFontWeightMedium];
-        _textView.textColor = (toolType == ToolTag || textStyle == TextStyleFilled) ? [NSColor whiteColor] : color;
+        BOOL isFilled = (textStyle == TextStyleFilled);
+        BOOL isLightCol = NO;
+        if (isFilled && color) {
+            NSColor *rgbCol = [color colorUsingColorSpace:[NSColorSpace sRGBColorSpace]] ?: color;
+            CGFloat r = 0, g = 0, b = 0, a = 0;
+            @try { [rgbCol getRed:&r green:&g blue:&b alpha:&a]; } @catch (NSException *e) {}
+            CGFloat lum = 0.299 * r + 0.587 * g + 0.114 * b;
+            isLightCol = (lum > 0.65);
+        }
+        _textView.textColor = isFilled ? (isLightCol ? [NSColor colorWithSRGBRed:0.1 green:0.1 blue:0.15 alpha:1.0] : [NSColor whiteColor]) : (color ?: [NSColor redColor]);
+        _textView.insertionPointColor = _textView.textColor;
         _textView.backgroundColor = [NSColor clearColor];
         _textView.drawsBackground = NO;
         _textView.richText = NO;
@@ -1511,6 +1542,9 @@ typedef NS_ENUM(NSInteger, HandleHitType) {
 
     // Expand UP and DOWN by the exact same distance from _centerPoint.y!
     NSRect f = self.frame;
+    if (_toolType == ToolTag) {
+        f.origin.x = _centerPoint.x + 14.0;
+    }
     f.origin.y = _centerPoint.y - targetH / 2.0;
     f.size.width = targetW;
     f.size.height = targetH;
@@ -1587,6 +1621,7 @@ typedef NS_ENUM(NSInteger, HandleHitType) {
 @property (nonatomic, assign) AnnotationToolType pinActiveTool;
 @property (nonatomic, assign) AnnotationTextStyle pinActiveTextStyle;
 @property (nonatomic, strong) NSColor *pinActiveColor;
+@property (nonatomic, strong) NSColor *pinWatermarkColor;
 @property (nonatomic, assign) CGFloat pinActiveLineWidth;
 @property (nonatomic, assign) CGFloat pinActiveFontSize;
 @property (nonatomic, assign) NSInteger pinCurrentStep;
@@ -1610,6 +1645,7 @@ typedef NS_ENUM(NSInteger, HandleHitType) {
 - (void)renderPinAnnotation:(AnnotationItem *)item;
 - (void)renderPinWatermarkInRect:(NSRect)bounds;
 - (void)renderPinTagNotchForEditor:(AnnotationInlineEditorView *)editor;
+- (void)updateZoomAfterResize;
 @end
 
 static NSMutableDictionary<NSString *, PinPanel *> *gPanels = nil;
@@ -1617,6 +1653,20 @@ static NSMutableDictionary<NSString *, PinPanel *> *gPanels = nil;
 @implementation PinPanel
 - (BOOL)canBecomeKeyWindow { return YES; }
 - (BOOL)canBecomeMainWindow { return NO; }
+
+- (void)setFrame:(NSRect)frameRect display:(BOOL)flag {
+    [super setFrame:frameRect display:flag];
+    if (self.pinView) {
+        [self.pinView updateZoomAfterResize];
+    }
+}
+
+- (void)setFrame:(NSRect)frameRect display:(BOOL)flag animate:(BOOL)animate {
+    [super setFrame:frameRect display:flag animate:animate];
+    if (self.pinView) {
+        [self.pinView updateZoomAfterResize];
+    }
+}
 
 - (void)keyDown:(NSEvent *)event {
     if (event.keyCode == 53) { // Escape key
@@ -1649,7 +1699,23 @@ static NSMutableDictionary<NSString *, PinPanel *> *gPanels = nil;
 }
 @end
 
-#pragma mark - Pin In-Place Floating Toolbar View
+#pragma mark - Pin In-Place Floating Toolbar Panel & View
+
+@interface PinEditToolbarPanel : NSPanel
+@end
+
+@implementation PinEditToolbarPanel
+- (BOOL)canBecomeKeyWindow { return YES; }
+- (BOOL)canBecomeMainWindow { return NO; }
+
+- (void)keyDown:(NSEvent *)event {
+    if (event.keyCode == 53) { // Escape
+        [self makeFirstResponder:nil];
+        return;
+    }
+    [super keyDown:event];
+}
+@end
 
 @interface PinEditToolbarView : NSView <NSTextFieldDelegate>
 @property (nonatomic, weak) PinContentView *pinContentView;
@@ -1755,7 +1821,7 @@ static NSMutableDictionary<NSString *, PinPanel *> *gPanels = nil;
         if (i == 1) { // Default Rect tool selected
             btn.isSelected = YES;
             if (@available(macOS 10.14, *)) {
-                btn.contentTintColor = [NSColor colorWithSRGBRed:0.20 green:0.43 blue:0.96 alpha:1.0];
+                btn.contentTintColor = AppTheme.currentTheme.accentColor;
             }
         }
 
@@ -1819,18 +1885,21 @@ static NSMutableDictionary<NSString *, PinPanel *> *gPanels = nil;
         _pinContentView.pinActiveTool = ToolNone;
         sender.isSelected = NO;
         if (@available(macOS 10.14, *)) {
-            sender.contentTintColor = [NSColor whiteColor];
+            sender.contentTintColor = AppTheme.currentTheme.textColor;
         }
     } else {
         _activeTool = tool;
         _lastSecondaryTool = tool;
         _pinContentView.pinActiveTool = tool;
+        if (tool == ToolWatermark) {
+            _pinContentView.pinIsWatermarkActive = YES;
+        }
         for (HoverButton *btn in _primaryButtons) {
             if (btn.tag >= 1 && btn.tag <= 13) {
                 BOOL isTarget = (btn == sender);
                 btn.isSelected = isTarget;
                 if (@available(macOS 10.14, *)) {
-                    btn.contentTintColor = isTarget ? [NSColor colorWithSRGBRed:0.20 green:0.43 blue:0.96 alpha:1.0] : [NSColor whiteColor];
+                    btn.contentTintColor = isTarget ? AppTheme.currentTheme.accentColor : AppTheme.currentTheme.textColor;
                 }
             }
         }
@@ -1874,7 +1943,7 @@ static NSMutableDictionary<NSString *, PinPanel *> *gPanels = nil;
             sBtn.layer.cornerRadius = 4.0;
             BOOL isSel = (_pinContentView.pinActiveTextStyle == s);
             sBtn.layer.borderWidth = isSel ? 1.5 : 0.5;
-            sBtn.layer.borderColor = isSel ? [[NSColor colorWithSRGBRed:0.20 green:0.43 blue:0.96 alpha:1.0] CGColor] : [[NSColor colorWithWhite:1.0 alpha:0.18] CGColor];
+            sBtn.layer.borderColor = isSel ? [AppTheme.currentTheme.accentColor CGColor] : [AppTheme.currentTheme.toolbarBorderColor CGColor];
             sBtn.tag = s;
             sBtn.target = self;
             sBtn.action = @selector(textStyleAction:);
@@ -1912,9 +1981,9 @@ static NSMutableDictionary<NSString *, PinPanel *> *gPanels = nil;
         chkBtn.wantsLayer = YES;
         chkBtn.layer.cornerRadius = 3.5;
         chkBtn.layer.borderWidth = active ? 0.0 : 1.2;
-        chkBtn.layer.borderColor = [[NSColor colorWithWhite:1.0 alpha:0.35] CGColor];
-        chkBtn.customNormalBgColor = active ? [NSColor colorWithSRGBRed:0.20 green:0.43 blue:0.96 alpha:1.0] : [NSColor colorWithWhite:1.0 alpha:0.06];
-        chkBtn.customHoverColor = active ? [NSColor colorWithSRGBRed:0.30 green:0.52 blue:0.98 alpha:1.0] : [NSColor colorWithWhite:1.0 alpha:0.18];
+        chkBtn.layer.borderColor = active ? [AppTheme.currentTheme.accentColor CGColor] : [AppTheme.currentTheme.toolbarBorderColor CGColor];
+        chkBtn.customNormalBgColor = active ? AppTheme.currentTheme.accentColor : (AppTheme.currentTheme.isDark ? [NSColor colorWithWhite:1.0 alpha:0.08] : [NSColor colorWithWhite:0.0 alpha:0.06]);
+        chkBtn.customHoverColor = active ? AppTheme.currentTheme.accentColor : AppTheme.currentTheme.buttonHoverColor;
         chkBtn.toolTip = [I18N tr:@"enableWatermark"];
         chkBtn.target = self;
         chkBtn.action = @selector(toggleWatermarkCheckboxAction:);
@@ -1937,8 +2006,8 @@ static NSMutableDictionary<NSString *, PinPanel *> *gPanels = nil;
             pBtn.layer.cornerRadius = 4.0;
             BOOL isActivePreset = [_pinContentView.pinWatermarkText isEqualToString:presets[p]];
             pBtn.layer.borderWidth = isActivePreset ? 1.5 : 0.5;
-            pBtn.layer.borderColor = isActivePreset ? [[NSColor colorWithSRGBRed:0.20 green:0.43 blue:0.96 alpha:1.0] CGColor] : [[NSColor colorWithWhite:1.0 alpha:0.18] CGColor];
-            pBtn.customNormalBgColor = isActivePreset ? [NSColor colorWithSRGBRed:0.20 green:0.43 blue:0.96 alpha:0.25] : [NSColor colorWithWhite:1.0 alpha:0.08];
+            pBtn.layer.borderColor = isActivePreset ? [AppTheme.currentTheme.accentColor CGColor] : [AppTheme.currentTheme.toolbarBorderColor CGColor];
+            pBtn.customNormalBgColor = isActivePreset ? [AppTheme.currentTheme.accentColor colorWithAlphaComponent:0.25] : (AppTheme.currentTheme.isDark ? [NSColor colorWithWhite:1.0 alpha:0.08] : [NSColor colorWithWhite:0.0 alpha:0.05]);
             pBtn.tag = p;
             pBtn.target = self;
             pBtn.action = @selector(watermarkPresetAction:);
@@ -1951,10 +2020,13 @@ static NSMutableDictionary<NSString *, PinPanel *> *gPanels = nil;
         VerticallyCenteredTextFieldCell *wmCell = [[VerticallyCenteredTextFieldCell alloc] initTextCell:@""];
         wmCell.scrollable = YES;
         wmCell.editable = YES;
+        wmCell.selectable = YES;
         wmCell.verticalOffset = 0.5;
         _watermarkInputField.cell = wmCell;
         _watermarkInputField.bezeled = NO;
         _watermarkInputField.drawsBackground = YES;
+        _watermarkInputField.editable = YES;
+        _watermarkInputField.selectable = YES;
         _watermarkInputField.backgroundColor = AppTheme.currentTheme.inputBgColor;
         _watermarkInputField.textColor = AppTheme.currentTheme.textColor;
         _watermarkInputField.font = [NSFont systemFontOfSize:11];
@@ -1986,7 +2058,7 @@ static NSMutableDictionary<NSString *, PinPanel *> *gPanels = nil;
             sBtn.wantsLayer = YES;
             sBtn.layer.cornerRadius = 13.0;
             sBtn.layer.borderWidth = (s == 1) ? 1.5 : 0.0;
-            sBtn.layer.borderColor = [[NSColor whiteColor] CGColor];
+            sBtn.layer.borderColor = (s == 1) ? [AppTheme.currentTheme.accentColor CGColor] : [[NSColor clearColor] CGColor];
             sBtn.tag = s;
             sBtn.target = self;
             sBtn.action = @selector(strokeSizeAction:);
@@ -1995,7 +2067,7 @@ static NSMutableDictionary<NSString *, PinPanel *> *gPanels = nil;
             CGFloat r = dotRadii[s];
             dotLayer.frame = CGRectMake((26 - r * 2) / 2.0, (26 - r * 2) / 2.0, r * 2, r * 2);
             dotLayer.cornerRadius = r;
-            dotLayer.backgroundColor = [[NSColor whiteColor] CGColor];
+            dotLayer.backgroundColor = [AppTheme.currentTheme.textColor CGColor];
             [sBtn.layer addSublayer:dotLayer];
 
             [_sizeButtons addObject:sBtn];
@@ -2011,15 +2083,8 @@ static NSMutableDictionary<NSString *, PinPanel *> *gPanels = nil;
 
     // 4. Color Swatches (NO "But" text & Fixed Background!)
     if (tool != ToolMosaic) {
-        NSArray *colors = @[
-            [NSColor colorWithSRGBRed:0.96 green:0.29 blue:0.27 alpha:1.0], // #f64b45 Red
-            [NSColor colorWithSRGBRed:1.00 green:0.78 blue:0.05 alpha:1.0], // #ffc60c Yellow
-            [NSColor colorWithSRGBRed:0.20 green:0.75 blue:0.29 alpha:1.0], // #34be4b Green
-            [NSColor colorWithSRGBRed:0.20 green:0.43 blue:0.96 alpha:1.0], // #336df4 Blue
-            [NSColor colorWithSRGBRed:0.12 green:0.14 blue:0.16 alpha:1.0], // #1f2329 Black
-            [NSColor colorWithSRGBRed:0.56 green:0.58 blue:0.62 alpha:1.0], // #8f959e Gray
-            [NSColor whiteColor]                                            // #ffffff White
-        ];
+        NSArray *colors = getPaletteColors();
+        NSColor *currentColor = (tool == ToolWatermark) ? _pinContentView.pinWatermarkColor : _pinContentView.pinActiveColor;
 
         for (NSInteger c = 0; c < colors.count; c++) {
             HoverButton *cBtn = [[HoverButton alloc] initWithFrame:NSMakeRect(optX, 7, 24, 24)];
@@ -2034,7 +2099,7 @@ static NSMutableDictionary<NSString *, PinPanel *> *gPanels = nil;
             cBtn.target = self;
             cBtn.action = @selector(colorPickAction:);
 
-            if ([colors[c] isEqual:_pinContentView.pinActiveColor]) {
+            if ([colors[c] isEqual:currentColor]) {
                 cBtn.title = @"✓";
                 cBtn.font = [NSFont systemFontOfSize:13 weight:NSFontWeightBold];
                 if (@available(macOS 10.14, *)) {
@@ -2108,8 +2173,9 @@ static NSMutableDictionary<NSString *, PinPanel *> *gPanels = nil;
 - (void)textStyleAction:(NSButton *)sender {
     _pinContentView.pinActiveTextStyle = (AnnotationTextStyle)sender.tag;
     for (NSButton *btn in _styleButtons) {
-        btn.layer.borderWidth = (btn == sender) ? 1.5 : 0.5;
-        btn.layer.borderColor = (btn == sender) ? [[NSColor colorWithSRGBRed:0.20 green:0.43 blue:0.96 alpha:1.0] CGColor] : [[NSColor colorWithWhite:1.0 alpha:0.18] CGColor];
+        BOOL isSel = (btn == sender);
+        btn.layer.borderWidth = isSel ? 1.5 : 0.5;
+        btn.layer.borderColor = isSel ? [AppTheme.currentTheme.accentColor CGColor] : [AppTheme.currentTheme.toolbarBorderColor CGColor];
     }
 }
 
@@ -2122,21 +2188,20 @@ static NSMutableDictionary<NSString *, PinPanel *> *gPanels = nil;
     CGFloat strokeMap[] = { 2.0, 4.0, 8.0 };
     _pinContentView.pinActiveLineWidth = strokeMap[sender.tag];
     for (NSButton *btn in _sizeButtons) {
-        btn.layer.borderWidth = (btn == sender) ? 1.5 : 0.0;
+        BOOL isSel = (btn == sender);
+        btn.layer.borderWidth = isSel ? 1.5 : 0.0;
+        btn.layer.borderColor = isSel ? [AppTheme.currentTheme.accentColor CGColor] : [[NSColor clearColor] CGColor];
     }
 }
 
 - (void)colorPickAction:(NSButton *)sender {
-    NSArray *colors = @[
-        [NSColor colorWithSRGBRed:0.96 green:0.29 blue:0.27 alpha:1.0],
-        [NSColor colorWithSRGBRed:1.00 green:0.78 blue:0.05 alpha:1.0],
-        [NSColor colorWithSRGBRed:0.20 green:0.75 blue:0.29 alpha:1.0],
-        [NSColor colorWithSRGBRed:0.20 green:0.43 blue:0.96 alpha:1.0],
-        [NSColor colorWithSRGBRed:0.12 green:0.14 blue:0.16 alpha:1.0],
-        [NSColor colorWithSRGBRed:0.56 green:0.58 blue:0.62 alpha:1.0],
-        [NSColor whiteColor]
-    ];
-    _pinContentView.pinActiveColor = colors[sender.tag];
+    NSArray *colors = getPaletteColors();
+    AnnotationToolType currentTool = (_activeTool != ToolNone) ? _activeTool : _lastSecondaryTool;
+    if (currentTool == ToolWatermark) {
+        _pinContentView.pinWatermarkColor = colors[sender.tag];
+    } else {
+        _pinContentView.pinActiveColor = colors[sender.tag];
+    }
 
     for (NSButton *btn in _colorButtons) {
         if (btn == sender) {
@@ -2149,6 +2214,7 @@ static NSMutableDictionary<NSString *, PinPanel *> *gPanels = nil;
             btn.title = @"";
         }
     }
+    [_pinContentView setNeedsDisplay:YES];
 }
 
 - (void)toggleWatermarkCheckboxAction:(NSButton *)sender {
@@ -2185,11 +2251,35 @@ static NSMutableDictionary<NSString *, PinPanel *> *gPanels = nil;
     [self updateWatermarkUIState];
     [_pinContentView setNeedsDisplay:YES];
 }
+
+- (BOOL)acceptsFirstResponder { return YES; }
 @end
 
 #pragma mark - Pin ContentView Implementation
 
 @implementation PinContentView
+
+- (void)updateZoomAfterResize {
+    if (_originalImageSize.width > 0 && self.bounds.size.width > 0) {
+        _zoomLevel = self.bounds.size.width / _originalImageSize.width;
+        if (_zoomLabel) {
+            _zoomLabel.stringValue = [NSString stringWithFormat:@"%.0f%%", _zoomLevel * 100.0];
+        }
+        [self updateToolbarPosition];
+        if (_isEditing) [self updateEditToolbarPosition];
+        [self.window invalidateCursorRectsForView:self];
+    }
+}
+
+- (void)viewDidEndLiveResize {
+    [super viewDidEndLiveResize];
+    [self updateZoomAfterResize];
+}
+
+- (void)resizeWithOldSuperviewSize:(NSSize)oldSize {
+    [super resizeWithOldSuperviewSize:oldSize];
+    [self updateZoomAfterResize];
+}
 
 - (instancetype)initWithFrame:(NSRect)frame image:(NSImage *)img path:(NSString *)path pinId:(NSString *)pid {
     self = [super initWithFrame:frame];
@@ -2204,6 +2294,7 @@ static NSMutableDictionary<NSString *, PinPanel *> *gPanels = nil;
         _pinActiveTool = ToolNone;
         _pinActiveTextStyle = TextStyleNormal;
         _pinActiveColor = [NSColor colorWithSRGBRed:0.96 green:0.29 blue:0.27 alpha:1.0];
+        _pinWatermarkColor = [NSColor colorWithSRGBRed:0.56 green:0.58 blue:0.62 alpha:1.0];
         _pinActiveLineWidth = 4.0;
         _pinActiveFontSize = 14.0;
         _pinCurrentStep = 1;
@@ -2317,18 +2408,17 @@ static NSMutableDictionary<NSString *, PinPanel *> *gPanels = nil;
 
 - (void)layout {
     [super layout];
-    [self updateToolbarPosition];
-    if (_isEditing) {
-        [self updateEditToolbarPosition];
-    }
+    [self updateZoomAfterResize];
 }
 
 - (void)setFrame:(NSRect)frame {
     [super setFrame:frame];
-    [self updateToolbarPosition];
-    if (_isEditing) {
-        [self updateEditToolbarPosition];
-    }
+    [self updateZoomAfterResize];
+}
+
+- (void)setFrameSize:(NSSize)newSize {
+    [super setFrameSize:newSize];
+    [self updateZoomAfterResize];
 }
 
 - (void)resetCursorRects {
@@ -2831,14 +2921,17 @@ static NSMutableDictionary<NSString *, PinPanel *> *gPanels = nil;
         if (x < screenF.origin.x + 8.0) x = screenF.origin.x + 8.0;
         if (x + tbW > screenF.origin.x + screenF.size.width - 8.0) x = screenF.origin.x + screenF.size.width - tbW - 8.0;
 
-        NSPanel *tbPanel = [[NSPanel alloc] initWithContentRect:NSMakeRect(x, y, tbW, tbH)
-                                                      styleMask:NSWindowStyleMaskBorderless | NSWindowStyleMaskNonactivatingPanel
+        PinEditToolbarPanel *tbPanel = [[PinEditToolbarPanel alloc] initWithContentRect:NSMakeRect(x, y, tbW, tbH)
+                                                      styleMask:NSWindowStyleMaskBorderless
                                                         backing:NSBackingStoreBuffered
                                                           defer:NO];
         tbPanel.level = panel.level + 1;
         tbPanel.backgroundColor = [NSColor clearColor];
         tbPanel.opaque = NO;
         tbPanel.hasShadow = YES;
+        tbPanel.appearance = AppTheme.currentTheme.isDark ?
+            [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua] :
+            [NSAppearance appearanceNamed:NSAppearanceNameAqua];
 
         tbPanel.contentView = _editToolbarView;
         panel.editToolbarPanel = tbPanel;
@@ -2977,7 +3070,7 @@ static NSMutableDictionary<NSString *, PinPanel *> *gPanels = nil;
             self->_pinCopyBtn.image = oldIcon;
             self->_pinCopyBtn.title = oldTitle;
             if (@available(macOS 10.14, *)) {
-                self->_pinCopyBtn.contentTintColor = [NSColor whiteColor];
+                self->_pinCopyBtn.contentTintColor = AppTheme.currentTheme.textColor;
             }
         });
     }
@@ -3041,9 +3134,30 @@ static NSMutableDictionary<NSString *, PinPanel *> *gPanels = nil;
 
 - (void)renderPinWatermarkInRect:(NSRect)bounds {
     NSString *wm = (_pinWatermarkText.length > 0) ? _pinWatermarkText : [I18N tr:@"wmInternalOnly"];
+    NSColor *baseCol = _pinWatermarkColor ?: [NSColor colorWithSRGBRed:0.56 green:0.58 blue:0.62 alpha:1.0];
+
+    // Safely convert to sRGB color space to prevent crash when white color is used!
+    NSColor *srgbCol = [baseCol colorUsingColorSpace:[NSColorSpace sRGBColorSpace]] ?: baseCol;
+    CGFloat r = 1.0, g = 1.0, b = 1.0, a = 1.0;
+    @try {
+        [srgbCol getRed:&r green:&g blue:&b alpha:&a];
+    } @catch (NSException *ex) {
+        r = 1.0; g = 1.0; b = 1.0; a = 1.0;
+    }
+
+    NSColor *wmColor = [NSColor colorWithSRGBRed:r green:g blue:b alpha:0.35];
+
+    NSShadow *shadow = [[NSShadow alloc] init];
+    shadow.shadowOffset = NSMakeSize(0.5, -0.5);
+    shadow.shadowBlurRadius = 1.5;
+    CGFloat lum = r * 0.299 + g * 0.587 + b * 0.114;
+    // For light colors (white, yellow, etc.), use a soft dark shadow so white text is clearly visible on off-white/gray backgrounds!
+    shadow.shadowColor = (lum > 0.55) ? [NSColor colorWithWhite:0.0 alpha:0.40] : [NSColor colorWithWhite:1.0 alpha:0.40];
+
     NSDictionary *attrs = @{
         NSFontAttributeName: [NSFont systemFontOfSize:15 weight:NSFontWeightBold],
-        NSForegroundColorAttributeName: [NSColor colorWithWhite:1.0 alpha:0.22]
+        NSForegroundColorAttributeName: wmColor,
+        NSShadowAttributeName: shadow
     };
     NSSize strSize = [wm sizeWithAttributes:attrs];
 
@@ -3074,13 +3188,28 @@ static NSMutableDictionary<NSString *, PinPanel *> *gPanels = nil;
     anchorDot.lineWidth = 1.5;
     [anchorDot stroke];
 
+    CGFloat tipX = anchor.x + 4.5;
+    CGFloat tipY = anchor.y;
+    CGFloat bubbleX = bubble.origin.x;
+
     NSBezierPath *notch = [NSBezierPath bezierPath];
-    [notch moveToPoint:NSMakePoint(anchor.x + 5.0, anchor.y)];
-    [notch lineToPoint:NSMakePoint(bubble.origin.x, anchor.y + 6.0)];
-    [notch lineToPoint:NSMakePoint(bubble.origin.x, anchor.y - 6.0)];
+    [notch moveToPoint:NSMakePoint(tipX, tipY)];
+    [notch lineToPoint:NSMakePoint(bubbleX, tipY + 6.0)];
+    [notch lineToPoint:NSMakePoint(bubbleX, tipY - 6.0)];
     [notch closePath];
-    [[NSColor colorWithSRGBRed:0.17 green:0.18 blue:0.23 alpha:0.96] setFill];
+    NSColor *notchFill = AppTheme.currentTheme.isDark ? [NSColor colorWithSRGBRed:0.17 green:0.18 blue:0.23 alpha:0.96] : [NSColor colorWithSRGBRed:0.96 green:0.96 blue:0.98 alpha:0.98];
+    [notchFill setFill];
     [notch fill];
+
+    if (!AppTheme.currentTheme.isDark) {
+        NSBezierPath *legs = [NSBezierPath bezierPath];
+        [legs moveToPoint:NSMakePoint(bubbleX + 0.5, tipY + 6.0)];
+        [legs lineToPoint:NSMakePoint(tipX, tipY)];
+        [legs lineToPoint:NSMakePoint(bubbleX + 0.5, tipY - 6.0)];
+        legs.lineWidth = 1.0;
+        [[NSColor colorWithWhite:0.0 alpha:0.18] setStroke];
+        [legs stroke];
+    }
 }
 
 - (void)renderPinAnnotation:(AnnotationItem *)item {
@@ -3236,7 +3365,7 @@ static NSMutableDictionary<NSString *, PinPanel *> *gPanels = nil;
             CGFloat fSize = item.fontSize ?: 14.0;
             NSDictionary *attrs = @{
                 NSFontAttributeName: [NSFont systemFontOfSize:fSize weight:NSFontWeightMedium],
-                NSForegroundColorAttributeName: [NSColor whiteColor]
+                NSForegroundColorAttributeName: item.color ?: [NSColor redColor]
             };
 
             CGFloat maxTextW = 0;
@@ -3261,17 +3390,54 @@ static NSMutableDictionary<NSString *, PinPanel *> *gPanels = nil;
             anchorDot.lineWidth = 1.5;
             [anchorDot stroke];
 
-            NSBezierPath *notch = [NSBezierPath bezierPath];
-            [notch moveToPoint:NSMakePoint(anchor.x + 5.0, centerY)];
-            [notch lineToPoint:NSMakePoint(bubbleX, centerY + 6.0)];
-            [notch lineToPoint:NSMakePoint(bubbleX, centerY - 6.0)];
-            [notch closePath];
-            [[NSColor colorWithSRGBRed:0.17 green:0.18 blue:0.23 alpha:0.96] setFill];
-            [notch fill];
+            NSColor *bubbleBg = AppTheme.currentTheme.isDark ? [NSColor colorWithSRGBRed:0.17 green:0.18 blue:0.23 alpha:0.96] : [NSColor colorWithSRGBRed:0.96 green:0.96 blue:0.98 alpha:0.98];
 
-            NSBezierPath *bubble = [NSBezierPath bezierPathWithRoundedRect:bubbleRect xRadius:6.0 yRadius:6.0];
-            [[NSColor colorWithSRGBRed:0.17 green:0.18 blue:0.23 alpha:0.96] setFill];
-            [bubble fill];
+            CGFloat radius = 6.0;
+            CGFloat notchHalfBase = 6.0;
+            CGFloat tipX = anchor.x + 4.5;
+            CGFloat tipY = centerY;
+            CGFloat baseTopY = centerY + notchHalfBase;
+            CGFloat baseBottomY = centerY - notchHalfBase;
+
+            NSBezierPath *tagPath = [NSBezierPath bezierPath];
+            [tagPath moveToPoint:NSMakePoint(tipX, tipY)];
+            [tagPath lineToPoint:NSMakePoint(bubbleX, baseTopY)];
+            [tagPath lineToPoint:NSMakePoint(bubbleX, bubbleY + bH - radius)];
+            [tagPath appendBezierPathWithArcFromPoint:NSMakePoint(bubbleX, bubbleY + bH)
+                                              toPoint:NSMakePoint(bubbleX + radius, bubbleY + bH)
+                                               radius:radius];
+            [tagPath lineToPoint:NSMakePoint(bubbleX + bW - radius, bubbleY + bH)];
+            [tagPath appendBezierPathWithArcFromPoint:NSMakePoint(bubbleX + bW, bubbleY + bH)
+                                              toPoint:NSMakePoint(bubbleX + bW, bubbleY + bH - radius)
+                                               radius:radius];
+            [tagPath lineToPoint:NSMakePoint(bubbleX + bW, bubbleY + radius)];
+            [tagPath appendBezierPathWithArcFromPoint:NSMakePoint(bubbleX + bW, bubbleY)
+                                              toPoint:NSMakePoint(bubbleX + bW - radius, bubbleY)
+                                               radius:radius];
+            [tagPath lineToPoint:NSMakePoint(bubbleX + radius, bubbleY)];
+            [tagPath appendBezierPathWithArcFromPoint:NSMakePoint(bubbleX, bubbleY)
+                                              toPoint:NSMakePoint(bubbleX, bubbleY + radius)
+                                               radius:radius];
+            [tagPath lineToPoint:NSMakePoint(bubbleX, baseBottomY)];
+            [tagPath closePath];
+
+            [NSGraphicsContext saveGraphicsState];
+            if (!AppTheme.currentTheme.isDark) {
+                NSShadow *shadow = [[NSShadow alloc] init];
+                shadow.shadowColor = [NSColor colorWithWhite:0.0 alpha:0.15];
+                shadow.shadowBlurRadius = 6.0;
+                shadow.shadowOffset = NSMakeSize(0, -1.5);
+                [shadow set];
+            }
+            [bubbleBg setFill];
+            [tagPath fill];
+            [NSGraphicsContext restoreGraphicsState];
+
+            if (!AppTheme.currentTheme.isDark) {
+                [[NSColor colorWithWhite:0.0 alpha:0.18] setStroke];
+                tagPath.lineWidth = 1.0;
+                [tagPath stroke];
+            }
 
             NSFont *tagFont = [NSFont systemFontOfSize:fSize weight:NSFontWeightMedium];
             CGFloat firstLineY = (centerY + (lines.count - 1) * lineHeight / 2.0) - fabs(tagFont.descender) - (tagFont.capHeight / 2.0);
@@ -3330,7 +3496,8 @@ static NSMutableDictionary<NSString *, PinPanel *> *gPanels = nil;
                 [bg fill];
             } else if (item.textStyle == TextStyleBordered) {
                 NSBezierPath *bg = [NSBezierPath bezierPathWithRoundedRect:cardRect xRadius:6.0 yRadius:6.0];
-                [[NSColor colorWithWhite:0.0 alpha:0.55] setFill];
+                NSColor *bgCol = AppTheme.currentTheme.isDark ? [NSColor colorWithWhite:0.0 alpha:0.55] : [NSColor colorWithWhite:1.0 alpha:0.88];
+                [bgCol setFill];
                 [bg fill];
                 [item.color setStroke];
                 bg.lineWidth = 1.5;
@@ -3397,7 +3564,8 @@ static NSMutableDictionary<NSString *, PinPanel *> *gPanels = nil;
                 [bg fill];
             } else if (item.textStyle == TextStyleBordered) {
                 NSBezierPath *bg = [NSBezierPath bezierPathWithRoundedRect:cardRect xRadius:6.0 yRadius:6.0];
-                [[NSColor colorWithWhite:0.0 alpha:0.55] setFill];
+                NSColor *bgCol = AppTheme.currentTheme.isDark ? [NSColor colorWithWhite:0.0 alpha:0.55] : [NSColor colorWithWhite:1.0 alpha:0.88];
+                [bgCol setFill];
                 [bg fill];
                 [item.color setStroke];
                 bg.lineWidth = 1.5;
@@ -3694,6 +3862,7 @@ static void createPin(NSDictionary *dict) {
 // Watermark State (Independent toggleable)
 @property (nonatomic, assign) BOOL isWatermarkActive;
 @property (nonatomic, strong) NSString *watermarkText;
+@property (nonatomic, strong) NSColor *watermarkColor;
 
 // UI Elements
 @property (nonatomic, strong) NSTextField *sizeLabel;
@@ -3747,6 +3916,7 @@ static CapturePanel *gCapturePanel = nil;
         _styleButtons = [NSMutableArray array];
         _presetPills = [NSMutableArray array];
         _activeColor = [NSColor colorWithSRGBRed:0.96 green:0.29 blue:0.27 alpha:1.0]; // Lark Red #f64b45
+        _watermarkColor = [NSColor colorWithSRGBRed:0.56 green:0.58 blue:0.62 alpha:1.0]; // Default Gray #8f959e
         _activeLineWidth = 4.0;
         _activeFontSize = 14.0;
         _currentStepCount = 1;
@@ -3931,7 +4101,7 @@ static CapturePanel *gCapturePanel = nil;
             sBtn.wantsLayer = YES;
             sBtn.layer.cornerRadius = 4.0;
             sBtn.layer.borderWidth = (_activeTextStyle == s) ? 1.5 : 0.5;
-            sBtn.layer.borderColor = (_activeTextStyle == s) ? [[NSColor colorWithSRGBRed:0.20 green:0.43 blue:0.96 alpha:1.0] CGColor] : [[NSColor colorWithWhite:1.0 alpha:0.18] CGColor];
+            sBtn.layer.borderColor = (_activeTextStyle == s) ? [AppTheme.currentTheme.accentColor CGColor] : [AppTheme.currentTheme.toolbarBorderColor CGColor];
             sBtn.tag = s;
             sBtn.target = self;
             sBtn.action = @selector(textStyleAction:);
@@ -3972,9 +4142,9 @@ static CapturePanel *gCapturePanel = nil;
         chkBtn.wantsLayer = YES;
         chkBtn.layer.cornerRadius = 3.5;
         chkBtn.layer.borderWidth = active ? 0.0 : 1.2;
-        chkBtn.layer.borderColor = [[NSColor colorWithWhite:1.0 alpha:0.35] CGColor];
-        chkBtn.customNormalBgColor = active ? [NSColor colorWithSRGBRed:0.20 green:0.43 blue:0.96 alpha:1.0] : [NSColor colorWithWhite:1.0 alpha:0.06];
-        chkBtn.customHoverColor = active ? [NSColor colorWithSRGBRed:0.30 green:0.52 blue:0.98 alpha:1.0] : [NSColor colorWithWhite:1.0 alpha:0.18];
+        chkBtn.layer.borderColor = active ? [AppTheme.currentTheme.accentColor CGColor] : [AppTheme.currentTheme.toolbarBorderColor CGColor];
+        chkBtn.customNormalBgColor = active ? AppTheme.currentTheme.accentColor : (AppTheme.currentTheme.isDark ? [NSColor colorWithWhite:1.0 alpha:0.08] : [NSColor colorWithWhite:0.0 alpha:0.06]);
+        chkBtn.customHoverColor = active ? AppTheme.currentTheme.accentColor : AppTheme.currentTheme.buttonHoverColor;
         chkBtn.toolTip = [I18N tr:@"enableWatermark"];
         chkBtn.target = self;
         chkBtn.action = @selector(toggleWatermarkCheckboxAction:);
@@ -3997,8 +4167,8 @@ static CapturePanel *gCapturePanel = nil;
             pBtn.layer.cornerRadius = 4.0;
             BOOL isActivePreset = [_watermarkText isEqualToString:presets[p]];
             pBtn.layer.borderWidth = isActivePreset ? 1.5 : 0.5;
-            pBtn.layer.borderColor = isActivePreset ? [[NSColor colorWithSRGBRed:0.20 green:0.43 blue:0.96 alpha:1.0] CGColor] : [[NSColor colorWithWhite:1.0 alpha:0.18] CGColor];
-            pBtn.customNormalBgColor = isActivePreset ? [NSColor colorWithSRGBRed:0.20 green:0.43 blue:0.96 alpha:0.25] : [NSColor colorWithWhite:1.0 alpha:0.08];
+            pBtn.layer.borderColor = isActivePreset ? [AppTheme.currentTheme.accentColor CGColor] : [AppTheme.currentTheme.toolbarBorderColor CGColor];
+            pBtn.customNormalBgColor = isActivePreset ? [AppTheme.currentTheme.accentColor colorWithAlphaComponent:0.25] : (AppTheme.currentTheme.isDark ? [NSColor colorWithWhite:1.0 alpha:0.08] : [NSColor colorWithWhite:0.0 alpha:0.05]);
             pBtn.tag = p;
             pBtn.target = self;
             pBtn.action = @selector(watermarkPresetAction:);
@@ -4012,10 +4182,13 @@ static CapturePanel *gCapturePanel = nil;
         VerticallyCenteredTextFieldCell *wmCell = [[VerticallyCenteredTextFieldCell alloc] initTextCell:@""];
         wmCell.scrollable = YES;
         wmCell.editable = YES;
+        wmCell.selectable = YES;
         wmCell.verticalOffset = 0.5;
         _watermarkInputField.cell = wmCell;
         _watermarkInputField.bezeled = NO;
         _watermarkInputField.drawsBackground = YES;
+        _watermarkInputField.editable = YES;
+        _watermarkInputField.selectable = YES;
         _watermarkInputField.backgroundColor = AppTheme.currentTheme.inputBgColor;
         _watermarkInputField.textColor = AppTheme.currentTheme.textColor;
         _watermarkInputField.font = [NSFont systemFontOfSize:11];
@@ -4047,7 +4220,7 @@ static CapturePanel *gCapturePanel = nil;
             sBtn.wantsLayer = YES;
             sBtn.layer.cornerRadius = 13.0;
             sBtn.layer.borderWidth = (s == 1) ? 1.5 : 0.0;
-            sBtn.layer.borderColor = [[NSColor whiteColor] CGColor];
+            sBtn.layer.borderColor = (s == 1) ? [AppTheme.currentTheme.accentColor CGColor] : [[NSColor clearColor] CGColor];
             sBtn.tag = s;
             sBtn.target = self;
             sBtn.action = @selector(strokeSizeAction:);
@@ -4056,7 +4229,7 @@ static CapturePanel *gCapturePanel = nil;
             CGFloat r = dotRadii[s];
             dotLayer.frame = CGRectMake((26 - r * 2) / 2.0, (26 - r * 2) / 2.0, r * 2, r * 2);
             dotLayer.cornerRadius = r;
-            dotLayer.backgroundColor = [[NSColor whiteColor] CGColor];
+            dotLayer.backgroundColor = [AppTheme.currentTheme.textColor CGColor];
             [sBtn.layer addSublayer:dotLayer];
 
             [_sizeButtons addObject:sBtn];
@@ -4072,15 +4245,8 @@ static CapturePanel *gCapturePanel = nil;
 
     // 7 Lark Color Swatches (NO "But" text & Fixed Background!)
     if (tool != ToolMosaic) {
-        NSArray *colors = @[
-            [NSColor colorWithSRGBRed:0.96 green:0.29 blue:0.27 alpha:1.0], // #f64b45 Red
-            [NSColor colorWithSRGBRed:1.00 green:0.78 blue:0.05 alpha:1.0], // #ffc60c Yellow
-            [NSColor colorWithSRGBRed:0.20 green:0.75 blue:0.29 alpha:1.0], // #34be4b Green
-            [NSColor colorWithSRGBRed:0.20 green:0.43 blue:0.96 alpha:1.0], // #336df4 Blue
-            [NSColor colorWithSRGBRed:0.12 green:0.14 blue:0.16 alpha:1.0], // #1f2329 Black
-            [NSColor colorWithSRGBRed:0.56 green:0.58 blue:0.62 alpha:1.0], // #8f959e Gray
-            [NSColor whiteColor]                                            // #ffffff White
-        ];
+        NSArray *colors = getPaletteColors();
+        NSColor *currentColor = (tool == ToolWatermark || (_isWatermarkActive && _activeTool == ToolNone)) ? _watermarkColor : _activeColor;
 
         for (NSInteger c = 0; c < colors.count; c++) {
             HoverButton *cBtn = [[HoverButton alloc] initWithFrame:NSMakeRect(optX, 7, 24, 24)];
@@ -4096,7 +4262,7 @@ static CapturePanel *gCapturePanel = nil;
             cBtn.action = @selector(colorPickAction:);
 
             // Active checkmark ✓
-            if ([colors[c] isEqual:_activeColor]) {
+            if ([colors[c] isEqual:currentColor]) {
                 cBtn.title = @"✓";
                 cBtn.font = [NSFont systemFontOfSize:13 weight:NSFontWeightBold];
                 if (@available(macOS 10.14, *)) {
@@ -4731,20 +4897,56 @@ static CapturePanel *gCapturePanel = nil;
     [anchorDot stroke];
 
     // Seamless triangular notch to bubble
+    CGFloat tipX = anchor.x + 4.5;
+    CGFloat tipY = anchor.y;
+    CGFloat bubbleX = bubble.origin.x;
+
     NSBezierPath *notch = [NSBezierPath bezierPath];
-    [notch moveToPoint:NSMakePoint(anchor.x + 5.0, anchor.y)];
-    [notch lineToPoint:NSMakePoint(bubble.origin.x, anchor.y + 6.0)];
-    [notch lineToPoint:NSMakePoint(bubble.origin.x, anchor.y - 6.0)];
+    [notch moveToPoint:NSMakePoint(tipX, tipY)];
+    [notch lineToPoint:NSMakePoint(bubbleX, tipY + 6.0)];
+    [notch lineToPoint:NSMakePoint(bubbleX, tipY - 6.0)];
     [notch closePath];
-    [[NSColor colorWithSRGBRed:0.17 green:0.18 blue:0.23 alpha:0.96] setFill];
+    NSColor *notchFill = AppTheme.currentTheme.isDark ? [NSColor colorWithSRGBRed:0.17 green:0.18 blue:0.23 alpha:0.96] : [NSColor colorWithSRGBRed:0.96 green:0.96 blue:0.98 alpha:0.98];
+    [notchFill setFill];
     [notch fill];
+
+    if (!AppTheme.currentTheme.isDark) {
+        NSBezierPath *legs = [NSBezierPath bezierPath];
+        [legs moveToPoint:NSMakePoint(bubbleX + 0.5, tipY + 6.0)];
+        [legs lineToPoint:NSMakePoint(tipX, tipY)];
+        [legs lineToPoint:NSMakePoint(bubbleX + 0.5, tipY - 6.0)];
+        legs.lineWidth = 1.0;
+        [[NSColor colorWithWhite:0.0 alpha:0.18] setStroke];
+        [legs stroke];
+    }
 }
 
 - (void)renderWatermarkInRect:(NSRect)bounds {
     NSString *wm = (_watermarkText.length > 0) ? _watermarkText : [I18N tr:@"wmInternalOnly"];
+    NSColor *baseCol = _watermarkColor ?: [NSColor colorWithSRGBRed:0.56 green:0.58 blue:0.62 alpha:1.0];
+
+    // Safely convert to sRGB color space to prevent crash when white color is used!
+    NSColor *srgbCol = [baseCol colorUsingColorSpace:[NSColorSpace sRGBColorSpace]] ?: baseCol;
+    CGFloat r = 1.0, g = 1.0, b = 1.0, a = 1.0;
+    @try {
+        [srgbCol getRed:&r green:&g blue:&b alpha:&a];
+    } @catch (NSException *ex) {
+        r = 1.0; g = 1.0; b = 1.0; a = 1.0;
+    }
+
+    NSColor *wmColor = [NSColor colorWithSRGBRed:r green:g blue:b alpha:0.35];
+
+    NSShadow *shadow = [[NSShadow alloc] init];
+    shadow.shadowOffset = NSMakeSize(0.5, -0.5);
+    shadow.shadowBlurRadius = 1.5;
+    CGFloat lum = r * 0.299 + g * 0.587 + b * 0.114;
+    // For light colors (white, yellow, etc.), use a soft dark shadow so white text is clearly visible on off-white/gray backgrounds!
+    shadow.shadowColor = (lum > 0.55) ? [NSColor colorWithWhite:0.0 alpha:0.40] : [NSColor colorWithWhite:1.0 alpha:0.40];
+
     NSDictionary *attrs = @{
         NSFontAttributeName: [NSFont systemFontOfSize:15 weight:NSFontWeightBold],
-        NSForegroundColorAttributeName: [NSColor colorWithWhite:1.0 alpha:0.22]
+        NSForegroundColorAttributeName: wmColor,
+        NSShadowAttributeName: shadow
     };
     NSSize strSize = [wm sizeWithAttributes:attrs];
 
@@ -4929,7 +5131,7 @@ static CapturePanel *gCapturePanel = nil;
             CGFloat fSize = item.fontSize ?: 14.0;
             NSDictionary *attrs = @{
                 NSFontAttributeName: [NSFont systemFontOfSize:fSize weight:NSFontWeightMedium],
-                NSForegroundColorAttributeName: [NSColor whiteColor]
+                NSForegroundColorAttributeName: item.color ?: [NSColor redColor]
             };
 
             CGFloat maxTextW = 0;
@@ -4956,19 +5158,54 @@ static CapturePanel *gCapturePanel = nil;
             anchorDot.lineWidth = 1.5;
             [anchorDot stroke];
 
-            // 2. Triangular notch seamlessly meeting the bubble
-            NSBezierPath *notch = [NSBezierPath bezierPath];
-            [notch moveToPoint:NSMakePoint(anchor.x + 5.0, centerY)];
-            [notch lineToPoint:NSMakePoint(bubbleX, centerY + 6.0)];
-            [notch lineToPoint:NSMakePoint(bubbleX, centerY - 6.0)];
-            [notch closePath];
-            [[NSColor colorWithSRGBRed:0.17 green:0.18 blue:0.23 alpha:0.96] setFill];
-            [notch fill];
+            NSColor *bubbleBg = AppTheme.currentTheme.isDark ? [NSColor colorWithSRGBRed:0.17 green:0.18 blue:0.23 alpha:0.96] : [NSColor colorWithSRGBRed:0.96 green:0.96 blue:0.98 alpha:0.98];
 
-            // 3. Charcoal rounded callout bubble #2b2f3a
-            NSBezierPath *bubble = [NSBezierPath bezierPathWithRoundedRect:bubbleRect xRadius:6.0 yRadius:6.0];
-            [[NSColor colorWithSRGBRed:0.17 green:0.18 blue:0.23 alpha:0.96] setFill];
-            [bubble fill];
+            CGFloat radius = 6.0;
+            CGFloat notchHalfBase = 6.0;
+            CGFloat tipX = anchor.x + 4.5;
+            CGFloat tipY = centerY;
+            CGFloat baseTopY = centerY + notchHalfBase;
+            CGFloat baseBottomY = centerY - notchHalfBase;
+
+            NSBezierPath *tagPath = [NSBezierPath bezierPath];
+            [tagPath moveToPoint:NSMakePoint(tipX, tipY)];
+            [tagPath lineToPoint:NSMakePoint(bubbleX, baseTopY)];
+            [tagPath lineToPoint:NSMakePoint(bubbleX, bubbleY + bH - radius)];
+            [tagPath appendBezierPathWithArcFromPoint:NSMakePoint(bubbleX, bubbleY + bH)
+                                              toPoint:NSMakePoint(bubbleX + radius, bubbleY + bH)
+                                               radius:radius];
+            [tagPath lineToPoint:NSMakePoint(bubbleX + bW - radius, bubbleY + bH)];
+            [tagPath appendBezierPathWithArcFromPoint:NSMakePoint(bubbleX + bW, bubbleY + bH)
+                                              toPoint:NSMakePoint(bubbleX + bW, bubbleY + bH - radius)
+                                               radius:radius];
+            [tagPath lineToPoint:NSMakePoint(bubbleX + bW, bubbleY + radius)];
+            [tagPath appendBezierPathWithArcFromPoint:NSMakePoint(bubbleX + bW, bubbleY)
+                                              toPoint:NSMakePoint(bubbleX + bW - radius, bubbleY)
+                                               radius:radius];
+            [tagPath lineToPoint:NSMakePoint(bubbleX + radius, bubbleY)];
+            [tagPath appendBezierPathWithArcFromPoint:NSMakePoint(bubbleX, bubbleY)
+                                              toPoint:NSMakePoint(bubbleX, bubbleY + radius)
+                                               radius:radius];
+            [tagPath lineToPoint:NSMakePoint(bubbleX, baseBottomY)];
+            [tagPath closePath];
+
+            [NSGraphicsContext saveGraphicsState];
+            if (!AppTheme.currentTheme.isDark) {
+                NSShadow *shadow = [[NSShadow alloc] init];
+                shadow.shadowColor = [NSColor colorWithWhite:0.0 alpha:0.15];
+                shadow.shadowBlurRadius = 6.0;
+                shadow.shadowOffset = NSMakeSize(0, -1.5);
+                [shadow set];
+            }
+            [bubbleBg setFill];
+            [tagPath fill];
+            [NSGraphicsContext restoreGraphicsState];
+
+            if (!AppTheme.currentTheme.isDark) {
+                [[NSColor colorWithWhite:0.0 alpha:0.18] setStroke];
+                tagPath.lineWidth = 1.0;
+                [tagPath stroke];
+            }
 
             // 4. Centered text
             NSFont *tagFont = [NSFont systemFontOfSize:fSize weight:NSFontWeightMedium];
@@ -5045,7 +5282,8 @@ static CapturePanel *gCapturePanel = nil;
             } else if (item.textStyle == TextStyleBordered) {
                 // Style 2: Bordered card
                 NSBezierPath *card = [NSBezierPath bezierPathWithRoundedRect:boxRect xRadius:5.0 yRadius:5.0];
-                [[NSColor colorWithWhite:0.0 alpha:0.45] setFill];
+                NSColor *borderBg = AppTheme.currentTheme.isDark ? [NSColor colorWithWhite:0.0 alpha:0.45] : [NSColor colorWithWhite:1.0 alpha:0.88];
+                [borderBg setFill];
                 [card fill];
                 [item.color setStroke];
                 card.lineWidth = 1.5;
@@ -5158,17 +5396,27 @@ static CapturePanel *gCapturePanel = nil;
     if (_activeTool == tool) {
         _activeTool = ToolNone;
         sender.state = NSControlStateValueOff;
+        if ([sender isKindOfClass:[HoverButton class]]) {
+            ((HoverButton *)sender).isSelected = NO;
+        }
         if (@available(macOS 10.14, *)) {
-            sender.contentTintColor = [NSColor whiteColor];
+            sender.contentTintColor = AppTheme.currentTheme.textColor;
         }
     } else {
         _activeTool = tool;
         _lastSecondaryTool = tool;
+        if (tool == ToolWatermark) {
+            _isWatermarkActive = YES;
+        }
         for (NSButton *btn in _primaryButtons) {
             if (btn.tag >= 1 && btn.tag <= 13) {
-                btn.state = (btn == sender) ? NSControlStateValueOn : NSControlStateValueOff;
+                BOOL isTarget = (btn == sender);
+                btn.state = isTarget ? NSControlStateValueOn : NSControlStateValueOff;
+                if ([btn isKindOfClass:[HoverButton class]]) {
+                    ((HoverButton *)btn).isSelected = isTarget;
+                }
                 if (@available(macOS 10.14, *)) {
-                    btn.contentTintColor = (btn == sender) ? [NSColor colorWithSRGBRed:0.20 green:0.43 blue:0.96 alpha:1.0] : [NSColor whiteColor];
+                    btn.contentTintColor = isTarget ? AppTheme.currentTheme.accentColor : AppTheme.currentTheme.textColor;
                 }
             }
         }
@@ -5188,8 +5436,9 @@ static CapturePanel *gCapturePanel = nil;
 - (void)textStyleAction:(NSButton *)sender {
     _activeTextStyle = (AnnotationTextStyle)sender.tag;
     for (NSButton *btn in _styleButtons) {
-        btn.layer.borderWidth = (btn == sender) ? 1.5 : 0.5;
-        btn.layer.borderColor = (btn == sender) ? [[NSColor colorWithSRGBRed:0.20 green:0.43 blue:0.96 alpha:1.0] CGColor] : [[NSColor colorWithWhite:1.0 alpha:0.18] CGColor];
+        BOOL isSel = (btn == sender);
+        btn.layer.borderWidth = isSel ? 1.5 : 0.5;
+        btn.layer.borderColor = isSel ? [AppTheme.currentTheme.accentColor CGColor] : [AppTheme.currentTheme.toolbarBorderColor CGColor];
     }
 }
 
@@ -5232,21 +5481,20 @@ static CapturePanel *gCapturePanel = nil;
     _activeLineWidth = strokeMap[sender.tag];
 
     for (NSButton *btn in _sizeButtons) {
-        btn.layer.borderWidth = (btn == sender) ? 1.5 : 0.0;
+        BOOL isSel = (btn == sender);
+        btn.layer.borderWidth = isSel ? 1.5 : 0.0;
+        btn.layer.borderColor = isSel ? [AppTheme.currentTheme.accentColor CGColor] : [[NSColor clearColor] CGColor];
     }
 }
 
 - (void)colorPickAction:(NSButton *)sender {
-    NSArray *colors = @[
-        [NSColor colorWithSRGBRed:0.96 green:0.29 blue:0.27 alpha:1.0],
-        [NSColor colorWithSRGBRed:1.00 green:0.78 blue:0.05 alpha:1.0],
-        [NSColor colorWithSRGBRed:0.20 green:0.75 blue:0.29 alpha:1.0],
-        [NSColor colorWithSRGBRed:0.20 green:0.43 blue:0.96 alpha:1.0],
-        [NSColor colorWithSRGBRed:0.12 green:0.14 blue:0.16 alpha:1.0],
-        [NSColor colorWithSRGBRed:0.56 green:0.58 blue:0.62 alpha:1.0],
-        [NSColor whiteColor]
-    ];
-    _activeColor = colors[sender.tag];
+    NSArray *colors = getPaletteColors();
+    AnnotationToolType currentTool = (_activeTool != ToolNone) ? _activeTool : _lastSecondaryTool;
+    if (currentTool == ToolWatermark) {
+        _watermarkColor = colors[sender.tag];
+    } else {
+        _activeColor = colors[sender.tag];
+    }
 
     for (NSButton *btn in _colorButtons) {
         if (btn == sender) {
@@ -5259,6 +5507,7 @@ static CapturePanel *gCapturePanel = nil;
             btn.title = @"";
         }
     }
+    [self setNeedsDisplay:YES];
 }
 
 - (void)undoAction {
