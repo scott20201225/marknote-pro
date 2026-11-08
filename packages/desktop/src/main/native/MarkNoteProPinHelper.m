@@ -1215,6 +1215,35 @@ static NSImage *getSvgIcon(NSString *iconId) {
     [self updateAppearance];
 }
 
+- (void)setCustomNormalBgColor:(NSColor *)customNormalBgColor {
+    _customNormalBgColor = customNormalBgColor;
+    [self updateAppearance];
+}
+
+- (void)setCustomHoverColor:(NSColor *)customHoverColor {
+    _customHoverColor = customHoverColor;
+    if (_isHovered) {
+        [self updateAppearance];
+    }
+}
+
+- (void)setCustomActiveBgColor:(NSColor *)customActiveBgColor {
+    _customActiveBgColor = customActiveBgColor;
+    if (_isSelected) {
+        [self updateAppearance];
+    }
+}
+
+- (void)setFixedBgColor:(NSColor *)fixedBgColor {
+    _fixedBgColor = fixedBgColor;
+    [self updateAppearance];
+}
+
+- (void)viewWillDraw {
+    [super viewWillDraw];
+    [self updateAppearance];
+}
+
 - (void)updateAppearance {
     if (self.fixedBgColor) {
         self.layer.backgroundColor = self.fixedBgColor.CGColor;
@@ -6767,8 +6796,10 @@ typedef NS_ENUM(NSInteger, ClipboardCategory) {
     cancelBtn.layer.borderColor = [AppTheme.currentTheme.toolbarBorderColor CGColor];
     cancelBtn.customNormalBgColor = AppTheme.currentTheme.inputBgColor;
     cancelBtn.customHoverColor = AppTheme.currentTheme.buttonHoverColor;
+    cancelBtn.layer.backgroundColor = [AppTheme.currentTheme.inputBgColor CGColor];
     cancelBtn.target = self;
     cancelBtn.action = @selector(dismissClearConfirmOverlay);
+    [cancelBtn updateAppearance];
     [card addSubview:cancelBtn];
 
     HoverButton *confirmBtn = [[HoverButton alloc] initWithFrame:NSMakeRect(btnsStartX + btnW + btnSpacing, 18, btnW, btnH)];
@@ -6783,8 +6814,10 @@ typedef NS_ENUM(NSInteger, ClipboardCategory) {
     confirmBtn.layer.cornerRadius = 6.0;
     confirmBtn.customNormalBgColor = [NSColor colorWithSRGBRed:0.85 green:0.25 blue:0.25 alpha:0.9];
     confirmBtn.customHoverColor = [NSColor colorWithSRGBRed:0.95 green:0.3 blue:0.3 alpha:1.0];
+    confirmBtn.layer.backgroundColor = [[NSColor colorWithSRGBRed:0.85 green:0.25 blue:0.25 alpha:0.9] CGColor];
     confirmBtn.target = self;
     confirmBtn.action = @selector(confirmClearAllHistoryAction);
+    [confirmBtn updateAppearance];
     [card addSubview:confirmBtn];
 
     [_confirmOverlayView addSubview:card];
