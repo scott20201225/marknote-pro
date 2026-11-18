@@ -49,6 +49,7 @@ import '@xterm/xterm/css/xterm.css'
 import { Search, ArrowUp, ArrowDown, Close } from '@element-plus/icons-vue'
 import { useTerminalStore } from '@/store/terminal'
 import { usePreferencesStore } from '@/store/preferences'
+import { isOsx } from '@/util'
 import { getAdaptiveTerminalTheme } from '@shared/terminalThemes'
 import type { ITerminalSessionInfo } from '@shared/types/terminal'
 
@@ -163,26 +164,63 @@ function initTerminal(): void {
 
   // Support copy & paste shortcuts directly in xterm
   term.attachCustomKeyEventHandler((event: KeyboardEvent) => {
-    const isCopy =
-      (event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey && event.key === 'c') ||
-      (event.ctrlKey && event.shiftKey && !event.metaKey && !event.altKey && (event.key === 'C' || event.key === 'c'))
-    if (isCopy && event.type === 'keydown') {
-      const selection = term?.getSelection()
-      if (selection) {
-        window.electron.clipboard.writeText(selection)
+    if (event.type !== 'keydown') return true
+    const key = event.key.toLowerCase()
+    const cmdOnly = event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey
+    const ctrlOnly = event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey
+    const ctrlShift = event.ctrlKey && event.shiftKey && !event.metaKey && !event.altKey
+
+    // Copy: Cmd+C on macOS, Ctrl+Shift+C elsewhere. Plain Ctrl+C without a
+    // selection is sent to the shell as SIGINT.
+    if (key === 'c') {
+      if (isOsx ? cmdOnly : ctrlShift) {
+        const selection = term?.getSelection()
+        if (selection) {
+          window.electron.clipboard.writeText(selection)
+        }
+        return false
+      }
+      if (!isOsx && ctrlOnly) {
+        if (term && term.hasSelection()) {
+          const selection = term.getSelection()
+          if (selection) {
+            window.electron.clipboard.writeText(selection)
+            term.clearSelection()
+          }
+        } else {
+          // No selection -> send SIGINT (\x03) to exit process (e.g. tail -f, log view, ping, top)
+          terminalStore.write(props.session.id, '\x03')
+        }
         return false
       }
     }
 
-    const isPaste =
-      (event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey && event.key === 'v') ||
-      (event.ctrlKey && event.shiftKey && !event.metaKey && !event.altKey && (event.key === 'V' || event.key === 'v'))
-    if (isPaste && event.type === 'keydown') {
-      const text = window.electron.clipboard.readText()
-      if (text) {
-        terminalStore.write(props.session.id, text)
-        return false
-      }
+    // Paste: Cmd+V on macOS, Ctrl+V / Ctrl+Shift+V elsewhere.
+    if (key === 'v' && (isOsx ? cmdOnly : ctrlOnly || ctrlShift)) {
+      void window.electron.clipboard.readText().then((text) => {
+        if (text) {
+          terminalStore.write(props.session.id, text)
+        }
+      })
+      return false
+    }
+
+    // Select all: Cmd+A on macOS (plain Ctrl+A must reach the shell).
+    if (isOsx && key === 'a' && cmdOnly) {
+      term?.selectAll()
+      return false
+    }
+
+    // Clear screen: Cmd+K on macOS (the context menu advertises it).
+    if (isOsx && key === 'k' && cmdOnly) {
+      term?.clear()
+      return false
+    }
+
+    // Search: Cmd+F / Ctrl+F.
+    if (key === 'f' && (event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey) {
+      showSearch.value = true
+      return false
     }
 
     return true
@@ -223,11 +261,33 @@ function initTerminal(): void {
   })
 }
 
-function openContextMenu(_e: MouseEvent): void {
-  // Can trigger Electron popup context menu or clipboard actions
+async function openContextMenu(e: MouseEvent): Promise<void> {
+  e.preventDefault()
   const selection = term?.getSelection()
-  if (selection) {
-    window.electron.clipboard.writeText(selection)
+  const hasSelection = Boolean(selection && selection.length > 0)
+  const clipboardText = await window.electron.clipboard.readText()
+  const hasClipboard = Boolean(clipboardText)
+
+  const action = await window.electron.ipcRenderer.invoke('mt::terminal:show-context-menu', {
+    hasSelection,
+    hasClipboard
+  })
+  if (!action) return
+
+  if (action === 'copy') {
+    if (selection) {
+      window.electron.clipboard.writeText(selection)
+    }
+  } else if (action === 'paste') {
+    if (clipboardText) {
+      terminalStore.write(props.session.id, clipboardText)
+    }
+  } else if (action === 'selectAll') {
+    term?.selectAll()
+  } else if (action === 'clear') {
+    term?.clear()
+  } else if (action === 'find') {
+    showSearch.value = true
   }
 }
 
@@ -262,11 +322,18 @@ function closeSearch(): void {
 watch(
   () => props.isActive,
   (active) => {
+    if (!active) {
+      notifyTerminalFocus(false)
+      return
+    }
     if (active && fitAddon && term) {
       nextTick(() => {
         try {
           fitAddon?.fit()
           term?.focus()
+          if (containerRef.value?.contains(document.activeElement)) {
+            notifyTerminalFocus(true)
+          }
         } catch {
           // ignore
         }
@@ -298,8 +365,28 @@ watch(
 
 let themeObserver: MutationObserver | null = null
 
+// Tell the main process whether the terminal itself owns keyboard focus. The
+// menu accelerators are released only while this is true, so shortcuts keep
+// working when focus is in the sidebar, a dialog, or another editor view.
+const notifyTerminalFocus = (focused: boolean): void => {
+  window.electron.ipcRenderer.send('mt::terminal-focus-mode', focused)
+}
+const onTerminalFocusIn = (): void => {
+  if (props.isActive) notifyTerminalFocus(true)
+}
+const onTerminalFocusOut = (event: FocusEvent): void => {
+  const next = event.relatedTarget as Node | null
+  if (!containerRef.value?.contains(next)) notifyTerminalFocus(false)
+}
+
 onMounted(() => {
   initTerminal()
+
+  const container = containerRef.value
+  if (container) {
+    container.addEventListener('focusin', onTerminalFocusIn)
+    container.addEventListener('focusout', onTerminalFocusOut)
+  }
 
   // Also observe stylesheet mutations so any dynamic theme switch triggers applyTheme
   const agTheme = document.querySelector('#ag-theme')
@@ -312,6 +399,12 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  const container = containerRef.value
+  if (container) {
+    container.removeEventListener('focusin', onTerminalFocusIn)
+    container.removeEventListener('focusout', onTerminalFocusOut)
+  }
+  notifyTerminalFocus(false)
   if (themeObserver) {
     themeObserver.disconnect()
     themeObserver = null

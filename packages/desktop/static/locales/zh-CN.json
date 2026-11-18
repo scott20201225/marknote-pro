@@ -213,6 +213,7 @@
     "cut": "剪切",
     "copy": "复制",
     "paste": "粘贴",
+    "selectAll": "全选",
     "copyAsRich": "复制为富文本",
     "copyAsHtml": "复制为 HTML",
     "pasteAsPlainText": "粘贴为纯文本",
@@ -322,7 +323,9 @@
       "mindMapOrganizationStructure": "组织结构图",
       "mindMapCatalogOrganization": "目录组织图",
       "mindMapTimeline": "时间轴",
-      "mindMapFishbone": "鱼骨图"
+      "mindMapFishbone": "鱼骨图",
+      "selectWorkspaceFirst": "请先选择工作区",
+      "selectWorkspaceFirstDetail": "请先在侧边栏选择一个工作区再导入。"
     },
     "toc": {
       "title": "目录"
@@ -523,7 +526,8 @@
       "spelling": "拼写",
       "theme": "主题",
       "image": "图片",
-      "keybindings": "快捷键"
+      "keybindings": "快捷键",
+      "terminal": "终端"
     },
     "general": {
       "title": "通用",
@@ -1136,7 +1140,8 @@
       "serial": "如 COM3 或 /dev/ttyUSB0:115200",
       "telnet": "如 192.168.1.1:23",
       "rawSocket": "如 192.168.1.1:9000"
-    }
+    },
+    "filterTotp": "筛选 2FA..."
   },
   "dialog": {
     "cancel": "取消",

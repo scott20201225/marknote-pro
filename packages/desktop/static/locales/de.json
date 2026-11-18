@@ -213,6 +213,7 @@
     "cut": "Ausschneiden",
     "copy": "Kopieren",
     "paste": "Einfügen",
+    "selectAll": "Alles auswählen",
     "copyAsRich": "Als Rich Text kopieren",
     "copyAsHtml": "Als HTML kopieren",
     "pasteAsPlainText": "Als reinen Text einfügen",
@@ -286,7 +287,9 @@
       "mindMapOrganizationStructure": "Organisationsstruktur",
       "mindMapCatalogOrganization": "Katalogorganisation",
       "mindMapTimeline": "Zeitleiste",
-      "mindMapFishbone": "Fischgräten-Diagramm"
+      "mindMapFishbone": "Fischgräten-Diagramm",
+      "selectWorkspaceFirst": "Bitte wählen Sie zuerst einen Arbeitsbereich aus",
+      "selectWorkspaceFirstDetail": "Bitte wählen Sie vor dem Import einen Arbeitsbereich in der Seitenleiste aus."
     },
     "toc": {
       "title": "Inhaltsverzeichnis"
@@ -485,7 +488,8 @@
       "spelling": "Rechtschreibung",
       "theme": "Design",
       "image": "Bild",
-      "keybindings": "Tastenkürzel"
+      "keybindings": "Tastenkürzel",
+      "terminal": "Terminal"
     },
     "general": {
       "title": "Allgemein",
@@ -1811,5 +1815,12 @@
         "selectRepositorySubdirectory": "Bitte einen Unterordner des aktuellen Git-Projekts waehlen."
       }
     }
+  },
+  "terminal": {
+    "clearScreen": "Bildschirm löschen",
+    "search": "Im Terminal suchen",
+    "findPrev": "Vorheriger Treffer",
+    "findNext": "Nächster Treffer",
+    "closeSearch": "Suche schließen"
   }
 }

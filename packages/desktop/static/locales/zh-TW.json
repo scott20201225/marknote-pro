@@ -214,6 +214,7 @@
     "cut": "剪下",
     "copy": "複製",
     "paste": "貼上",
+    "selectAll": "全選",
     "copyAsRich": "複製為富文本",
     "copyAsHtml": "複製為 HTML",
     "pasteAsPlainText": "貼上為純文字",
@@ -314,7 +315,9 @@
       "mindMapOrganizationStructure": "組織結構圖",
       "mindMapCatalogOrganization": "目錄組織圖",
       "mindMapTimeline": "時間軸",
-      "mindMapFishbone": "魚骨圖"
+      "mindMapFishbone": "魚骨圖",
+      "selectWorkspaceFirst": "請先選擇工作區",
+      "selectWorkspaceFirstDetail": "請先在側邊欄選擇一個工作區再匯入。"
     },
     "toc": {
       "title": "目錄"
@@ -515,7 +518,8 @@
       "spelling": "拼字",
       "theme": "主題",
       "image": "圖片",
-      "keybindings": "按鍵綁定"
+      "keybindings": "按鍵綁定",
+      "terminal": "終端"
     },
     "general": {
       "title": "一般",
@@ -1844,5 +1848,12 @@
         "selectRepositorySubdirectory": "請選擇目前 Git 專案下的子目錄。"
       }
     }
+  },
+  "terminal": {
+    "clearScreen": "清除畫面",
+    "search": "在終端中尋找",
+    "findPrev": "上一個符合項",
+    "findNext": "下一個符合項",
+    "closeSearch": "關閉搜尋"
   }
 }

@@ -21,6 +21,8 @@ class Keybindings {
   commandManager: CommandManager
   userKeybindings: Map<string, string>
   keys: Map<string, string>
+  private terminalWindows = new Set<number>()
+  private terminalFocusedWindows = new Set<number>()
 
   /**
    * @param commandManager The command manager instance.
@@ -57,6 +59,81 @@ class Keybindings {
     return name
   }
 
+  setTerminalMode(windowId: number, enabled: boolean): void {
+    if (enabled) {
+      this.terminalWindows.add(windowId)
+    } else {
+      this.terminalWindows.delete(windowId)
+    }
+  }
+
+  isTerminalMode(windowId: number): boolean {
+    return this.terminalWindows.has(windowId)
+  }
+
+  setTerminalFocus(windowId: number, focused: boolean): void {
+    if (focused) {
+      this.terminalFocusedWindows.add(windowId)
+    } else {
+      this.terminalFocusedWindows.delete(windowId)
+    }
+  }
+
+  isTerminalFocused(windowId: number): boolean {
+    return this.terminalFocusedWindows.has(windowId)
+  }
+
+  isTerminalBypassAccelerator(accelerator: string): boolean {
+    const acc = accelerator.replace(/\s+/g, '').toLowerCase()
+    const bypassList = [
+      'ctrl+c',
+      'ctrl+v',
+      'ctrl+shift+c',
+      'ctrl+shift+v',
+      'ctrl+shift+a',
+      'ctrl+z',
+      'ctrl+shift+z',
+      'ctrl+y',
+      'ctrl+d',
+      'ctrl+shift+d',
+      'ctrl+a',
+      'ctrl+e',
+      'ctrl+k',
+      'ctrl+shift+k',
+      'ctrl+u',
+      'ctrl+shift+u',
+      'ctrl+l',
+      'ctrl+r',
+      'ctrl+shift+r',
+      'ctrl+x',
+      'ctrl+b',
+      'ctrl+f',
+      'ctrl+shift+f',
+      'ctrl+g',
+      'ctrl+shift+g',
+      'ctrl+h',
+      'ctrl+shift+h',
+      'ctrl+j',
+      'ctrl+shift+j',
+      'ctrl+t',
+      'ctrl+shift+t',
+      // macOS terminal editing/navigation shortcuts must reach xterm instead of
+      // being consumed by the editor's menu accelerators.
+      'command+c',
+      'command+v',
+      'command+a',
+      'command+k',
+      'command+f',
+      'command+x',
+      'command+z',
+      'command+shift+z',
+      'command+shift+c',
+      'command+shift+v',
+      'command+shift+a'
+    ]
+    return bypassList.includes(acc)
+  }
+
   registerAccelerator(win: BrowserWindow, accelerator: string, callback: ShortcutCallback): void {
     if (!win || !accelerator || !callback) {
       throw new Error(`addKeyHandler: invalid arguments (accelerator="${accelerator}").`)
@@ -67,6 +144,16 @@ class Keybindings {
     // can handle reserved Chromium shortcuts. Afterwards prevent the default action of
     // the event so the native menu is not triggered.
     electronLocalshortcut.register(win, accelerator, () => {
+      // Only release accelerators when the SSH terminal itself has focus, not
+      // merely when a terminal tab is active: shortcuts must still work from
+      // the sidebar, dialogs, or any other focused view in the same window.
+      if (
+        this.isTerminalMode(win.id) &&
+        this.isTerminalFocused(win.id) &&
+        this.isTerminalBypassAccelerator(accelerator)
+      ) {
+        return false
+      }
       callback(win)
       return true // prevent default action
     })

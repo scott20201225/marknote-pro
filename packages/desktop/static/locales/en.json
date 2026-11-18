@@ -213,6 +213,7 @@
     "cut": "Cut",
     "copy": "Copy",
     "paste": "Paste",
+    "selectAll": "Select All",
     "copyAsRich": "Copy As Rich Text",
     "copyAsHtml": "Copy As HTML",
     "pasteAsPlainText": "Paste as Plain Text",
@@ -322,7 +323,9 @@
       "mindMapOrganizationStructure": "Organization structure",
       "mindMapCatalogOrganization": "Catalog organization",
       "mindMapTimeline": "Timeline",
-      "mindMapFishbone": "Fishbone"
+      "mindMapFishbone": "Fishbone",
+      "selectWorkspaceFirst": "Please select a workspace first",
+      "selectWorkspaceFirstDetail": "Please select a workspace in the sidebar before importing."
     },
     "toc": {
       "title": "Table Of Contents"
@@ -523,7 +526,8 @@
       "spelling": "Spelling",
       "theme": "Theme",
       "image": "Image",
-      "keybindings": "Keybindings"
+      "keybindings": "Keybindings",
+      "terminal": "Terminal"
     },
     "general": {
       "title": "General",

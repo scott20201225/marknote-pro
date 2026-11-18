@@ -360,6 +360,8 @@ class AppMenu {
   setTerminalMenuMode(windowId: number, enabled: boolean): void {
     const entry = this.windowMenus.get(windowId)
     if (!entry || entry.type !== MenuType.EDITOR) return
+    this._keybindings.setTerminalMode(windowId, enabled)
+    if (!enabled) this._keybindings.setTerminalFocus(windowId, false)
     if (
       entry.terminalMode === enabled &&
       (!enabled || (!entry.drawioMode && !entry.geogebraMode && !entry.mindmapMode && !entry.kdbxMode && !entry.pdfMode))
@@ -438,6 +440,8 @@ class AppMenu {
     // NOTE: Shortcut handler is automatically unregistered when window is closed.
     const { activeWindowId } = this
     this.windowMenus.delete(windowId)
+    this._keybindings.setTerminalMode(windowId, false)
+    this._keybindings.setTerminalFocus(windowId, false)
     if (activeWindowId === windowId) {
       this.activeWindowId = -1
     }
@@ -790,6 +794,10 @@ class AppMenu {
     ipcMain.on('mt::terminal-menu-mode', (event, enabled: boolean) => {
       const win = BrowserWindow.fromWebContents(event.sender)
       if (win) this.setTerminalMenuMode(win.id, enabled === true)
+    })
+    ipcMain.on('mt::terminal-focus-mode', (event, focused: boolean) => {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      if (win) this._keybindings.setTerminalFocus(win.id, focused === true)
     })
     ipcMain.on('mt::pdf-menu-mode', (event, enabled: boolean) => {
       const win = BrowserWindow.fromWebContents(event.sender)

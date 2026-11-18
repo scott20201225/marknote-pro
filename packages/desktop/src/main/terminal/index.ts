@@ -1,7 +1,7 @@
-import { ipcMain, BrowserWindow, dialog } from 'electron'
+import { ipcMain, BrowserWindow, dialog, Menu, MenuItem, clipboard } from 'electron'
 import * as path from 'path'
 import * as fs from 'fs'
-import { SshEngineSession } from './sshEngine'
+import { SshEngineSession, triggerLocalNetworkPrompt } from './sshEngine'
 import { TelnetEngineSession } from './telnetEngine'
 import { SerialEngineSession } from './serialEngine'
 import { RawSocketEngineSession } from './rawSocketEngine'
@@ -17,6 +17,13 @@ import type {
 
 type AnySession = SshEngineSession | TelnetEngineSession | SerialEngineSession | RawSocketEngineSession
 
+// vue-i18n returns the key itself when a translation is missing, so `t(key) || fallback`
+// never reaches the fallback. Compare against the key instead.
+const menuLabel = (key: string, fallback: string): string => {
+  const value = t(key)
+  return value === key ? fallback : value
+}
+
 export class TerminalManager {
   private static instance: TerminalManager | null = null
   private sessions = new Map<string, AnySession>()
@@ -31,12 +38,14 @@ export class TerminalManager {
   }
 
   public registerHandlers(): void {
+    triggerLocalNetworkPrompt()
+
     // 1. Connect
     ipcMain.handle(
       'mt::terminal:connect',
       async (_event, config: ITerminalConnectionConfig, cols?: number, rows?: number, existingSessionId?: string) => {
         const sessionId = existingSessionId || `term_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`
-        const win = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0]
+        const sender = _event.sender
 
         console.log(`[Terminal/Manager] mt::terminal:connect requested:`, {
           sessionId,
@@ -59,26 +68,26 @@ export class TerminalManager {
 
         const callbacks = {
           onData: (data: string) => {
-            if (win && !win.isDestroyed()) {
-              win.webContents.send('mt::terminal:data', { sessionId, data })
+            if (sender && !sender.isDestroyed()) {
+              sender.send('mt::terminal:data', { sessionId, data })
             }
           },
           onStatus: (info: ITerminalSessionInfo) => {
-            if (win && !win.isDestroyed()) {
-              win.webContents.send('mt::terminal:status', info)
+            if (sender && !sender.isDestroyed()) {
+              sender.send('mt::terminal:status', info)
             }
           },
           onStats: (stats: IHardwareStats) => {
-            if (win && !win.isDestroyed()) {
-              win.webContents.send('mt::terminal:stats', { sessionId, stats })
+            if (sender && !sender.isDestroyed()) {
+              sender.send('mt::terminal:stats', { sessionId, stats })
             }
           },
           on2faPrompt: async (prompt: string, instruction?: string) => {
             return new Promise<string>((resolve) => {
               const promptId = `2fa_${Date.now()}`
               this.pending2faResolvers.set(promptId, resolve)
-              if (win && !win.isDestroyed()) {
-                win.webContents.send('mt::terminal:2fa-prompt', {
+              if (sender && !sender.isDestroyed()) {
+                sender.send('mt::terminal:2fa-prompt', {
                   sessionId,
                   promptId,
                   prompt,
@@ -88,8 +97,8 @@ export class TerminalManager {
             })
           },
           onTransferProgress: (progress: ISftpTransferProgress) => {
-            if (win && !win.isDestroyed()) {
-              win.webContents.send('mt::terminal:sftp-progress', { sessionId, progress })
+            if (sender && !sender.isDestroyed()) {
+              sender.send('mt::terminal:sftp-progress', { sessionId, progress })
             }
           }
         }
@@ -167,10 +176,10 @@ export class TerminalManager {
       const s = this.sessions.get(sessionId) as SshEngineSession | undefined
       if (!s) throw new Error(t('terminal.sessionNotFound'))
       const sftp = await s.getSftpClient()
-      const win = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0]
+      const sender = _event.sender
       return SftpManager.uploadFile(sftp, localPath, remotePath, (progress) => {
-        if (win && !win.isDestroyed()) {
-          win.webContents.send('mt::terminal:sftp-progress', { sessionId, progress })
+        if (sender && !sender.isDestroyed()) {
+          sender.send('mt::terminal:sftp-progress', { sessionId, progress })
         }
       })
     })
@@ -190,7 +199,7 @@ export class TerminalManager {
           }
         }
 
-        const win = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0]
+        const win = BrowserWindow.fromWebContents(_event.sender) || BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0]
         if (win && !win.isDestroyed()) {
           try {
             win.focus()
@@ -216,10 +225,10 @@ export class TerminalManager {
       }
 
       const sftp = await s.getSftpClient()
-      const win = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0]
+      const sender = _event.sender
       await SftpManager.downloadFile(sftp, remotePath, localPath, (progress) => {
-        if (win && !win.isDestroyed()) {
-          win.webContents.send('mt::terminal:sftp-progress', { sessionId, progress })
+        if (sender && !sender.isDestroyed()) {
+          sender.send('mt::terminal:sftp-progress', { sessionId, progress })
         }
       })
       return { canceled: false, localPath }
@@ -282,6 +291,84 @@ export class TerminalManager {
     ipcMain.handle('mt::terminal:test-latency', async (_event, host: string, port = 22) => {
       return TerminalServerStore.testLatency(host, port)
     })
+
+    // 8. Terminal Native Context Menu
+    ipcMain.handle(
+      'mt::terminal:show-context-menu',
+      async (event, { hasSelection }: { hasSelection: boolean; hasClipboard?: boolean }) => {
+        const win = BrowserWindow.fromWebContents(event.sender)
+        if (!win || win.isDestroyed()) return null
+
+        // Read the clipboard in the main process: the renderer bridge is async
+        // and the old code treated its Promise as a string, so paste was always disabled.
+        const hasClipboard = clipboard.readText().length > 0
+
+        const isMac = process.platform === 'darwin'
+        const copyShortcut = isMac ? '⌘C' : 'Ctrl+Shift+C'
+        const pasteShortcut = isMac ? '⌘V' : 'Ctrl+Shift+V'
+        const selectAllShortcut = isMac ? '⌘A' : 'Ctrl+Shift+A'
+        const clearShortcut = isMac ? '⌘K' : 'Ctrl+L'
+
+        return new Promise<string | null>((resolve) => {
+          let resolved = false
+          const safeResolve = (action: string | null) => {
+            if (!resolved) {
+              resolved = true
+              resolve(action)
+            }
+          }
+
+          const menu = new Menu()
+
+          menu.append(
+            new MenuItem({
+              label: `${menuLabel('contextMenu.copy', 'Copy')}\t(${copyShortcut})`,
+              enabled: Boolean(hasSelection),
+              click: () => safeResolve('copy')
+            })
+          )
+
+          menu.append(
+            new MenuItem({
+              label: `${menuLabel('contextMenu.paste', 'Paste')}\t(${pasteShortcut})`,
+              enabled: Boolean(hasClipboard),
+              click: () => safeResolve('paste')
+            })
+          )
+
+          menu.append(new MenuItem({ type: 'separator' }))
+
+          menu.append(
+            new MenuItem({
+              label: `${menuLabel('contextMenu.selectAll', 'Select All')}\t(${selectAllShortcut})`,
+              click: () => safeResolve('selectAll')
+            })
+          )
+
+          menu.append(
+            new MenuItem({
+              label: `${menuLabel('terminal.clearScreen', 'Clear Screen')}\t(${clearShortcut})`,
+              click: () => safeResolve('clear')
+            })
+          )
+
+          menu.append(new MenuItem({ type: 'separator' }))
+
+          menu.append(
+            new MenuItem({
+              label: `${menuLabel('terminal.search', 'Find in Terminal')}\t(${isMac ? '⌘F' : 'Ctrl+F'})`,
+              click: () => safeResolve('find')
+            })
+          )
+
+          menu.once('menu-will-close', () => {
+            setTimeout(() => safeResolve(null), 100)
+          })
+
+          menu.popup({ window: win })
+        })
+      }
+    )
   }
 }
 

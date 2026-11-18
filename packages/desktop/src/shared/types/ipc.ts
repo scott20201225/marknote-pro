@@ -308,14 +308,17 @@ export interface IpcInvokeChannels {
   'mt::uploader::upload': { args: [req: unknown]; ret: unknown }
   'mt::win::is-fullscreen': { args: []; ret: boolean }
   'mt::win::is-maximized': { args: []; ret: boolean }
-  'mt::terminal:connect': { args: [config: ITerminalConnectionConfig, cols?: number, rows?: number]; ret: ITerminalSessionInfo }
+  'mt::terminal:connect': { args: [config: ITerminalConnectionConfig, cols?: number, rows?: number, existingSessionId?: string]; ret: ITerminalSessionInfo }
   'mt::terminal:disconnect': { args: [sessionId: string]; ret: boolean }
   'mt::terminal:sftp-list': { args: [sessionId: string, dirPath: string]; ret: ISftpItem[] }
   'mt::terminal:sftp-upload': { args: [sessionId: string, localPath: string, remotePath: string]; ret: boolean }
   'mt::terminal:sftp-download': { args: [sessionId: string, remotePath: string, localPath: string]; ret: boolean }
+  'mt::terminal:sftp-read': { args: [sessionId: string, remotePath: string]; ret: string }
+  'mt::terminal:sftp-write': { args: [sessionId: string, remotePath: string, content: string]; ret: boolean }
   'mt::terminal:sftp-mkdir': { args: [sessionId: string, remotePath: string]; ret: boolean }
   'mt::terminal:sftp-delete': { args: [sessionId: string, remotePath: string, isDirectory: boolean]; ret: boolean }
   'mt::terminal:sftp-rename': { args: [sessionId: string, oldPath: string, newPath: string]; ret: boolean }
+  'mt::terminal:show-context-menu': { args: [payload: { hasSelection: boolean; hasClipboard?: boolean }]; ret: string | null }
   'mt::terminal:list-serial-ports': { args: []; ret: Array<{ path: string; manufacturer?: string }> }
   'mt::terminal:get-stored-servers': { args: []; ret: ITerminalConnectionConfig[] }
   'mt::terminal:save-stored-server': { args: [config: ITerminalConnectionConfig]; ret: ITerminalConnectionConfig }
@@ -456,6 +459,7 @@ export interface IpcSendChannels {
   'mt::mindmap-menu-mode': [enabled: boolean]
   'mt::kdbx-menu-mode': [enabled: boolean]
   'mt::terminal-menu-mode': [enabled: boolean]
+  'mt::terminal-focus-mode': [focused: boolean]
   'mt::pdf-menu-mode': [enabled: boolean]
   'mt::pdf::hide': []
   'mt::pdf::set-bounds': [bounds: DrawioBounds]

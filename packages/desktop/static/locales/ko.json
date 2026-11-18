@@ -213,6 +213,7 @@
     "cut": "잘라내기",
     "copy": "복사",
     "paste": "붙여넣기",
+    "selectAll": "모두 선택",
     "copyAsRich": "서식 있는 텍스트로 복사",
     "copyAsHtml": "HTML로 복사",
     "pasteAsPlainText": "일반 텍스트로 붙여넣기",
@@ -286,7 +287,9 @@
       "mindMapOrganizationStructure": "조직 구조도",
       "mindMapCatalogOrganization": "카탈로그 조직도",
       "mindMapTimeline": "타임라인",
-      "mindMapFishbone": "어골도"
+      "mindMapFishbone": "어골도",
+      "selectWorkspaceFirst": "먼저 작업 공간을 선택하세요",
+      "selectWorkspaceFirstDetail": "가져오기 전에 사이드바에서 작업 공간을 선택하세요."
     },
     "toc": {
       "title": "목차"
@@ -485,7 +488,8 @@
       "spelling": "맞춤법",
       "theme": "테마",
       "image": "이미지",
-      "keybindings": "키 바인딩"
+      "keybindings": "키 바인딩",
+      "terminal": "터미널"
     },
     "general": {
       "title": "일반",
@@ -1810,5 +1814,12 @@
         "selectRepositorySubdirectory": "현재 Git 프로젝트 안의 하위 디렉터리를 선택하세요."
       }
     }
+  },
+  "terminal": {
+    "clearScreen": "화면 지우기",
+    "search": "터미널에서 찾기",
+    "findPrev": "이전 일치",
+    "findNext": "다음 일치",
+    "closeSearch": "검색 닫기"
   }
 }

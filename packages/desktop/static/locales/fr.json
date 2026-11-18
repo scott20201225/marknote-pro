@@ -213,6 +213,7 @@
     "cut": "Couper",
     "copy": "Copier",
     "paste": "Coller",
+    "selectAll": "Tout sélectionner",
     "copyAsRich": "Copier en texte riche",
     "copyAsHtml": "Copier en HTML",
     "pasteAsPlainText": "Coller en texte brut",
@@ -286,7 +287,9 @@
       "mindMapOrganizationStructure": "Structure d'organisation",
       "mindMapCatalogOrganization": "Organisation de catalogue",
       "mindMapTimeline": "Chronologie",
-      "mindMapFishbone": "Diagramme en arête de poisson"
+      "mindMapFishbone": "Diagramme en arête de poisson",
+      "selectWorkspaceFirst": "Veuillez d'abord sélectionner un espace de travail",
+      "selectWorkspaceFirstDetail": "Veuillez sélectionner un espace de travail dans la barre latérale avant d'importer."
     },
     "toc": {
       "title": "Table des matières"
@@ -485,7 +488,8 @@
       "spelling": "Orthographe",
       "theme": "Thème",
       "image": "Image",
-      "keybindings": "Raccourcis clavier"
+      "keybindings": "Raccourcis clavier",
+      "terminal": "Terminal"
     },
     "general": {
       "title": "Général",
@@ -1810,5 +1814,12 @@
         "selectRepositorySubdirectory": "Veuillez choisir un sous-dossier du projet Git actuel."
       }
     }
+  },
+  "terminal": {
+    "clearScreen": "Effacer l'écran",
+    "search": "Rechercher dans le terminal",
+    "findPrev": "Correspondance précédente",
+    "findNext": "Correspondance suivante",
+    "closeSearch": "Fermer la recherche"
   }
 }

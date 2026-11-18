@@ -213,6 +213,7 @@
     "cut": "切り取り",
     "copy": "コピー",
     "paste": "貼り付け",
+    "selectAll": "すべて選択",
     "copyAsRich": "リッチテキストとしてコピー",
     "copyAsHtml": "HTMLとしてコピー",
     "pasteAsPlainText": "プレーンテキストとして貼り付け",
@@ -286,7 +287,9 @@
       "mindMapOrganizationStructure": "組織構造図",
       "mindMapCatalogOrganization": "カタログ組織図",
       "mindMapTimeline": "タイムライン",
-      "mindMapFishbone": "魚骨図"
+      "mindMapFishbone": "魚骨図",
+      "selectWorkspaceFirst": "先にワークスペースを選択してください",
+      "selectWorkspaceFirstDetail": "インポートする前に、サイドバーでワークスペースを選択してください。"
     },
     "toc": {
       "title": "目次"
@@ -485,7 +488,8 @@
       "spelling": "スペルチェック",
       "theme": "テーマ",
       "image": "画像",
-      "keybindings": "キーバインド"
+      "keybindings": "キーバインド",
+      "terminal": "ターミナル"
     },
     "general": {
       "title": "一般",
@@ -1810,5 +1814,12 @@
         "selectRepositorySubdirectory": "現在の Git プロジェクト内のサブディレクトリを選択してください。"
       }
     }
+  },
+  "terminal": {
+    "clearScreen": "画面をクリア",
+    "search": "ターミナル内を検索",
+    "findPrev": "前の一致",
+    "findNext": "次の一致",
+    "closeSearch": "検索を閉じる"
   }
 }
