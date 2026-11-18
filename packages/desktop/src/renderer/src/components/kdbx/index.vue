@@ -160,21 +160,23 @@
       </aside>
     </template>
 
-    <div v-if="groupMenu" class="kdbx-group-menu" :style="{ left: `${groupMenu.x}px`, top: `${groupMenu.y}px` }" @click.stop><button type="button" @click="createGroup(groupMenu.group.id)"><el-icon><FolderAdd /></el-icon>{{ t('kdbx.newGroup') }}</button><button type="button" @click="importEntries(groupMenu.group.id)"><el-icon><Upload /></el-icon>{{ t('kdbx.import') }}</button><template v-if="!groupMenu.group.isRoot"><button type="button" @click="openGroupMove(groupMenu.group)"><el-icon><FolderOpened /></el-icon>{{ t('kdbx.moveTo') }}</button><button type="button" @click="renameGroup(groupMenu.group)"><el-icon><Edit /></el-icon>{{ t('kdbx.renameGroup') }}</button><button type="button" @click="deleteGroup(groupMenu.group)"><el-icon><Delete /></el-icon>{{ t('kdbx.delete') }}</button></template></div>
-    <div v-if="entryMenu" class="kdbx-group-menu kdbx-entry-menu" :style="{ left: `${entryMenu.x}px`, top: `${entryMenu.y}px` }" @click.stop>
-      <template v-if="entryMenu.entry.isRecycleBin">
-        <button type="button" @click="runEntryMenuAction('restore')"><el-icon><RefreshRight /></el-icon>{{ t('kdbx.restoreHistory') }}</button>
-        <button type="button" @click="runEntryMenuAction('delete')"><el-icon><Delete /></el-icon>{{ t('kdbx.deletePermanently') }}</button>
-      </template>
-      <template v-else>
-        <button v-if="getEntryUrlType(entryMenu.entry)" type="button" @click="runEntryMenuAction('connect-terminal')"><el-icon><Monitor /></el-icon>{{ t('kdbx.connectTerminal') }}</button>
-        <button type="button" @click="runEntryMenuAction('edit')"><el-icon><Edit /></el-icon>{{ t('kdbx.edit') }}</button>
-        <button type="button" @click="runEntryMenuAction('copy')"><el-icon><DocumentCopy /></el-icon>{{ t('kdbx.copy') }}</button>
-        <button type="button" @click="runEntryMenuAction('export')"><el-icon><Download /></el-icon>{{ t('kdbx.export') }}</button>
-        <button type="button" @click="runEntryMenuAction('move')"><el-icon><FolderOpened /></el-icon>{{ t('kdbx.moveTo') }}</button>
-        <button type="button" @click="runEntryMenuAction('delete')"><el-icon><Delete /></el-icon>{{ t('kdbx.delete') }}</button>
-      </template>
-    </div>
+    <Teleport to="body">
+      <div v-if="groupMenu" ref="groupMenuRef" class="kdbx-group-menu" :style="{ left: `${groupMenu.x}px`, top: `${groupMenu.y}px` }" @click.stop><button type="button" @click="createGroup(groupMenu.group.id)"><el-icon><FolderAdd /></el-icon>{{ t('kdbx.newGroup') }}</button><button type="button" @click="importEntries(groupMenu.group.id)"><el-icon><Upload /></el-icon>{{ t('kdbx.import') }}</button><template v-if="!groupMenu.group.isRoot"><button type="button" @click="openGroupMove(groupMenu.group)"><el-icon><FolderOpened /></el-icon>{{ t('kdbx.moveTo') }}</button><button type="button" @click="renameGroup(groupMenu.group)"><el-icon><Edit /></el-icon>{{ t('kdbx.renameGroup') }}</button><button type="button" @click="deleteGroup(groupMenu.group)"><el-icon><Delete /></el-icon>{{ t('kdbx.delete') }}</button></template></div>
+      <div v-if="entryMenu" ref="entryMenuRef" class="kdbx-group-menu kdbx-entry-menu" :style="{ left: `${entryMenu.x}px`, top: `${entryMenu.y}px` }" @click.stop>
+        <template v-if="entryMenu.entry.isRecycleBin">
+          <button type="button" @click="runEntryMenuAction('restore')"><el-icon><RefreshRight /></el-icon>{{ t('kdbx.restoreHistory') }}</button>
+          <button type="button" @click="runEntryMenuAction('delete')"><el-icon><Delete /></el-icon>{{ t('kdbx.deletePermanently') }}</button>
+        </template>
+        <template v-else>
+          <button v-if="getEntryUrlType(entryMenu.entry)" type="button" @click="runEntryMenuAction('connect-terminal')"><el-icon><Monitor /></el-icon>{{ t('kdbx.connectTerminal') }}</button>
+          <button type="button" @click="runEntryMenuAction('edit')"><el-icon><Edit /></el-icon>{{ t('kdbx.edit') }}</button>
+          <button type="button" @click="runEntryMenuAction('copy')"><el-icon><DocumentCopy /></el-icon>{{ t('kdbx.copy') }}</button>
+          <button type="button" @click="runEntryMenuAction('export')"><el-icon><Download /></el-icon>{{ t('kdbx.export') }}</button>
+          <button type="button" @click="runEntryMenuAction('move')"><el-icon><FolderOpened /></el-icon>{{ t('kdbx.moveTo') }}</button>
+          <button type="button" @click="runEntryMenuAction('delete')"><el-icon><Delete /></el-icon>{{ t('kdbx.delete') }}</button>
+        </template>
+      </div>
+    </Teleport>
     <el-dialog v-model="moveDialogVisible" class="kdbx-dialog" :title="moveGroupSourceId ? t('kdbx.moveGroup') : t('kdbx.moveEntries')" width="460px" :close-on-click-modal="false" @closed="clearMoveDialog"><div class="kdbx-move-tree"><el-tree v-if="moveTargetTree.length" :data="moveTargetTree" node-key="id" :expand-on-click-node="false" :highlight-current="true" default-expand-all @node-click="selectMoveTarget"><template #default="{ data }"><div class="kdbx-move-tree-row"><el-icon><Folder /></el-icon><span>{{ data.label }}</span></div></template></el-tree><div v-else class="kdbx-empty">{{ t('kdbx.noEntries') }}</div></div><template #footer><el-button @click="moveDialogVisible = false">{{ t('common.cancel') }}</el-button><el-button type="primary" :loading="moving" :disabled="!moveTargetGroupId" @click="confirmMove">{{ t('common.ok') }}</el-button></template></el-dialog>
     <el-dialog v-model="historyDialogVisible" class="kdbx-dialog" :title="t('kdbx.historyVersion')" width="620px"><template v-if="historyPreview"><dl class="kdbx-history-preview"><dt>{{ t('kdbx.title') }}</dt><dd>{{ historyPreview.title || t('kdbx.untitled') }}</dd><dt>{{ t('kdbx.username') }}</dt><dd>{{ historyPreview.username }}</dd><dt>{{ t('kdbx.url') }}</dt><dd>{{ historyPreview.url }}</dd><dt>{{ t('kdbx.tags') }}</dt><dd>{{ historyPreview.tags.join(', ') }}</dd><dt>{{ t('kdbx.notes') }}</dt><dd>{{ historyPreview.notes }}</dd><dt>{{ t('kdbx.customFields') }}</dt><dd>{{ historyPreview.fields.filter(field => !standardFieldKeys.includes(field.key) && field.key.toLowerCase() !== 'key_url_type').map(field => `${field.key}: ${field.value}`).join('\n') || '-' }}</dd><dt>{{ t('kdbx.attachments') }}</dt><dd>{{ historyPreview.attachments.map(attachment => attachment.name).join(', ') || '-' }}</dd></dl></template></el-dialog>
     <el-dialog v-model="resetPasswordVisible" class="kdbx-dialog kdbx-reset-password-dialog" :title="t('kdbx.resetPassword')" width="440px" :close-on-click-modal="false" @closed="clearResetPassword">
@@ -258,7 +260,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, toRaw, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, toRaw, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowDown, ArrowRight, Delete, DeleteFilled, Document, DocumentAdd, DocumentCopy, Download, Edit, Filter, Folder, FolderAdd, FolderOpened, FullScreen, Hide, Key, Loading, Lock, Monitor, MoreFilled, Paperclip, Plus, PriceTag, RefreshRight, Search, Tickets, Upload, View } from '@element-plus/icons-vue'
@@ -467,8 +469,43 @@ const selectTag = (tag: string): void => { selectedTag.value = selectedTag.value
 const selectUntagged = (): void => { selectedUntagged.value = !selectedUntagged.value; selectedTag.value = ''; selectedGroup.value = ''; selectedRecycle.value = false; clearEntrySelection() }
 const toggleAllItems = (): void => { allItemsExpanded.value = !allItemsExpanded.value }
 const toggleGroup = (id: string): void => { const next = new Set(expandedGroups.value); next.has(id) ? next.delete(id) : next.add(id); expandedGroups.value = next }
-const openGroupMenu = (group: FlatGroup, event: MouseEvent): void => { entryMenu.value = null; groupMenu.value = { group, x: event.clientX, y: event.clientY } }
-const openEntryMenu = (entry: KdbxVaultSnapshot['entries'][number], event: MouseEvent): void => { groupMenu.value = null; entryMenu.value = { entry, x: event.clientX, y: event.clientY } }
+const groupMenuRef = ref<HTMLElement | null>(null)
+const entryMenuRef = ref<HTMLElement | null>(null)
+const MENU_VIEWPORT_MARGIN = 8
+const clampMenuPosition = async(state: { x: number; y: number } | null, elementRef: { value: HTMLElement | null }): Promise<void> => {
+  await nextTick()
+  const element = elementRef.value
+  if (!state || !element || !element.isConnected) return
+  const { width, height } = element.getBoundingClientRect()
+  let x = state.x
+  let y = state.y
+  // Flip to the left/above the pointer when the menu would leave the window,
+  // so actions near the bottom-right edge stay reachable.
+  if (x + width > window.innerWidth - MENU_VIEWPORT_MARGIN) x -= width
+  if (x < MENU_VIEWPORT_MARGIN) x = Math.max(MENU_VIEWPORT_MARGIN, window.innerWidth - width - MENU_VIEWPORT_MARGIN)
+  if (y + height > window.innerHeight - MENU_VIEWPORT_MARGIN) y -= height
+  if (y < MENU_VIEWPORT_MARGIN) y = Math.max(MENU_VIEWPORT_MARGIN, window.innerHeight - height - MENU_VIEWPORT_MARGIN)
+  state.x = x
+  state.y = y
+}
+const openGroupMenu = (group: FlatGroup, event: MouseEvent): void => {
+  entryMenu.value = null
+  groupMenu.value = { group, x: event.clientX, y: event.clientY }
+  void clampMenuPosition(groupMenu.value, groupMenuRef)
+}
+const openEntryMenu = (entry: KdbxVaultSnapshot['entries'][number], event: MouseEvent): void => {
+  groupMenu.value = null
+  entryMenu.value = { entry, x: event.clientX, y: event.clientY }
+  void clampMenuPosition(entryMenu.value, entryMenuRef)
+}
+const closeFloatingMenus = (): void => { groupMenu.value = null; entryMenu.value = null }
+const onGlobalPointerDown = (event: PointerEvent): void => {
+  const target = event.target as Node | null
+  if (target && (groupMenuRef.value?.contains(target) || entryMenuRef.value?.contains(target))) return
+  if (groupMenu.value || entryMenu.value) closeFloatingMenus()
+}
+const onGlobalViewportChange = (): void => { if (groupMenu.value || entryMenu.value) closeFloatingMenus() }
+const onGlobalKeyDown = (event: KeyboardEvent): void => { if (event.key === 'Escape') closeFloatingMenus() }
 const groupPathFor = (targetId: string, groups = vault.value?.groups || [], ancestors: string[] = []): string[] => { for (const group of groups) { const current = [...ancestors, groupDisplayName(group)]; if (group.id === targetId) return current; const found = groupPathFor(targetId, group.groups, current); if (found.length) return found } return [] }
 const selectEntry = async(id: string): Promise<void> => { if (!filePath.value) return; if (editing.value && id !== selectedEntryId.value) { try { await ElMessageBox.confirm(t('kdbx.discardChangesConfirm'), t('kdbx.cancelEdit'), { ...messageBoxTheme, confirmButtonText: t('common.ok'), cancelButtonText: t('common.cancel'), type: 'warning' }) } catch { return } clearEditDraft() } const detail = await window.electron.ipcRenderer.invoke('mt::kdbx::entry', filePath.value, id); if (!detail) return; selectedEntryId.value = id; draft.value = detail; showPassword.value = false; revealedCustomFields.value = new Set() }
 const clearMoveDialog = (): void => { moveTargetGroupId.value = ''; moveGroupSourceId.value = ''; moveEntryIds.value = [] }
@@ -784,12 +821,20 @@ watch([query, searchFields], clearEntrySelection, { deep: true })
 watch(filePath, next => { void activate(next) }, { immediate: true })
 onMounted(() => {
   window.electron.ipcRenderer.on('mt::kdbx-lock', lock)
+  window.addEventListener('pointerdown', onGlobalPointerDown, true)
+  window.addEventListener('scroll', onGlobalViewportChange, true)
+  window.addEventListener('resize', onGlobalViewportChange)
+  window.addEventListener('keydown', onGlobalKeyDown, true)
   totpTimer = window.setInterval(() => {
     now.value = Date.now()
   }, 1000)
 })
 onBeforeUnmount(() => {
   window.electron.ipcRenderer.removeAllListeners('mt::kdbx-lock')
+  window.removeEventListener('pointerdown', onGlobalPointerDown, true)
+  window.removeEventListener('scroll', onGlobalViewportChange, true)
+  window.removeEventListener('resize', onGlobalViewportChange)
+  window.removeEventListener('keydown', onGlobalKeyDown, true)
   if (totpTimer !== null) {
     clearInterval(totpTimer)
     totpTimer = null
@@ -819,7 +864,7 @@ button { border: 0; background: transparent; color: inherit; cursor: pointer; } 
 
 .kdbx-detail { min-width: 0; overflow: auto; padding: 0 16px 24px; }.kdbx-detail label { display: grid; gap: 6px; margin-top: 14px; font-size: 12px; color: var(--editorColor50); }.kdbx-detail :deep(.el-input__wrapper), .kdbx-detail :deep(.el-select__wrapper), .kdbx-detail :deep(.el-textarea__inner) { background: var(--inputBgColor); box-shadow: 0 0 0 1px var(--floatBorderColor) inset; color: var(--editorColor); }.kdbx-detail :deep(.el-input__inner), .kdbx-detail :deep(.el-textarea__inner), .kdbx-detail :deep(.el-select__selected-item) { color: var(--editorColor80); }.kdbx-detail-title { position: sticky; top: 0; z-index: 2; margin: 0 -16px; padding: 0 16px; background: var(--editorBgColor); }.kdbx-breadcrumb { min-width: 0; display: flex; overflow: hidden; color: var(--editorColor50); font-size: 12px; white-space: nowrap; }.kdbx-breadcrumb span { overflow: hidden; text-overflow: ellipsis; }.kdbx-breadcrumb span + span::before { content: '/'; padding: 0 5px; color: var(--editorColor50); }
 .kdbx-section { margin-top: 18px; border-top: 1px solid var(--itemBgColor); padding-top: 10px; }.kdbx-section-title { display: flex; align-items: center; justify-content: space-between; min-height: 28px; }.kdbx-custom-field { display: grid; grid-template-columns: minmax(110px, .6fr) minmax(150px, 1fr) 28px 28px; gap: 6px; align-items: center; margin-top: 7px; }.kdbx-custom-field :deep(.el-checkbox) { display: inline-flex; justify-self: center; width: 28px; height: 28px; margin: 0; }.kdbx-custom-field :deep(.el-checkbox__label) { display: inline-flex; padding-left: 4px; color: var(--editorColor50); }.kdbx-file-input { display: none; }.kdbx-section-empty { padding: 8px 0; color: var(--editorColor50); font-size: 12px; }.kdbx-entry-view { display: grid; grid-template-columns: 116px minmax(0, 1fr); gap: 10px 14px; margin: 16px 0 0; }.kdbx-entry-view dt { color: var(--editorColor50); font-size: 12px; }.kdbx-entry-view dd { min-width: 0; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }.kdbx-custom-field-view { margin-top: 10px; }.kdbx-tag-chip { display: inline-flex; margin: 0 5px 4px 0; padding: 2px 7px; border: 1px solid var(--floatBorderColor); border-radius: 3px; background: var(--floatHoverColor); color: var(--editorColor); font-size: 12px; }.kdbx-attachment { display: flex; align-items: center; gap: 4px; min-height: 32px; }.kdbx-attachment > div { min-width: 0; flex: 1; display: grid; grid-template-columns: 17px minmax(0, 1fr) auto; gap: 6px; align-items: center; text-align: left; }.kdbx-attachment span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.kdbx-attachment em { color: var(--editorColor50); font-size: 12px; font-style: normal; }.kdbx-attachment > button { display: inline-flex; width: 28px; height: 28px; align-items: center; justify-content: center; }.kdbx-attachment:hover { background: var(--floatHoverColor); }.kdbx-attachment-preview { display: block; width: auto; max-width: 100%; height: auto; max-height: calc(100vh - 180px); margin: 0 auto; object-fit: contain; }
-.kdbx-history-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 8px; align-items: center; min-height: 43px; border-bottom: 1px solid var(--itemBgColor); }.kdbx-history-row > div { min-width: 0; display: grid; gap: 2px; }.kdbx-history-row strong, .kdbx-history-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.kdbx-history-row span { color: var(--editorColor50); font-size: 11px; }.kdbx-history-row > button { padding: 4px 6px; color: var(--themeColor); font-size: 12px; }.kdbx-history-delete { display: inline-flex; width: 28px; height: 28px; align-items: center; justify-content: center; padding: 0 !important; color: var(--editorColor50) !important; }.kdbx-history-row > button:hover { background: var(--floatHoverColor); }.kdbx-empty { display: grid; place-items: center; min-height: 120px; color: var(--editorColor50); }.kdbx-group-menu { position: fixed; z-index: 30; display: grid; min-width: 142px; padding: 4px; border: 1px solid var(--floatBorderColor); background: var(--floatBgColor); box-shadow: 0 5px 16px rgb(0 0 0 / 18%); }.kdbx-group-menu button { display: grid; grid-template-columns: 18px 1fr; gap: 7px; align-items: center; padding: 7px; text-align: left; font-size: 13px; }.kdbx-group-menu button:hover { background: var(--floatHoverColor); }.kdbx-move-tree { min-height: 220px; max-height: 420px; overflow: auto; padding: 4px 0; border: 1px solid var(--floatBorderColor); border-radius: 6px; background: var(--sideBarBgColor); }.kdbx-move-tree-row { display: flex; align-items: center; gap: 8px; min-width: 0; }.kdbx-move-tree-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.kdbx-move-tree :deep(.el-tree) { background: transparent; color: var(--editorColor); }.kdbx-move-tree :deep(.el-tree-node__content) { height: 30px; }.kdbx-move-tree :deep(.el-tree-node__content:hover), .kdbx-move-tree :deep(.el-tree-node.is-current > .el-tree-node__content) { background: var(--floatHoverColor); }.kdbx-history-preview { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 10px 14px; margin: 0; }.kdbx-history-preview dt { color: var(--editorColor50); }.kdbx-history-preview dd { min-width: 0; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }.kdbx-edit-form { display: grid; gap: 14px; }.kdbx-edit-form > label { display: grid; gap: 6px; color: var(--editorColor50); font-size: 12px; }.kdbx-edit-form :deep(.el-input__wrapper), .kdbx-edit-form :deep(.el-select__wrapper), .kdbx-edit-form :deep(.el-textarea__inner) { background: var(--inputBgColor); box-shadow: 0 0 0 1px var(--floatBorderColor) inset; color: var(--editorColor); }.kdbx-edit-form :deep(.el-input__inner), .kdbx-edit-form :deep(.el-textarea__inner), .kdbx-edit-form :deep(.el-select__selected-item) { color: var(--editorColor80); }.kdbx-password-rule { margin-top: 6px; color: var(--editorColor50); font-size: 12px; line-height: 1.4; }.kdbx-password-rule.error { color: var(--deleteColor, #ff6969) !important; }:global(.kdbx-reset-password-dialog .el-input.is-password-invalid .el-input__wrapper) { box-shadow: 0 0 0 1px var(--deleteColor, #ff6969) inset !important; }.kdbx-password-view { display: flex; align-items: center; gap: 6px; }.kdbx-password-view > span { min-width: 0; flex: 1; }.kdbx-password-view > button { display: inline-flex; width: 28px; height: 28px; align-items: center; justify-content: center; color: var(--editorColor50); }.kdbx-password-view > button:hover { background: var(--floatHoverColor); color: var(--editorColor); }
+.kdbx-history-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 8px; align-items: center; min-height: 43px; border-bottom: 1px solid var(--itemBgColor); }.kdbx-history-row > div { min-width: 0; display: grid; gap: 2px; }.kdbx-history-row strong, .kdbx-history-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.kdbx-history-row span { color: var(--editorColor50); font-size: 11px; }.kdbx-history-row > button { padding: 4px 6px; color: var(--themeColor); font-size: 12px; }.kdbx-history-delete { display: inline-flex; width: 28px; height: 28px; align-items: center; justify-content: center; padding: 0 !important; color: var(--editorColor50) !important; }.kdbx-history-row > button:hover { background: var(--floatHoverColor); }.kdbx-empty { display: grid; place-items: center; min-height: 120px; color: var(--editorColor50); }.kdbx-group-menu { position: fixed; z-index: 3000; display: grid; min-width: 142px; max-height: calc(100vh - 16px); overflow-y: auto; padding: 4px; border: 1px solid var(--floatBorderColor); background: var(--floatBgColor); box-shadow: 0 5px 16px rgb(0 0 0 / 18%); }.kdbx-group-menu button { display: grid; grid-template-columns: 18px 1fr; gap: 7px; align-items: center; padding: 7px; text-align: left; font-size: 13px; }.kdbx-group-menu button:hover { background: var(--floatHoverColor); }.kdbx-move-tree { min-height: 220px; max-height: 420px; overflow: auto; padding: 4px 0; border: 1px solid var(--floatBorderColor); border-radius: 6px; background: var(--sideBarBgColor); }.kdbx-move-tree-row { display: flex; align-items: center; gap: 8px; min-width: 0; }.kdbx-move-tree-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.kdbx-move-tree :deep(.el-tree) { background: transparent; color: var(--editorColor); }.kdbx-move-tree :deep(.el-tree-node__content) { height: 30px; }.kdbx-move-tree :deep(.el-tree-node__content:hover), .kdbx-move-tree :deep(.el-tree-node.is-current > .el-tree-node__content) { background: var(--floatHoverColor); }.kdbx-history-preview { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 10px 14px; margin: 0; }.kdbx-history-preview dt { color: var(--editorColor50); }.kdbx-history-preview dd { min-width: 0; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }.kdbx-edit-form { display: grid; gap: 14px; }.kdbx-edit-form > label { display: grid; gap: 6px; color: var(--editorColor50); font-size: 12px; }.kdbx-edit-form :deep(.el-input__wrapper), .kdbx-edit-form :deep(.el-select__wrapper), .kdbx-edit-form :deep(.el-textarea__inner) { background: var(--inputBgColor); box-shadow: 0 0 0 1px var(--floatBorderColor) inset; color: var(--editorColor); }.kdbx-edit-form :deep(.el-input__inner), .kdbx-edit-form :deep(.el-textarea__inner), .kdbx-edit-form :deep(.el-select__selected-item) { color: var(--editorColor80); }.kdbx-password-rule { margin-top: 6px; color: var(--editorColor50); font-size: 12px; line-height: 1.4; }.kdbx-password-rule.error { color: var(--deleteColor, #ff6969) !important; }:global(.kdbx-reset-password-dialog .el-input.is-password-invalid .el-input__wrapper) { box-shadow: 0 0 0 1px var(--deleteColor, #ff6969) inset !important; }.kdbx-password-view { display: flex; align-items: center; gap: 6px; }.kdbx-password-view > span { min-width: 0; flex: 1; }.kdbx-password-view > button { display: inline-flex; width: 28px; height: 28px; align-items: center; justify-content: center; color: var(--editorColor50); }.kdbx-password-view > button:hover { background: var(--floatHoverColor); color: var(--editorColor); }
 .kdbx-totp-view { display: flex; align-items: center; gap: 10px; }
 .kdbx-totp-code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 18px; font-weight: 700; letter-spacing: 2px; color: var(--themeColor); }
 .kdbx-totp-timer { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--editorColor50); }
