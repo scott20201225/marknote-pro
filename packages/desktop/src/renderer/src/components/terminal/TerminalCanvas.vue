@@ -174,6 +174,7 @@ function initTerminal(): void {
     // selection is sent to the shell as SIGINT.
     if (key === 'c') {
       if (isOsx ? cmdOnly : ctrlShift) {
+        event.preventDefault()
         const selection = term?.getSelection()
         if (selection) {
           window.electron.clipboard.writeText(selection)
@@ -181,6 +182,7 @@ function initTerminal(): void {
         return false
       }
       if (!isOsx && ctrlOnly) {
+        event.preventDefault()
         if (term && term.hasSelection()) {
           const selection = term.getSelection()
           if (selection) {
@@ -197,6 +199,11 @@ function initTerminal(): void {
 
     // Paste: Cmd+V on macOS, Ctrl+V / Ctrl+Shift+V elsewhere.
     if (key === 'v' && (isOsx ? cmdOnly : ctrlOnly || ctrlShift)) {
+      // Stop the browser's native paste event; xterm also listens for it and
+      // would write the clipboard a second time (123 -> 123123 on Windows/Linux).
+      event.preventDefault()
+      suppressNativePaste = true
+      window.setTimeout(() => { suppressNativePaste = false }, 0)
       void window.electron.clipboard.readText().then((text) => {
         if (text) {
           terminalStore.write(props.session.id, text)
@@ -207,18 +214,21 @@ function initTerminal(): void {
 
     // Select all: Cmd+A on macOS (plain Ctrl+A must reach the shell).
     if (isOsx && key === 'a' && cmdOnly) {
+      event.preventDefault()
       term?.selectAll()
       return false
     }
 
     // Clear screen: Cmd+K on macOS (the context menu advertises it).
     if (isOsx && key === 'k' && cmdOnly) {
+      event.preventDefault()
       term?.clear()
       return false
     }
 
     // Search: Cmd+F / Ctrl+F.
     if (key === 'f' && (event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey) {
+      event.preventDefault()
       showSearch.value = true
       return false
     }
@@ -364,6 +374,7 @@ watch(
 )
 
 let themeObserver: MutationObserver | null = null
+let suppressNativePaste = false
 
 // Tell the main process whether the terminal itself owns keyboard focus. The
 // menu accelerators are released only while this is true, so shortcuts keep
@@ -378,6 +389,15 @@ const onTerminalFocusOut = (event: FocusEvent): void => {
   const next = event.relatedTarget as Node | null
   if (!containerRef.value?.contains(next)) notifyTerminalFocus(false)
 }
+// xterm registers its own paste listener and writes the clipboard into the
+// session. When Ctrl/Cmd+V has already been handled by the key handler above,
+// swallow the native event so the text is not written twice.
+const onNativePaste = (event: ClipboardEvent): void => {
+  if (!suppressNativePaste) return
+  suppressNativePaste = false
+  event.preventDefault()
+  event.stopPropagation()
+}
 
 onMounted(() => {
   initTerminal()
@@ -386,6 +406,7 @@ onMounted(() => {
   if (container) {
     container.addEventListener('focusin', onTerminalFocusIn)
     container.addEventListener('focusout', onTerminalFocusOut)
+    container.addEventListener('paste', onNativePaste, true)
   }
 
   // Also observe stylesheet mutations so any dynamic theme switch triggers applyTheme
@@ -403,6 +424,7 @@ onBeforeUnmount(() => {
   if (container) {
     container.removeEventListener('focusin', onTerminalFocusIn)
     container.removeEventListener('focusout', onTerminalFocusOut)
+    container.removeEventListener('paste', onNativePaste, true)
   }
   notifyTerminalFocus(false)
   if (themeObserver) {
