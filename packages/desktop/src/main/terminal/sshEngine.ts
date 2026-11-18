@@ -1,4 +1,5 @@
 import { BrowserWindow } from 'electron'
+import * as dgram from 'dgram'
 import { Client, type ClientChannel, type ConnectConfig } from 'ssh2'
 import { t } from '../i18n'
 import { generateTotp } from '../../shared/totp'
@@ -11,6 +12,44 @@ import type {
 } from '../../shared/types/terminal'
 import { LinuxHardwareProbe } from './probeEngine'
 import { ZModemSessionHandler } from './zmodemEngine'
+
+/**
+ * Proactively triggers macOS Local Network privacy permission check on macOS Sequoia / Sonoma
+ * by sending an mDNS query so the application is registered in System Settings -> Privacy & Security -> Local Network.
+ */
+export function triggerLocalNetworkPrompt(): void {
+  if (process.platform !== 'darwin') return
+  try {
+    const socket = dgram.createSocket('udp4')
+    socket.bind(0, () => {
+      try {
+        const buf = Buffer.from([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        socket.send(buf, 0, buf.length, 5353, '224.0.0.251', () => {
+          try {
+            socket.close()
+          } catch {
+            // ignore
+          }
+        })
+      } catch {
+        try {
+          socket.close()
+        } catch {
+          // ignore
+        }
+      }
+    })
+    socket.on('error', () => {
+      try {
+        socket.close()
+      } catch {
+        // ignore
+      }
+    })
+  } catch {
+    // ignore
+  }
+}
 // 全局记录已消费的 2FA 动态口令及主机排队锁，防止多终端同时登录同一主机触发 Linux PAM 防重放拦截
 const consumedTotpMap = new Map<string, { code: string; step: number; timestamp: number }>()
 const totpMutexMap = new Map<string, Promise<void>>()
@@ -135,6 +174,7 @@ export class SshEngineSession {
         // ignore
       }
     }
+    triggerLocalNetworkPrompt()
     this.client = new Client()
     this.status = 'connecting'
     this.has2fa = false
@@ -153,10 +193,15 @@ export class SshEngineSession {
         }
       }
 
+      let targetHost = (this.config.host || '').trim()
+      if (targetHost.toLowerCase() === 'localhost') {
+        targetHost = '127.0.0.1'
+      }
+
       const connectConfig: ConnectConfig = {
-        host: this.config.host,
-        port: this.config.port || 22,
-        username: this.config.username || 'root',
+        host: targetHost,
+        port: Number(this.config.port) || 22,
+        username: (this.config.username || 'root').trim(),
         keepaliveInterval: kaInterval,
         keepaliveCountMax: 10,
         readyTimeout: this.config.readyTimeout && this.config.readyTimeout > 100 ? this.config.readyTimeout : (this.config.totpSecret ? 60000 : 20000),
@@ -286,11 +331,14 @@ export class SshEngineSession {
       const target = `${this.config.username ? `${this.config.username}@` : ''}${this.config.host}:${this.config.port || 22}`
       this.onDataCallback(`\x1b[90m${t('terminal.connecting', { target })}\x1b[0m\r\n`)
 
-      this.client.on('error', (err) => {
+      this.client.on('error', (err: any) => {
         console.error(`[Terminal/SSH] Connection error on ${this.config.host}:`, err)
         this.status = 'error'
-        this.onDataCallback(`\r\n\x1b[31;1m${t('terminal.connectionFailed', { error: err.message || err })}\x1b[0m\r\n`)
-        this.onStatusCallback({ ...this.getSessionInfo(), error: err.message })
+        const errMsg = err?.message || String(err)
+        const errDetail = err?.code ? ` (${err.code})` : (err?.level ? ` [${err.level}]` : '')
+        const fullErr = `${errMsg}${errDetail}`
+        this.onDataCallback(`\r\n\x1b[31;1m${t('terminal.connectionFailed', { error: fullErr })}\x1b[0m\r\n`)
+        this.onStatusCallback({ ...this.getSessionInfo(), error: fullErr })
         if (!isResolved) {
           isResolved = true
           reject(err)

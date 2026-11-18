@@ -1,0 +1,221 @@
+diff --git a/node_modules/ssh2/lib/protocol/chacha20.js b/node_modules/ssh2/lib/protocol/chacha20.js
+new file mode 100644
+--- /dev/null
++++ b/node_modules/ssh2/lib/protocol/chacha20.js
+@@ -0,0 +1,123 @@
++'use strict';
++
++// Pure-JS ChaCha20 stream cipher fallback.
++//
++// ssh2's chacha20-poly1305@openssh.com implementation calls
++// crypto.createCipheriv('chacha20', ...), a cipher OpenSSL exposes but
++// Electron's BoringSSL does not. Without this fallback, ssh2 filters
++// chacha20-poly1305 out of its supported cipher list and connections to
++// servers that only offer it fail with "Unsupported algorithm".
++//
++// The IV layout matches OpenSSL's EVP_chacha20: the first 32 bits (little
++// endian) are the block counter, the remaining 96 bits are the nonce.
++
++const crypto = require('crypto');
++
++const SIGMA = [0x61707865, 0x3320646e, 0x79622d32, 0x6b206574];
++
++function rotl(value, count) {
++  return ((value << count) | (value >>> (32 - count))) >>> 0;
++}
++
++function quarterRound(x, a, b, c, d) {
++  x[a] = (x[a] + x[b]) >>> 0;
++  x[d] = rotl(x[d] ^ x[a], 16);
++  x[c] = (x[c] + x[d]) >>> 0;
++  x[b] = rotl(x[b] ^ x[c], 12);
++  x[a] = (x[a] + x[b]) >>> 0;
++  x[d] = rotl(x[d] ^ x[a], 8);
++  x[c] = (x[c] + x[d]) >>> 0;
++  x[b] = rotl(x[b] ^ x[c], 7);
++}
++
++class ChaCha20Cipher {
++  constructor(key, iv) {
++    if (!Buffer.isBuffer(key) || key.length !== 32)
++      throw new TypeError('ChaCha20 key must be 32 bytes');
++    if (!Buffer.isBuffer(iv) || iv.length !== 16)
++      throw new TypeError('ChaCha20 IV must be 16 bytes');
++
++    this._key = new Uint32Array(8);
++    for (let i = 0; i < 8; ++i)
++      this._key[i] = key.readUInt32LE(i * 4);
++
++    this._counter = iv.readUInt32LE(0);
++    this._nonce = [
++      iv.readUInt32LE(4),
++      iv.readUInt32LE(8),
++      iv.readUInt32LE(12),
++    ];
++
++    this._keystream = Buffer.allocUnsafe(64);
++    this._keystreamPos = 64;
++  }
++
++  _generateBlock() {
++    const state = new Uint32Array(16);
++    state[0] = SIGMA[0];
++    state[1] = SIGMA[1];
++    state[2] = SIGMA[2];
++    state[3] = SIGMA[3];
++    state.set(this._key, 4);
++    state[12] = this._counter;
++    state[13] = this._nonce[0];
++    state[14] = this._nonce[1];
++    state[15] = this._nonce[2];
++
++    const x = new Uint32Array(state);
++    for (let i = 0; i < 10; ++i) {
++      quarterRound(x, 0, 4, 8, 12);
++      quarterRound(x, 1, 5, 9, 13);
++      quarterRound(x, 2, 6, 10, 14);
++      quarterRound(x, 3, 7, 11, 15);
++      quarterRound(x, 0, 5, 10, 15);
++      quarterRound(x, 1, 6, 11, 12);
++      quarterRound(x, 2, 7, 8, 13);
++      quarterRound(x, 3, 4, 9, 14);
++    }
++
++    for (let i = 0; i < 16; ++i)
++      this._keystream.writeUInt32LE((x[i] + state[i]) >>> 0, i * 4);
++
++    this._counter = (this._counter + 1) >>> 0;
++  }
++
++  update(data) {
++    const input = Buffer.isBuffer(data) ? data : Buffer.from(data);
++    const output = Buffer.allocUnsafe(input.length);
++    for (let i = 0; i < input.length; ++i) {
++      if (this._keystreamPos >= 64) {
++        this._generateBlock();
++        this._keystreamPos = 0;
++      }
++      output[i] = input[i] ^ this._keystream[this._keystreamPos++];
++    }
++    return output;
++  }
++
++  final() {
++    return Buffer.alloc(0);
++  }
++
++  // ssh2 only calls update(), but keep the common stream-cipher surface so
++  // this object is a drop-in replacement for crypto.createCipheriv().
++  setAAD() {}
++  setAuthTag() {}
++  getAuthTag() {
++    return Buffer.alloc(0);
++  }
++  setAutoPadding() {}
++}
++
++function createChaCha20Cipher(key, iv) {
++  try {
++    return crypto.createCipheriv('chacha20', key, iv);
++  } catch {
++    return new ChaCha20Cipher(key, iv);
++  }
++}
++
++module.exports = {
++  ChaCha20Cipher,
++  createChaCha20Cipher,
++};
+diff --git a/node_modules/ssh2/lib/protocol/constants.js b/node_modules/ssh2/lib/protocol/constants.js
+--- a/node_modules/ssh2/lib/protocol/constants.js
++++ b/node_modules/ssh2/lib/protocol/constants.js
+@@ -7,7 +7,8 @@
+   cpuInfo = require('cpu-features')();
+ } catch {}
+ 
+-const { bindingAvailable, CIPHER_INFO, MAC_INFO } = require('./crypto.js');
++const { bindingAvailable, CIPHER_INFO, MAC_INFO, chacha20Available } =
++  require('./crypto.js');
+ 
+ const eddsaSupported = (() => {
+   if (typeof crypto.sign === 'function'
+@@ -78,7 +79,9 @@
+ 
+ const canUseCipher = (() => {
+   const ciphers = crypto.getCiphers();
+-  return (name) => ciphers.includes(CIPHER_INFO[name].sslName);
++  return (name) => (ciphers.includes(CIPHER_INFO[name].sslName)
++                    || (name === 'chacha20-poly1305@openssh.com'
++                        && chacha20Available));
+ })();
+ let DEFAULT_CIPHER = [
+   // http://tools.ietf.org/html/rfc5647
+diff --git a/node_modules/ssh2/lib/protocol/crypto.js b/node_modules/ssh2/lib/protocol/crypto.js
+--- a/node_modules/ssh2/lib/protocol/crypto.js
++++ b/node_modules/ssh2/lib/protocol/crypto.js
+@@ -11,6 +11,7 @@
+ } = require('crypto');
+ 
+ const { readUInt32BE, writeUInt32BE } = require('./utils.js');
++const { createChaCha20Cipher } = require('./chacha20.js');
+ 
+ const FastBuffer = Buffer[Symbol.species];
+ const MAX_SEQNO = 2 ** 32 - 1;
+@@ -198,19 +199,19 @@
+     POLY1305_OUT_COMPUTE[0] = 0; // Set counter to 0 (little endian)
+     writeUInt32BE(POLY1305_OUT_COMPUTE, this.outSeqno, 12);
+     const polyKey =
+-      createCipheriv('chacha20', this._encKeyMain, POLY1305_OUT_COMPUTE)
++      createChaCha20Cipher( this._encKeyMain, POLY1305_OUT_COMPUTE)
+       .update(POLY1305_ZEROS);
+ 
+     // Encrypt packet length
+     const pktLenEnc =
+-      createCipheriv('chacha20', this._encKeyPktLen, POLY1305_OUT_COMPUTE)
++      createChaCha20Cipher( this._encKeyPktLen, POLY1305_OUT_COMPUTE)
+       .update(packet.slice(0, 4));
+     this._onWrite(pktLenEnc);
+ 
+     // Encrypt rest of packet
+     POLY1305_OUT_COMPUTE[0] = 1; // Set counter to 1 (little endian)
+     const payloadEnc =
+-      createCipheriv('chacha20', this._encKeyMain, POLY1305_OUT_COMPUTE)
++      createChaCha20Cipher( this._encKeyMain, POLY1305_OUT_COMPUTE)
+       .update(packet.slice(4));
+     this._onWrite(payloadEnc);
+ 
+@@ -650,7 +651,7 @@
+         writeUInt32BE(POLY1305_OUT_COMPUTE, this.inSeqno, 12);
+ 
+         const decLenBytes =
+-          createDecipheriv('chacha20', this._decKeyPktLen, POLY1305_OUT_COMPUTE)
++          createChaCha20Cipher( this._decKeyPktLen, POLY1305_OUT_COMPUTE)
+           .update(this._lenBuf);
+         this._len = readUInt32BE(decLenBytes, 0);
+ 
+@@ -706,7 +707,7 @@
+       POLY1305_OUT_COMPUTE[0] = 0; // Set counter to 0 (little endian)
+       writeUInt32BE(POLY1305_OUT_COMPUTE, this.inSeqno, 12);
+       const polyKey =
+-        createCipheriv('chacha20', this._decKeyMain, POLY1305_OUT_COMPUTE)
++        createChaCha20Cipher( this._decKeyMain, POLY1305_OUT_COMPUTE)
+         .update(POLY1305_ZEROS);
+ 
+       // Calculate and compare Poly1305 MACs
+@@ -729,7 +730,7 @@
+       // Decrypt packet
+       POLY1305_OUT_COMPUTE[0] = 1; // Set counter to 1 (little endian)
+       const packet =
+-        createDecipheriv('chacha20', this._decKeyMain, POLY1305_OUT_COMPUTE)
++        createChaCha20Cipher( this._decKeyMain, POLY1305_OUT_COMPUTE)
+         .update(this._packet);
+ 
+       const payload = new FastBuffer(packet.buffer,
+@@ -1577,6 +1578,7 @@
+   CIPHER_INFO,
+   MAC_INFO,
+   bindingAvailable: !!binding,
++  chacha20Available: true,
+   init: (() => {
+     // eslint-disable-next-line no-async-promise-executor
+     return new Promise(async (resolve, reject) => {
