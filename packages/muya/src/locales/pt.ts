@@ -91,6 +91,8 @@ export const pt = {
         'Duplicate': 'Duplicar',
         'New Paragraph': 'Novo parágrafo',
         'Delete': 'Excluir',
+        'Continue Previous Numbering': 'Continuar numeração anterior',
+        'Start New List': 'Iniciar nova lista',
         // imageToolbar
         'Edit Image': 'Editar imagem',
         'Inline Image': 'Imagem em linha',

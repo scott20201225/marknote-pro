@@ -91,6 +91,8 @@ export const ja = {
         'Duplicate': '段落をコピーする',
         'New Paragraph': '段落を新規作成',
         'Delete': '段落を削除する',
+        'Continue Previous Numbering': '前の番号付けを継続',
+        'Start New List': '新しいリストを開始',
         // imageToolbar
         'Edit Image': '画像を編集する',
         'Inline Image': '行内画像',

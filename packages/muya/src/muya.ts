@@ -12,6 +12,7 @@ import type { TAdmonitionType } from './state/admonition';
 import type { IBlockQuoteState, IBulletListState, IOrderListState, ITableState, ITaskListState, TState } from './state/types';
 import type { IMuyaOptions, Nullable } from './types';
 import Format from './block/base/format';
+import OrderList from './block/commonMark/orderList';
 import { canTurnInto, insertBlockBelowByLabel, insertFrontMatterAtStart, replaceBlockByLabel } from './block/blockTransforms';
 import { ScrollPage } from './block/scrollPage';
 import emptyStates from './config/emptyStates';
@@ -975,6 +976,31 @@ export class Muya {
             block.outdentCurrentListItem?.();
     }
 
+    continueOrderListNumbering(targetBlock?: Parent | null) {
+        const orderList = this._resolveOrderList(targetBlock);
+        if (orderList instanceof OrderList) {
+            orderList.continuePreviousNumbering();
+        }
+    }
+
+    restartOrderListNumbering(targetBlock?: Parent | null) {
+        const orderList = this._resolveOrderList(targetBlock);
+        if (orderList instanceof OrderList) {
+            orderList.restartNewList();
+        }
+    }
+
+    private _resolveOrderList(targetBlock?: Parent | null): OrderList | null {
+        let current: any = targetBlock ?? this.editor.activeContentBlock ?? this.editor.selection.anchorBlock;
+        while (current) {
+            if (current.blockName === 'order-list') {
+                return current as OrderList;
+            }
+            current = current.parent;
+        }
+        return null;
+    }
+
     insertFootnote(targetBlock?: Format | null) {
         const { scrollPage } = this.editor;
         if (!scrollPage)
@@ -1203,18 +1229,32 @@ export class Muya {
     private _wrapSelectedBlocksInList(label: 'bullet-list' | 'order-list' | 'task-list') {
         const { bulletListMarker, orderListDelimiter, preferLooseListItem } = this.options;
         const itemName = label === 'task-list' ? 'task-list-item' : 'list-item';
-        const meta: Record<string, unknown> = label === 'order-list'
-            ? { loose: preferLooseListItem, delimiter: orderListDelimiter, start: 1 }
-            : { loose: preferLooseListItem, marker: bulletListMarker };
 
         this._wrapSelectedBlocks(
-            blocks => ({
-                name: label,
-                meta,
-                children: blocks.map(b => label === 'task-list'
-                    ? { name: itemName, meta: { checked: false }, children: [b.getState()] }
-                    : { name: itemName, children: [b.getState()] }),
-            }),
+            blocks => {
+                let start = 1;
+                if (label === 'order-list' && blocks.length > 0) {
+                    let prev = blocks[0].prev;
+                    while (prev) {
+                        if (prev.blockName === 'order-list') {
+                            start = ((prev as any).meta?.start || 1) + (prev as any).children.length;
+                            break;
+                        }
+                        prev = prev.prev;
+                    }
+                }
+                const meta: Record<string, unknown> = label === 'order-list'
+                    ? { loose: preferLooseListItem, delimiter: orderListDelimiter, start }
+                    : { loose: preferLooseListItem, marker: bulletListMarker };
+
+                return {
+                    name: label,
+                    meta,
+                    children: blocks.map(b => label === 'task-list'
+                        ? { name: itemName, meta: { checked: false }, children: [b.getState()] }
+                        : { name: itemName, children: [b.getState()] }),
+                };
+            },
             container => this._selectWrappedContent(container),
         );
     }
@@ -1704,6 +1744,16 @@ export class Muya {
 
         if (type === 'list-outdent') {
             this.outdentListItem();
+            return;
+        }
+
+        if (type === 'continue-numbering' || type === 'continueNumbering') {
+            this.continueOrderListNumbering();
+            return;
+        }
+
+        if (type === 'restart-numbering' || type === 'restartNumbering') {
+            this.restartOrderListNumbering();
             return;
         }
 

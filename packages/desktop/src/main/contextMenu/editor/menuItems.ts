@@ -200,6 +200,30 @@ export const getOutdentList = (): MenuItemConstructorOptions => ({
   }
 })
 
+export const getContinueNumbering = (): MenuItemConstructorOptions => ({
+  label: t('contextMenu.continueNumbering'),
+  id: 'contextContinueNumberingMenuItem',
+  click(_menuItem, targetWindow) {
+    if (targetWindow) {
+      ;(targetWindow as BrowserWindow).webContents.send('mt::editor-paragraph-action', {
+        type: 'continue-numbering'
+      })
+    }
+  }
+})
+
+export const getRestartNumbering = (): MenuItemConstructorOptions => ({
+  label: t('contextMenu.restartNumbering'),
+  id: 'contextRestartNumberingMenuItem',
+  click(_menuItem, targetWindow) {
+    if (targetWindow) {
+      ;(targetWindow as BrowserWindow).webContents.send('mt::editor-paragraph-action', {
+        type: 'restart-numbering'
+      })
+    }
+  }
+})
+
 // Retained for backward compatibility
 export const CUT = getCUT()
 export const COPY = getCOPY()
@@ -217,6 +241,8 @@ export const TASK_LIST = getTaskList()
 export const TASK_STATUS = getTaskStatus()
 export const INDENT_LIST = getIndentList()
 export const OUTDENT_LIST = getOutdentList()
+export const CONTINUE_NUMBERING = getContinueNumbering()
+export const RESTART_NUMBERING = getRestartNumbering()
 
 export const SEPARATOR: MenuItemConstructorOptions = {
   type: 'separator'

@@ -368,6 +368,18 @@ const commands: CommandDescriptor[] = [
     }
   },
   {
+    id: 'paragraph.continue-numbering',
+    execute: async () => {
+      focusEditorAndExecute(() => bus.emit('paragraph', 'continue-numbering'))
+    }
+  },
+  {
+    id: 'paragraph.restart-numbering',
+    execute: async () => {
+      focusEditorAndExecute(() => bus.emit('paragraph', 'restart-numbering'))
+    }
+  },
+  {
     id: 'paragraph.bullet-list',
     execute: async () => {
       focusEditorAndExecute(() => bus.emit('paragraph', 'ul-bullet'))

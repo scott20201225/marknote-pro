@@ -112,6 +112,17 @@
     background: var(--float-hover-color);
 }
 
+.mu-front-menu > ul li.item.disabled {
+    opacity: 0.38;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.mu-front-menu li .icon-wrapper i.icon svg {
+    width: 16px;
+    height: 16px;
+}
+
 .mu-front-menu > ul li.item.delete:hover span {
     color: var(--delete-color);
 }

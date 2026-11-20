@@ -12,6 +12,7 @@ import type {
 import { admonitionColor, admonitionIconNodes } from '../../state/admonition';
 import type { IQuickInsertMenuItem } from '../paragraphQuickInsertMenu/config';
 import Format from '../../block/base/format';
+import OrderList from '../../block/commonMark/orderList';
 import { replaceBlockByLabel } from '../../block/blockTransforms';
 import { ScrollPage } from '../../block/scrollPage';
 import emptyStates from '../../config/emptyStates';
@@ -46,6 +47,65 @@ function renderAdmonitionIcon(admonitionType: NonNullable<IQuickInsertMenuItem['
                 },
             },
             admonitionIconNodes(admonitionType).map(node => h(node.tag, { attrs: node.attrs })),
+        ),
+    );
+}
+
+function renderContinueIcon() {
+    return h(
+        'i.icon',
+        h(
+            'svg',
+            {
+                attrs: {
+                    viewBox: '0 0 24 24',
+                    'aria-hidden': 'true',
+                    fill: 'none',
+                    stroke: 'currentColor',
+                    'stroke-width': '2',
+                    'stroke-linecap': 'round',
+                    'stroke-linejoin': 'round',
+                },
+                style: {
+                    width: '16px',
+                    height: '16px',
+                },
+            },
+            [
+                h('path', { attrs: { d: 'M9 14l-4-4 4-4' } }),
+                h('path', { attrs: { d: 'M5 10h11a4 4 0 1 1 0 8h-1' } }),
+            ],
+        ),
+    );
+}
+
+function renderRestartIcon() {
+    return h(
+        'i.icon',
+        h(
+            'svg',
+            {
+                attrs: {
+                    viewBox: '0 0 24 24',
+                    'aria-hidden': 'true',
+                    fill: 'none',
+                    stroke: 'currentColor',
+                    'stroke-width': '2',
+                    'stroke-linecap': 'round',
+                    'stroke-linejoin': 'round',
+                },
+                style: {
+                    width: '16px',
+                    height: '16px',
+                },
+            },
+            [
+                h('line', { attrs: { x1: '10', y1: '6', x2: '21', y2: '6' } }),
+                h('line', { attrs: { x1: '10', y1: '12', x2: '21', y2: '12' } }),
+                h('line', { attrs: { x1: '10', y1: '18', x2: '21', y2: '18' } }),
+                h('path', { attrs: { d: 'M4 6h1v4' } }),
+                h('path', { attrs: { d: 'M3 10h3' } }),
+            ],
         ),
     );
 }
@@ -238,6 +298,73 @@ export class ParagraphFrontMenu extends BaseFloat {
             children.unshift(this._renderSubMenu(subMenu));
         }
 
+        let orderList: OrderList | null = null;
+        let cur: any = block;
+        while (cur) {
+            if (cur.blockName === 'order-list') {
+                orderList = cur as OrderList;
+                break;
+            }
+            cur = cur.parent;
+        }
+        if (!orderList) {
+            let activeCur: any = this.muya.editor.activeContentBlock;
+            while (activeCur) {
+                if (activeCur.blockName === 'order-list') {
+                    orderList = activeCur as OrderList;
+                    break;
+                }
+                activeCur = activeCur.parent;
+            }
+        }
+
+        if (orderList) {
+            const prevOl = orderList.findPreviousOrderList ? orderList.findPreviousOrderList() : null;
+            const expectedContinuedStart = prevOl ? (prevOl.meta.start || 1) + prevOl.children.length : 1;
+            const canContinue = !!prevOl && orderList.meta.start !== expectedContinuedStart;
+            const canRestart = orderList.meta.start !== 1;
+
+            const continueItem = h(
+                `li.item.continueNumbering${canContinue ? '' : '.disabled'}`,
+                {
+                    on: {
+                        click: (event: Event) => {
+                            if (canContinue) {
+                                this.selectItem(event, { label: 'continueNumbering' });
+                            }
+                        },
+                    },
+                },
+                [
+                    h('div.icon-wrapper', renderContinueIcon()),
+                    h('span.text', i18n.t('Continue Previous Numbering')),
+                    h('div.short-cut', []),
+                ],
+            );
+
+            const restartItem = h(
+                `li.item.restartNumbering${canRestart ? '' : '.disabled'}`,
+                {
+                    on: {
+                        click: (event: Event) => {
+                            if (canRestart) {
+                                this.selectItem(event, { label: 'restartNumbering' });
+                            }
+                        },
+                    },
+                },
+                [
+                    h('div.icon-wrapper', renderRestartIcon()),
+                    h('span.text', i18n.t('Start New List')),
+                    h('div.short-cut', []),
+                ],
+            );
+
+            children.unshift(h('li.divider'));
+            children.unshift(restartItem);
+            children.unshift(continueItem);
+        }
+
         const vnode = h('ul', children);
 
         if (oldVNode)
@@ -261,6 +388,37 @@ export class ParagraphFrontMenu extends BaseFloat {
         this._block = null;
         if (!block?.parent)
             return;
+
+        if (label === 'continueNumbering' || label === 'restartNumbering') {
+            let targetOl: OrderList | null = null;
+            let cur: any = block;
+            while (cur) {
+                if (cur.blockName === 'order-list') {
+                    targetOl = cur as OrderList;
+                    break;
+                }
+                cur = cur.parent;
+            }
+            if (!targetOl) {
+                let activeCur: any = this.muya.editor.activeContentBlock;
+                while (activeCur) {
+                    if (activeCur.blockName === 'order-list') {
+                        targetOl = activeCur as OrderList;
+                        break;
+                    }
+                    activeCur = activeCur.parent;
+                }
+            }
+            if (targetOl) {
+                if (label === 'continueNumbering') {
+                    targetOl.continuePreviousNumbering();
+                } else {
+                    targetOl.restartNewList();
+                }
+            }
+            setTimeout(this.hide.bind(this));
+            return;
+        }
 
         const selectionStore = this.muya.editor.selection;
         const selection = selectionStore.getSelection();

@@ -84,6 +84,8 @@ export const it = {
         'Duplicate': 'Duplica',
         'New Paragraph': 'Nuovo paragrafo',
         'Delete': 'Elimina',
+        'Continue Previous Numbering': 'Continua numerazione precedente',
+        'Start New List': 'Inizia un nuovo elenco',
         'Edit Image': 'Modifica immagine',
         'Inline Image': 'Immagine inline',
         'Remove Image': 'Rimuovi immagine',

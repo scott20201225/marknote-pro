@@ -91,6 +91,8 @@ export const zhTW = {
         'Duplicate': '複製段落',
         'New Paragraph': '新增段落',
         'Delete': '刪除段落',
+        'Continue Previous Numbering': '繼續先前的編號',
+        'Start New List': '開始新清單',
         // imageToolbar
         'Edit Image': '編輯圖片',
         'Inline Image': '行內圖片',

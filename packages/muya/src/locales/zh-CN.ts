@@ -91,6 +91,8 @@ export const zhCN = {
         'Duplicate': '复制段落',
         'New Paragraph': '新建段落',
         'Delete': '删除段落',
+        'Continue Previous Numbering': '继续之前的编号',
+        'Start New List': '开始新列表',
         // imageToolbar
         'Edit Image': '编辑图片',
         'Inline Image': '行内图片',

@@ -17,7 +17,9 @@ import {
   getTaskList,
   getTaskStatus,
   getIndentList,
-  getOutdentList
+  getOutdentList,
+  getContinueNumbering,
+  getRestartNumbering
 } from './menuItems'
 import spellcheckMenuBuilder from './spellcheck'
 import { getCopyMenuAvailability, type EditorContextState } from './state'
@@ -208,6 +210,11 @@ const getContextItems = (
 
   if (shouldShowListIndentation) {
     items.push(SEPARATOR, getIndentList(), getOutdentList())
+    if (inOrderedList) {
+      items.push(getContinueNumbering(), getRestartNumbering())
+    }
+  } else if (inOrderedList) {
+    items.push(SEPARATOR, getContinueNumbering(), getRestartNumbering())
   }
 
   items.push(

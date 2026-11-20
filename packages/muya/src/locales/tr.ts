@@ -91,6 +91,8 @@ export const tr = {
         'Duplicate': 'Çoğalt',
         'New Paragraph': 'Yeni Paragraf',
         'Delete': 'Sil',
+        'Continue Previous Numbering': 'Önceki Numaralandırmaya Devam Et',
+        'Start New List': 'Yeni Liste Başlat',
         // imageToolbar
         'Edit Image': 'Görseli Düzenle',
         'Inline Image': 'Satır İçi Görsel',

@@ -888,13 +888,25 @@ class Format extends Content {
             },
         ];
 
+        let start = Number(matches![2].slice(0, -1));
+        if (isOrdered && start === 1 && parent) {
+            let prev = parent.prev;
+            while (prev) {
+                if (prev.blockName === 'order-list') {
+                    start = ((prev as any).meta?.start || 1) + (prev as any).children.length;
+                    break;
+                }
+                prev = prev.prev;
+            }
+        }
+
         const listState: IOrderListState | IBulletListState = isOrdered
             ? {
                     name: 'order-list',
                     meta: {
                         loose: preferLooseListItem,
                         delimiter: matches![2].slice(-1),
-                        start: Number(matches![2].slice(0, -1)),
+                        start,
                     },
                     children,
                 }

@@ -137,11 +137,23 @@ function buildHeadingBlock(label: string, muya: Muya, text: string) {
     return ScrollPage.loadBlock(blockName).create(muya, headingState);
 }
 
-function buildOrderListBlock(muya: Muya, text: string) {
+function buildOrderListBlock(muya: Muya, text: string, anchorBlock?: Parent) {
     const { preferLooseListItem, orderListDelimiter } = muya.options;
     const orderState = deepClone(emptyStates['order-list']);
     orderState.meta.loose = preferLooseListItem;
     orderState.meta.delimiter = orderListDelimiter;
+
+    if (anchorBlock) {
+        let prev = anchorBlock.prev;
+        while (prev) {
+            if (prev.blockName === 'order-list') {
+                orderState.meta.start = ((prev as any).meta?.start || 1) + (prev as any).children.length;
+                break;
+            }
+            prev = prev.prev;
+        }
+    }
+
     const firstChild = orderState.children[0].children[0];
     if (text && isParagraphState(firstChild))
         firstChild.text = text;
@@ -189,7 +201,7 @@ function buildAdmonitionBlock(admonitionType: TAdmonitionType, muya: Muya, text:
     return ScrollPage.loadBlock('block-quote').create(muya, blockQuoteState);
 }
 
-export function buildReplacementBlock(label: string, muya: Muya, text: string) {
+export function buildReplacementBlock(label: string, muya: Muya, text: string, anchorBlock?: Parent) {
     if (label.startsWith('atx-heading '))
         return buildHeadingBlock(label, muya, text);
     if (label.startsWith('diagram '))
@@ -215,7 +227,7 @@ export function buildReplacementBlock(label: string, muya: Muya, text: string) {
             return buildLeafBlock(label, muya, text);
 
         case 'order-list':
-            return buildOrderListBlock(muya, text);
+            return buildOrderListBlock(muya, text, anchorBlock);
 
         case 'bullet-list':
             // fall through
@@ -266,7 +278,7 @@ export function replaceBlockByLabel({ block, muya, label, text = '' }: {
         return;
     }
 
-    const newBlock = buildReplacementBlock(label, muya, text);
+    const newBlock = buildReplacementBlock(label, muya, text, block);
 
     block.replaceWith(newBlock);
     finishInsertedBlock(newBlock, muya, label);

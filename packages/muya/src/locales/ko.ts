@@ -91,6 +91,8 @@ export const ko = {
         'Duplicate': '단락 복제',
         'New Paragraph': '새 단락',
         'Delete': '단락 삭제',
+        'Continue Previous Numbering': '이전 번호 매기기 계속',
+        'Start New List': '새 목록 시작',
         // imageToolbar
         'Edit Image': '이미지 편집',
         'Inline Image': '인라인 이미지',

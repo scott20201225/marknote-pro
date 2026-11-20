@@ -539,13 +539,16 @@ class ParagraphContent extends Format {
 
                     default: {
                         const newParagraph = parent!.clone() as Paragraph;
+                        const offset = list.offset(listItem);
+                        const nextStart = list instanceof OrderList
+                            ? (list.meta.start || 1) + offset
+                            : 1;
                         const newListState: IBulletListState | IOrderListState | ITaskListState
                             = list instanceof TaskList
                                 ? { name: 'task-list', meta: { ...list.meta }, children: [] }
                                 : list instanceof OrderList
-                                    ? { name: 'order-list', meta: { ...list.meta }, children: [] }
+                                    ? { name: 'order-list', meta: { ...list.meta, start: nextStart }, children: [] }
                                     : { name: 'bullet-list', meta: { ...list.meta }, children: [] };
-                        const offset = list.offset(listItem);
                         list.forEachAt(offset + 1, undefined, (node) => {
                             if (node.isParent()) {
                                 const childState = node.getState();

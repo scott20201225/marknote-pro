@@ -47,6 +47,59 @@ class OrderList extends Parent {
         this.createDomNode();
     }
 
+    get start(): number {
+        return this.meta.start;
+    }
+
+    set start(start: number) {
+        const oldStart = this.meta.start;
+        if (start !== oldStart) {
+            this.meta.start = start;
+            this.attributes = {
+                ...this.attributes,
+                start: String(start),
+            };
+            if (this.domNode) {
+                this.domNode.setAttribute('start', String(start));
+            }
+            if (this.parent) {
+                const path = [...this.path];
+                path.pop();
+                path.push('meta', 'start');
+                this.jsonState.replaceOperation(path, oldStart, start);
+            }
+        }
+    }
+
+    findPreviousOrderList(): OrderList | null {
+        let prev = this.prev;
+        while (prev) {
+            if (prev.blockName === 'order-list') {
+                return prev as OrderList;
+            }
+            prev = prev.prev;
+        }
+        return null;
+    }
+
+    continuePreviousNumbering(): boolean {
+        const prevOl = this.findPreviousOrderList();
+        if (prevOl) {
+            const nextStart = (prevOl.meta.start || 1) + prevOl.children.length;
+            this.start = nextStart;
+            return true;
+        }
+        return false;
+    }
+
+    restartNewList(): boolean {
+        if (this.meta.start !== 1) {
+            this.start = 1;
+            return true;
+        }
+        return false;
+    }
+
     override getState(): IOrderListState {
         const state: IOrderListState = {
             name: 'order-list',
