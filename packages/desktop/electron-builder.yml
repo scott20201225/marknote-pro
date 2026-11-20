@@ -133,12 +133,9 @@ electronLanguages: # Keep Chromium/AppKit locales for the UI languages MarkText 
 asarUnpack:
   - resources/**
 protocols:
-  - name: GitHub Desktop
+  - name: MarkNotePro GitHub Auth
     schemes:
-      - x-github-client
-      - x-github-desktop-dev-auth
-      - x-github-desktop-auth
-      - github-mac
+      - marknotepro-github-auth
 fileAssociations:
   - ext: md
     name: Markdown

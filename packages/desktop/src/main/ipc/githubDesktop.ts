@@ -80,7 +80,10 @@ let githubDesktopMenu = buildDefaultMenu(currentMenuLabels)
 const GITHUB_DESKTOP_THEME_CHANNEL = 'marknotepro-theme-updated'
 const GITHUB_DESKTOP_LOCALE_CHANNEL = 'marknotepro-locale-updated'
 
+const APP_GITHUB_AUTH_PROTOCOL = 'marknotepro-github-auth'
+
 const githubDesktopProtocols = [
+  APP_GITHUB_AUTH_PROTOCOL,
   'x-github-client',
   'x-github-desktop-dev-auth',
   'x-github-desktop-auth',
@@ -992,7 +995,7 @@ const registerGitHubDesktopProtocols = (): void => {
 
   const protocolArgs = app.isPackaged ? [] : [app.getAppPath()]
 
-  for (const protocol of githubDesktopProtocols) {
+  for (const protocol of [APP_GITHUB_AUTH_PROTOCOL]) {
     try {
       if (process.platform === 'win32') {
         app.setAsDefaultProtocolClient(protocol, process.execPath, [
