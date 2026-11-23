@@ -284,6 +284,11 @@ describe('diagramPreview — interactive diagram viewer', () => {
         fitBtn.click();
         expect(fitBtn.classList.contains('active')).toBe(false);
 
+        // Test popout button
+        const popoutBtn = preview.domNode!.querySelector('.mermaid-popout-btn') as HTMLButtonElement;
+        expect(popoutBtn).not.toBeNull();
+        expect(popoutBtn.getAttribute('title')).toBe('独立窗口展示 (置顶贴图)');
+
         // Teardown
         preview.remove();
         expect(preview.domNode!.querySelector('.mermaid-viewer-control-panel')).toBeNull();

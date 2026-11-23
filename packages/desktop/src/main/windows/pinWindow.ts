@@ -98,6 +98,15 @@ export class PinWindowManager {
         base64 = candidatePath
       }
 
+      // Re-encode URI-encoded SVG data to base64 if needed
+      if (base64.startsWith('data:image/svg+xml') && !base64.includes(';base64,')) {
+        const commaIdx = base64.indexOf(',')
+        if (commaIdx !== -1) {
+          const rawSvg = decodeURIComponent(base64.substring(commaIdx + 1))
+          base64 = `data:image/svg+xml;base64,${Buffer.from(rawSvg, 'utf-8').toString('base64')}`
+        }
+      }
+
       const helper = getMacNativeHelper()
       const ok = helper.pin({
         pinId,

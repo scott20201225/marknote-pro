@@ -304,49 +304,73 @@ class DiagramPreview extends Parent {
                 clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
                 clone.setAttribute('width', `${width}`);
                 clone.setAttribute('height', `${height}`);
+                clone.style.transform = '';
+                clone.style.transition = '';
+
+                if (!clone.getAttribute('viewBox') && svgRect.width > 0 && svgRect.height > 0) {
+                    clone.setAttribute('viewBox', `0 0 ${width} ${height}`);
+                }
 
                 const svgString = new XMLSerializer().serializeToString(clone);
-                const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-                const blobUrl = URL.createObjectURL(svgBlob);
+                let base64Data = '';
+                try {
+                    base64Data = btoa(unescape(encodeURIComponent(svgString)));
+                } catch {
+                    base64Data = btoa(svgString);
+                }
+                const svgDataUrl = `data:image/svg+xml;base64,${base64Data}`;
 
                 const img = new Image();
                 img.crossOrigin = 'anonymous';
                 img.onload = () => {
-                    const scale = window.devicePixelRatio || 2;
-                    const canvas = document.createElement('canvas');
-                    canvas.width = width * scale;
-                    canvas.height = height * scale;
-                    const ctx = canvas.getContext('2d');
-                    if (ctx) {
-                        ctx.scale(scale, scale);
-                        ctx.drawImage(img, 0, 0, width, height);
-                        URL.revokeObjectURL(blobUrl);
-                        const pngDataUrl = canvas.toDataURL('image/png');
-                        if ((window as any).electron?.ipcRenderer?.invoke) {
-                            (window as any).electron.ipcRenderer.invoke('mt::pin-create', {
-                                type: 'image',
-                                content: pngDataUrl,
-                                width,
-                                height,
-                                title: 'Mermaid 图表'
-                            });
+                    try {
+                        const scale = window.devicePixelRatio || 2;
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width * scale;
+                        canvas.height = height * scale;
+                        const ctx = canvas.getContext('2d');
+                        if (ctx) {
+                            ctx.scale(scale, scale);
+                            ctx.drawImage(img, 0, 0, width, height);
+                            const pngDataUrl = canvas.toDataURL('image/png');
+                            if ((window as any).electron?.ipcRenderer?.invoke) {
+                                (window as any).electron.ipcRenderer.invoke('mt::pin-create', {
+                                    type: 'image',
+                                    content: pngDataUrl,
+                                    width,
+                                    height,
+                                    title: 'Mermaid 图表'
+                                });
+                                return;
+                            }
                         }
+                    } catch (err) {
+                        console.warn('[Mermaid Popout] Canvas rasterization failed, using svg fallback:', err);
                     }
-                };
-                img.onerror = () => {
-                    URL.revokeObjectURL(blobUrl);
-                    const fallbackDataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgString)}`;
+
                     if ((window as any).electron?.ipcRenderer?.invoke) {
                         (window as any).electron.ipcRenderer.invoke('mt::pin-create', {
                             type: 'image',
-                            content: fallbackDataUrl,
+                            content: svgDataUrl,
                             width,
                             height,
                             title: 'Mermaid 图表'
                         });
                     }
                 };
-                img.src = blobUrl;
+                img.onerror = (err) => {
+                    console.warn('[Mermaid Popout] Image rasterization failed, using svg fallback:', err);
+                    if ((window as any).electron?.ipcRenderer?.invoke) {
+                        (window as any).electron.ipcRenderer.invoke('mt::pin-create', {
+                            type: 'image',
+                            content: svgDataUrl,
+                            width,
+                            height,
+                            title: 'Mermaid 图表'
+                        });
+                    }
+                };
+                img.src = svgDataUrl;
             } catch (err) {
                 console.error('[Mermaid Popout] Failed to pop out diagram:', err);
             }
