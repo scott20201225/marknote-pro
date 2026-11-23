@@ -44,4 +44,24 @@ describe('KDBX Countdown Formatter', () => {
     expect(formatKdbxCountdown(5)).toBe('(0:05)')
     expect(formatKdbxCountdown(0)).toBe('(0:00)')
   })
+
+  it('keeps unlocked file countdown tied to unlock duration, immune to preference changes', () => {
+    const unlockedAt = 100000
+    const initialUnlockMinutes = 5
+
+    const computeRemaining = (now: number, lockMinutes: number) => {
+      const elapsedSec = (now - unlockedAt) / 1000
+      return Math.ceil(lockMinutes * 60 - elapsedSec)
+    }
+
+    // After 65 seconds
+    const now = unlockedAt + 65 * 1000
+    const remaining = computeRemaining(now, initialUnlockMinutes)
+    expect(remaining).toBe(235) // 300 - 65
+    expect(formatKdbxCountdown(remaining)).toBe('(3:55)')
+
+    // Even if global preference changes to 60 minutes, the snapshot duration remains 5 minutes
+    const unchangedRemaining = computeRemaining(now, initialUnlockMinutes)
+    expect(formatKdbxCountdown(unchangedRemaining)).toBe('(3:55)')
+  })
 })

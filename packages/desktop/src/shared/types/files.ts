@@ -183,6 +183,7 @@ export interface IKdbxState {
   filename: string
   locked: boolean
   unlockedAt?: number
+  autoLockMinutes?: number
   modified: boolean
   isSaved: boolean
   isSaving: boolean

@@ -241,10 +241,6 @@ export const usePreferencesStore = defineStore('preferences', {
         setLanguage(lang)
       }
 
-      if (typeof (preference as { kdbxAutoLockMinutes?: unknown }).kdbxAutoLockMinutes === 'number') {
-        useEditorStore().CHECK_KDBX_AUTO_LOCK((preference as { kdbxAutoLockMinutes: number }).kdbxAutoLockMinutes)
-      }
-
       this.preferenceLoaded = true
     },
 
@@ -272,10 +268,6 @@ export const usePreferencesStore = defineStore('preferences', {
       // Update i18n language if language preference changed
       if (type === 'language' && typeof value === 'string') {
         setLanguage(value)
-      }
-
-      if (type === 'kdbxAutoLockMinutes' && typeof value === 'number') {
-        useEditorStore().CHECK_KDBX_AUTO_LOCK(value)
       }
 
       // save to electron-store
