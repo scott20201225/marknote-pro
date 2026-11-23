@@ -20,7 +20,8 @@ import { isKdbxPasswordValid } from '../../shared/kdbxPassword'
 const KDBX_EXTENSION = '.kdbx'
 const KDBXE_EXTENSION = '.kdbxe'
 const MAX_ENTRY_HISTORY = 10
-const KDBX_PASSWORD_ERROR = '密码必须为 8-16 位，且同时包含大写字母、小写字母和数字'
+const KDBX_PASSWORD_ERROR =
+  '密码必须为 8-16 位，且同时包含大写字母、小写字母、数字和特殊符号（支持：!@#$%^&*()_+-=[]{}|;:,.<>?~）'
 // Kept only while an entry is in the recycle bin so it can return to its original group.
 const ORIGINAL_GROUP_ID_FIELD = 'MarkNotePro.OriginalGroupId'
 const ORIGINAL_GROUP_PATH_FIELD = 'MarkNotePro.OriginalGroupPath'

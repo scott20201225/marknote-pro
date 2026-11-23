@@ -182,6 +182,7 @@ export interface IKdbxState {
   pathname: string
   filename: string
   locked: boolean
+  unlockedAt?: number
   modified: boolean
   isSaved: boolean
   isSaving: boolean

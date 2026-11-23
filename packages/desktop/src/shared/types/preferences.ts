@@ -65,6 +65,7 @@ export interface IUserPreferences {
   lastOpenedFolder?: string
   autoNormalizeLineEndings?: boolean
   watcherUsePolling?: boolean
+  kdbxAutoLockMinutes?: number
   treePathExcludePatterns?: string[]
   [key: string]: unknown
 }

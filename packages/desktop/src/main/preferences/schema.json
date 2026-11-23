@@ -386,6 +386,13 @@
     "type": "boolean",
     "default": true
   },
+  "kdbxAutoLockMinutes": {
+    "description": "KDBX--Auto lock minutes after unlock.",
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 60,
+    "default": 5
+  },
   "watcherUsePolling": {
     "description": "Watcher--Whether to use polling. Polling may leads to high CPU utilization but is necessary to watch files over a network.--internal",
     "type": "boolean",

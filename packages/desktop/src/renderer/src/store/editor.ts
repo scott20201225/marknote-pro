@@ -175,12 +175,20 @@ export interface EditorState {
   geogebraStates: Record<string, IGeoGebraState>
   mindMapStates: Record<string, IMindMapState>
   kdbxStates: Record<string, IKdbxState>
+  kdbxCountdowns: Record<string, string>
   pdfStates: Record<string, IPdfState>
   listToc: TocItem[]
   toc: TocTreeNode[]
 }
 
 const autoSaveTimers = new Map<string, ReturnType<typeof setTimeout>>()
+let kdbxAutoLockTimer: ReturnType<typeof setInterval> | null = null
+
+export const formatKdbxCountdown = (remainingSeconds: number): string => {
+  const m = Math.floor(Math.max(0, remainingSeconds) / 60)
+  const s = Math.floor(Math.max(0, remainingSeconds) % 60)
+  return `(${m}:${String(s).padStart(2, '0')})`
+}
 
 const replacePathPrefix = (pathname: string, src: string, dest: string): string => {
   if (window.fileUtils.isSamePathSync(pathname, src)) return dest
@@ -198,6 +206,7 @@ export const useEditorStore = defineStore('editor', {
     geogebraStates: {},
     mindMapStates: {},
     kdbxStates: {},
+    kdbxCountdowns: {},
     pdfStates: {},
     listToc: [], // Used for equal check and for searching for the correct github-slug to jump to
     toc: []
@@ -1042,6 +1051,7 @@ export const useEditorStore = defineStore('editor', {
     },
 
     LISTEN_FOR_KDBX_STATE(): void {
+      this.START_KDBX_AUTO_LOCK_TIMER()
       window.electron.ipcRenderer.on('mt::kdbx::state', (_, payload) => {
         if (!payload || typeof payload.filePath !== 'string') return
         const tab = this.tabs.find(
@@ -1049,11 +1059,20 @@ export const useEditorStore = defineStore('editor', {
         )
         if (!tab) return
         const previous = this.kdbxStates[tab.id]
+        const isLocked = payload.locked === true
+        let unlockedAt = previous?.unlockedAt
+        if (isLocked) {
+          unlockedAt = undefined
+          delete this.kdbxCountdowns[tab.id]
+        } else if (!unlockedAt) {
+          unlockedAt = Date.now()
+        }
         const state: IKdbxState = {
           id: tab.id,
           pathname: tab.pathname,
           filename: tab.filename,
-          locked: payload.locked === true,
+          locked: isLocked,
+          unlockedAt,
           modified: payload.modified === true,
           isSaved: payload.isSaved === true,
           isSaving: payload.isSaving === true,
@@ -1061,6 +1080,9 @@ export const useEditorStore = defineStore('editor', {
         }
         this.kdbxStates[tab.id] = state
         tab.isSaved = state.isSaved && !state.modified
+        if (!isLocked) {
+          this.CHECK_KDBX_AUTO_LOCK()
+        }
         if (payload.saveError) {
           notice.notify({ title: t('dialog.saveFailure'), message: payload.saveError, type: 'error', time: 20000, showConfirm: false })
         }
@@ -1073,6 +1095,80 @@ export const useEditorStore = defineStore('editor', {
         }
         debouncedSendBufferedState()
       })
+    },
+
+    START_KDBX_AUTO_LOCK_TIMER(): void {
+      if (kdbxAutoLockTimer !== null) return
+      kdbxAutoLockTimer = window.setInterval(() => {
+        this.CHECK_KDBX_AUTO_LOCK()
+      }, 1000)
+    },
+
+    STOP_KDBX_AUTO_LOCK_TIMER(): void {
+      if (kdbxAutoLockTimer !== null) {
+        clearInterval(kdbxAutoLockTimer)
+        kdbxAutoLockTimer = null
+      }
+    },
+
+    CHECK_KDBX_AUTO_LOCK(customMinutes?: number): void {
+      const preferencesStore = usePreferencesStore()
+      const minutes = customMinutes ?? preferencesStore.kdbxAutoLockMinutes ?? 5
+      const timeoutSec = minutes * 60
+      const now = Date.now()
+
+      for (const tab of this.tabs) {
+        if (!tab.isKdbx) continue
+        const state = this.kdbxStates[tab.id]
+        if (!state || state.locked || !state.unlockedAt) {
+          if (this.kdbxCountdowns[tab.id]) {
+            delete this.kdbxCountdowns[tab.id]
+          }
+          continue
+        }
+
+        const elapsedSec = (now - state.unlockedAt) / 1000
+        const remainingSec = Math.ceil(timeoutSec - elapsedSec)
+
+        if (remainingSec <= 0) {
+          delete this.kdbxCountdowns[tab.id]
+          state.unlockedAt = undefined
+          state.locked = true
+          if (tab.pathname) {
+            void window.electron.ipcRenderer.invoke('mt::kdbx::lock', tab.pathname)
+          }
+        } else {
+          this.kdbxCountdowns[tab.id] = formatKdbxCountdown(remainingSec)
+        }
+      }
+    },
+
+    SET_KDBX_UNLOCKED(filePath: string): void {
+      const tab = this.tabs.find(
+        (file) => file.isKdbx && window.fileUtils.isSamePathSync(file.pathname, filePath)
+      )
+      if (!tab) return
+      const state = this.kdbxStates[tab.id]
+      if (state) {
+        state.locked = false
+        if (!state.unlockedAt) {
+          state.unlockedAt = Date.now()
+        }
+      }
+      this.CHECK_KDBX_AUTO_LOCK()
+    },
+
+    SET_KDBX_LOCKED(filePath: string): void {
+      const tab = this.tabs.find(
+        (file) => file.isKdbx && window.fileUtils.isSamePathSync(file.pathname, filePath)
+      )
+      if (!tab) return
+      const state = this.kdbxStates[tab.id]
+      if (state) {
+        state.locked = true
+        state.unlockedAt = undefined
+      }
+      delete this.kdbxCountdowns[tab.id]
     },
 
     LISTEN_FOR_PDF_STATE(): void {
@@ -1915,6 +2011,7 @@ export const useEditorStore = defineStore('editor', {
 
       if (file.isKdbx) {
         delete this.kdbxStates[file.id]
+        delete this.kdbxCountdowns[file.id]
         if (file.pathname) void window.electron.ipcRenderer.invoke('mt::kdbx::lock', file.pathname)
       }
 
@@ -2081,6 +2178,7 @@ export const useEditorStore = defineStore('editor', {
         }
         if (closed?.isKdbx) {
           delete this.kdbxStates[closed.id]
+          delete this.kdbxCountdowns[closed.id]
           if (pathname) void window.electron.ipcRenderer.invoke('mt::kdbx::lock', pathname)
         }
 

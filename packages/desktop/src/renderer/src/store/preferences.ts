@@ -3,6 +3,7 @@ import { DEFAULT_LANGUAGE } from '@shared/i18n'
 import bus from '../bus'
 import { setLanguage } from '../i18n'
 import { isWindows } from '../util'
+import { useEditorStore } from './editor'
 
 // Finite-value unions where the runtime currently constrains the field.
 // We keep these as plain strings everywhere else to avoid forcing prematurely
@@ -39,6 +40,7 @@ export interface PreferencesState {
   preferenceLoaded: boolean
   treePathExcludePatterns: string[]
   language: string
+  kdbxAutoLockMinutes: number
 
   // ----- Editor / typography -----
   editorFontFamily: string
@@ -143,6 +145,7 @@ export const usePreferencesStore = defineStore('preferences', {
     preferenceLoaded: false,
     treePathExcludePatterns: [],
     language: DEFAULT_LANGUAGE,
+    kdbxAutoLockMinutes: 5,
 
     editorFontFamily: 'Open Sans',
     fontSize: 16,
@@ -238,6 +241,10 @@ export const usePreferencesStore = defineStore('preferences', {
         setLanguage(lang)
       }
 
+      if (typeof (preference as { kdbxAutoLockMinutes?: unknown }).kdbxAutoLockMinutes === 'number') {
+        useEditorStore().CHECK_KDBX_AUTO_LOCK((preference as { kdbxAutoLockMinutes: number }).kdbxAutoLockMinutes)
+      }
+
       this.preferenceLoaded = true
     },
 
@@ -265,6 +272,10 @@ export const usePreferencesStore = defineStore('preferences', {
       // Update i18n language if language preference changed
       if (type === 'language' && typeof value === 'string') {
         setLanguage(value)
+      }
+
+      if (type === 'kdbxAutoLockMinutes' && typeof value === 'number') {
+        useEditorStore().CHECK_KDBX_AUTO_LOCK(value)
       }
 
       // save to electron-store

@@ -5,6 +5,41 @@
         <h2>{{ displayFilename }}</h2><p>{{ t('kdbx.enterPassword') }}</p>
         <div class="kdbx-unlock-input"><el-input v-model="password" :type="unlockPasswordVisible ? 'text' : 'password'" autofocus autocomplete="current-password"><template #suffix><el-tooltip :content="unlockPasswordVisible ? t('kdbx.hidePassword') : t('kdbx.showPassword')" :show-after="350"><button class="kdbx-unlock-action" :title="unlockPasswordVisible ? t('kdbx.hidePassword') : t('kdbx.showPassword')" type="button" @mousedown.prevent @click="unlockPasswordVisible = !unlockPasswordVisible"><el-icon><Hide v-if="unlockPasswordVisible" /><View v-else /></el-icon></button></el-tooltip><el-tooltip :content="t('kdbx.unlock')" :show-after="350"><button class="kdbx-unlock-action" :title="t('kdbx.unlock')" type="submit" :disabled="unlocking || !password"><el-icon v-if="unlocking" class="is-loading"><Loading /></el-icon><span v-else class="kdbx-return-icon">&#8629;</span></button></el-tooltip></template></el-input></div>
         <p v-if="error" class="kdbx-error">{{ error }}</p>
+        <div class="kdbx-auto-lock-tip">
+          <span>{{ t('kdbx.autoLockTip', { minutes: autoLockMinutes }) }}</span>
+          <el-popover
+            trigger="click"
+            placement="bottom"
+            :width="170"
+            popper-class="kdbx-auto-lock-popover"
+          >
+            <template #reference>
+              <button
+                type="button"
+                class="kdbx-auto-lock-setting-btn"
+                :title="t('kdbx.setAutoLockTime')"
+                @click.stop
+              >
+                <el-icon :size="14"><Setting /></el-icon>
+              </button>
+            </template>
+            <div class="kdbx-auto-lock-popover-content" @click.stop @keydown.enter.stop.prevent>
+              <div class="kdbx-auto-lock-popover-title">{{ t('kdbx.autoLockTimeTitle') }}</div>
+              <div class="kdbx-auto-lock-popover-row">
+                <el-input-number
+                  :model-value="autoLockMinutes"
+                  :min="1"
+                  :max="60"
+                  :step="1"
+                  controls-position="right"
+                  size="small"
+                  @change="handleAutoLockMinutesChange"
+                />
+                <span class="kdbx-auto-lock-unit">{{ t('kdbx.minutesUnit') }}</span>
+              </div>
+            </div>
+          </el-popover>
+        </div>
       </div>
     </form>
 
@@ -263,9 +298,10 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, toRaw, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowDown, ArrowRight, Delete, DeleteFilled, Document, DocumentAdd, DocumentCopy, Download, Edit, Filter, Folder, FolderAdd, FolderOpened, FullScreen, Hide, Key, Loading, Lock, Monitor, MoreFilled, Paperclip, Plus, PriceTag, RefreshRight, Search, Tickets, Upload, View } from '@element-plus/icons-vue'
+import { ArrowDown, ArrowRight, Delete, DeleteFilled, Document, DocumentAdd, DocumentCopy, Download, Edit, Filter, Folder, FolderAdd, FolderOpened, FullScreen, Hide, Key, Loading, Lock, Monitor, MoreFilled, Paperclip, Plus, PriceTag, RefreshRight, Search, Setting, Tickets, Upload, View } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import { useEditorStore } from '@/store/editor'
+import { usePreferencesStore } from '@/store/preferences'
 import { useTerminalStore } from '@/store/terminal'
 import type { KdbxEntryDetail, KdbxEntryInput, KdbxEntryRevision, KdbxEntrySummary, KdbxField, KdbxGroupSummary, KdbxVaultSnapshot } from '@shared/types/kdbx'
 import type { ITerminalConnectionConfig, TerminalProtocolType } from '@shared/types/terminal'
@@ -297,7 +333,17 @@ const errorMessage = (reason: unknown, fallback: string): string => {
   return message.replace(/^Error invoking remote method '[^']+':\s*(?:Error:\s*)?/, '').replace(/^Error:\s*/, '') || fallback
 }
 const editorStore = useEditorStore()
+const preferencesStore = usePreferencesStore()
 const { currentFile } = storeToRefs(editorStore)
+const autoLockMinutes = computed(() => preferencesStore.kdbxAutoLockMinutes ?? 5)
+const handleAutoLockMinutesChange = (value: number | undefined): void => {
+  if (typeof value !== 'number' || isNaN(value)) return
+  const minutes = Math.max(1, Math.min(60, Math.round(value)))
+  preferencesStore.SET_SINGLE_PREFERENCE({
+    type: 'kdbxAutoLockMinutes',
+    value: minutes
+  })
+}
 const terminalStore = useTerminalStore()
 const vault = ref<KdbxVaultSnapshot | null>(null)
 const locked = ref(true); const password = ref(''); const error = ref(''); const unlocking = ref(false); const unlockPasswordVisible = ref(false)
@@ -445,7 +491,7 @@ const newPasswordInvalid = computed(() => (resetNewPassword.value.length > 0 && 
 const resetPasswordMismatch = computed(() => (resetConfirmPassword.value.length > 0 || resetAttempted.value) && resetNewPassword.value !== resetConfirmPassword.value)
 const expandAllGroups = (): void => { expandedGroups.value = new Set(flatGroups.value.map(group => group.id)) }
 const refresh = async(pathname = filePath.value): Promise<void> => { if (!pathname || locked.value) return; vault.value = await window.electron.ipcRenderer.invoke('mt::kdbx::snapshot', pathname); expandAllGroups() }
-const unlock = async(): Promise<void> => { if (!filePath.value || !password.value) return; unlocking.value = true; error.value = ''; try { vault.value = await window.electron.ipcRenderer.invoke('mt::kdbx::unlock', filePath.value, password.value); locked.value = false; password.value = ''; unlockPasswordVisible.value = false; expandAllGroups() } catch (err) { const message = err instanceof Error ? err.message : ''; error.value = /InvalidKey/i.test(message) ? t('kdbx.invalidPassword') : t('kdbx.unlockFailed') } finally { unlocking.value = false } }
+const unlock = async(): Promise<void> => { if (!filePath.value || !password.value) return; unlocking.value = true; error.value = ''; try { vault.value = await window.electron.ipcRenderer.invoke('mt::kdbx::unlock', filePath.value, password.value); locked.value = false; password.value = ''; unlockPasswordVisible.value = false; expandAllGroups(); editorStore.SET_KDBX_UNLOCKED(filePath.value) } catch (err) { const message = err instanceof Error ? err.message : ''; error.value = /InvalidKey/i.test(message) ? t('kdbx.invalidPassword') : t('kdbx.unlockFailed') } finally { unlocking.value = false } }
 const clearCustomFields = (): void => { customFields.value = []; totpField.value = '' }
 const loadCustomFields = (detail: KdbxEntryDetail): void => {
   const totpEntry = detail.fields.find(field => isTotpField(field))
@@ -456,7 +502,7 @@ const loadAttachments = (detail: KdbxEntryDetail): void => { attachmentDrafts.va
 const clearAttachmentPreview = (): void => { if (attachmentPreviewUrl.value.startsWith('blob:')) URL.revokeObjectURL(attachmentPreviewUrl.value); attachmentPreviewUrl.value = ''; attachmentPreviewName.value = '' }
 const clearEditDraft = (): void => { editDraft.value = null; passwordField.value = ''; totpField.value = ''; editEntryType.value = 'Normal'; editing.value = false; newEntry.value = false; clearCustomFields(); attachmentDrafts.value = []; clearAttachmentPreview() }
 const clearDraft = (): void => { draft.value = null; selectedEntryId.value = ''; showPassword.value = false; revealedCustomFields.value = new Set(); clearEditDraft() }
-const lock = async(): Promise<void> => { const pathname = filePath.value; if (!pathname) return; await window.electron.ipcRenderer.invoke('mt::kdbx::lock', pathname); if (pathname !== filePath.value) return; vault.value = null; clearDraft(); password.value = ''; unlockPasswordVisible.value = false; locked.value = true }
+const lock = async(): Promise<void> => { const pathname = filePath.value; if (!pathname) return; await window.electron.ipcRenderer.invoke('mt::kdbx::lock', pathname); if (pathname !== filePath.value) return; vault.value = null; clearDraft(); password.value = ''; unlockPasswordVisible.value = false; error.value = ''; locked.value = true; editorStore.SET_KDBX_LOCKED(pathname) }
 const clearResetPassword = (): void => { resetAttempted.value = false; currentPasswordIncorrect.value = false; resetCurrentPassword.value = ''; resetNewPassword.value = ''; resetConfirmPassword.value = '' }
 const openResetPassword = (): void => { clearResetPassword(); resetPasswordVisible.value = true }
 const resetVaultPassword = async(): Promise<void> => { if (!filePath.value || resettingPassword.value) return; resetAttempted.value = true; currentPasswordIncorrect.value = false; if (!resetCurrentPassword.value) { ElMessage.error(t('kdbx.passwordRequired')); return } if (!isKdbxPasswordValid(resetNewPassword.value)) { ElMessage.error(t('kdbx.passwordRule')); return } if (resetNewPassword.value !== resetConfirmPassword.value) { ElMessage.error(t('kdbx.passwordMismatch')); return } resettingPassword.value = true; try { await window.electron.ipcRenderer.invoke('mt::kdbx::reset-password', filePath.value, resetCurrentPassword.value, resetNewPassword.value); resetPasswordVisible.value = false; ElMessage.success(t('kdbx.passwordReset')) } catch (error) { const message = errorMessage(error, t('kdbx.resetPasswordFailed')); currentPasswordIncorrect.value = message.includes('当前主密码不正确') || message === t('kdbx.currentPasswordInvalid'); ElMessage.error(currentPasswordIncorrect.value ? t('kdbx.currentPasswordInvalid') : message) } finally { resettingPassword.value = false } }
@@ -816,11 +862,24 @@ const formatSize = (size: number): string => size < 1024 ? `${size} B` : size < 
 const viewHistory = async(historyIndex: number): Promise<void> => { if (!filePath.value || !draft.value) return; try { historyPreview.value = await window.electron.ipcRenderer.invoke('mt::kdbx::history-entry', filePath.value, draft.value.id, historyIndex); historyDialogVisible.value = true } catch (err) { ElMessage.error(errorMessage(err, t('kdbx.historyFailed'))) } }
 const restoreHistory = async(historyIndex: number): Promise<void> => { if (!filePath.value || !draft.value) return; try { await ElMessageBox.confirm(t('kdbx.restoreHistoryConfirm'), t('kdbx.restoreHistory'), { ...messageBoxTheme, confirmButtonText: t('common.ok'), cancelButtonText: t('common.cancel'), type: 'warning' }); const detail = await window.electron.ipcRenderer.invoke('mt::kdbx::restore-history', filePath.value, draft.value.id, historyIndex); draft.value = detail; showPassword.value = false; clearEntrySelection(); await refresh(); ElMessage.success(t('kdbx.restored')) } catch { /* cancelled */ } }
 const deleteHistory = async(historyIndex: number): Promise<void> => { if (!filePath.value || !draft.value) return; try { await ElMessageBox.confirm(t('kdbx.deleteHistoryConfirm'), t('kdbx.deleteHistory'), { ...messageBoxTheme, confirmButtonText: t('kdbx.deletePermanently'), cancelButtonText: t('common.cancel'), type: 'warning' }); draft.value = await window.electron.ipcRenderer.invoke('mt::kdbx::delete-history', filePath.value, draft.value.id, historyIndex); clearEntrySelection(); await refresh() } catch { /* cancelled */ } }
-const activate = async(pathname: string): Promise<void> => { locked.value = true; vault.value = null; clearDraft(); password.value = ''; unlockPasswordVisible.value = false; error.value = ''; selectedGroup.value = ''; selectedTag.value = ''; selectedUntagged.value = false; selectedRecycle.value = false; if (!pathname) return; const value = await window.electron.ipcRenderer.invoke('mt::kdbx::snapshot', pathname) as KdbxVaultSnapshot | null; if (value && pathname === filePath.value) { vault.value = value; locked.value = false; expandAllGroups() } }
+const activate = async(pathname: string): Promise<void> => { locked.value = true; vault.value = null; clearDraft(); password.value = ''; unlockPasswordVisible.value = false; error.value = ''; selectedGroup.value = ''; selectedTag.value = ''; selectedUntagged.value = false; selectedRecycle.value = false; if (!pathname) return; const value = await window.electron.ipcRenderer.invoke('mt::kdbx::snapshot', pathname) as KdbxVaultSnapshot | null; if (value && pathname === filePath.value) { vault.value = value; locked.value = false; expandAllGroups(); editorStore.SET_KDBX_UNLOCKED(pathname) } }
 watch([query, searchFields], clearEntrySelection, { deep: true })
 watch(filePath, next => { void activate(next) }, { immediate: true })
+const onKdbxState = (_: unknown, payload: { filePath?: string; locked?: boolean }): void => {
+  if (payload && payload.filePath && filePath.value && window.fileUtils.isSamePathSync(filePath.value, payload.filePath)) {
+    if (payload.locked && !locked.value) {
+      vault.value = null
+      clearDraft()
+      password.value = ''
+      unlockPasswordVisible.value = false
+      error.value = ''
+      locked.value = true
+    }
+  }
+}
 onMounted(() => {
   window.electron.ipcRenderer.on('mt::kdbx-lock', lock)
+  window.electron.ipcRenderer.on('mt::kdbx::state', onKdbxState)
   window.addEventListener('pointerdown', onGlobalPointerDown, true)
   window.addEventListener('scroll', onGlobalViewportChange, true)
   window.addEventListener('resize', onGlobalViewportChange)
@@ -831,6 +890,7 @@ onMounted(() => {
 })
 onBeforeUnmount(() => {
   window.electron.ipcRenderer.removeAllListeners('mt::kdbx-lock')
+  window.electron.ipcRenderer.removeListener('mt::kdbx::state', onKdbxState)
   window.removeEventListener('pointerdown', onGlobalPointerDown, true)
   window.removeEventListener('scroll', onGlobalViewportChange, true)
   window.removeEventListener('resize', onGlobalViewportChange)
@@ -917,4 +977,13 @@ button { border: 0; background: transparent; color: inherit; cursor: pointer; } 
 .kdbx-custom-field-actions { display: flex; align-items: center; gap: 2px; flex: 0 0 auto; }
 .kdbx-custom-field-actions button { display: inline-flex; width: 28px; height: 28px; align-items: center; justify-content: center; color: var(--editorColor50); border-radius: 4px; }
 .kdbx-custom-field-actions button:hover { background: var(--floatHoverColor); color: var(--editorColor); }
+.kdbx-auto-lock-tip { display: flex; align-items: center; justify-content: center; gap: 6px; color: var(--editorColor50); font-size: 13px; line-height: 20px; }
+.kdbx-auto-lock-setting-btn { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--editorColor50); cursor: pointer; transition: all .15s ease; }
+.kdbx-auto-lock-setting-btn:hover { background: var(--floatHoverColor); color: var(--themeColor); }
+:global(.kdbx-auto-lock-popover) { padding: 12px !important; background: var(--floatBgColor) !important; border-color: var(--floatBorderColor) !important; color: var(--editorColor) !important; box-shadow: 0 4px 16px rgba(0, 0, 0, .2) !important; }
+:global(.kdbx-auto-lock-popover .el-popper__arrow::before) { background: var(--floatBgColor) !important; border-color: var(--floatBorderColor) !important; }
+.kdbx-auto-lock-popover-content { display: flex; flex-direction: column; gap: 8px; }
+.kdbx-auto-lock-popover-title { font-size: 12px; color: var(--editorColor50); text-align: left; }
+.kdbx-auto-lock-popover-row { display: flex; align-items: center; gap: 8px; }
+.kdbx-auto-lock-unit { font-size: 12px; color: var(--editorColor50); }
 </style>

@@ -75,5 +75,7 @@
   "searchNoIgnore": false,
   "searchFollowSymlinks": true,
 
+  "kdbxAutoLockMinutes": 5,
+
   "watcherUsePolling": false
 }
