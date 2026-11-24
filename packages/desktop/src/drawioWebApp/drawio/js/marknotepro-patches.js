@@ -236,11 +236,129 @@
 					this.menubarContainer.style.display = 'none';
 				}
 
+				patchEditorUiSave(this);
+
 				return result;
 			}
 
 			createUiWithoutMenubar.marknoteproMenubarPatched = true;
 			EditorUi.prototype.createUi = createUiWithoutMenubar;
+		}
+
+		function patchEditorUiSave(ui) {
+			if (ui == null || ui.actions == null) return;
+			var graph = ui.editor != null ? ui.editor.graph : null;
+			if (graph != null) {
+				graph.editorUi = ui;
+			}
+			if (typeof window !== 'undefined') {
+				window.editorUi = ui;
+			}
+
+			var saveAction = ui.actions.get('save');
+			if (saveAction != null && !saveAction.marknoteproSeamlessPatched) {
+				saveAction.funct = function (exit) {
+					var graph = ui.editor != null ? ui.editor.graph : null;
+
+					if (exit === true) {
+						// User requested tab close / exit: stop editing to finalize cell value
+						if (graph != null && graph.isEditing()) {
+							graph.stopEditing();
+						}
+					} else if (graph != null) {
+						// Auto-save or non-exit save (Cmd+S / Ctrl+S):
+						// Seamless operation - DO NOT stop editing or disrupt text selection / cursor!
+						var cellEditor = graph.cellEditor;
+						if (graph.isEditing() && cellEditor != null && cellEditor.editingCell != null) {
+							var state = graph.view.getState(cellEditor.editingCell);
+							if (state != null && typeof cellEditor.getCurrentValue === 'function') {
+								var currentVal = cellEditor.getCurrentValue(state);
+								if (currentVal != null) {
+									var cell = cellEditor.editingCell;
+									if (cell.value != null && typeof cell.value === 'object') {
+										var labelAttr = (typeof Graph !== 'undefined' && Graph.translateDiagram &&
+											Graph.diagramLanguage != null && cell.value.hasAttribute('label_' + Graph.diagramLanguage))
+											? ('label_' + Graph.diagramLanguage) : 'label';
+										cell.value.setAttribute(labelAttr, currentVal);
+									} else {
+										cell.value = currentVal;
+									}
+								}
+							}
+						}
+					}
+
+					// Snapshot selection & active element before serializing XML
+					var savedRanges = null;
+					var cellEditor = graph != null ? graph.cellEditor : null;
+					if (exit !== true && graph != null && graph.isEditing() && cellEditor != null && typeof cellEditor.saveSelection === 'function') {
+						try {
+							savedRanges = cellEditor.saveSelection();
+						} catch (e) {}
+					}
+					var selectedCells = null;
+					if (exit !== true && graph != null && !graph.isEditing() && typeof graph.getSelectionCells === 'function') {
+						try {
+							selectedCells = graph.getSelectionCells();
+						} catch (e) {}
+					}
+					var activeEl = document.activeElement;
+
+					// Generate XML data
+					var data = (typeof urlParams !== 'undefined' && urlParams['pages'] != '0' ||
+						(ui.pages != null && ui.pages.length > 1))
+						? ui.getFileData(true)
+						: mxUtils.getXml(ui.editor.getGraphXml());
+
+					if (typeof urlParams !== 'undefined' && urlParams['proto'] == 'json') {
+						var msg = ui.createLoadMessage('save');
+						msg.xml = data;
+
+					if (exit === true && (urlParams['saveAndExit'] == '1' || urlParams['publishClose'] == '1')) {
+							msg.exit = true;
+						}
+
+						data = JSON.stringify(msg);
+					}
+
+					var parent = ui.embedMessageSource || window.opener || window.parent;
+					if (parent != null) {
+						parent.postMessage(data, '*');
+					}
+
+					if (typeof urlParams !== 'undefined' && urlParams['modified'] != '0' && urlParams['keepmodified'] != '1') {
+						ui.editor.modified = false;
+						ui.clearStatus();
+					}
+
+					// Restore cursor, text selection, or workspace selection
+					if (exit !== true && graph != null && graph.isEditing() && cellEditor != null) {
+						if (savedRanges != null && typeof cellEditor.restoreSelection === 'function') {
+							try {
+								cellEditor.restoreSelection(savedRanges);
+							} catch (e) {}
+						}
+						if (cellEditor.textarea != null && document.activeElement !== cellEditor.textarea) {
+							try {
+								cellEditor.textarea.focus();
+							} catch (e) {}
+						}
+					} else if (exit !== true && graph != null && !graph.isEditing() && selectedCells != null && selectedCells.length > 0) {
+						try {
+							var currentSel = graph.getSelectionCells();
+							if (!currentSel || currentSel.length !== selectedCells.length) {
+								graph.setSelectionCells(selectedCells);
+							}
+						} catch (e) {}
+						if (activeEl != null && document.activeElement !== activeEl && typeof activeEl.focus === 'function') {
+							try {
+								activeEl.focus();
+							} catch (e) {}
+						}
+					}
+				};
+				saveAction.marknoteproSeamlessPatched = true;
+			}
 		}
 
 		function createToolbarWithDefaultEdgeIcons(container) {
@@ -249,6 +367,7 @@
 
 			if (graph == null) return toolbar;
 			applyMarkNoteProTheme(graph);
+			patchEditorUiSave(this);
 
 			if (this.actions != null && this.actions.get('marknoteproExportPng') == null) {
 				var ui = this;
@@ -404,6 +523,107 @@
 
 		createToolbarWithDefaultEdgeIcons.marknoteproPatched = true;
 		EditorUi.prototype.createToolbar = createToolbarWithDefaultEdgeIcons;
+
+		if (typeof EditorUi !== 'undefined' && EditorUi.prototype != null &&
+			EditorUi.prototype.save != null && !EditorUi.prototype.save.marknoteproSeamlessPatched) {
+			var origEditorUiSave = EditorUi.prototype.save;
+			EditorUi.prototype.save = function (name) {
+				if (typeof urlParams !== 'undefined' && urlParams['embed'] == '1') {
+					if (this.actions != null && this.actions.get('save') != null) {
+						this.actions.get('save').funct(false);
+						return;
+					}
+				}
+				return origEditorUiSave.apply(this, arguments);
+			};
+			EditorUi.prototype.save.marknoteproSeamlessPatched = true;
+		}
+
+		if (typeof App !== 'undefined' && App.prototype != null &&
+			App.prototype.save != null && !App.prototype.save.marknoteproSeamlessPatched) {
+			var origAppSave = App.prototype.save;
+			App.prototype.save = function (name, done) {
+				if (typeof urlParams !== 'undefined' && urlParams['embed'] == '1') {
+					if (this.actions != null && this.actions.get('save') != null) {
+						this.actions.get('save').funct(false);
+						if (typeof done === 'function') done();
+						return;
+					}
+				}
+				return origAppSave.apply(this, arguments);
+			};
+			App.prototype.save.marknoteproSeamlessPatched = true;
+		}
+
+		if (typeof App !== 'undefined' && App.prototype != null &&
+			App.prototype.saveFile != null && !App.prototype.saveFile.marknoteproSeamlessPatched) {
+			var origAppSaveFile = App.prototype.saveFile;
+			App.prototype.saveFile = function (forceDialog, success) {
+				if (typeof urlParams !== 'undefined' && urlParams['embed'] == '1') {
+					if (this.actions != null && this.actions.get('save') != null) {
+						this.actions.get('save').funct(false);
+						if (typeof success === 'function') success();
+						return;
+					}
+				}
+				return origAppSaveFile.apply(this, arguments);
+			};
+			App.prototype.saveFile.marknoteproSeamlessPatched = true;
+		}
+
+		if (typeof mxCellEditor !== 'undefined' && mxCellEditor.prototype != null) {
+			var origStartEditing = mxCellEditor.prototype.startEditing;
+			if (origStartEditing != null && !origStartEditing.marknoteproSeamlessPatched) {
+				mxCellEditor.prototype.startEditing = function (cell, trigger) {
+					origStartEditing.apply(this, arguments);
+
+					if (this.textarea != null && !this.textarea.marknoteproInputBound) {
+						var self = this;
+						var inputTimer = null;
+
+						var notifyInputAutosave = function () {
+							if (inputTimer != null) {
+								clearTimeout(inputTimer);
+							}
+							inputTimer = setTimeout(function () {
+								inputTimer = null;
+								if (self.editingCell == null || self.graph == null || self.graph.view == null) return;
+								var state = self.graph.view.getState(self.editingCell);
+								if (state == null || typeof self.getCurrentValue !== 'function') return;
+
+								var currentVal = self.getCurrentValue(state);
+								if (currentVal == null) return;
+
+								var c = self.editingCell;
+								if (c.value != null && typeof c.value === 'object') {
+									var labelAttr = (typeof Graph !== 'undefined' && Graph.translateDiagram &&
+										Graph.diagramLanguage != null && c.value.hasAttribute('label_' + Graph.diagramLanguage))
+										? ('label_' + Graph.diagramLanguage) : 'label';
+									c.value.setAttribute(labelAttr, currentVal);
+								} else {
+									c.value = currentVal;
+								}
+
+								var ui = self.graph.editorUi || (typeof window !== 'undefined' ? window.editorUi : null);
+								if (ui != null && typeof ui.getFileData === 'function') {
+									var data = ui.getFileData(true);
+									var msg = ui.createLoadMessage('autosave');
+									msg.xml = data;
+									var parent = ui.embedMessageSource || window.opener || window.parent;
+									if (parent != null) {
+										parent.postMessage(JSON.stringify(msg), '*');
+									}
+								}
+							}, 600);
+						};
+
+						this.textarea.addEventListener('input', notifyInputAutosave);
+						this.textarea.marknoteproInputBound = true;
+					}
+				};
+				mxCellEditor.prototype.startEditing.marknoteproSeamlessPatched = true;
+			}
+		}
 	}
 
 	applyPatches();
