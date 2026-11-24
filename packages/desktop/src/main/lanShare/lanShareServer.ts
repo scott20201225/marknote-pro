@@ -6,6 +6,8 @@ import path from 'path'
 import crypto from 'crypto'
 import type { LanShareRecord, LanShareFileItem } from '../../shared/types/lanShare'
 import { createZipBuffer } from './zipUtil'
+// @ts-ignore
+import { marked } from 'marked'
 
 interface IpLockRecord {
   failedAttempts: number
@@ -907,96 +909,203 @@ export class LanShareServer {
   <style>
     :root {
       --primary: #2563eb;
+      --primary-hover: #1d4ed8;
       --bg: #ffffff;
-      --text: #1e293b;
+      --card-bg: #f8fafc;
+      --text: #0f172a;
       --text-muted: #64748b;
       --border: #e2e8f0;
       --code-bg: #f1f5f9;
+      --table-alt-bg: #f8fafc;
     }
     @media (prefers-color-scheme: dark) {
       :root {
         --primary: #3b82f6;
+        --primary-hover: #60a5fa;
         --bg: #0f172a;
+        --card-bg: #1e293b;
         --text: #f1f5f9;
         --text-muted: #94a3b8;
         --border: #334155;
         --code-bg: #1e293b;
+        --table-alt-bg: #162032;
       }
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
       background: var(--bg);
       color: var(--text);
-      line-height: 1.7;
-      padding: 16px 20px 40px;
+      line-height: 1.75;
+      padding: 16px 20px 60px;
+      word-break: break-word;
     }
     .top-nav {
-      max-width: 760px;
+      max-width: 840px;
       margin: 0 auto 24px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding-bottom: 12px;
+      padding-bottom: 14px;
       border-bottom: 1px solid var(--border);
     }
     .nav-btn {
       font-size: 14px;
       color: var(--primary);
       text-decoration: none;
-      font-weight: 600;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 6px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      transition: all 0.15s ease;
+    }
+    .nav-btn:hover {
+      border-color: var(--primary);
+      background: var(--bg);
     }
     .article {
-      max-width: 760px;
+      max-width: 840px;
       margin: 0 auto;
     }
-    h1, h2, h3, h4, h5, h6 {
-      margin-top: 1.5em;
-      margin-bottom: 0.6em;
+    .article h1, .article h2, .article h3, .article h4, .article h5, .article h6 {
+      margin-top: 1.6em;
+      margin-bottom: 0.7em;
       font-weight: 700;
-      line-height: 1.3;
+      line-height: 1.35;
+      color: var(--text);
     }
-    h1 { font-size: 26px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
-    h2 { font-size: 20px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
-    h3 { font-size: 18px; }
-    p { margin-bottom: 1em; }
-    pre {
-      background: var(--code-bg);
-      padding: 12px 16px;
-      border-radius: 8px;
-      overflow-x: auto;
-      font-family: Menlo, Monaco, Consolas, monospace;
-      font-size: 13px;
+    .article h1 { font-size: 26px; border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-top: 0.4em; }
+    .article h2 { font-size: 21px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    .article h3 { font-size: 18px; }
+    .article h4 { font-size: 16px; }
+    .article p { margin-bottom: 1.1em; }
+
+    /* Lists */
+    .article ul, .article ol {
+      margin-left: 24px;
       margin-bottom: 1.2em;
     }
-    code {
-      background: var(--code-bg);
-      padding: 2px 5px;
-      border-radius: 4px;
-      font-family: Menlo, Monaco, Consolas, monospace;
-      font-size: 0.9em;
+    .article li {
+      margin-bottom: 6px;
     }
-    blockquote {
-      border-left: 4px solid var(--primary);
-      padding-left: 12px;
-      color: var(--text-muted);
-      margin: 1em 0;
+    .article li > p {
+      margin-bottom: 6px;
     }
-    ul, ol { margin-left: 20px; margin-bottom: 1em; }
-    li { margin-bottom: 4px; }
-    table {
+
+    /* Task list items & inline checkboxes */
+    .article li.task-list-item {
+      list-style-type: none;
+      margin-left: -18px;
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .article input[type="checkbox"] {
+      width: 15px;
+      height: 15px;
+      margin: 0 4px 0 0;
+      vertical-align: -2px;
+      cursor: default;
+      accent-color: var(--primary);
+    }
+    .article input[type="checkbox"].task-checkbox {
+      margin-top: 3px;
+      flex-shrink: 0;
+    }
+    .article input[type="checkbox"].inline-checkbox {
+      margin-left: 2px;
+      margin-right: 4px;
+    }
+
+    /* Tables */
+    .article .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      margin-bottom: 1.4em;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .article table {
       border-collapse: collapse;
       width: 100%;
-      margin-bottom: 1.2em;
-      overflow-x: auto;
-      display: block;
+      border-spacing: 0;
+      font-size: 14px;
     }
-    th, td {
+    .article th, .article td {
       border: 1px solid var(--border);
-      padding: 8px 12px;
+      padding: 10px 14px;
       text-align: left;
     }
-    th { background: var(--code-bg); }
+    .article th {
+      background: var(--code-bg);
+      font-weight: 600;
+    }
+    .article tr:nth-child(even) td {
+      background: var(--table-alt-bg);
+    }
+
+    /* Code blocks */
+    .article pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      padding: 14px 18px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 13.5px;
+      line-height: 1.55;
+      margin-bottom: 1.3em;
+    }
+    .article code {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 0.9em;
+    }
+    .article pre code {
+      background: transparent;
+      border: none;
+      padding: 0;
+      font-size: inherit;
+    }
+
+    /* Blockquote */
+    .article blockquote {
+      border-left: 4px solid var(--primary);
+      padding: 10px 16px;
+      color: var(--text-muted);
+      background: var(--card-bg);
+      border-radius: 0 8px 8px 0;
+      margin: 1.2em 0;
+    }
+
+    /* Horizontal line */
+    .article hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 2em 0;
+    }
+
+    /* Links & Images */
+    .article a {
+      color: var(--primary);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+    .article img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      margin: 1em 0;
+      border: 1px solid var(--border);
+    }
   </style>
 </head>
 <body>
@@ -1012,36 +1121,44 @@ export class LanShareServer {
   }
 
   private convertMarkdownToHtml(md: string): string {
-    let out = this.escapeHtml(md)
+    try {
+      const renderer = new marked.Renderer()
+      const origText = renderer.text.bind(renderer)
+      renderer.text = function (text: string) {
+        let res = origText(text)
+        // 支持普通文本与多级列表中行内 [ ] 与 [x] 复选框
+        res = res.replace(/\[ \]/g, '<input type="checkbox" disabled class="inline-checkbox">')
+        res = res.replace(/\[[xX]\]/g, '<input type="checkbox" checked disabled class="inline-checkbox">')
+        return res
+      }
+      renderer.table = function (header: string, body: string) {
+        return `<div class="table-wrapper"><table><thead>${header}</thead><tbody>${body}</tbody></table></div>`
+      }
+      renderer.listitem = function (text: string, task: boolean, checked: boolean) {
+        if (task) {
+          const cleanText = text.replace(/^<input[^>]+>/, '').trim()
+          return `<li class="task-list-item"><input type="checkbox" ${checked ? 'checked' : ''} disabled class="task-checkbox"> <span>${cleanText}</span></li>`
+        }
+        return `<li>${text}</li>`
+      }
+      renderer.link = function (href: string, title: string | null | undefined, text: string) {
+        const isExternal = /^https?:\/\//i.test(href || '')
+        const titleAttr = title ? ` title="${title}"` : ''
+        const targetAttr = isExternal ? ' target="_blank" rel="noopener noreferrer"' : ''
+        return `<a href="${href || '#'}"${titleAttr}${targetAttr}>${text}</a>`
+      }
 
-    // Code blocks ```code```
-    out = out.replace(/```([\s\S]*?)```/g, (_m, code) => {
-      return `<pre><code>${code.trim()}</code></pre>`
-    })
+      marked.setOptions({
+        gfm: true,
+        breaks: true,
+        renderer
+      })
 
-    // Inline code `code`
-    out = out.replace(/`([^`]+)`/g, '<code>$1</code>')
-
-    // Headers
-    out = out.replace(/^### (.*$)/gim, '<h3>$1</h3>')
-    out = out.replace(/^## (.*$)/gim, '<h2>$1</h2>')
-    out = out.replace(/^# (.*$)/gim, '<h1>$1</h1>')
-
-    // Bold & Italic
-    out = out.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    out = out.replace(/\*(.*?)\*/g, '<em>$1</em>')
-
-    // Blockquote
-    out = out.replace(/^\> (.*$)/gim, '<blockquote>$1</blockquote>')
-
-    // Unordered lists
-    out = out.replace(/^\s*-\s+(.*$)/gim, '<li>$1</li>')
-
-    // Paragraphs
-    out = out.replace(/\n\n+/g, '</p><p>')
-    out = `<p>${out}</p>`
-
-    return out
+      return marked.parse ? marked.parse(md) : marked(md)
+    } catch (e) {
+      console.warn('[LanShareServer] Markdown parse error:', e)
+      return `<pre style="white-space: pre-wrap;">${this.escapeHtml(md)}</pre>`
+    }
   }
 
   private escapeHtml(str: string): string {
