@@ -940,6 +940,16 @@ export const useProjectStore = defineStore('project', () => {
       const { pathname } = activeItem.value
       window.electron.shell.showItemInFolder(pathname)
     })
+    bus.on('SIDEBAR::share-lan', () => {
+      const item = activeItem.value
+      if (item && item.pathname) {
+        bus.emit('LAN_SHARE::open-create-modal', {
+          pathname: item.pathname,
+          isDirectory: !!item.isDirectory,
+          title: item.name
+        })
+      }
+    })
     bus.on('SIDEBAR::copy-path', () => {
       const pathname = activeItem.value?.pathname
       if (pathname) {

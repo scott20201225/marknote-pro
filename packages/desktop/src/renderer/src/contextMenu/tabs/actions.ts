@@ -27,3 +27,7 @@ export const copyPath = (tabId: string): void => {
 export const showInFolder = (tabId: string): void => {
   bus.emit('TABS::show-in-folder', tabId)
 }
+
+export const shareLan = (tabId: string): void => {
+  bus.emit('TABS::share-lan', tabId)
+}

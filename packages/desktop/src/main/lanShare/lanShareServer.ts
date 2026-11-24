@@ -1,0 +1,1061 @@
+import http from 'http'
+import type { Socket } from 'net'
+import fs from 'fs'
+import fsPromises from 'fs/promises'
+import path from 'path'
+import crypto from 'crypto'
+import type { LanShareRecord, LanShareFileItem } from '../../shared/types/lanShare'
+import { createZipBuffer } from './zipUtil'
+
+interface IpLockRecord {
+  failedAttempts: number
+  lockedUntil: number // timestamp ms
+}
+
+/**
+ * 局域网 IP 防暴力破解锁定管理器
+ * 规则：同一个 IP 连续密码输入错误 5 次，该 IP 被锁定 30 分钟，不允许访问和下载分享。
+ */
+export class IpLockManager {
+  private static attempts: Map<string, IpLockRecord> = new Map()
+
+  public static normalizeIp(rawIp?: string): string {
+    if (!rawIp) return '127.0.0.1'
+    let ip = rawIp.trim()
+    if (ip.startsWith('::ffff:')) {
+      ip = ip.substring(7)
+    }
+    return ip
+  }
+
+  public static checkLock(ip: string): { locked: boolean; remainingMinutes: number } {
+    const record = this.attempts.get(ip)
+    if (!record) return { locked: false, remainingMinutes: 0 }
+    const now = Date.now()
+    if (record.lockedUntil > now) {
+      const remainingMinutes = Math.ceil((record.lockedUntil - now) / 60000)
+      return { locked: true, remainingMinutes }
+    }
+    if (record.lockedUntil > 0 && record.lockedUntil <= now) {
+      this.attempts.delete(ip)
+    }
+    return { locked: false, remainingMinutes: 0 }
+  }
+
+  public static recordFailure(ip: string): { locked: boolean; remainingAttempts: number; remainingMinutes: number } {
+    const now = Date.now()
+    let record = this.attempts.get(ip)
+    if (!record) {
+      record = { failedAttempts: 0, lockedUntil: 0 }
+      this.attempts.set(ip, record)
+    }
+    record.failedAttempts += 1
+    if (record.failedAttempts >= 5) {
+      record.lockedUntil = now + 30 * 60 * 1000 // 锁定 30 分钟
+      return { locked: true, remainingAttempts: 0, remainingMinutes: 30 }
+    }
+    return { locked: false, remainingAttempts: 5 - record.failedAttempts, remainingMinutes: 0 }
+  }
+
+  public static recordSuccess(ip: string): void {
+    this.attempts.delete(ip)
+  }
+}
+
+export class LanShareServer {
+  public share: LanShareRecord
+  private server: http.Server | null = null
+  private openSockets: Set<Socket> = new Set()
+  private validTokens: Set<string> = new Set()
+  private serverSecret: string = crypto.randomBytes(16).toString('hex')
+
+  constructor(share: LanShareRecord) {
+    this.share = share
+  }
+
+  public async start(preferredPort: number = 9527): Promise<number> {
+    const port = await this.findAvailablePort(preferredPort)
+    this.share.port = port
+
+    return new Promise((resolve, reject) => {
+      this.server = http.createServer((req, res) => {
+        this.handleRequest(req, res).catch((err) => {
+          console.error('[LanShareServer] Request error:', err)
+          if (!res.headersSent) {
+            res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' })
+            res.end(JSON.stringify({ error: 'Internal Server Error' }))
+          }
+        })
+      })
+
+      this.server.on('connection', (socket) => {
+        this.openSockets.add(socket)
+        socket.once('close', () => {
+          this.openSockets.delete(socket)
+        })
+      })
+
+      this.server.on('error', (err) => {
+        reject(err)
+      })
+
+      this.server.listen(port, '0.0.0.0', () => {
+        this.share.status = 'running'
+        resolve(port)
+      })
+    })
+  }
+
+  public async stop(): Promise<void> {
+    return new Promise((resolve) => {
+      if (!this.server) {
+        this.share.status = 'stopped'
+        resolve()
+        return
+      }
+
+      const s = this.server
+      this.server = null
+      this.share.status = 'stopped'
+      this.validTokens.clear()
+
+      // 1. Force close idle & keep-alive connections in Node 18+
+      if (typeof (s as any).closeAllConnections === 'function') {
+        try {
+          (s as any).closeAllConnections()
+        } catch {}
+      }
+
+      // 2. Destroy all active browser sockets to immediately release keep-alive
+      for (const socket of this.openSockets) {
+        try {
+          socket.destroy()
+        } catch {}
+      }
+      this.openSockets.clear()
+
+      let resolved = false
+      const done = () => {
+        if (!resolved) {
+          resolved = true
+          resolve()
+        }
+      }
+
+      try {
+        s.close(() => {
+          done()
+        })
+      } catch {
+        done()
+      }
+
+      // 3. Fallback safety timer so pause never hangs
+      setTimeout(done, 300)
+    })
+  }
+
+  private async findAvailablePort(startPort: number): Promise<number> {
+    for (let p = startPort; p < startPort + 50; p++) {
+      const isAvailable = await new Promise<boolean>((resolve) => {
+        const testServer = http.createServer()
+        testServer.once('error', () => resolve(false))
+        testServer.once('listening', () => {
+          testServer.close(() => resolve(true))
+        })
+        testServer.listen(p, '0.0.0.0')
+      })
+      if (isAvailable) return p
+    }
+    return startPort
+  }
+
+  private isAuthenticated(req: http.IncomingMessage, url: URL): boolean {
+    if (!this.share.password) return true
+
+    // Check token query parameter or header
+    const token = url.searchParams.get('token') || (req.headers['x-share-token'] as string)
+    if (token && this.validTokens.has(token)) {
+      return true
+    }
+
+    // Check Authorization header for Basic auth or password
+    const auth = req.headers['authorization']
+    if (auth && auth.startsWith('Bearer ')) {
+      const bToken = auth.slice(7)
+      if (this.validTokens.has(bToken)) return true
+    }
+
+    // Check cookie
+    const cookie = req.headers['cookie']
+    if (cookie) {
+      const match = cookie.match(/share_token=([a-zA-Z0-9_-]+)/)
+      if (match && this.validTokens.has(match[1])) {
+        return true
+      }
+    }
+
+    return false
+  }
+
+  private async handleRequest(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+    // CORS headers for LAN communication
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Share-Token')
+
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204)
+      res.end()
+      return
+    }
+
+    const host = req.headers.host || `localhost:${this.share.port}`
+    const parsedUrl = new URL(req.url || '/', `http://${host}`)
+    const pathname = decodeURIComponent(parsedUrl.pathname)
+
+    // Client IP extraction & lockout check (连续密码错误5次锁定30分钟)
+    const clientIp = IpLockManager.normalizeIp(
+      (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress
+    )
+    const lockStatus = IpLockManager.checkLock(clientIp)
+    if (lockStatus.locked) {
+      if (
+        req.headers.accept &&
+        req.headers.accept.includes('text/html') &&
+        !pathname.startsWith('/api/')
+      ) {
+        res.writeHead(429, { 'Content-Type': 'text/html; charset=utf-8' })
+        res.end(this.renderLockedHtml(lockStatus.remainingMinutes))
+      } else {
+        res.writeHead(429, { 'Content-Type': 'application/json; charset=utf-8' })
+        res.end(
+          JSON.stringify({
+            success: false,
+            error: `该IP因密码连续错误5次已被锁定30分钟，还剩 ${lockStatus.remainingMinutes} 分钟解除锁定`,
+            locked: true,
+            remainingMinutes: lockStatus.remainingMinutes
+          })
+        )
+      }
+      return
+    }
+
+    // 1. API: Info
+    if (pathname === '/api/info') {
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
+      res.end(
+        JSON.stringify({
+          id: this.share.id,
+          title: this.share.title || '',
+          fileCount: this.share.files.length,
+          hasPassword: !!this.share.password,
+          createdAt: this.share.createdAt
+        })
+      )
+      return
+    }
+
+    // 2. API: Verify Password
+    if (pathname === '/api/verify' && req.method === 'POST') {
+      const body = await this.readRequestBody(req)
+      let password = ''
+      try {
+        const json = JSON.parse(body)
+        password = (json.password || '').trim()
+      } catch {
+        password = (body || '').trim()
+      }
+
+      if (!this.share.password || password === this.share.password) {
+        IpLockManager.recordSuccess(clientIp)
+        const token = crypto
+          .createHmac('sha256', this.serverSecret)
+          .update(`${Date.now()}-${Math.random()}`)
+          .digest('hex')
+        this.validTokens.add(token)
+
+        res.setHeader('Set-Cookie', `share_token=${token}; Path=/; HttpOnly; SameSite=Lax`)
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
+        res.end(JSON.stringify({ success: true, token }))
+      } else {
+        const failResult = IpLockManager.recordFailure(clientIp)
+        if (failResult.locked) {
+          res.writeHead(429, { 'Content-Type': 'application/json; charset=utf-8' })
+          res.end(
+            JSON.stringify({
+              success: false,
+              error: '密码连续错误5次，该IP已被锁定30分钟，禁止访问',
+              locked: true,
+              remainingMinutes: failResult.remainingMinutes
+            })
+          )
+        } else {
+          res.writeHead(401, { 'Content-Type': 'application/json; charset=utf-8' })
+          res.end(
+            JSON.stringify({
+              success: false,
+              error: `提取密码错误（剩余尝试次数：${failResult.remainingAttempts}次）`,
+              remainingAttempts: failResult.remainingAttempts
+            })
+          )
+        }
+      }
+      return
+    }
+
+    // Check authentication for protected resources
+    const isAuthed = this.isAuthenticated(req, parsedUrl)
+
+    // 3. API: List Files
+    if (pathname === '/api/files') {
+      if (!isAuthed) {
+        res.writeHead(401, { 'Content-Type': 'application/json; charset=utf-8' })
+        res.end(JSON.stringify({ error: '需要输入提取密码' }))
+        return
+      }
+
+      const files = this.share.files.map((f) => ({
+        id: f.id,
+        name: f.name,
+        relativePath: f.relativePath,
+        size: f.size,
+        extension: f.extension,
+        updatedAt: f.updatedAt,
+        isMarkdown: ['.md', '.markdown'].includes(f.extension.toLowerCase())
+      }))
+
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
+      res.end(JSON.stringify({ title: this.share.title, files }))
+      return
+    }
+
+    // 4. API: Download single file (只允许根据文件ID+密码/Token进行下载，严禁传入任何路径参数，防止路径遍历)
+    if (pathname.startsWith('/api/download/')) {
+      const fileId = pathname.replace('/api/download/', '').trim()
+
+      // 安全校验：fileId 仅允许字母、数字、下划线和短横线，严禁任何路径分隔符或点号
+      if (!fileId || !/^[a-zA-Z0-9_-]+$/.test(fileId)) {
+        res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' })
+        res.end(JSON.stringify({ error: '无效的文件ID，禁止通过路径参数访问服务器文件' }))
+        return
+      }
+
+      // 严格仅在当前分享白名单列表中匹配文件
+      const file = this.share.files.find((f) => f.id === fileId)
+      if (!file) {
+        res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' })
+        res.end('文件不存在或未在分享列表中')
+        return
+      }
+
+      // 密码与权限校验（支持在请求中直接传入 password 参数或使用已校验 token）
+      let authed = false
+      if (!this.share.password) {
+        authed = true
+      } else {
+        const reqPassword =
+          parsedUrl.searchParams.get('password') ||
+          parsedUrl.searchParams.get('pwd') ||
+          (req.headers['x-share-password'] as string)
+
+        if (reqPassword) {
+          if (reqPassword === this.share.password) {
+            IpLockManager.recordSuccess(clientIp)
+            authed = true
+          } else {
+            const failResult = IpLockManager.recordFailure(clientIp)
+            if (failResult.locked) {
+              res.writeHead(429, { 'Content-Type': 'application/json; charset=utf-8' })
+              res.end(
+                JSON.stringify({
+                  error: '密码连续错误5次，该IP已被锁定30分钟，禁止访问',
+                  locked: true,
+                  remainingMinutes: failResult.remainingMinutes
+                })
+              )
+            } else {
+              res.writeHead(401, { 'Content-Type': 'application/json; charset=utf-8' })
+              res.end(
+                JSON.stringify({
+                  error: `提取密码错误（剩余尝试次数：${failResult.remainingAttempts}次）`,
+                  remainingAttempts: failResult.remainingAttempts
+                })
+              )
+            }
+            return
+          }
+        } else if (this.isAuthenticated(req, parsedUrl)) {
+          authed = true
+        }
+      }
+
+      if (!authed) {
+        res.writeHead(401, { 'Content-Type': 'application/json; charset=utf-8' })
+        res.end(JSON.stringify({ error: '下载需要提供正确的提取密码' }))
+        return
+      }
+
+      try {
+        const resolvedPath = path.resolve(file.absolutePath)
+        const stat = await fsPromises.stat(resolvedPath)
+        const encodedName = encodeURIComponent(file.name)
+        res.writeHead(200, {
+          'Content-Type': 'application/octet-stream',
+          'Content-Length': stat.size,
+          'Content-Disposition': `attachment; filename="${encodedName}"; filename*=UTF-8''${encodedName}`
+        })
+        const readStream = fs.createReadStream(resolvedPath)
+        readStream.pipe(res)
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' })
+        res.end('读取文件失败: ' + String(err))
+      }
+      return
+    }
+
+    // 5. API: Download All as ZIP
+    if (pathname === '/api/download-all') {
+      let authed = isAuthed
+      if (!authed && this.share.password) {
+        const reqPassword =
+          parsedUrl.searchParams.get('password') ||
+          parsedUrl.searchParams.get('pwd') ||
+          (req.headers['x-share-password'] as string)
+        if (reqPassword) {
+          if (reqPassword === this.share.password) {
+            IpLockManager.recordSuccess(clientIp)
+            authed = true
+          } else {
+            const failResult = IpLockManager.recordFailure(clientIp)
+            if (failResult.locked) {
+              res.writeHead(429, { 'Content-Type': 'application/json; charset=utf-8' })
+              res.end(
+                JSON.stringify({
+                  error: '密码连续错误5次，该IP已被锁定30分钟，禁止访问',
+                  locked: true,
+                  remainingMinutes: failResult.remainingMinutes
+                })
+              )
+            } else {
+              res.writeHead(401, { 'Content-Type': 'application/json; charset=utf-8' })
+              res.end(
+                JSON.stringify({
+                  error: `提取密码错误（剩余尝试次数：${failResult.remainingAttempts}次）`,
+                  remainingAttempts: failResult.remainingAttempts
+                })
+              )
+            }
+            return
+          }
+        }
+      }
+
+      if (!authed) {
+        res.writeHead(401, { 'Content-Type': 'application/json; charset=utf-8' })
+        res.end(JSON.stringify({ error: '需要输入提取密码' }))
+        return
+      }
+
+      try {
+        const zipInputs = []
+        for (const file of this.share.files) {
+          try {
+            const buf = await fsPromises.readFile(file.absolutePath)
+            zipInputs.push({
+              name: file.relativePath || file.name,
+              content: buf
+            })
+          } catch (e) {
+            console.warn('[LanShareServer] Skip unreadable file:', file.absolutePath, e)
+          }
+        }
+
+        const zipBuffer = createZipBuffer(zipInputs)
+        const zipName = encodeURIComponent(`${this.share.title || 'shared-files'}.zip`)
+
+        res.writeHead(200, {
+          'Content-Type': 'application/zip',
+          'Content-Length': zipBuffer.length,
+          'Content-Disposition': `attachment; filename="${zipName}"; filename*=UTF-8''${zipName}`
+        })
+        res.end(zipBuffer)
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' })
+        res.end('打包 ZIP 失败: ' + String(err))
+      }
+      return
+    }
+
+    // 6. API: Preview single file (for markdown / raw view)
+    if (pathname.startsWith('/api/preview/')) {
+      const fileId = pathname.replace('/api/preview/', '').trim()
+      if (!fileId || !/^[a-zA-Z0-9_-]+$/.test(fileId)) {
+        res.writeHead(400, { 'Content-Type': 'text/html; charset=utf-8' })
+        res.end('<h2>无效的文件ID</h2>')
+        return
+      }
+
+      if (!isAuthed) {
+        res.writeHead(401, { 'Content-Type': 'text/html; charset=utf-8' })
+        res.end('<h2>需要输入提取密码</h2>')
+        return
+      }
+
+      const file = this.share.files.find((f) => f.id === fileId)
+      if (!file) {
+        res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' })
+        res.end('<h2>文件未找到</h2>')
+        return
+      }
+
+      try {
+        const content = await fsPromises.readFile(file.absolutePath, 'utf8')
+        const html = this.renderMarkdownReaderHtml(file.name, content, file.id)
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+        res.end(html)
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'text/html; charset=utf-8' })
+        res.end('<h2>读取失败</h2>')
+      }
+      return
+    }
+
+    // 7. Web UI: Browser / Mobile Portal
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+    res.end(this.renderPortalHtml(isAuthed))
+  }
+
+  private readRequestBody(req: http.IncomingMessage): Promise<string> {
+    return new Promise((resolve, reject) => {
+      let body = ''
+      req.on('data', (chunk) => {
+        body += chunk
+        if (body.length > 1024 * 64) {
+          req.destroy()
+          reject(new Error('Payload too large'))
+        }
+      })
+      req.on('end', () => resolve(body))
+      req.on('error', reject)
+    })
+  }
+
+  private renderPortalHtml(isAuthed: boolean): string {
+    const hasPassword = !!this.share.password
+    let displayTitle = this.share.title
+    if (!displayTitle) {
+      if (hasPassword && !isAuthed) {
+        displayTitle = '局域网加密分享'
+      } else {
+        displayTitle = this.share.files.length === 1
+          ? this.share.files[0].name
+          : (this.share.files.length > 1 ? `${this.share.files[0].name} 等 ${this.share.files.length} 个文件` : '局域网文件分享')
+      }
+    }
+    const title = this.escapeHtml(displayTitle)
+    const fileCount = this.share.files.length
+
+    return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>${title} - MarkNote LAN Share</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --radius: 12px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --primary: #3b82f6;
+        --primary-hover: #2563eb;
+        --bg: #0f172a;
+        --card-bg: #1e293b;
+        --text: #f8fafc;
+        --text-muted: #94a3b8;
+        --border: #334155;
+      }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 16px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .container {
+      width: 100%;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+      padding-top: 10px;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      background: #eff6ff;
+      color: var(--primary);
+      margin-bottom: 8px;
+    }
+    @media (prefers-color-scheme: dark) {
+      .badge { background: #1e3a8a; }
+    }
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      word-break: break-all;
+    }
+    .subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .password-box {
+      text-align: center;
+      padding: 30px 16px;
+    }
+    .password-input {
+      font-size: 18px;
+      letter-spacing: 2px;
+      text-align: center;
+      width: 100%;
+      max-width: 320px;
+      padding: 10px 14px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg);
+      color: var(--text);
+      outline: none;
+      margin: 16px 0;
+      transition: border-color 0.2s;
+    }
+    .password-input:focus {
+      border-color: var(--primary);
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: background 0.2s;
+      text-decoration: none;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 13px;
+    }
+    .btn-outline {
+      background: transparent;
+      color: var(--primary);
+      border: 1px solid var(--primary);
+    }
+    .error-msg {
+      color: #ef4444;
+      font-size: 13px;
+      margin-top: 8px;
+      min-height: 18px;
+    }
+    .actions-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .file-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      margin-bottom: 10px;
+      background: var(--bg);
+      gap: 12px;
+    }
+    .file-item:last-child {
+      margin-bottom: 0;
+    }
+    .file-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .file-name {
+      font-size: 15px;
+      font-weight: 500;
+      word-break: break-all;
+      color: var(--text);
+    }
+    .file-meta {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .file-actions {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .footer {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 24px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="badge">局域网专属分享</div>
+      <h1>${title}</h1>
+      <div class="subtitle">共 ${fileCount} 个共享文件 · 实时内网直连</div>
+    </div>
+
+    ${
+      !isAuthed && hasPassword
+        ? `
+    <div class="card password-box">
+      <div style="font-size: 40px; margin-bottom: 8px;">🔒</div>
+      <h2 style="font-size: 18px; margin-bottom: 6px;">请输入提取密码</h2>
+      <p style="font-size: 13px; color: var(--text-muted);">此分享设有安全保护，请输入 10~18 位提取码（连续错5次将锁定30分钟）</p>
+      <input id="pwdInput" class="password-input" type="text" maxlength="18" placeholder="10-18位大小写字母与数字" autofocus autocomplete="off" />
+      <div>
+        <button id="verifyBtn" class="btn btn-primary" onclick="verifyPassword()">确认提取</button>
+      </div>
+      <div id="errMsg" class="error-msg"></div>
+    </div>
+    `
+        : `
+    <div class="card">
+      <div class="actions-bar">
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-muted);">文件列表 (${fileCount})</span>
+        <a href="/api/download-all" class="btn btn-primary btn-sm">📦 打包下载全部 (.zip)</a>
+      </div>
+      <div id="fileList">
+        ${this.share.files
+          .map((f) => {
+            const isMd = ['.md', '.markdown'].includes(f.extension.toLowerCase())
+            const sizeStr = this.formatSize(f.size)
+            const safeName = this.escapeHtml(f.name)
+            return `
+        <div class="file-item">
+          <div class="file-info">
+            <div class="file-name">${safeName}</div>
+            <div class="file-meta">${sizeStr} · ${f.extension || '文件'}</div>
+          </div>
+          <div class="file-actions">
+            ${
+              isMd
+                ? `<a href="/api/preview/${f.id}" class="btn btn-outline btn-sm">在线阅读</a>`
+                : ''
+            }
+            <a href="/api/download/${f.id}" class="btn btn-primary btn-sm">下载</a>
+          </div>
+        </div>
+        `
+          })
+          .join('')}
+      </div>
+    </div>
+    `
+    }
+
+    <div class="footer">由 MarkNote Suite 局域网服务提供</div>
+  </div>
+
+  <script>
+    const pwdInput = document.getElementById('pwdInput');
+    if (pwdInput) {
+      pwdInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') verifyPassword();
+      });
+
+      // 支持类似百度网盘直达链接：URL 携带 ?pwd=xxx 或 ?password=xxx 自动填入并验证
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const autoPwd = (urlParams.get('pwd') || urlParams.get('password') || '').trim();
+        if (autoPwd) {
+          pwdInput.value = autoPwd;
+          setTimeout(() => verifyPassword(), 200);
+        }
+      } catch (err) {}
+    }
+
+    async function verifyPassword() {
+      const pwd = (pwdInput ? pwdInput.value : '').trim();
+      const errMsg = document.getElementById('errMsg');
+      const verifyBtn = document.getElementById('verifyBtn');
+      if (!pwd) {
+        errMsg.innerText = '请输入提取密码';
+        return;
+      }
+      if (pwd.length < 10 || pwd.length > 18) {
+        errMsg.innerText = '提取密码长度必须在 10 ~ 18 位之间';
+        return;
+      }
+      errMsg.innerText = '';
+      verifyBtn.disabled = true;
+      verifyBtn.innerText = '校验中...';
+
+      try {
+        const res = await fetch('/api/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: pwd })
+        });
+        const data = await res.json();
+        if (data.success) {
+          window.location.reload();
+        } else {
+          errMsg.innerText = data.error || '提取密码错误';
+          if (data.locked) {
+            verifyBtn.disabled = true;
+            verifyBtn.innerText = '已被安全锁定';
+          } else {
+            verifyBtn.disabled = false;
+            verifyBtn.innerText = '确认提取';
+            if (pwdInput) pwdInput.select();
+          }
+        }
+      } catch (e) {
+        errMsg.innerText = '连接服务器失败或已被拒绝';
+        verifyBtn.disabled = false;
+        verifyBtn.innerText = '确认提取';
+      }
+    }
+  </script>
+</body>
+</html>`
+  }
+
+  private renderLockedHtml(remainingMinutes: number): string {
+    return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>访问受限 - IP 已被锁定</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; padding: 16px; box-sizing: border-box; text-align: center; }
+    .box { background: #1e293b; padding: 36px 24px; border-radius: 14px; border: 1px solid #ef4444; max-width: 440px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5); }
+    h1 { font-size: 20px; color: #ef4444; margin-bottom: 12px; }
+    p { color: #94a3b8; font-size: 14px; line-height: 1.6; margin-bottom: 12px; }
+    .time { font-size: 26px; font-weight: bold; color: #f59e0b; margin: 18px 0; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <div style="font-size: 52px; margin-bottom: 12px;">🚫</div>
+    <h1>当前 IP 已被安全锁定</h1>
+    <p>由于该 IP 地址连续输入提取密码错误达到 5 次，为防止暴力破解，系统已限制该 IP 访问与下载分享资源 30 分钟。</p>
+    <div class="time">剩余锁定时间：约 ${remainingMinutes} 分钟</div>
+    <p>请等待锁定时间结束后再尝试访问。</p>
+  </div>
+</body>
+</html>`
+  }
+
+  private renderMarkdownReaderHtml(fileName: string, content: string, fileId: string): string {
+    const safeTitle = this.escapeHtml(fileName)
+    const safeBody = this.convertMarkdownToHtml(content)
+
+    return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>${safeTitle} - 在线阅读</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --bg: #ffffff;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --code-bg: #f1f5f9;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --primary: #3b82f6;
+        --bg: #0f172a;
+        --text: #f1f5f9;
+        --text-muted: #94a3b8;
+        --border: #334155;
+        --code-bg: #1e293b;
+      }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      padding: 16px 20px 40px;
+    }
+    .top-nav {
+      max-width: 760px;
+      margin: 0 auto 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-btn {
+      font-size: 14px;
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .article {
+      max-width: 760px;
+      margin: 0 auto;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.5em;
+      margin-bottom: 0.6em;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+    h1 { font-size: 26px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+    h2 { font-size: 20px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { font-size: 18px; }
+    p { margin-bottom: 1em; }
+    pre {
+      background: var(--code-bg);
+      padding: 12px 16px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-family: Menlo, Monaco, Consolas, monospace;
+      font-size: 13px;
+      margin-bottom: 1.2em;
+    }
+    code {
+      background: var(--code-bg);
+      padding: 2px 5px;
+      border-radius: 4px;
+      font-family: Menlo, Monaco, Consolas, monospace;
+      font-size: 0.9em;
+    }
+    blockquote {
+      border-left: 4px solid var(--primary);
+      padding-left: 12px;
+      color: var(--text-muted);
+      margin: 1em 0;
+    }
+    ul, ol { margin-left: 20px; margin-bottom: 1em; }
+    li { margin-bottom: 4px; }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-bottom: 1.2em;
+      overflow-x: auto;
+      display: block;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      text-align: left;
+    }
+    th { background: var(--code-bg); }
+  </style>
+</head>
+<body>
+  <div class="top-nav">
+    <a href="/" class="nav-btn">← 返回文件列表</a>
+    <a href="/api/download/${fileId}" class="nav-btn">📥 下载源文件 (.md)</a>
+  </div>
+  <div class="article">
+    ${safeBody}
+  </div>
+</body>
+</html>`
+  }
+
+  private convertMarkdownToHtml(md: string): string {
+    let out = this.escapeHtml(md)
+
+    // Code blocks ```code```
+    out = out.replace(/```([\s\S]*?)```/g, (_m, code) => {
+      return `<pre><code>${code.trim()}</code></pre>`
+    })
+
+    // Inline code `code`
+    out = out.replace(/`([^`]+)`/g, '<code>$1</code>')
+
+    // Headers
+    out = out.replace(/^### (.*$)/gim, '<h3>$1</h3>')
+    out = out.replace(/^## (.*$)/gim, '<h2>$1</h2>')
+    out = out.replace(/^# (.*$)/gim, '<h1>$1</h1>')
+
+    // Bold & Italic
+    out = out.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    out = out.replace(/\*(.*?)\*/g, '<em>$1</em>')
+
+    // Blockquote
+    out = out.replace(/^\> (.*$)/gim, '<blockquote>$1</blockquote>')
+
+    // Unordered lists
+    out = out.replace(/^\s*-\s+(.*$)/gim, '<li>$1</li>')
+
+    // Paragraphs
+    out = out.replace(/\n\n+/g, '</p><p>')
+    out = `<p>${out}</p>`
+
+    return out
+  }
+
+  private escapeHtml(str: string): string {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;')
+  }
+
+  private formatSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  }
+}

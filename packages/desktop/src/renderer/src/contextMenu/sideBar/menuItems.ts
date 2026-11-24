@@ -197,6 +197,14 @@ export const getReloadWorkspace = () => ({
   }
 })
 
+export const getShareLan = () => ({
+  label: t('contextMenu.sideBar.shareLan'),
+  id: 'shareLanMenuItem',
+  click(_menuItem: unknown, _browserWindow: unknown) {
+    contextMenu.shareLan()
+  }
+})
+
 // Retained for backward compatibility
 export const NEW_FILE = getNewFile()
 export const NEW_DIRECTORY = getNewDirectory()

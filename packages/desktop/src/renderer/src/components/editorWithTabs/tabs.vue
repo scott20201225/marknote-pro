@@ -216,6 +216,17 @@ const showInFolder = (tabId: unknown) => {
   }
 }
 
+const shareLan = (tabId: unknown) => {
+  const tab = tabs.value.find((f) => f.id === tabId)
+  if (tab && tab.pathname) {
+    bus.emit('LAN_SHARE::open-create-modal', {
+      pathname: tab.pathname,
+      isDirectory: false,
+      title: tab.filename || tab.title
+    })
+  }
+}
+
 const handleContextMenu = (event: MouseEvent, tab: IFileState) => {
   if (tab.id) {
     showContextMenu(event, tab)
@@ -244,6 +255,7 @@ onMounted(() => {
   bus.on('TABS::rename', rename)
   bus.on('TABS::copy-path', copyPath)
   bus.on('TABS::show-in-folder', showInFolder)
+  bus.on('TABS::share-lan', shareLan)
   bus.on('EDITOR_TABS::change-max-width', changeMaxWidth)
 
   const tabsEl = tabContainer.value
@@ -307,6 +319,7 @@ onBeforeUnmount(() => {
   bus.off('TABS::rename', rename)
   bus.off('TABS::copy-path', copyPath)
   bus.off('TABS::show-in-folder', showInFolder)
+  bus.off('TABS::share-lan', shareLan)
   bus.off('EDITOR_TABS::change-max-width', changeMaxWidth)
 })
 

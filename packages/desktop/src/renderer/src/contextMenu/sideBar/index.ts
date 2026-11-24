@@ -19,7 +19,8 @@ import {
   getShowInFolder,
   getExpandAll,
   getCollapseAll,
-  getReloadWorkspace
+  getReloadWorkspace,
+  getShareLan
 } from './menuItems'
 import { popupContextMenu, type ContextMenuItem } from '../popupMenu'
 import { getNoteNodeKind } from '../../util/noteWorkspace'
@@ -92,7 +93,9 @@ export const showContextMenu = (
       SEPARATOR,
       getCopyPath(),
       SEPARATOR,
-      getShowInFolder()
+      getShowInFolder(),
+      SEPARATOR,
+      getShareLan()
     ]
   } else if (kind === 'area') {
     contextItems = [
@@ -112,7 +115,9 @@ export const showContextMenu = (
       SEPARATOR,
       getCopyPath(),
       SEPARATOR,
-      getShowInFolder()
+      getShowInFolder(),
+      SEPARATOR,
+      getShareLan()
     ]
   } else if (kind === 'document') {
     contextItems = [
@@ -130,7 +135,9 @@ export const showContextMenu = (
       SEPARATOR,
       getCopyPath(),
       SEPARATOR,
-      getShowInFolder()
+      getShowInFolder(),
+      SEPARATOR,
+      getShareLan()
     ]
   } else {
     contextItems = [
@@ -150,7 +157,9 @@ export const showContextMenu = (
       SEPARATOR,
       getCopyPath(),
       SEPARATOR,
-      getShowInFolder()
+      getShowInFolder(),
+      SEPARATOR,
+      getShareLan()
     ]
   }
 

@@ -67,6 +67,14 @@ export const getShowInFolder = () => ({
   }
 })
 
+export const getShareLan = () => ({
+  label: t('contextMenu.tabs.shareLan'),
+  id: 'shareLan',
+  click(menuItem: TabMenuItem, _browserWindow?: unknown) {
+    contextMenu.shareLan(menuItem._tabId)
+  }
+})
+
 // Retained for backward compatibility
 export const CLOSE_THIS = getCloseThis()
 export const CLOSE_OTHERS = getCloseOthers()

@@ -4,7 +4,8 @@ import {
   Search as SearchIcon,
   Setting as SettingIcon,
   Crop as CropIcon,
-  DocumentCopy as DocumentCopyIcon
+  DocumentCopy as DocumentCopyIcon,
+  Share as ShareIcon
 } from '@element-plus/icons-vue'
 import { t } from '@/i18n'
 
@@ -42,6 +43,11 @@ export const sideBarIcons: SideBarIconEntry[] = [
       return `${t('sideBar.icons.clipboardHistory')} (${shortcut})`
     },
     icon: DocumentCopyIcon
+  },
+  {
+    id: 'lanShare',
+    name: () => t('sideBar.icons.lanShare'),
+    icon: ShareIcon
   }
 ]
 

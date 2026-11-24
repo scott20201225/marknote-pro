@@ -87,6 +87,9 @@
       <move-node-dialog />
       <rename />
       <import-modal />
+      <create-share-modal />
+      <remote-share-modal />
+      <qr-code-modal />
     </div>
   </div>
   <about-dialog />
@@ -111,6 +114,9 @@ import ExportSettingDialog from '@/components/exportSettings/index.vue'
 import MoveNodeDialog from '@/components/moveNode/index.vue'
 import Rename from '@/components/rename/index.vue'
 import ImportModal from '@/components/import/index.vue'
+import CreateShareModal from '@/components/lanShare/createShareModal.vue'
+import RemoteShareModal from '@/components/lanShare/remoteShareModal.vue'
+import QrCodeModal from '@/components/lanShare/qrCodeModal.vue'
 import GitDesktop from '@/components/gitDesktop/index.vue'
 import TerminalView from '@/components/terminal/index.vue'
 import Drawio from '@/components/drawio/index.vue'
