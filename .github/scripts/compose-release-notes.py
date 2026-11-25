@@ -1,22 +1,9 @@
 #!/usr/bin/env python3
 import argparse
-import json
 import re
 import subprocess
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
-
-
-def format_size(num_bytes: int) -> str:
-    if num_bytes <= 0:
-        return "-"
-    units = ["B", "KB", "MB", "GB"]
-    size = float(num_bytes)
-    for unit in units:
-        if size < 1024 or unit == units[-1]:
-            return f"{int(size)} {unit}" if unit == "B" else f"{size:.1f} {unit}"
-        size /= 1024.0
-    return f"{num_bytes} B"
+from typing import List
 
 
 def detect_prev_tag(tag: str) -> str:
@@ -78,51 +65,6 @@ def fallback_git_log(prev_tag: str, tag: str) -> str:
         return ""
 
 
-def classify_assets(items: List[Tuple[str, int]]) -> Dict[str, List[Tuple[str, int]]]:
-    groups: Dict[str, List[Tuple[str, int]]] = {
-        "macOS": [],
-        "Windows": [],
-        "Linux": [],
-        "校验与自动更新元数据 / Checksums & Metadata": [],
-    }
-    for name, size in sorted(items, key=lambda x: x[0].lower()):
-        lower = name.lower()
-        if lower in ("sha256sums.txt", "builder-debug.yml") or lower.endswith(".yml") or lower.endswith(".blockmap"):
-            groups["校验与自动更新元数据 / Checksums & Metadata"].append((name, size))
-        elif "-mac-" in lower or lower.endswith(".dmg") or ("mac" in lower and lower.endswith(".zip")):
-            groups["macOS"].append((name, size))
-        elif "-win-" in lower or lower.endswith(".exe") or ("win" in lower and lower.endswith(".zip")):
-            groups["Windows"].append((name, size))
-        elif "-linux-" in lower or any(lower.endswith(ext) for ext in (".deb", ".rpm", ".snap", ".tar.gz", ".appimage")):
-            groups["Linux"].append((name, size))
-        else:
-            groups["校验与自动更新元数据 / Checksums & Metadata"].append((name, size))
-    return groups
-
-
-def render_artifacts_section(items: List[Tuple[str, int]]) -> str:
-    lines: List[str] = ["## 产物列表与校验 / Artifacts & Verification", ""]
-    if items:
-        groups = classify_assets(items)
-        lines.append("| 平台 / Platform | 产物文件 / File | 大小 / Size |")
-        lines.append("| --- | --- | --- |")
-        for platform, entries in groups.items():
-            for name, size in entries:
-                lines.append(f"| {platform} | `{name}` | {format_size(size)} |")
-        lines.append("")
-
-    lines.extend(
-        [
-            "所有安装包的 SHA-256 校验值均记录在 `SHA256SUMS.txt` 中，可通过以下命令校验：",
-            "",
-            "```bash",
-            "sha256sum -c SHA256SUMS.txt --ignore-missing",
-            "```",
-        ]
-    )
-    return "\n".join(lines).strip()
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(description="Compose standardized Release Notes.")
     parser.add_argument("--tag", required=True)
@@ -166,26 +108,10 @@ def main() -> None:
     if install_path.exists():
         sections.append(install_path.read_text(encoding="utf-8").strip())
 
-    # 3. 再次展示：产品简介与对比选择
+    # 3. 再次展示：轻量产品描述、对比、Git 与下载链接
     intro_path = Path(args.intro)
     if intro_path.exists():
         sections.append(intro_path.read_text(encoding="utf-8").strip())
-
-    # 4. 最后展示：产物列表与校验
-    items: List[Tuple[str, int]] = []
-    if args.assets_json:
-        raw = json.loads(Path(args.assets_json).read_text(encoding="utf-8"))
-        for entry in raw:
-            if isinstance(entry, dict) and entry.get("name"):
-                items.append((str(entry["name"]), int(entry.get("size") or 0)))
-    elif args.dist_dir:
-        dist_path = Path(args.dist_dir)
-        if dist_path.is_dir():
-            for child in dist_path.iterdir():
-                if child.is_file():
-                    items.append((child.name, child.stat().st_size))
-
-    sections.append(render_artifacts_section(items))
 
     final_body = "\n\n---\n\n".join(s for s in sections if s) + "\n"
     Path(args.output).write_text(final_body, encoding="utf-8")
