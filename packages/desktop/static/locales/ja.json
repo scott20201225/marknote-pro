@@ -308,7 +308,8 @@
       "expandWorkspace": "ワークスペースを展開",
       "collapseWorkspace": "ワークスペースを折りたたむ",
       "screenCapture": "画面キャプチャ",
-      "clipboardHistory": "クリップボード履歴"
+      "clipboardHistory": "クリップボード履歴",
+      "lanShare": "LAN共有"
     },
     "lanShare": "LAN共有"
   },
@@ -1873,6 +1874,7 @@
     "passwordTip": "総当たり攻撃防止 · 5回失敗で30分間IPロック",
     "passwordPlaceholder": "10〜18文字の英数字（空欄でパスワード不要）",
     "refreshPassword": "コード再生成",
+    "noPasswordBtn": "パスなし",
     "pendingFiles": "共有対象ファイル",
     "totalSize": "合計",
     "selectAll": "すべて選択",
@@ -1901,6 +1903,29 @@
     "browseOtherFolder": "別の場所を参照...",
     "downloadSelected": "📥 選択したファイルをダウンロード ({count})",
     "downloadSuccess": "ファイルをダウンロードしました",
-    "markNoteAreaWarning": "MarkNoteノートはAREA_*フォルダー内に保存する必要があります。デフォルトフォルダーにリダイレクトされました。"
+    "markNoteAreaWarning": "MarkNoteノートはAREA_*フォルダー内に保存する必要があります。デフォルトフォルダーにリダイレクトされました。",
+    "selectOneFileWarn": "共有するファイルを少なくとも1つ選択してください",
+    "passwordLengthWarn": "パスコードは10～18文字である必要があります",
+    "passwordFormatWarn": "パスコードには半角英数字のみ使用できます",
+    "shareStartedSuccess": "LAN共有を開始しました！",
+    "shareStartFailed": "共有の開始に失敗しました: {error}",
+    "shareLinkPrefix": "リンク: ",
+    "shareCodePrefix": "パスコード: ",
+    "fileFallback": "ファイル",
+    "unspecified": "未指定",
+    "downloadingProgress": "ダウンロード中... ({progress})",
+    "defaultAreaLabel": "⭐ デフォルトエリア: [Dump] Downloads",
+    "defaultFolderLabel": "⭐ デフォルトフォルダ: Dump/Downloads",
+    "tagRecommended": "推奨",
+    "tagArea": "エリア",
+    "tagFolder": "フォルダ",
+    "markNoteAreaPathWarn": "MarkNoteではノートを AREA_ フォルダ内にのみ保存できます",
+    "enterPasswordWarn": "パスコードを入力してください",
+    "passwordLengthExactWarn": "パスコードは10～18文字にしてください",
+    "wrongPasswordErr": "パスコードが正しくありません",
+    "connectFailedErr": "接続に失敗しました: {error}",
+    "fetchFilesFailedErr": "ファイル一覧の取得に失敗しました: {error}",
+    "downloadSuccessToDir": "{count} 個のファイルを保存しました：{dir}",
+    "downloadErrorErr": "ダウンロード中にエラーが発生しました: {error}"
   }
 }

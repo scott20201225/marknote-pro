@@ -308,7 +308,8 @@
       "expandWorkspace": "Arbeitsbereich erweitern",
       "collapseWorkspace": "Arbeitsbereich einklappen",
       "screenCapture": "Bildschirmaufnahme",
-      "clipboardHistory": "Zwischenablage-Verlauf"
+      "clipboardHistory": "Zwischenablage-Verlauf",
+      "lanShare": "LAN-Freigabe"
     },
     "lanShare": "LAN-Freigabe"
   },
@@ -1874,6 +1875,7 @@
     "passwordTip": "Schutz vor Brute-Force · 5 Fehlversuche sperren IP für 30 Min.",
     "passwordPlaceholder": "10-18 Groß-, Kleinbuchstaben und Ziffern (leer für kein Passwort)",
     "refreshPassword": "Neuer Code",
+    "noPasswordBtn": "Kein Code",
     "pendingFiles": "Dateien zur Freigabe",
     "totalSize": "Gesamt",
     "selectAll": "Alle auswählen",
@@ -1902,6 +1904,29 @@
     "browseOtherFolder": "Anderen Ort wählen...",
     "downloadSelected": "📥 Ausgewählte herunterladen ({count})",
     "downloadSuccess": "Dateien erfolgreich heruntergeladen",
-    "markNoteAreaWarning": "MarkNote-Notizen müssen in einem AREA_*-Verzeichnis abgelegt werden. Zum Standardverzeichnis umgeleitet."
+    "markNoteAreaWarning": "MarkNote-Notizen müssen in einem AREA_*-Verzeichnis abgelegt werden. Zum Standardverzeichnis umgeleitet.",
+    "selectOneFileWarn": "Bitte wählen Sie mindestens eine Datei zum Teilen aus",
+    "passwordLengthWarn": "Der Code muss zwischen 10 und 18 Zeichen lang sein",
+    "passwordFormatWarn": "Der Code darf nur Buchstaben und Ziffern enthalten",
+    "shareStartedSuccess": "LAN-Freigabe gestartet!",
+    "shareStartFailed": "Freigabe fehlgeschlagen: {error}",
+    "shareLinkPrefix": "Link: ",
+    "shareCodePrefix": "Code: ",
+    "fileFallback": "Datei",
+    "unspecified": "Nicht angegeben",
+    "downloadingProgress": "Wird heruntergeladen... ({progress})",
+    "defaultAreaLabel": "⭐ Standardbereich: [Dump] Downloads",
+    "defaultFolderLabel": "⭐ Standardordner: Dump/Downloads",
+    "tagRecommended": "Empfohlen",
+    "tagArea": "Bereich",
+    "tagFolder": "Ordner",
+    "markNoteAreaPathWarn": "MarkNote erlaubt das Speichern von Notizen nur in einem AREA_-Ordner",
+    "enterPasswordWarn": "Bitte Zugangscode eingeben",
+    "passwordLengthExactWarn": "Der Code muss 10-18 Zeichen lang sein",
+    "wrongPasswordErr": "Falscher Zugangscode",
+    "connectFailedErr": "Verbindung fehlgeschlagen: {error}",
+    "fetchFilesFailedErr": "Dateiliste konnte nicht abgerufen werden: {error}",
+    "downloadSuccessToDir": "{count} Datei(en) heruntergeladen nach: {dir}",
+    "downloadErrorErr": "Download-Fehler: {error}"
   }
 }

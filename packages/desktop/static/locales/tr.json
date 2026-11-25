@@ -308,7 +308,8 @@
       "expandWorkspace": "Çalışma alanını genişlet",
       "collapseWorkspace": "Çalışma alanını daralt",
       "screenCapture": "Ekran Görüntüsü",
-      "clipboardHistory": "Pano Geçmişi"
+      "clipboardHistory": "Pano Geçmişi",
+      "lanShare": "Yerel Ağ Paylaşımı"
     },
     "lanShare": "Yerel Ağ Paylaşımı"
   },
@@ -1873,6 +1874,7 @@
     "passwordTip": "Kaba kuvvet koruması · 5 hatalı denemede IP 30 dakika kilitlenir",
     "passwordPlaceholder": "10-18 büyük, küçük harf ve rakam (şifresiz için boş bırakın)",
     "refreshPassword": "Yeni Kod",
+    "noPasswordBtn": "Şifresiz",
     "pendingFiles": "Paylaşılacak dosyalar",
     "totalSize": "Toplam",
     "selectAll": "Tümünü Seç",
@@ -1901,6 +1903,29 @@
     "browseOtherFolder": "Başka bir konuma gözat...",
     "downloadSelected": "📥 Seçilenleri İndir ({count})",
     "downloadSuccess": "Dosyalar başarıyla indirildi",
-    "markNoteAreaWarning": "MarkNote notları bir AREA_* dizinine kaydedilmelidir. Varsayılan AREA dizinine yönlendirildi."
+    "markNoteAreaWarning": "MarkNote notları bir AREA_* dizinine kaydedilmelidir. Varsayılan AREA dizinine yönlendirildi.",
+    "selectOneFileWarn": "Lütfen paylaşmak için en az bir dosya seçin",
+    "passwordLengthWarn": "Erişim kodu 10 ile 18 karakter arasında olmalıdır",
+    "passwordFormatWarn": "Erişim kodu yalnızca harf ve rakam içerebilir",
+    "shareStartedSuccess": "Yerel ağ paylaşımı başlatıldı!",
+    "shareStartFailed": "Paylaşım başlatılamadı: {error}",
+    "shareLinkPrefix": "Bağlantı: ",
+    "shareCodePrefix": "Erişim Kodu: ",
+    "fileFallback": "Dosya",
+    "unspecified": "Belirtilmemiş",
+    "downloadingProgress": "İndiriliyor... ({progress})",
+    "defaultAreaLabel": "⭐ Varsayılan Alan: [Dump] Downloads",
+    "defaultFolderLabel": "⭐ Varsayılan Klasör: Dump/Downloads",
+    "tagRecommended": "Önerilen",
+    "tagArea": "Alan",
+    "tagFolder": "Klasör",
+    "markNoteAreaPathWarn": "MarkNote yalnızca AREA_ ile başlayan klasörlere kaydetmeye izin verir",
+    "enterPasswordWarn": "Lütfen erişim kodunu girin",
+    "passwordLengthExactWarn": "Erişim kodu 10-18 karakter olmalıdır",
+    "wrongPasswordErr": "Hatalı erişim kodu",
+    "connectFailedErr": "Bağlantı başarısız: {error}",
+    "fetchFilesFailedErr": "Dosya listesi alınamadı: {error}",
+    "downloadSuccessToDir": "{count} dosya indirildi: {dir}",
+    "downloadErrorErr": "İndirme hatası: {error}"
   }
 }

@@ -308,7 +308,8 @@
       "expandWorkspace": "Expandir espacio de trabajo",
       "collapseWorkspace": "Contraer espacio de trabajo",
       "screenCapture": "Captura de pantalla",
-      "clipboardHistory": "Historial del portapapeles"
+      "clipboardHistory": "Historial del portapapeles",
+      "lanShare": "Compartir por LAN"
     },
     "lanShare": "Compartir por LAN"
   },
@@ -1873,6 +1874,7 @@
     "passwordTip": "Anti fuerza bruta · 5 fallos bloquean la IP por 30m",
     "passwordPlaceholder": "10-18 mayúsculas, minúsculas y dígitos (en blanco para sin contraseña)",
     "refreshPassword": "Nuevo código",
+    "noPasswordBtn": "Sin código",
     "pendingFiles": "Archivos a compartir",
     "totalSize": "Total",
     "selectAll": "Seleccionar todo",
@@ -1901,6 +1903,29 @@
     "browseOtherFolder": "Explorar otra ubicación...",
     "downloadSelected": "📥 Descargar seleccionados ({count})",
     "downloadSuccess": "Archivos descargados con éxito",
-    "markNoteAreaWarning": "Las notas de MarkNote deben guardarse en un directorio AREA_*. Redirigido al directorio AREA predeterminado."
+    "markNoteAreaWarning": "Las notas de MarkNote deben guardarse en un directorio AREA_*. Redirigido al directorio AREA predeterminado.",
+    "selectOneFileWarn": "Seleccione al menos un archivo para compartir",
+    "passwordLengthWarn": "El código debe tener entre 10 y 18 caracteres",
+    "passwordFormatWarn": "El código solo puede contener letras y dígitos",
+    "shareStartedSuccess": "¡Compartición por LAN iniciada!",
+    "shareStartFailed": "Error al iniciar la compartición: {error}",
+    "shareLinkPrefix": "Enlace: ",
+    "shareCodePrefix": "Código: ",
+    "fileFallback": "Archivo",
+    "unspecified": "Sin especificar",
+    "downloadingProgress": "Descargando... ({progress})",
+    "defaultAreaLabel": "⭐ Área predeterminada: [Dump] Downloads",
+    "defaultFolderLabel": "⭐ Carpeta predeterminada: Dump/Downloads",
+    "tagRecommended": "Recomendado",
+    "tagArea": "Área",
+    "tagFolder": "Carpeta",
+    "markNoteAreaPathWarn": "MarkNote solo permite guardar notas en una carpeta AREA_",
+    "enterPasswordWarn": "Ingrese el código de acceso",
+    "passwordLengthExactWarn": "El código debe tener 10-18 caracteres",
+    "wrongPasswordErr": "Código incorrecto",
+    "connectFailedErr": "Error de conexión: {error}",
+    "fetchFilesFailedErr": "Error al obtener lista de archivos: {error}",
+    "downloadSuccessToDir": "Se descargaron {count} archivo(s) en: {dir}",
+    "downloadErrorErr": "Error durante la descarga: {error}"
   }
 }

@@ -338,7 +338,8 @@
       "expandWorkspace": "展開工作區",
       "collapseWorkspace": "折疊工作區",
       "screenCapture": "螢幕截圖",
-      "clipboardHistory": "剪貼簿歷史"
+      "clipboardHistory": "剪貼簿歷史",
+      "lanShare": "區域網路分享"
     },
     "lanShare": "區域網路分享"
   },
@@ -1911,6 +1912,7 @@
     "passwordTip": "防暴力破解 · 連續錯5次鎖定30分鐘",
     "passwordPlaceholder": "10-18位大小寫字母與數字組合（留空則免密）",
     "refreshPassword": "換一個",
+    "noPasswordBtn": "免密",
     "pendingFiles": "待選檔案",
     "totalSize": "總計",
     "selectAll": "全選",
@@ -1939,6 +1941,29 @@
     "browseOtherFolder": "瀏覽其他位置...",
     "downloadSelected": "📥 下載所選檔案 ({count})",
     "downloadSuccess": "檔案下載成功",
-    "markNoteAreaWarning": "MarkNote 筆記必須保存在 AREA_* 分區目錄下，已為您自動重導向到預設目錄。"
+    "markNoteAreaWarning": "MarkNote 筆記必須保存在 AREA_* 分區目錄下，已為您自動重導向到預設目錄。",
+    "selectOneFileWarn": "請至少勾選一個檔案進行分享",
+    "passwordLengthWarn": "提取密碼長度必須在 10 ~ 18 位之間",
+    "passwordFormatWarn": "提取密碼只能包含大小寫英文字母與數字",
+    "shareStartedSuccess": "區域網路分享已啟動！",
+    "shareStartFailed": "啟動分享失敗: {error}",
+    "shareLinkPrefix": "連結: ",
+    "shareCodePrefix": "提取碼: ",
+    "fileFallback": "檔案",
+    "unspecified": "未指定",
+    "downloadingProgress": "正在下載... ({progress})",
+    "defaultAreaLabel": "⭐ 預設分區: [Dump] Downloads",
+    "defaultFolderLabel": "⭐ 預設目錄: Dump/Downloads",
+    "tagRecommended": "預設推薦",
+    "tagArea": "分區",
+    "tagFolder": "資料夾",
+    "markNoteAreaPathWarn": "MarkNote 僅支援將筆記檔案儲存至分區目錄（目錄名稱須以 AREA_ 開頭）",
+    "enterPasswordWarn": "請輸入提取密碼",
+    "passwordLengthExactWarn": "提取密碼長度應為 10~18 位",
+    "wrongPasswordErr": "提取密碼錯誤",
+    "connectFailedErr": "連線失敗: {error}",
+    "fetchFilesFailedErr": "取得檔案清單失敗: {error}",
+    "downloadSuccessToDir": "成功下載 {count} 個檔案至：{dir}",
+    "downloadErrorErr": "下載過程中發生錯誤: {error}"
   }
 }

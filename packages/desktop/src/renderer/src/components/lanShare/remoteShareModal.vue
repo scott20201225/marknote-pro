@@ -64,7 +64,7 @@
             />
             <div class="file-info-col">
               <span class="file-name">{{ file.name }}</span>
-              <span class="file-meta">{{ formatSize(file.size) }} · {{ file.extension || '文件' }}</span>
+              <span class="file-meta">{{ formatSize(file.size) }} · {{ file.extension || t('lanShare.fileFallback') }}</span>
             </div>
           </div>
         </div>
@@ -115,12 +115,12 @@
           </el-button>
         </div>
         <div class="loc-current-path" :title="targetSavePath">
-          {{ targetSavePath || '未指定' }}
+          {{ targetSavePath || t('lanShare.unspecified') }}
         </div>
       </div>
 
       <div v-if="downloading" class="download-progress-box">
-        <span>正在下载... ({{ downloadProgressText }})</span>
+        <span>{{ t('lanShare.downloadingProgress', { progress: downloadProgressText }) }}</span>
       </div>
     </div>
 
@@ -243,9 +243,9 @@ const folderOptions = computed<FolderOption[]>(() => {
     // 1. MarkNotePro: 默认 {工作区}/GROUP_Dump/AREA_Downloads
     const defaultPath = `${root}/GROUP_Dump/AREA_Downloads`
     options.push({
-      label: '⭐ 默认分区: [Dump] Downloads',
+      label: t('lanShare.defaultAreaLabel'),
       value: defaultPath,
-      tag: '默认推荐'
+      tag: t('lanShare.tagRecommended')
     })
 
     // 2. 扫描工作区内已有的所有 AREA（只能选择AREA）
@@ -256,7 +256,7 @@ const folderOptions = computed<FolderOption[]>(() => {
         options.push({
           label: `📑 ${area.display}`,
           value: area.path,
-          tag: '分区'
+          tag: t('lanShare.tagArea')
         })
       }
     }
@@ -264,9 +264,9 @@ const folderOptions = computed<FolderOption[]>(() => {
     // 1. marktext-pro: 默认 {工作区}/Dump/Downloads
     const defaultPath = `${root}/Dump/Downloads`
     options.push({
-      label: '⭐ 默认目录: Dump/Downloads',
+      label: t('lanShare.defaultFolderLabel'),
       value: defaultPath,
-      tag: '默认推荐'
+      tag: t('lanShare.tagRecommended')
     })
 
     // 2. 扫描工作区内所有文件夹
@@ -277,7 +277,7 @@ const folderOptions = computed<FolderOption[]>(() => {
         options.push({
           label: `📁 ${folder.display}`,
           value: folder.path,
-          tag: '文件夹'
+          tag: t('lanShare.tagFolder')
         })
       }
     }
@@ -307,7 +307,7 @@ const selectCustomFolder = async () => {
     if (isMarkNote.value) {
       const base = selected.split(/[/\\]/).pop() || ''
       if (!base.startsWith('AREA_')) {
-        ElMessage.warning('MarkNote 仅支持将笔记文件保存至分区（目录名须以 AREA_ 开头）')
+        ElMessage.warning(t('lanShare.markNoteAreaPathWarn'))
         return
       }
     }
@@ -359,11 +359,11 @@ const verifyPassword = async () => {
   if (!share.value) return
   const pwd = passwordInput.value.trim()
   if (!pwd) {
-    pwdError.value = '请输入提取密码'
+    pwdError.value = t('lanShare.enterPasswordWarn')
     return
   }
   if (pwd.length < 10 || pwd.length > 18) {
-    pwdError.value = '提取密码长度应为 10~18 位'
+    pwdError.value = t('lanShare.passwordLengthExactWarn')
     return
   }
 
@@ -380,10 +380,10 @@ const verifyPassword = async () => {
       isVerified.value = true
       await fetchFiles()
     } else {
-      pwdError.value = res.error || '提取密码错误'
+      pwdError.value = res.error || t('lanShare.wrongPasswordErr')
     }
   } catch (err: any) {
-    pwdError.value = '连接失败: ' + err.message
+    pwdError.value = t('lanShare.connectFailedErr', { error: err.message })
   } finally {
     verifying.value = false
   }
@@ -402,7 +402,7 @@ const fetchFiles = async () => {
     // 默认全选远程文件以方便快速下载
     selectedIds.value = remoteFiles.value.map((f) => f.id)
   } catch (err: any) {
-    ElMessage.error('获取文件列表失败: ' + err.message)
+    ElMessage.error(t('lanShare.fetchFilesFailedErr', { error: err.message }))
   } finally {
     loadingFiles.value = false
   }
@@ -420,7 +420,7 @@ const startDownload = async () => {
     if (isMarkNote.value) {
       const base = selected.split(/[/\\]/).pop() || ''
       if (!base.startsWith('AREA_')) {
-        ElMessage.warning('MarkNote 仅支持将笔记文件保存至分区目录（目录名须以 AREA_ 开头）')
+        ElMessage.warning(t('lanShare.markNoteAreaPathWarn'))
         return
       }
     }
@@ -453,7 +453,7 @@ const startDownload = async () => {
       successCount++
     }
 
-    ElMessage.success(`成功下载 ${successCount} 个文件至：${targetDir}`)
+    ElMessage.success(t('lanShare.downloadSuccessToDir', { count: successCount, dir: targetDir }))
 
     // 如果保存位置在当前打开的工作区内，主动触发刷新工作区侧边栏树
     const rootPath = projectStore.projectTree?.pathname
@@ -463,7 +463,7 @@ const startDownload = async () => {
 
     visible.value = false
   } catch (err: any) {
-    ElMessage.error('下载过程中出错: ' + err.message)
+    ElMessage.error(t('lanShare.downloadErrorErr', { error: err.message }))
   } finally {
     downloading.value = false
   }

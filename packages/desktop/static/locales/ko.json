@@ -308,7 +308,8 @@
       "expandWorkspace": "작업 영역 확장",
       "collapseWorkspace": "작업 영역 축소",
       "screenCapture": "화면 캡처",
-      "clipboardHistory": "클립보드 기록"
+      "clipboardHistory": "클립보드 기록",
+      "lanShare": "LAN 공유"
     },
     "lanShare": "LAN 공유"
   },
@@ -1873,6 +1874,7 @@
     "passwordTip": "무차별 대입 방지 · 5회 실패 시 30분 동안 IP 차단",
     "passwordPlaceholder": "10-18자 영문 대소문자 및 숫자 조합 (비워두면 무암호)",
     "refreshPassword": "코드 재생성",
+    "noPasswordBtn": "비번 없음",
     "pendingFiles": "공유할 파일",
     "totalSize": "총계",
     "selectAll": "모두 선택",
@@ -1901,6 +1903,29 @@
     "browseOtherFolder": "다른 위치 찾아보기...",
     "downloadSelected": "📥 선택 항목 다운로드 ({count})",
     "downloadSuccess": "파일 다운로드 완료",
-    "markNoteAreaWarning": "MarkNote 노트는 AREA_* 디렉터리 안에 저장해야 합니다. 기본 디렉터리로 리디렉션되었습니다."
+    "markNoteAreaWarning": "MarkNote 노트는 AREA_* 디렉터리 안에 저장해야 합니다. 기본 디렉터리로 리디렉션되었습니다.",
+    "selectOneFileWarn": "공유할 파일을 하나 이상 선택하세요",
+    "passwordLengthWarn": "비밀번호는 10~18자여야 합니다",
+    "passwordFormatWarn": "비밀번호는 영문 대소문자와 숫자만 사용할 수 있습니다",
+    "shareStartedSuccess": "LAN 공유가 시작되었습니다!",
+    "shareStartFailed": "공유 시작 실패: {error}",
+    "shareLinkPrefix": "링크: ",
+    "shareCodePrefix": "추출 코드: ",
+    "fileFallback": "파일",
+    "unspecified": "미지정",
+    "downloadingProgress": "다운로드 중... ({progress})",
+    "defaultAreaLabel": "⭐ 기본 영역: [Dump] Downloads",
+    "defaultFolderLabel": "⭐ 기본 폴더: Dump/Downloads",
+    "tagRecommended": "추천",
+    "tagArea": "영역",
+    "tagFolder": "폴더",
+    "markNoteAreaPathWarn": "MarkNote는 노트를 AREA_ 폴더에만 저장할 수 있습니다",
+    "enterPasswordWarn": "추출 비밀번호를 입력하세요",
+    "passwordLengthExactWarn": "비밀번호는 10~18자여야 합니다",
+    "wrongPasswordErr": "비밀번호가 올바르지 않습니다",
+    "connectFailedErr": "연결 실패: {error}",
+    "fetchFilesFailedErr": "파일 목록 가져오기 실패: {error}",
+    "downloadSuccessToDir": "{count}개의 파일을 저장했습니다: {dir}",
+    "downloadErrorErr": "다운로드 중 오류 발생: {error}"
   }
 }

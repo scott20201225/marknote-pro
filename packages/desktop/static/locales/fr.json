@@ -308,7 +308,8 @@
       "expandWorkspace": "Développer l'espace de travail",
       "collapseWorkspace": "Réduire l'espace de travail",
       "screenCapture": "Capture d'écran",
-      "clipboardHistory": "Historique du presse-papiers"
+      "clipboardHistory": "Historique du presse-papiers",
+      "lanShare": "Partage LAN"
     },
     "lanShare": "Partage LAN"
   },
@@ -1873,6 +1874,7 @@
     "passwordTip": "Protection anti force brute · 5 échecs bloquent l'IP pendant 30 min",
     "passwordPlaceholder": "10-18 majuscules, minuscules et chiffres (vide pour sans mot de passe)",
     "refreshPassword": "Nouveau code",
+    "noPasswordBtn": "Sans code",
     "pendingFiles": "Fichiers à partager",
     "totalSize": "Total",
     "selectAll": "Tout sélectionner",
@@ -1899,6 +1901,31 @@
     "workspaceTip": "(Dossier de l'espace de travail)",
     "selectFolderPlaceholder": "Sélectionner un dossier de destination",
     "browseOtherFolder": "Parcourir un autre emplacement...",
-    "downloadSelected": "📥 Télécharger la sélection ({count})"
+    "downloadSelected": "📥 Télécharger la sélection ({count})",
+    "downloadSuccess": "Téléchargement réussi",
+    "markNoteAreaWarning": "Les notes MarkNote doivent être enregistrées dans un répertoire AREA_*. Redirection vers le dossier AREA par défaut.",
+    "selectOneFileWarn": "Veuillez sélectionner au moins un fichier à partager",
+    "passwordLengthWarn": "Le code doit contenir entre 10 et 18 caractères",
+    "passwordFormatWarn": "Le code ne peut contenir que des lettres et des chiffres",
+    "shareStartedSuccess": "Partage LAN démarré !",
+    "shareStartFailed": "Échec du démarrage du partage : {error}",
+    "shareLinkPrefix": "Lien : ",
+    "shareCodePrefix": "Code : ",
+    "fileFallback": "Fichier",
+    "unspecified": "Non spécifié",
+    "downloadingProgress": "Téléchargement... ({progress})",
+    "defaultAreaLabel": "⭐ Zone par défaut : [Dump] Downloads",
+    "defaultFolderLabel": "⭐ Dossier par défaut : Dump/Downloads",
+    "tagRecommended": "Recommandé",
+    "tagArea": "Zone",
+    "tagFolder": "Dossier",
+    "markNoteAreaPathWarn": "MarkNote autorise uniquement l’enregistrement dans un dossier AREA_",
+    "enterPasswordWarn": "Veuillez saisir le code d’accès",
+    "passwordLengthExactWarn": "Le code doit contenir 10 à 18 caractères",
+    "wrongPasswordErr": "Code d’accès incorrect",
+    "connectFailedErr": "Échec de la connexion : {error}",
+    "fetchFilesFailedErr": "Échec de récupération des fichiers : {error}",
+    "downloadSuccessToDir": "{count} fichier(s) téléchargé(s) dans : {dir}",
+    "downloadErrorErr": "Erreur lors du téléchargement : {error}"
   }
 }

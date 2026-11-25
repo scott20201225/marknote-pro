@@ -37,6 +37,11 @@
             clearable
           />
           <el-button type="info" plain @click="refreshPassword">{{ t('lanShare.refreshPassword') }}</el-button>
+          <el-button
+            :type="!password ? 'success' : 'info'"
+            plain
+            @click="clearPassword"
+          >{{ t('lanShare.noPasswordBtn') }}</el-button>
         </div>
       </div>
 
@@ -193,6 +198,10 @@ const refreshPassword = () => {
   password.value = generateSecurePassword(12)
 }
 
+const clearPassword = () => {
+  password.value = ''
+}
+
 const toggleFile = (path: string) => {
   const idx = selectedFiles.value.indexOf(path)
   if (idx > -1) {
@@ -245,18 +254,18 @@ const openModal = async (payload: { pathname: string; isDirectory?: boolean; tit
 
 const startShare = async () => {
   if (selectedFiles.value.length === 0) {
-    ElMessage.warning('请至少勾选一个文件进行分享')
+    ElMessage.warning(t('lanShare.selectOneFileWarn'))
     return
   }
 
   const pwd = password.value.trim()
   if (pwd) {
     if (pwd.length < 10 || pwd.length > 18) {
-      ElMessage.warning('提取密码长度必须在 10 ~ 18 位之间')
+      ElMessage.warning(t('lanShare.passwordLengthWarn'))
       return
     }
     if (!/^[A-Za-z0-9]+$/.test(pwd)) {
-      ElMessage.warning('提取密码只能包含大小写英文字母和数字')
+      ElMessage.warning(t('lanShare.passwordFormatWarn'))
       return
     }
   }
@@ -275,12 +284,12 @@ const startShare = async () => {
     const record = await window.electron.ipcRenderer.invoke('mt::lan-share:create', cleanPayload)
 
     visible.value = false
-    ElMessage.success('局域网分享已启动！')
+    ElMessage.success(t('lanShare.shareStartedSuccess'))
 
     // 弹出二维码与链接查看面板
     bus.emit('LAN_SHARE::open-qr-modal', record)
   } catch (err: any) {
-    ElMessage.error('启动分享失败: ' + err.message)
+    ElMessage.error(t('lanShare.shareStartFailed', { error: err.message }))
   } finally {
     submitting.value = false
   }
@@ -358,6 +367,11 @@ onBeforeUnmount(() => {
 .password-input-group {
   display: flex;
   gap: 8px;
+}
+
+.password-input-group .el-button {
+  margin-left: 0;
+  flex-shrink: 0;
 }
 
 .folder-selection-area {

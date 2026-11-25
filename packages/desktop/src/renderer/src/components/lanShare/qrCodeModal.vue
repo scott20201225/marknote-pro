@@ -154,9 +154,9 @@ const copyShareInfo = () => {
   const title = displayTitle.value
   let text = ''
   if (share.value.password) {
-    text = `【${title}】${t('lanShare.panelTitle')}\n链接: ${share.value.url}\n提取码: ${share.value.password}`
+    text = `【${title}】${t('lanShare.panelTitle')}\n${t('lanShare.shareLinkPrefix')}${share.value.url}\n${t('lanShare.shareCodePrefix')}${share.value.password}`
   } else {
-    text = `【${title}】${t('lanShare.panelTitle')}\n链接: ${share.value.url} (${t('lanShare.noPassword')})`
+    text = `【${title}】${t('lanShare.panelTitle')}\n${t('lanShare.shareLinkPrefix')}${share.value.url} (${t('lanShare.noPassword')})`
   }
   copyText(text, t('lanShare.copyShareInfoSuccess'))
 }

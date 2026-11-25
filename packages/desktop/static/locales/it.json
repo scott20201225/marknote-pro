@@ -308,7 +308,8 @@
       "expandWorkspace": "Espandi area di lavoro",
       "collapseWorkspace": "Comprimi area di lavoro",
       "screenCapture": "Cattura schermo",
-      "clipboardHistory": "Cronologia appunti"
+      "clipboardHistory": "Cronologia appunti",
+      "lanShare": "Condivisione LAN"
     },
     "lanShare": "Condivisione LAN"
   },
@@ -1873,6 +1874,7 @@
     "passwordTip": "Anti brute-force · 5 errori bloccano l'IP per 30m",
     "passwordPlaceholder": "10-18 maiuscole, minuscole e numeri (vuoto per nessuna password)",
     "refreshPassword": "Nuovo codice",
+    "noPasswordBtn": "Senza codice",
     "pendingFiles": "File da condividere",
     "totalSize": "Totale",
     "selectAll": "Seleziona tutto",
@@ -1901,6 +1903,29 @@
     "browseOtherFolder": "Sfoglia altra posizione...",
     "downloadSelected": "📥 Scarica selezionati ({count})",
     "downloadSuccess": "File scaricati con successo",
-    "markNoteAreaWarning": "Le note MarkNote devono essere salvate in una cartella AREA_*. Reindirizzato alla cartella AREA predefinita."
+    "markNoteAreaWarning": "Le note MarkNote devono essere salvate in una cartella AREA_*. Reindirizzato alla cartella AREA predefinita.",
+    "selectOneFileWarn": "Seleziona almeno un file da condividere",
+    "passwordLengthWarn": "Il codice deve contenere tra 10 e 18 caratteri",
+    "passwordFormatWarn": "Il codice può contenere solo lettere e cifre",
+    "shareStartedSuccess": "Condivisione LAN avviata!",
+    "shareStartFailed": "Impossibile avviare la condivisione: {error}",
+    "shareLinkPrefix": "Link: ",
+    "shareCodePrefix": "Codice: ",
+    "fileFallback": "File",
+    "unspecified": "Non specificato",
+    "downloadingProgress": "Download in corso... ({progress})",
+    "defaultAreaLabel": "⭐ Area predefinita: [Dump] Downloads",
+    "defaultFolderLabel": "⭐ Cartella predefinita: Dump/Downloads",
+    "tagRecommended": "Consigliato",
+    "tagArea": "Area",
+    "tagFolder": "Cartella",
+    "markNoteAreaPathWarn": "MarkNote consente di salvare le note solo in una cartella AREA_",
+    "enterPasswordWarn": "Inserisci il codice di accesso",
+    "passwordLengthExactWarn": "Il codice deve essere di 10-18 caratteri",
+    "wrongPasswordErr": "Codice errato",
+    "connectFailedErr": "Connessione non riuscita: {error}",
+    "fetchFilesFailedErr": "Impossibile recuperare la lista file: {error}",
+    "downloadSuccessToDir": "Scaricati {count} file in: {dir}",
+    "downloadErrorErr": "Errore durante il download: {error}"
   }
 }

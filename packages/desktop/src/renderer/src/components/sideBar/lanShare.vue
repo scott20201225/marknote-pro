@@ -368,9 +368,9 @@ const copyShareInfo = (share: LanShareRecord) => {
   const mainTitle = getShareMainTitle(share)
   let text = ''
   if (share.password) {
-    text = `【${mainTitle}】${t('lanShare.panelTitle')}\n链接: ${share.url}\n提取码: ${share.password}`
+    text = `【${mainTitle}】${t('lanShare.panelTitle')}\n${t('lanShare.shareLinkPrefix')}${share.url}\n${t('lanShare.shareCodePrefix')}${share.password}`
   } else {
-    text = `【${mainTitle}】${t('lanShare.panelTitle')}\n链接: ${share.url} (${t('lanShare.noPassword')})`
+    text = `【${mainTitle}】${t('lanShare.panelTitle')}\n${t('lanShare.shareLinkPrefix')}${share.url} (${t('lanShare.noPassword')})`
   }
   copyText(text, t('lanShare.copyShareInfoSuccess'))
 }
