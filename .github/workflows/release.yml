@@ -213,6 +213,7 @@ jobs:
         uses: actions/checkout@v4.3.1
         with:
           ref: ${{ github.sha }}
+          fetch-depth: 0
 
       # upload-artifact@v4 treats `dist/` as the common-ancestor root and
       # stores files flat inside each artifact (no `dist/` prefix). Downloading
@@ -237,24 +238,12 @@ jobs:
       - name: Compose release notes body
         env:
           RELEASE_TAG: ${{ needs.resolve.outputs.release_tag }}
-          IS_PRERELEASE: ${{ contains(needs.resolve.outputs.release_tag, '-') }}
         run: |
-          {
-            cat .github/release-notes/intro-bilingual.md
-            echo
-            if [[ "$IS_PRERELEASE" == "true" ]]; then
-              echo "## ❗ This is a pre-release"
-              echo "- May contain bugs and unfinished features."
-              echo ""
-            fi
-            cat .github/release-notes/macos-unsigned-zh-CN.md
-            echo
-            echo "## Verifying downloads"
-            echo "All artifacts are listed with their SHA-256 in \`SHA256SUMS.txt\`. Verify with:"
-            echo '```'
-            echo 'sha256sum -c SHA256SUMS.txt --ignore-missing'
-            echo '```'
-          } > release_body.md
+          python3 .github/scripts/compose-release-notes.py \
+            --tag "${RELEASE_TAG}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --dist-dir dist \
+            --output release_body.md
 
       # Immutable-release repos forbid adding assets to an already-published
       # release, and action-gh-release publishes before uploading the assets.
@@ -265,7 +254,7 @@ jobs:
         with:
           draft: true
           prerelease: ${{ contains(needs.resolve.outputs.release_tag, '-') }}
-          generate_release_notes: true
+          generate_release_notes: false
           tag_name: ${{ needs.resolve.outputs.release_tag }}
           name: ${{ needs.resolve.outputs.release_tag }}
           body_path: release_body.md

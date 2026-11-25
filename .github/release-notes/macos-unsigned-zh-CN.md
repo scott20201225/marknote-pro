@@ -1,38 +1,14 @@
-## macOS 安装说明
+## 安装说明 / Installation Guide
 
-因为当前 macOS 安装包未进行 Apple Developer ID 签名，若软件提示“已损坏”或者“未知来源”，可参照下列方法进行处理：
-
-- 先打开【系统偏好设置】→【安全性与隐私】→【通用】，查看是否允许“任何来源”；若无此选项，打开终端输入：
-
-  ```bash
-  sudo spctl --master-disable
-  ```
-
-  回车并输入管理员密码。
-
-- 若仍报错，在终端执行：
+- **Windows**：下载 `-setup.exe` 安装向导运行安装，或下载 `.zip` 绿色压缩包解压即用。
+- **Linux**：按发行版选择 `.deb`、`.rpm`、`.snap` 安装包，或解压 `.tar.gz` 运行。
+- **macOS（未签名提示处理 / Unsigned App Notice）**：
+  由于当前 macOS 安装包采用 Ad-hoc 签名（暂未接入 Apple Developer ID 公证），若系统提示“**已损坏**”或“**无法验证开发者**”，请在终端执行以下命令后重新打开：
 
   ```bash
   sudo xattr -r -d com.apple.quarantine /Applications/MarkNotePro.app
   ```
 
-  回车并输入管理员密码。
+  > 若未安装在 `/Applications` 目录，可输入 `sudo xattr -r -d com.apple.quarantine `（末尾保留空格），再将 `MarkNotePro.app` 拖入终端回车即可；如仍无“任何来源”选项，可执行 `sudo spctl --master-disable`。
 
-- 若默认路径命令仍不成功，说明软件可能没有安装在默认位置。此时在终端执行：
-
-  ```bash
-  sudo xattr -r -d com.apple.quarantine 
-  ```
-
-  注意命令最后保留一个空格，然后将 MarkNotePro 从 `Applications` 文件夹拖入终端窗口补全路径，回车并输入管理员密码。
-
----
-
-### macOS Installation Notice
-
-Since the macOS build is currently ad-hoc signed without an Apple Developer ID certificate, if macOS warns that the application "is damaged and can't be opened" or is from an "unidentified developer", please run the following command in Terminal:
-
-```bash
-sudo xattr -r -d com.apple.quarantine /Applications/MarkNotePro.app
-```
-(Press Enter and enter your administrator password). If installed in a non-standard path, run `sudo xattr -r -d com.apple.quarantine ` (with a trailing space) and drag the app bundle from Finder into Terminal to append its path.
+  *For macOS users seeing "is damaged and can't be opened" or "unidentified developer", run `sudo xattr -r -d com.apple.quarantine /Applications/MarkNotePro.app` in Terminal (or drag the app after `sudo xattr -r -d com.apple.quarantine ` if placed elsewhere).*
