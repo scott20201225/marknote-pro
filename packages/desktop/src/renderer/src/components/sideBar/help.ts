@@ -5,7 +5,9 @@ import {
   Setting as SettingIcon,
   Crop as CropIcon,
   DocumentCopy as DocumentCopyIcon,
-  Share as ShareIcon
+  Share as ShareIcon,
+  Switch as SwitchIcon,
+  FolderAdd as FolderAddIcon
 } from '@element-plus/icons-vue'
 import { t } from '@/i18n'
 
@@ -25,6 +27,16 @@ export const sideBarIcons: SideBarIconEntry[] = [
     id: 'search',
     name: () => t('sideBar.icons.search'),
     icon: SearchIcon
+  },
+  {
+    id: 'switchGitWorkspace',
+    name: () => t('sideBar.icons.switchGitWorkspace'),
+    icon: SwitchIcon
+  },
+  {
+    id: 'mergeWorkspace',
+    name: () => t('sideBar.icons.mergeWorkspace'),
+    icon: FolderAddIcon
   },
   {
     id: 'screenCapture',

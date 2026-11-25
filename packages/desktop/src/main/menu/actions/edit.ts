@@ -41,11 +41,31 @@ ipcMain.on('mt::ask-for-image-auto-path', (e, { pathname, src, id }) => {
 
 // --- Menu actions -------------------------------------------------------------
 
+const getFocusedBrowserViewWebContents = (win: BrowserWindow): Electron.WebContents | null => {
+  const views = win.getBrowserViews()
+  const focusedView = views.find(
+    (v) => !v.webContents.isDestroyed() && v.webContents.isFocused()
+  )
+  return focusedView ? focusedView.webContents : null
+}
+
 export const editorUndo = (win: Win): void => {
+  if (!win) return
+  const viewWc = getFocusedBrowserViewWebContents(win)
+  if (viewWc) {
+    viewWc.undo()
+    return
+  }
   edit(win, 'undo')
 }
 
 export const editorRedo = (win: Win): void => {
+  if (!win) return
+  const viewWc = getFocusedBrowserViewWebContents(win)
+  if (viewWc) {
+    viewWc.redo()
+    return
+  }
   edit(win, 'redo')
 }
 
@@ -58,10 +78,22 @@ export const editorCopyAsHtml = (win: Win): void => {
 }
 
 export const editorPasteAsPlainText = (win: Win): void => {
+  if (!win) return
+  const viewWc = getFocusedBrowserViewWebContents(win)
+  if (viewWc) {
+    viewWc.pasteAndMatchStyle()
+    return
+  }
   edit(win, 'pasteAsPlainText')
 }
 
 export const editorSelectAll = (win: Win): void => {
+  if (!win) return
+  const viewWc = getFocusedBrowserViewWebContents(win)
+  if (viewWc) {
+    viewWc.selectAll()
+    return
+  }
   edit(win, 'selectAll')
 }
 
@@ -105,19 +137,22 @@ export const edit = (win: Win, type: string): void => {
 
 export const nativeCut = (win: Win): void => {
   if (win) {
-    win.webContents.cut()
+    const wc = getFocusedBrowserViewWebContents(win) ?? win.webContents
+    wc.cut()
   }
 }
 
 export const nativeCopy = (win: Win): void => {
   if (win) {
-    win.webContents.copy()
+    const wc = getFocusedBrowserViewWebContents(win) ?? win.webContents
+    wc.copy()
   }
 }
 
 export const nativePaste = (win: Win): void => {
   if (win) {
-    win.webContents.paste()
+    const wc = getFocusedBrowserViewWebContents(win) ?? win.webContents
+    wc.paste()
   }
 }
 

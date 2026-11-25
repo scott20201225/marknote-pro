@@ -8,6 +8,7 @@ import { Ref } from '../lib/ref'
 
 interface IConfirmRepositorySwitchProps {
   readonly repository: Repository | CloningRepository
+  readonly isCloned?: boolean
   readonly onConfirmation: (
     repository: Repository | CloningRepository,
     switchNoteWorkspace: boolean
@@ -36,12 +37,21 @@ export class ConfirmRepositorySwitch extends React.Component<
   public render() {
     const isSwitching = this.state.isSwitching
     const canSwitchNoteWorkspace = this.props.repository instanceof Repository
+    const isCloned = !!this.props.isCloned
 
     return (
       <Dialog
         id="confirm-repository-switch"
         key="repository-switch-confirmation"
-        title={__DARWIN__ ? 'Switch Repository?' : 'Switch repository?'}
+        title={
+          isCloned
+            ? __DARWIN__
+              ? 'Clone Completed?'
+              : 'Clone completed?'
+            : __DARWIN__
+            ? 'Switch Repository?'
+            : 'Switch repository?'
+        }
         dismissDisabled={isSwitching}
         loading={isSwitching}
         disabled={isSwitching}
@@ -49,7 +59,11 @@ export class ConfirmRepositorySwitch extends React.Component<
         onSubmit={this.onSubmit}
       >
         <DialogContent>
-          <p>Are you sure you want to switch to this repository?</p>
+          <p>
+            {isCloned
+              ? 'Repository cloned successfully. Switch workspace to this repository?'
+              : 'Are you sure you want to switch to this repository?'}
+          </p>
           <div className="description">
             <p>Repository:</p>
             <p>
@@ -71,7 +85,7 @@ export class ConfirmRepositorySwitch extends React.Component<
         </DialogContent>
         <DialogFooter>
           <OkCancelButtonGroup
-            okButtonText="Switch"
+            okButtonText={isCloned ? 'OK' : 'Switch'}
             okButtonDisabled={isSwitching}
             cancelButtonDisabled={isSwitching}
           />

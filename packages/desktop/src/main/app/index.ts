@@ -35,6 +35,7 @@ import { setLanguage } from '../i18n'
 import { getNativeThemeSource, isDarkApplicationTheme } from './nativeTheme'
 import type Accessor from './accessor'
 import type WindowManager from './windowManager'
+import { recordRecentWorkspace } from '../workspaceMigration'
 
 interface CliArgs {
   _: string[]
@@ -232,6 +233,12 @@ class App {
     const startUpAction = rawPreferences.startUpAction
     const defaultDirectoryToOpen = rawPreferences.defaultDirectoryToOpen
     const lastOpenedFolder = preferences.getItem<string>('lastOpenedFolder')
+    if (defaultDirectoryToOpen) {
+      void recordRecentWorkspace(defaultDirectoryToOpen)
+    }
+    if (lastOpenedFolder) {
+      void recordRecentWorkspace(lastOpenedFolder)
+    }
     const theme = normalizeAppTheme(rawPreferences.theme)
     const language = rawPreferences.language
     const followSystemTheme = preferences.getItem<boolean>('followSystemTheme')
@@ -870,6 +877,7 @@ class App {
     ipcMain.on('mt::reload-workspace', (event, pathname: string) => {
       const win = BrowserWindow.fromWebContents(event.sender)
       if (!win || !pathname) return
+      void recordRecentWorkspace(pathname)
       const editor = this._windowManager.get(win.id) as EditorWindow | undefined
       if (editor) {
         editor.openFolder(pathname, true)
@@ -895,7 +903,23 @@ class App {
         properties: ['openDirectory', 'createDirectory']
       })
       if (filePaths && filePaths[0]) {
-        preferences.setItems({ defaultDirectoryToOpen: filePaths[0] })
+        const selectedPath = normalizeAndResolvePath(filePaths[0])
+        preferences.setItems({
+          defaultDirectoryToOpen: selectedPath,
+          startUpAction: 'folder'
+        })
+        void recordRecentWorkspace(selectedPath)
+
+        const senderWin = this._windowManager.get(win.id)
+        const editorWin = (
+          senderWin?.type === WindowType.EDITOR
+            ? senderWin
+            : this._windowManager.getActiveEditor() ??
+              this._windowManager.getWindowsByType(WindowType.EDITOR)[0]?.win
+        ) as EditorWindow | undefined
+        if (editorWin) {
+          editorWin.openFolder(selectedPath, true)
+        }
       }
     })
 

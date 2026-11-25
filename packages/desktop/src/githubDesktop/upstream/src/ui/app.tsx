@@ -278,6 +278,26 @@ export class App extends React.Component<IAppProps, IAppState> {
 
   private updateIntervalHandle?: number
 
+  private lastRepositoriesSnapshot = ''
+
+  private syncRepositoriesToHost(
+    repositories: ReadonlyArray<Repository | CloningRepository>
+  ) {
+    const clean = repositories
+      .filter((r): r is Repository => r instanceof Repository)
+      .map(r => ({
+        id: r.id,
+        name: r.name,
+        path: r.path,
+        missing: r.missing,
+      }))
+    const snapshot = JSON.stringify(clean)
+    if (snapshot !== this.lastRepositoriesSnapshot) {
+      this.lastRepositoriesSnapshot = snapshot
+      ipcRenderer.send('mt::github-desktop::repositories-updated', clean)
+    }
+  }
+
   private repositoryViewRef = React.createRef<RepositoryView>()
 
   /**
@@ -318,8 +338,10 @@ export class App extends React.Component<IAppProps, IAppState> {
     })
 
     this.state = props.appStore.getState()
+    this.syncRepositoriesToHost(this.state.repositories)
     props.appStore.onDidUpdate(state => {
       this.setState(state)
+      this.syncRepositoriesToHost(state.repositories)
     })
 
     props.appStore.onDidError(error => {
@@ -327,6 +349,18 @@ export class App extends React.Component<IAppProps, IAppState> {
     })
 
     ipcRenderer.on('menu-event', (_, name) => this.onMenuEvent(name))
+    ipcRenderer.on('mt::github-desktop::select-repository-by-path', (_event, repoPath) => {
+      if (!repoPath) return
+      const normalized = repoPath.replace(/[/\\]+$/, '').toLowerCase()
+      const match = this.state.repositories.find(
+        (r): r is Repository =>
+          r instanceof Repository &&
+          (r.path === repoPath || r.path.replace(/[/\\]+$/, '').toLowerCase() === normalized)
+      )
+      if (match) {
+        void this.props.dispatcher.selectRepository(match)
+      }
+    })
 
     updateStore.onDidChange(async state => {
       const status = state.status
@@ -2024,6 +2058,7 @@ export class App extends React.Component<IAppProps, IAppState> {
           <ConfirmRepositorySwitch
             key="confirm-repository-switch"
             repository={popup.repository}
+            isCloned={popup.isCloned}
             onConfirmation={this.onConfirmRepositorySwitch}
             onDismissed={onPopupDismissedFn}
           />

@@ -865,6 +865,12 @@ export class Dispatcher {
           type: PopupType.ChooseForkSettings,
           repository: addedRepository,
         })
+      } else {
+        this.showPopup({
+          type: PopupType.ConfirmRepositorySwitch,
+          repository: addedRepository,
+          isCloned: true,
+        })
       }
 
       return addedRepository

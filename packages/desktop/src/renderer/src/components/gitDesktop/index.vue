@@ -12,7 +12,9 @@
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { ElMessage } from 'element-plus'
+import { useI18n } from 'vue-i18n'
 import { usePreferencesStore } from '@/store/preferences'
+import { useProjectStore } from '@/store/project'
 import bus from '@/bus'
 import { isOsx } from '@/util'
 import type {
@@ -21,8 +23,10 @@ import type {
   GitHubDesktopThemePayload
 } from '@shared/types/ipc'
 
+const { t } = useI18n()
 const surfaceRef = ref<HTMLDivElement | null>(null)
 const preferencesStore = usePreferencesStore()
+const projectStore = useProjectStore()
 const { language, theme, zoom } = storeToRefs(preferencesStore)
 let boundsSyncAnimationFrame = 0
 
@@ -151,11 +155,10 @@ const switchToNote = (): void => {
   window.dispatchEvent(new CustomEvent('marknotepro:switch-workbench', { detail: 'note' }))
 }
 
-const setWorkspacePath = async(
-  workspacePath: string,
+const commitWorkspaceSwitch = async(
+  normalizedWorkspacePath: string,
   options: { switchToNote: boolean; showMessage: boolean }
 ): Promise<void> => {
-  const normalizedWorkspacePath = window.path.normalize(workspacePath)
   await window.fileUtils.ensureDir(normalizedWorkspacePath)
   preferencesStore.SET_SINGLE_PREFERENCE({
     type: 'defaultDirectoryToOpen',
@@ -166,8 +169,53 @@ const setWorkspacePath = async(
     window.dispatchEvent(new CustomEvent('marknotepro:switch-workbench', { detail: 'note' }))
   }
   if (options.showMessage) {
-    ElMessage.success('已切换笔记工作区。')
+    const msg = t('workspaceMigration.workspaceSwitched')
+    if (options.switchToNote) {
+      ElMessage.success(msg)
+    } else {
+      window.electron.ipcRenderer.send('mt::github-desktop::toast', { type: 'success', message: msg })
+    }
   }
+}
+
+const setWorkspacePath = async(
+  workspacePath: string,
+  options: { switchToNote: boolean; showMessage: boolean }
+): Promise<void> => {
+  const previousWorkspacePath =
+    preferencesStore.defaultDirectoryToOpen || projectStore.projectTree?.pathname || ''
+  const normalizedWorkspacePath = window.path.normalize(workspacePath)
+
+  if (previousWorkspacePath) {
+    const normPrev = window.path.normalize(previousWorkspacePath)
+    if (normPrev !== normalizedWorkspacePath) {
+      try {
+        const [prevInfo, targetInfo] = await Promise.all([
+          window.electron.ipcRenderer.invoke('mt::workspace-migration:inspect', normPrev),
+          window.electron.ipcRenderer.invoke(
+            'mt::workspace-migration:inspect',
+            normalizedWorkspacePath
+          )
+        ])
+        if (prevInfo?.exists && !prevInfo.hasGit && prevInfo.fileCount > 0 && targetInfo?.hasGit) {
+          bus.emit('WORKSPACE::open-migration-prompt', {
+            sourceDir: normPrev,
+            targetDir: normalizedWorkspacePath,
+            fromGitDesktopSilent: true,
+            pendingSwitch: {
+              targetWorkbench: options.switchToNote ? 'note' : undefined,
+              showMessage: true
+            }
+          })
+          return
+        }
+      } catch {
+        // ignore inspect error
+      }
+    }
+  }
+
+  await commitWorkspaceSwitch(normalizedWorkspacePath, options)
 }
 
 const applyWorkspacePath = async(_event: unknown, workspacePath: string): Promise<void> => {

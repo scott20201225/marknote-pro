@@ -50,6 +50,10 @@ import {
   zoomIn,
   zoomOut
 } from '../windows/utils'
+import { updateCachedGitRepositories } from '../workspaceMigration'
+import type { GitRepositoryCacheEntry } from '../../shared/types/workspaceMigration'
+
+const pendingSelectRepoPathByWindow = new Map<number, string>()
 
 interface GitHubDesktopViewEntry {
   view: BrowserView
@@ -657,6 +661,14 @@ const replayGitHubDesktopState = (entry: GitHubDesktopViewEntry): void => {
     if (entry.currentLocalePayload) {
       sendGitHubDesktopLocale(entry, entry.currentLocalePayload)
     }
+    const winId = Array.from(views.entries()).find(([, item]) => item === entry)?.[0]
+    if (winId !== undefined && pendingSelectRepoPathByWindow.has(winId)) {
+      const pendingRepo = pendingSelectRepoPathByWindow.get(winId)
+      if (pendingRepo && entry.loaded && !entry.view.webContents.isDestroyed()) {
+        entry.view.webContents.send('mt::github-desktop::select-repository-by-path', pendingRepo)
+        pendingSelectRepoPathByWindow.delete(winId)
+      }
+    }
   }
 
   sendState()
@@ -1083,32 +1095,14 @@ const registerGitHubDesktopViewHandlers = (): void => {
       type: 'question',
       message: text.setWorkspaceTitle,
       detail: text.setWorkspaceDetail,
-      buttons: [text.useRepositoryRoot, text.selectSubdirectory, text.cancel],
+      buttons: [text.ok, text.cancel],
       defaultId: 0,
-      cancelId: 2
+      cancelId: 1
     })
 
-    if (choice.response === 2) return null
+    if (choice.response !== 0) return null
 
-    let workspacePath = normalizedRepositoryPath
-    if (choice.response === 1) {
-      const result = await dialog.showOpenDialog(win, {
-        defaultPath: normalizedRepositoryPath,
-        properties: ['openDirectory', 'createDirectory']
-      })
-      if (result.canceled) return null
-
-      const selectedPath = path.normalize(result.filePaths[0] ?? '')
-      if (!selectedPath || !isChildPath(normalizedRepositoryPath, selectedPath)) {
-        await dialog.showMessageBox(win, {
-          type: 'warning',
-          message: text.selectRepositorySubdirectory,
-          buttons: [text.ok]
-        })
-        return null
-      }
-      workspacePath = selectedPath
-    }
+    const workspacePath = normalizedRepositoryPath
 
     await fs.ensureDir(workspacePath)
     win.webContents.send('mt::github-desktop::workspace-selected', workspacePath)
@@ -1166,6 +1160,15 @@ const registerGitHubDesktopViewHandlers = (): void => {
     if (!win || !workspacePath) return
     win.webContents.send('mt::github-desktop::workspace-selected-silent', workspacePath)
   })
+
+  ipcMain.on('mt::github-desktop::toast', (event, payload: { type?: string; message?: string }) => {
+    const win = getWindowFromSender(event)
+    if (!win || !payload?.message) return
+    const entry = views.get(win.id)
+    if (entry && !entry.view.webContents.isDestroyed()) {
+      entry.view.webContents.send('marknotepro-toast', payload)
+    }
+  })
 }
 
 const registerGitHubDesktopRendererHandlers = (): void => {
@@ -1221,6 +1224,23 @@ const registerGitHubDesktopRendererHandlers = (): void => {
       entry.currentRepositoryPath = repositoryPath
     }
     win.webContents.send('mt::github-desktop::selected-repository-path', repositoryPath)
+  })
+  ipcMain.on('mt::github-desktop::repositories-updated', (_event, repositories: GitRepositoryCacheEntry[]) => {
+    void updateCachedGitRepositories(repositories)
+  })
+  ipcMain.on('mt::github-desktop::select-repository-by-path', (event, repoPath: string) => {
+    const win = getWindowFromSender(event)
+    if (!win || !repoPath) return
+    const normalized = path.normalize(repoPath)
+    const entry = views.get(win.id)
+    if (entry) {
+      entry.currentRepositoryPath = normalized
+      if (entry.loaded && !entry.view.webContents.isDestroyed()) {
+        entry.view.webContents.send('mt::github-desktop::select-repository-by-path', normalized)
+        return
+      }
+    }
+    pendingSelectRepoPathByWindow.set(win.id, normalized)
   })
   ipcMain.on('install-windows-cli', () => undefined)
   ipcMain.on('uninstall-windows-cli', () => undefined)

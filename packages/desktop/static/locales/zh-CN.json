@@ -347,7 +347,9 @@
       "collapseWorkspace": "折叠工作区",
       "screenCapture": "屏幕截图",
       "clipboardHistory": "剪贴板历史",
-      "lanShare": "局域网分享"
+      "lanShare": "局域网分享",
+      "switchGitWorkspace": "切换工作区",
+      "mergeWorkspace": "合并其他工作区至此工作区"
     },
     "lanShare": "局域网分享"
   },
@@ -1822,7 +1824,16 @@
         "Are you sure you want to switch to this repository?": "确认切换到这个 Git 仓库吗？",
         "Repository:": "仓库：",
         "Also switch notes workspace to this repository": "同时切换笔记工作区到该仓库",
-        "Switch": "切换"
+        "Switch": "切换",
+        "Clone Completed?": "克隆完成 · 切换工作区？",
+        "Clone completed?": "克隆完成 · 切换工作区？",
+        "Repository cloned successfully. Switch workspace to this repository?": "仓库克隆成功！是否将工作区切换至此仓库？",
+        "Amend last commit": "修改上一次提交",
+        "Generate commit message with Copilot": "使用 Copilot 生成提交信息",
+        "Cancel generating commit details": "取消生成提交详情",
+        "Commit options": "提交选项",
+        "This binary file has changed.": "此二进制文件已更改。",
+        "Open file in external program.": "在外部程序中打开文件。"
       }
     },
     "menu": {
@@ -1962,7 +1973,7 @@
         "selectRepositoryFirst": "请先选择一个 Git 仓库。",
         "ok": "确定",
         "setWorkspaceTitle": "设置笔记工作区",
-        "setWorkspaceDetail": "这将会切换笔记目录。默认使用当前 Git 项目根目录，也可以选择项目下的子目录。",
+        "setWorkspaceDetail": "这将会将当前 Git 项目根目录切换为笔记工作区。",
         "useRepositoryRoot": "使用项目根目录",
         "selectSubdirectory": "选择子目录",
         "cancel": "取消"
@@ -2142,5 +2153,53 @@
       "testFailed": "连接测试失败: {error}",
       "saveSuccess": "已保存连接配置"
     }
+  },
+  "workspaceMigration": {
+    "switchGitTitle": "切换工作区",
+    "switchGitDesc": "可从 Git 工作区、历史工作区列表中选择切换，或直接选择系统本地文件夹。",
+    "noGitReposTitle": "暂无已记录的工作区",
+    "noGitReposDesc": "你可以直接选择系统本地文件夹作为工作区，或前往 Git 工作台添加/克隆仓库。",
+    "goToGitWorkbench": "前往 Git 工作台",
+    "currentBadge": "当前工作区",
+    "cancel": "取消",
+    "confirm": "确定",
+    "switchedToRepoSuccess": "已切换工作区至：{name}",
+    "workspaceSwitched": "已切换工作区。",
+    "autoPromptTitle": "迁移原工作区文件至当前工作区",
+    "manualMergeTitle": "合并其他工作区至此工作区",
+    "noGitPromptDesc": "检测到原工作区没有 Git 信息（未纳入 Git 版本控制），是否迁移原工作区的文件至当前选定工作区？",
+    "sourceWorkspaceLabel": "原工作区（源目录）：",
+    "selectSourcePlaceholder": "请点击“浏览”选择源工作区文件夹...",
+    "browseBtn": "浏览...",
+    "targetWorkspaceLabel": "当前选定工作区（目标目录）：",
+    "noActiveWorkspace": "尚未打开工作区",
+    "sameOrNestedWarning": "源目录与目标目录不能相同或存在嵌套包含关系。",
+    "pendingFilesCount": "待迁移文件数：",
+    "conflictFilesCount": "同目录同名冲突：",
+    "conflictSampleTitle": "存在以下同目录同名文件：",
+    "conflictMoreCount": "... 等共 {count} 个冲突文件",
+    "conflictStrategyLabel": "同目录同文件名的文件解决方案：",
+    "strategySkipTitle": "跳过",
+    "defaultTag": "默认推荐",
+    "strategySkipDesc": "保留当前工作区已有的同名文件，仅迁移不冲突的新文件（安全）。",
+    "strategyOverwriteTitle": "覆盖",
+    "strategyOverwriteDesc": "用原工作区的文件覆盖当前工作区同目录下的同名文件。",
+    "strategyNoneTitle": "不迁移",
+    "strategyNoneDesc": "不迁移原工作区数据，仅切换工作区。",
+    "wrapScatteredLabel": "将非 GROUP_/AREA_ 结构的散落文件自动归入 GROUP_Migrated / AREA_Imported 以便侧边栏显示",
+    "openTargetWorkspaceFirst": "请先打开或选择一个目标工作区。",
+    "migrationSkippedNoChanges": "已选择不合并，未对文件做任何改动。",
+    "migrationSuccess": "迁移完成：新增复制 {copied} 个，覆盖 {overwritten} 个，跳过 {skipped} 个。",
+    "migrationFailed": "迁移失败: {error}",
+    "switchCancelledNoChanges": "已取消，未切换工作区。",
+    "chooseSystemFolderBtn": "选择文件夹...",
+    "currentWorkspaceSection": "当前工作区",
+    "gitWorkspacesSection": "Git 工作区列表",
+    "historyWorkspacesSection": "历史工作区列表",
+    "gitBadge": "Git",
+    "localBadge": "本地",
+    "missingBadge": "工作区已被删除",
+    "removeHistoryTooltip": "移除该工作区历史记录",
+    "removedFromHistorySuccess": "已从历史记录移除（未删除本地文件夹）。"
   }
 }

@@ -92,6 +92,8 @@
       <qr-code-modal />
     </div>
   </div>
+  <switch-git-workspace-modal />
+  <workspace-migration-modal />
   <about-dialog />
 </template>
 
@@ -117,6 +119,8 @@ import ImportModal from '@/components/import/index.vue'
 import CreateShareModal from '@/components/lanShare/createShareModal.vue'
 import RemoteShareModal from '@/components/lanShare/remoteShareModal.vue'
 import QrCodeModal from '@/components/lanShare/qrCodeModal.vue'
+import SwitchGitWorkspaceModal from '@/components/workspaceMigration/switchGitWorkspaceModal.vue'
+import WorkspaceMigrationModal from '@/components/workspaceMigration/workspaceMigrationModal.vue'
 import GitDesktop from '@/components/gitDesktop/index.vue'
 import TerminalView from '@/components/terminal/index.vue'
 import Drawio from '@/components/drawio/index.vue'

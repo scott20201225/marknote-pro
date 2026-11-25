@@ -347,7 +347,9 @@
       "collapseWorkspace": "Collapse Workspace",
       "screenCapture": "Screen Capture",
       "clipboardHistory": "Clipboard History",
-      "lanShare": "LAN Share"
+      "lanShare": "LAN Share",
+      "switchGitWorkspace": "Switch Workspace",
+      "mergeWorkspace": "Merge Workspace Into Current"
     },
     "lanShare": "LAN Share"
   },
@@ -1367,7 +1369,16 @@
         "Are you sure you want to switch to this repository?": "Are you sure you want to switch to this repository?",
         "Repository:": "Repository:",
         "Also switch notes workspace to this repository": "Also switch notes workspace to this repository",
-        "Switch": "Switch"
+        "Switch": "Switch",
+        "Clone Completed?": "Clone Completed?",
+        "Clone completed?": "Clone Completed?",
+        "Repository cloned successfully. Switch workspace to this repository?": "Repository cloned successfully. Switch workspace to this repository?",
+        "Amend last commit": "Amend last commit",
+        "Generate commit message with Copilot": "Generate commit message with Copilot",
+        "Cancel generating commit details": "Cancel generating commit details",
+        "Commit options": "Commit options",
+        "This binary file has changed.": "This binary file has changed.",
+        "Open file in external program.": "Open file in external program."
       }
     },
     "menu": {
@@ -1385,7 +1396,7 @@
         "selectRepositoryFirst": "Please select a Git repository first.",
         "ok": "OK",
         "setWorkspaceTitle": "Set notes workspace",
-        "setWorkspaceDetail": "This will switch the notes directory. By default it uses the current Git project root; you can also choose a subdirectory inside the project.",
+        "setWorkspaceDetail": "This will switch the notes workspace to the current Git repository root directory.",
         "useRepositoryRoot": "Use project root",
         "selectSubdirectory": "Choose subdirectory",
         "cancel": "Cancel"
@@ -1565,5 +1576,53 @@
       "testFailed": "Connection test failed: {error}",
       "saveSuccess": "Connection config saved"
     }
+  },
+  "workspaceMigration": {
+    "switchGitTitle": "Switch Workspace",
+    "switchGitDesc": "Select from recorded Git or history workspaces, or choose a system folder.",
+    "noGitReposTitle": "No Recorded Workspaces",
+    "noGitReposDesc": "You can choose a local folder directly or open the Git workbench to clone a repository.",
+    "goToGitWorkbench": "Open Git Workbench",
+    "currentBadge": "Current",
+    "cancel": "Cancel",
+    "confirm": "OK",
+    "switchedToRepoSuccess": "Switched workspace to: {name}",
+    "workspaceSwitched": "Workspace switched.",
+    "autoPromptTitle": "Migrate Previous Workspace Files",
+    "manualMergeTitle": "Merge Another Workspace Here",
+    "noGitPromptDesc": "The previous workspace has no Git repository info. Would you like to migrate its files into the newly selected workspace?",
+    "sourceWorkspaceLabel": "Source Workspace:",
+    "selectSourcePlaceholder": "Click Browse to select a source workspace folder...",
+    "browseBtn": "Browse...",
+    "targetWorkspaceLabel": "Target Workspace (Current):",
+    "noActiveWorkspace": "No active workspace",
+    "sameOrNestedWarning": "Source and target workspace cannot be identical or nested.",
+    "pendingFilesCount": "Files to migrate:",
+    "conflictFilesCount": "Same-path conflicts:",
+    "conflictSampleTitle": "Conflicting files at the same path:",
+    "conflictMoreCount": "... and {count} conflicting files total",
+    "conflictStrategyLabel": "Conflict resolution for same-directory & same-name files:",
+    "strategySkipTitle": "Skip",
+    "defaultTag": "Default",
+    "strategySkipDesc": "Keep existing files in target workspace and only migrate non-conflicting files.",
+    "strategyOverwriteTitle": "Overwrite",
+    "strategyOverwriteDesc": "Replace same-path conflicting files in target workspace with source files.",
+    "strategyNoneTitle": "Do Not Migrate",
+    "strategyNoneDesc": "Do not migrate original workspace data; only switch workspace.",
+    "wrapScatteredLabel": "Place non-GROUP_/AREA_ scattered files under GROUP_Migrated / AREA_Imported for sidebar visibility",
+    "openTargetWorkspaceFirst": "Please open or select a target workspace first.",
+    "migrationSkippedNoChanges": "Merge skipped; no files were modified.",
+    "migrationSuccess": "Migration completed: {copied} copied, {overwritten} overwritten, {skipped} skipped.",
+    "migrationFailed": "Migration failed: {error}",
+    "switchCancelledNoChanges": "Cancelled. Workspace was not switched.",
+    "chooseSystemFolderBtn": "Choose Folder...",
+    "currentWorkspaceSection": "Current Workspace",
+    "gitWorkspacesSection": "Git Workspaces",
+    "historyWorkspacesSection": "History Workspaces",
+    "gitBadge": "Git",
+    "localBadge": "Local",
+    "missingBadge": "Workspace deleted",
+    "removeHistoryTooltip": "Remove this workspace from history",
+    "removedFromHistorySuccess": "Removed from history (local folder kept)."
   }
 }

@@ -90,6 +90,10 @@ export type RequestChannels = {
   'mt::github-desktop::switch-to-note': () => void
   'mt::github-desktop::workspace-selected-silent': (workspacePath: string) => void
   'mt::github-desktop::selected-repository-path': (path: string | null) => void
+  'mt::github-desktop::repositories-updated': (
+    repositories: ReadonlyArray<{ id: number; name: string; path: string; missing: boolean }>
+  ) => void
+  'mt::github-desktop::select-repository-by-path': (path: string) => void
   'marknotepro-workspace-path-renamed': (payload: {
     src: string
     dest: string

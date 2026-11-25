@@ -665,7 +665,8 @@ const shouldSkipInternalI18n = (element: Element | null): boolean => {
     '.diff',
     '.diff-line-code',
     '.blob-code',
-    '.cm-editor'
+    '.cm-editor',
+    '#marknotepro-toast-host'
   ].join(','))
 }
 
@@ -684,7 +685,8 @@ const shouldSkipInternalAttributeI18n = (element: Element | null): boolean => {
     '.cm-editor',
     '#app-menu-bar',
     '#marknotepro-github-desktop-actions',
-    '#marknotepro-global-tooltip'
+    '#marknotepro-global-tooltip',
+    '#marknotepro-toast-host'
   ].join(','))
 }
 
@@ -983,10 +985,176 @@ const translateDynamicText = (value: string): string | null => {
     }
   }
 
-  match = value.match(/^(Commit|Amend|Committing|Amending)\s+(.+)\s+to\s+(.+)$/)
+  const formatCommitVerb = (verbRaw: string): string => {
+    const map: Record<string, Record<string, string>> = {
+      Commit: {
+        'zh-CN': '提交',
+        'zh-TW': '提交',
+        ja: 'コミット',
+        ko: '커밋',
+        de: 'Commit',
+        es: 'Confirmar',
+        fr: 'Valider',
+        it: 'Commit',
+        pt: 'Confirmar',
+        tr: 'İşle'
+      },
+      Amend: {
+        'zh-CN': '修改提交',
+        'zh-TW': '修改提交',
+        ja: '修正コミット',
+        ko: '커밋 수정',
+        de: 'Ergänzen',
+        es: 'Enmendar',
+        fr: 'Corriger',
+        it: 'Correggi',
+        pt: 'Emendar',
+        tr: 'Düzelt'
+      },
+      Committing: {
+        'zh-CN': '正在提交',
+        'zh-TW': '正在提交',
+        ja: 'コミット中',
+        ko: '커밋 중',
+        de: 'Wird committet',
+        es: 'Confirmando',
+        fr: 'Validation',
+        it: 'Commit in corso',
+        pt: 'Confirmando',
+        tr: 'İşleniyor'
+      },
+      Amending: {
+        'zh-CN': '正在修改提交',
+        'zh-TW': '正在修改提交',
+        ja: '修正中',
+        ko: '수정 중',
+        de: 'Wird ergänzt',
+        es: 'Enmendando',
+        fr: 'Correction',
+        it: 'Correzione',
+        pt: 'Emendando',
+        tr: 'Düzeltiliyor'
+      }
+    }
+    return map[verbRaw]?.[currentLanguage] ?? dictionary[verbRaw] ?? verbRaw
+  }
+
+  const formatCommitTargetPrefix = (
+    verbRaw: string,
+    countStr?: string
+  ): string => {
+    const verb = formatCommitVerb(verbRaw)
+    const count = countStr ? Number(countStr) : 0
+    const hasCount = Boolean(countStr)
+    switch (currentLanguage) {
+      case 'zh-CN':
+        return `${verb}${hasCount ? ` ${count} 个文件` : ''}到`
+      case 'zh-TW':
+        return `${verb}${hasCount ? ` ${count} 個檔案` : ''}到`
+      case 'ja':
+        return `${verb}${hasCount ? `（${count} 件）` : ''} →`
+      case 'ko':
+        return `${verb}${hasCount ? ` (${count}개 파일)` : ''} →`
+      case 'de':
+        return `${verb}${hasCount ? ` (${count} ${count === 1 ? 'Datei' : 'Dateien'})` : ''} auf`
+      case 'es':
+        return `${verb}${hasCount ? ` ${count} ${count === 1 ? 'archivo' : 'archivos'}` : ''} en`
+      case 'fr':
+        return `${verb}${hasCount ? ` ${count} ${count === 1 ? 'fichier' : 'fichiers'}` : ''} sur`
+      case 'it':
+        return `${verb}${hasCount ? ` ${count} file` : ''} su`
+      case 'pt':
+        return `${verb}${hasCount ? ` ${count} ${count === 1 ? 'arquivo' : 'arquivos'}` : ''} para`
+      case 'tr':
+        return `${verb}${hasCount ? ` (${count} dosya)` : ''} →`
+      default:
+        return `${verbRaw}${hasCount ? ` ${count} ${count === 1 ? 'file' : 'files'}` : ''} to`
+    }
+  }
+
+  match = value.match(/^(Commit|Amend|Committing|Amending)(?:\s+(\d+)\s+files?)?\s+to$/)
   if (match) {
-    const verb = dictionary[match[1]] ?? match[1]
-    return `${verb} ${match[2]} ${dictionary['Commit to'] ?? 'Commit to'} ${match[3]}`
+    return formatCommitTargetPrefix(match[1], match[2])
+  }
+
+  match = value.match(/^(Commit|Amend|Committing|Amending)(?:\s+(\d+)\s+files?)?\s+to\s+(.+)$/)
+  if (match) {
+    return `${formatCommitTargetPrefix(match[1], match[2])} ${match[3]}`
+  }
+
+  match = value.match(/^(Create|Delete|Update)\s+(.+)$/)
+  if (match) {
+    const file = match[2]
+    if (match[1] === 'Create') {
+      switch (currentLanguage) {
+        case 'zh-CN':
+          return `创建 ${file}`
+        case 'zh-TW':
+          return `建立 ${file}`
+        case 'ja':
+          return `${file} を作成`
+        case 'ko':
+          return `${file} 생성`
+        case 'de':
+          return `${file} erstellen`
+        case 'es':
+          return `Crear ${file}`
+        case 'fr':
+          return `Créer ${file}`
+        case 'it':
+          return `Crea ${file}`
+        case 'pt':
+          return `Criar ${file}`
+        case 'tr':
+          return `${file} oluştur`
+      }
+    } else if (match[1] === 'Delete') {
+      switch (currentLanguage) {
+        case 'zh-CN':
+          return `删除 ${file}`
+        case 'zh-TW':
+          return `刪除 ${file}`
+        case 'ja':
+          return `${file} を削除`
+        case 'ko':
+          return `${file} 삭제`
+        case 'de':
+          return `${file} löschen`
+        case 'es':
+          return `Eliminar ${file}`
+        case 'fr':
+          return `Supprimer ${file}`
+        case 'it':
+          return `Elimina ${file}`
+        case 'pt':
+          return `Excluir ${file}`
+        case 'tr':
+          return `${file} sil`
+      }
+    } else if (match[1] === 'Update') {
+      switch (currentLanguage) {
+        case 'zh-CN':
+          return `更新 ${file}`
+        case 'zh-TW':
+          return `更新 ${file}`
+        case 'ja':
+          return `${file} を更新`
+        case 'ko':
+          return `${file} 업데이트`
+        case 'de':
+          return `${file} aktualisieren`
+        case 'es':
+          return `Actualizar ${file}`
+        case 'fr':
+          return `Mettre à jour ${file}`
+        case 'it':
+          return `Aggiorna ${file}`
+        case 'pt':
+          return `Atualizar ${file}`
+        case 'tr':
+          return `${file} güncelle`
+      }
+    }
   }
 
   match = value.match(/^A branch named (.+) already exists\.$/)
@@ -1581,6 +1749,98 @@ const applyMarkNoteProLocale = (payload: MarkNoteProLocalePayload): void => {
   })
 }
 
+const showHostToast = (payload: { type?: string; message?: string }): void => {
+  const message = payload?.message?.trim()
+  if (!message || !document.body) return
+  const type = payload.type || 'info'
+
+  let host = document.getElementById('marknotepro-toast-host')
+  if (!host) {
+    host = document.createElement('div')
+    host.id = 'marknotepro-toast-host'
+    Object.assign(host.style, {
+      position: 'fixed',
+      top: '16px',
+      left: '50%',
+      transform: 'translateX(-50%)',
+      zIndex: '2147483647',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: '8px',
+      pointerEvents: 'none'
+    })
+    document.body.appendChild(host)
+  }
+
+  const isDark = document.body.classList.contains('marknotepro-theme-dark')
+  const palette: Record<string, { bg: string; border: string; text: string; icon: string }> = isDark
+    ? {
+        success: { bg: '#1c2b21', border: '#2d5a3c', text: '#85ce61', icon: '✓' },
+        warning: { bg: '#2b2419', border: '#5e4926', text: '#e6a23c', icon: '!' },
+        error: { bg: '#2e1d1e', border: '#663436', text: '#f56c6c', icon: '✕' },
+        info: { bg: '#25262b', border: '#41444d', text: '#d0d3dc', icon: 'i' }
+      }
+    : {
+        success: { bg: '#f0f9eb', border: '#c2e7b0', text: '#529b2e', icon: '✓' },
+        warning: { bg: '#fdf6ec', border: '#f3d19e', text: '#b88230', icon: '!' },
+        error: { bg: '#fef0f0', border: '#fab6b6', text: '#c45656', icon: '✕' },
+        info: { bg: '#f4f4f5', border: '#d3d4d6', text: '#606266', icon: 'i' }
+      }
+  const colors = palette[type] || palette.info
+
+  const toast = document.createElement('div')
+  Object.assign(toast.style, {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '9px 16px',
+    borderRadius: '8px',
+    border: `1px solid ${colors.border}`,
+    backgroundColor: colors.bg,
+    color: colors.text,
+    fontSize: '13px',
+    fontWeight: '500',
+    boxShadow: '0 6px 18px rgba(0, 0, 0, 0.22)',
+    opacity: '0',
+    transform: 'translateY(-8px)',
+    transition: 'opacity 0.18s ease, transform 0.18s ease',
+    maxWidth: '80vw',
+    wordBreak: 'break-word'
+  })
+  const badge = document.createElement('span')
+  badge.textContent = colors.icon
+  Object.assign(badge.style, {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '16px',
+    height: '16px',
+    borderRadius: '50%',
+    backgroundColor: colors.text,
+    color: isDark ? '#141414' : '#ffffff',
+    fontSize: '11px',
+    fontWeight: '700',
+    flexShrink: '0'
+  })
+  const textSpan = document.createElement('span')
+  textSpan.textContent = message
+  toast.appendChild(badge)
+  toast.appendChild(textSpan)
+  host.appendChild(toast)
+
+  window.requestAnimationFrame(() => {
+    toast.style.opacity = '1'
+    toast.style.transform = 'translateY(0)'
+  })
+
+  window.setTimeout(() => {
+    toast.style.opacity = '0'
+    toast.style.transform = 'translateY(-8px)'
+    window.setTimeout(() => toast.remove(), 220)
+  }, 3000)
+}
+
 export const installMarkNoteProThemeAdapter = (): void => {
   applyMarkNoteProTheme({
     ...DEFAULT_THEME_PAYLOAD,
@@ -1595,6 +1855,10 @@ export const installMarkNoteProThemeAdapter = (): void => {
 
   ipcRenderer.on('marknotepro-locale-updated', (_event, payload: MarkNoteProLocalePayload) => {
     applyMarkNoteProLocale(payload)
+  })
+
+  ipcRenderer.on('marknotepro-toast', (_event, payload: { type?: string; message?: string }) => {
+    showHostToast(payload)
   })
 
   ipcRenderer.on('marknotepro-view-activated', () => {

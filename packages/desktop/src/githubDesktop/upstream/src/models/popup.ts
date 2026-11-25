@@ -214,6 +214,7 @@ export type PopupDetail =
   | {
       type: PopupType.ConfirmRepositorySwitch
       repository: Repository | CloningRepository
+      isCloned?: boolean
     }
   | { type: PopupType.TermsAndConditions }
   | {
