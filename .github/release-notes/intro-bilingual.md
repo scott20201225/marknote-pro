@@ -9,7 +9,7 @@
 
 ### 🔗 Git 仓库与直接下载 / Repositories & Direct Downloads
 
-- **MarkNotePro**：[GitHub 仓库](https://github.com/scott20201225/marknote-pro) · [Gitee 镜像](https://gitee.com/cmflovekm/marknote-pro) · [GitHub 直接下载 (Releases)](https://github.com/scott20201225/marknote-pro/releases/latest) · [百度网盘下载 (提取码 `dec2`)](https://pan.baidu.com/s/17s0JYmzCbqhq2AHpKa2YAA?pwd=dec2)
-- **MarkTextPro**：[GitHub 仓库](https://github.com/scott20201225/marktext-pro) · [Gitee 镜像](https://gitee.com/cmflovekm/marktext-pro) · [GitHub 直接下载 (Releases)](https://github.com/scott20201225/marktext-pro/releases/latest) · [百度网盘下载 (提取码 `ddun`)](https://pan.baidu.com/s/1UVWciYMIAZmI6y-H9KUuNQ?pwd=ddun)
+- **MarkNotePro**：[GitHub 仓库](https://github.com/scott20201225/marknote-pro) · [Gitee 镜像](https://gitee.com/cmflovekm/marknote-pro) · [GitHub 直接下载 (Releases)](https://github.com/scott20201225/marknote-pro/releases/latest)
+- **MarkTextPro**：[GitHub 仓库](https://github.com/scott20201225/marktext-pro) · [Gitee 镜像](https://gitee.com/cmflovekm/marktext-pro) · [GitHub 直接下载 (Releases)](https://github.com/scott20201225/marktext-pro/releases/latest)
 
 > **安全建议 / Security**：建议将个人或项目 Git 仓库设为 **私有（Private）**，勿将 `.kdbx` 密码库上传至公开仓库（请在 `.gitignore` 中排除 `*.kdbx`）。

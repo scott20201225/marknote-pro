@@ -78,7 +78,7 @@ All notable changes to **MarkNotePro** are documented in this file.
 
 ### ✨ Features & Improvements
 - **界面交互**：优化 Git 视图顶部工具栏工作区动态提示，并恢复上栏搜索按钮 Tooltip。
-- **自动化同步与文档**：新增 GitHub 向 Gitee 自动镜像同步代码、Tag 与 Release 的 CI 流水线；新增英文版 `README_en.md`，完善双语 Release 说明模板、关联仓库链接及百度网盘下载入口。
+- **自动化同步与文档**：新增 GitHub 向 Gitee 自动镜像同步代码、Tag 与 Release 的 CI 流水线；新增英文版 `README_en.md`，完善双语 Release 说明模板与关联仓库链接。
 
 ## [1.2.0] - 2026-10-16
 
