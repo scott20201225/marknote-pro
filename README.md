@@ -3,9 +3,9 @@
 <h1 align="center">MarkNotePro</h1>
 
 <div align="center">
-  <strong>集成 Git、Draw.io、GeoGebra、MindMap、KDBX 加密密码库（含 2FA & SSH 直连）与 PDF 专业阅读批注的本地 Markdown 笔记与知识工作台</strong><br>
-  用本地目录管理知识库，原生支持 Markdown 笔记、Draw.io 专业绘图、GeoGebra 数学建模、MindMap 思维导图、KDBX 加密密码库与 PDF 专业阅读批注，用 Git 做版本管理、同步和恢复。<br>
-  <sub>支持 Linux、macOS、Windows。</sub>
+  <strong>本地优先的结构化多模态知识与生产力工作台</strong><br>
+  围绕分区层级组织长期知识库：原生集成 Markdown、Draw.io、GeoGebra、MindMap、PDF 专业批注、KDBX 密码库（2FA & SSH/SFTP 直连）、局域网共享与 Git 版本控制。<br>
+  <sub>支持 Linux、macOS、Windows（核心创作与加密引擎 100% 离线可用）</sub>
 </div>
 
 <div align="center">
@@ -32,333 +32,154 @@
 </div>
 
 <div align="center">
-  <h3>
-    <a href="#产品定位">产品定位</a>
-    <span> | </span>
-    <a href="#核心能力">核心能力</a>
-    <span> | </span>
-    <a href="#内置创作与安全引擎drawio-geogebra-mindmap-kdbx-与-pdf">内置创作与安全引擎</a>
-    <span> | </span>
-    <a href="#kdbx-加密密码库">KDBX 密码库</a>
-    <span> | </span>
-    <a href="#产品选择">产品选择</a>
-    <span> | </span>
-    <a href="#笔记工作区模型">工作区模型</a>
-    <span> | </span>
-    <a href="#git-联动">Git 联动</a>
-    <span> | </span>
-    <a href="#数据安全与-git-使用建议">安全建议</a>
-    <span> | </span>
-    <a href="#截图与演示">截图与演示</a>
-    <span> | </span>
-    <a href="#下载安装">下载安装</a>
-  </h3>
+  <h4>
+    <a href="#功能演示">功能演示</a>
+    <span> · </span>
+    <a href="#产品定位与双产品对比">产品对比</a>
+    <span> · </span>
+    <a href="#核心能力矩阵">核心能力</a>
+    <span> · </span>
+    <a href="#工作区与-git-联动">工作区与 Git</a>
+    <span> · </span>
+    <a href="#安全规范">安全规范</a>
+    <span> · </span>
+    <a href="#下载安装与源码构建">下载构建</a>
+    <span> · </span>
+    <a href="#开源协议与第三方声明">开源协议</a>
+  </h4>
 </div>
 
-## 产品定位
+---
 
-MarkNotePro 是一款本地优先的结构化知识管理与多模态创作工作台。围绕笔记工作区建立体系化知识库，左侧分区管理文档，右侧原生集成 Markdown、Draw.io 架构图、GeoGebra 数学建模、MindMap 思维导图与 PDF 专业阅读批注，支持 txt、json 等常用文本简单编辑；内置 KDBX 加密密钥库及 2FA 动态口令，提供 SSH 终端直连（必须建立密钥库，通过密钥库直连、自动 2FA 验证），并无缝联动 Git 进行版本管理、提交与同步。
+## 功能演示
 
-它适合这些场景：
+一站式覆盖结构化笔记、Markdown 排版与增强表格、Draw.io 架构图、MindMap 脑图、Git 版本控制、GeoGebra 建模、KDBX 密码库（2FA/SSH）、多工作区无缝迁移、全局截屏贴图与剪贴板历史、局域网共享及 PDF 原地批注：
 
-- 把个人笔记、技术架构图、数学/理工科推导、思维导图、PDF 资料批注、服务器凭据与长期知识库放在同一个本地目录中管理。
-- 使用开放通用的本地文件格式（`.md`、`.drawio`、`.ggb`、`.smm`、`.kdbx`、`.pdf`）保存内容，避免被专有云服务锁定。
-- 在同一工作区内直接创建和编辑 Draw.io 流程图/架构图、GeoGebra 数学建模、MindMap 思维导图以及阅读与批注 PDF 文档（支持文本高亮、手绘涂鸦、文字批注、图章图片与签名，快捷键原地覆盖保存），全程离线可用。
-- 通过 GitHub、Gitee、Coding 或其它 Git 服务同步整个知识库目录，在多台电脑之间无损同步、回滚、查看历史版本。
-- 希望知识库结构清晰，不希望普通杂乱文件夹和笔记体系互相污染。
+<p align="center">
+  <img src="docs/assets/screenshots/feature-showcase.gif" alt="MarkNotePro 全功能综合演示" width="100%">
+</p>
 
-## 产品选择
+## 产品定位与双产品对比
 
-MarkNotePro 和 MarkTextPro 是两个相互独立、但能力互补的产品：
+**MarkNotePro** 面向长期笔记与体系化知识沉淀：采用「工作区 → 分区组 → 分区 → 文档」层级组织知识，侧边栏只呈现受支持的标准目录与知识资产，避免工程杂项文件干扰。
 
-- **MarkNotePro**：**本地结构化笔记与多模态知识工作台**。强调笔记工作区、分区组、分区与结构化文档体系，原生集成 **Markdown、Draw.io 绘图、GeoGebra 数学建模、MindMap 思维导图、KDBX 加密密码库（支持 2FA 动态口令与 SSH/终端直连）与 PDF 专业阅读批注**，适合长期笔记、体系化知识库、专业资料与本地凭据管理。
-- **MarkTextPro**：**本地自由文件与项目多模态工作区管理器**。强调开放文件系统、自由文件夹、外部独立文档与代码项目管理，同样原生集成 **Markdown、Draw.io 绘图、GeoGebra 数学建模、MindMap 思维导图、KDBX 加密密码库（支持 2FA 动态口令与 SSH/终端直连）与 PDF 专业阅读批注**，适合代码仓库、外部技术文档和自由项目编辑。
-
-相关地址：
-
-- **MarkNotePro**（结构化本地笔记与多模态知识工作台）：
-  - GitHub Releases 官方下载：[https://github.com/scott20201225/marknote-pro/releases/latest](https://github.com/scott20201225/marknote-pro/releases/latest)
-  - GitHub 仓库：[https://github.com/scott20201225/marknote-pro](https://github.com/scott20201225/marknote-pro)
-  - Gitee 镜像仓库：[https://gitee.com/cmflovekm/marknote-pro](https://gitee.com/cmflovekm/marknote-pro)
-- **MarkTextPro**（自由文件与项目多模态工作区）：
-  - GitHub Releases 官方下载：[https://github.com/scott20201225/marktext-pro/releases/latest](https://github.com/scott20201225/marktext-pro/releases/latest)
-  - GitHub 仓库：[https://github.com/scott20201225/marktext-pro](https://github.com/scott20201225/marktext-pro)
-  - Gitee 镜像仓库：[https://gitee.com/cmflovekm/marktext-pro](https://gitee.com/cmflovekm/marktext-pro)
-
-两者均内置 **Markdown、Draw.io、GeoGebra、MindMap、KDBX 加密密码库（含 2FA & SSH 终端直连）与 PDF 专业阅读批注**等本地核心能力，并都深度集成 Git 工作区版本管理；这些能力与 Git 是二者的共同底座。选择时更应该看你需要“结构化多模态笔记工作台”还是“自由多模态项目文件管理器”。
-
-下面是同一个项目在两个产品里的展示差异：MarkNotePro 只会展示符合笔记标准的目录与受支持文档（`.md` / `.drawio` / `.ggb` / `.smm` / `.kdbx` / `.pdf`），收敛为分区组 / 分区 / 文档视图；MarkTextPro 则展示真实文件系统结构，更适合完整项目目录和外部文件管理。
+同一项目目录在姊妹产品中的视图对比如下：
 
 <table>
   <tr>
-    <td align="center">
+    <td align="center" width="50%">
       <img src="docs/assets/screenshots/product-compare-note.png" alt="MarkNotePro 结构化笔记视图" width="100%">
       <br>
-      <sub>MarkNotePro：只展示符合笔记标准的目录和知识文档</sub>
+      <sub><b>MarkNotePro</b>：聚焦分区层级，自动过滤非笔记目录与杂项文件</sub>
     </td>
-    <td align="center">
+    <td align="center" width="50%">
       <img src="docs/assets/screenshots/product-compare-text.png" alt="MarkTextPro 真实文件系统视图" width="100%">
       <br>
-      <sub>MarkTextPro：展示完整真实文件系统结构</sub>
+      <sub><b>MarkTextPro</b>：映射真实文件夹树，适合代码仓库与外部独立文档</sub>
     </td>
   </tr>
 </table>
 
-选择建议：
+| 维度 | MarkNotePro（本仓库） | [MarkTextPro](https://github.com/scott20201225/marktext-pro)（姊妹项目） |
+| --- | --- | --- |
+| **组织模型** | 笔记工作区、分区组（支持子组）、分区与文档，支持 Tree / List 双视图 | 开放文件系统，完整展示真实目录，支持打开工作区外独立文件 |
+| **适用场景** | 个人长期知识库、体系化笔记、团队研发文档、本地凭据与资料归档 | 代码仓库协作、项目文档编辑、自由文件夹与临时多模态文件处理 |
+| **共同底座** | 共享同一套离线多模态引擎、KDBX/2FA/SSH 安全工作台、Git 集成与效率套件 | 同左 |
+| **仓库与下载** | [GitHub Releases](https://github.com/scott20201225/marknote-pro/releases/latest) · [Gitee 镜像](https://gitee.com/cmflovekm/marknote-pro) | [GitHub Releases](https://github.com/scott20201225/marktext-pro/releases/latest) · [Gitee 镜像](https://gitee.com/cmflovekm/marktext-pro) |
 
-| 使用场景 / 需求 | 推荐产品 |
-| --- | --- |
-| 你希望像管理笔记本一样管理长期笔记、结构化知识库与项目资料 | MarkNotePro |
-| 你需要在结构化笔记中直接进行 Markdown 写作、绘制 Draw.io 架构图/流程图、使用 GeoGebra 数学建模、绘制 MindMap 思维导图，或进行 PDF 批注阅读 | MarkNotePro |
-| 你需要在结构化工作区中管理受主密码保护的 KDBX 密码库、密钥条目、2FA 动态口令并一键直连 SSH 终端 | MarkNotePro |
-| 你接受并需要工作区、分区组、分区、文档这种结构化层级 | MarkNotePro |
-| 你希望侧边栏只呈现笔记体系，减少普通杂乱文件夹带来的干扰 | MarkNotePro |
-| 你主要在真实文件夹、代码仓库中工作，或频繁编辑外部独立文档与项目 README | MarkTextPro |
-| 你需要在自由文件夹、项目仓库或外部路径中直接创建与管理 Markdown、Draw.io 架构图、GeoGebra 数学模型、MindMap 思维导图、KDBX 密码库（含 2FA & SSH 直连），或对 PDF 进行专业批注阅读 | MarkTextPro |
-| 你希望保留真实文件系统目录结构，不希望被笔记层级约束 | MarkTextPro |
-| 你需要一个更自由的本地多模态文件与项目工作区管理器 | MarkTextPro |
+## 核心能力矩阵
 
-## 核心能力
+### 1. 内置创作与专业引擎（100% 离线可用）
 
-- **本地笔记工作区**：首次使用必须选择工作区，所有笔记与专业创作文档围绕这个根目录组织。
-- **分区组 / 分区 / 多类型文档**：用类似 OneNote 的结构统一管理 Markdown 笔记（`.md`）、Draw.io 绘图（`.drawio`）、GeoGebra 数学文档（`.ggb`）、MindMap 思维导图（`.smm`）、KDBX 密码库（`.kdbx`）、PDF 文档（`.pdf`）及常用文本，减少普通文件夹式管理的混乱。
-- **常用文本与配置轻量编辑**：原生支持打开与编辑 `.txt`、`.json` 等通用纯文本与配置文件，支持轻量快速查看、修改与原地实时保存。
-- **Tree / List 双模式**：既可以使用纯树结构，也可以使用“分区树 + 文档列表”的方式快速定位笔记、图表、数学模型、思维导图、纯文本与 PDF。
-- **Markdown 所见即所得编辑**：支持标题、列表、任务、表格、引用、代码块、数学公式、Mermaid、警告块（Callouts）等常用 Markdown 能力。
-- **内置 PDF 专业阅读与批注引擎**：本地离线集成 Mozilla PDF.js 全功能引擎，支持页面流式阅读、目录大纲导航、缩略图、多语言全文字符搜索、页面旋转与自适应缩放；深度集成丰富批注工具集：**文本高亮**（多色标记与透明度控制）、**下划线/删除线**、**自由手绘涂鸦（Ink）**、**添加文本批注**、**插入图片/图章**与**电子签名**；原生快捷键 `Cmd+S / Ctrl+S` 原地覆盖保存源文件（无多余另存为弹窗），修改红点状态精准双向同步，暗色/明亮主题自动适配。
-- **内置 Draw.io 专业绘图引擎**：本地离线集成完整 Draw.io 编辑器，支持直接创建、编辑、自动保存 `.drawio` 图表文件，支持导出 PNG、JPEG、SVG、PDF、HTML、XML 等格式。
-- **内置 GeoGebra 数学与几何套件**：本地离线集成官方 GeoGebra 全功能引擎，支持**绘图计算**、**几何**、**3D 计算器**、**CAS（计算机代数）**、**概率统计**与**科学计算器**六大模式，支持导出 `.ggb`、`.png`、`.svg`、`.pdf`、`.stl` 及打印。
-- **内置 MindMap 专业思维导图引擎**：本地离线集成全功能思维导图工作台，原生支持**思维导图**、**逻辑结构图**、**目录组织图**、**组织结构图**、**时间轴**、**鱼骨图**等 6 种经典脑图结构；支持节点富文本、LaTeX 数学公式、节点图标/贴纸、超链接、关联线、概要节点、外框、备注与标签；提供大纲编辑与快捷键面板，支持导入 XMind / Markdown / .smm 并支持导出 PNG、SVG、PDF、Markdown、JSON 及直接调用系统打印。
-- **内置 KDBX 加密密码库（含 2FA & SSH 终端直连）**：基于 KDBXWeb 在本地创建、解锁和保存 KeePass 兼容的 `.kdbx` 密码库；支持分组、密钥条目、自定义字段、标签、附件、历史记录、回收站与主密码重置，并支持受提取码保护的批量密钥导入导出。深度集成 **2FA 双因素动态口令**（支持二维码扫描、截图粘贴与 URI 批量导入，实时倒计时与防重放）；提供 **SSH / 终端安全直连**（**必须建立密钥库**，严格通过密钥库直连发起会话、登录**自动 2FA 验证**，并集成图形化 SFTP 文件管理器与 ZMODEM 传输）。
-- **工作区内链跳转与路径复制**：支持在侧边栏一键复制文档相对工作区路径或 Markdown 链接，并在 Markdown 笔记中点击直达工作区内的其它笔记、Draw.io 图表、GeoGebra 文档、思维导图或 PDF 标签页。
-- **表格增强**：支持表格批量编辑、复制粘贴、与 Excel 互操作等高频办公能力。
-- **本地附件与自包含资源**：Markdown 插入本地图片时可自动复制到工作区 `Attachments` 附件目录并使用相对路径引用；GeoGebra 与 MindMap 中插入的图片等媒体资源则直接内嵌封装在文档内部，跨电脑同步不丢失。
-- **集成 Git 工作区**：内置 Git 操作界面，支持仓库添加、克隆、变更查看、提交、分支、拉取、推送等操作。
-- **笔记工作区与 Git 仓库联动**：可以从 Git 仓库切换笔记工作区，也可以在笔记根目录重命名后同步更新 Git 仓库路径。
+所有文档均以开放通用格式保存于本地目录，跨设备通过 Git 无损同步，拒绝云端厂商锁定：
 
-## 内置创作与安全引擎：Draw.io、GeoGebra、MindMap、KDBX 与 PDF
+| 模块 / 格式 | 核心特性 | 导入导出与资源管理 |
+| --- | --- | --- |
+| **Markdown** (`.md`) | 所见即所得编辑；支持 LaTeX 数学公式、Mermaid 流程图/饼图、5 种 Callouts 警示块、快捷插入面板、任务批量编辑及强化表格工具 | 本地图片自动归档至 `Attachments/` 相对路径；表格支持与 Excel 互操作 |
+| **Draw.io 绘图** (`.drawio`) | 完整离线 diagrams.net 引擎：架构图、流程图、UML、ER 图、网络拓扑，多标签保活切换与自动保存 | 支持导出 `PNG`、`JPEG`、`SVG`、`PDF`、`HTML`、`XML` |
+| **GeoGebra 建模** (`.ggb`) | 内置官方全功能套件：绘图计算、几何作图、3D 计算器、CAS 符号代数、概率统计、科学计算器 6 大模式 | 图片内嵌于 `.ggb` 包；支持导出 `.ggb`、`.png`、`.svg`、`.pdf`、`.stl`（3D 打印）与打印 |
+| **MindMap 脑图** (`.smm`) | 思维导图、逻辑图、目录/组织结构图、时间轴、鱼骨图 6 种结构；支持 LaTeX、贴纸、关联线、概要、外框、双向大纲编辑与快捷键面板 | 支持导入 `.xmind` / `.md` / `.smm` / `.json` / `.mind`（自动防重名创建并打开）；导出 `PNG`、`SVG`、`PDF`、`Markdown`、`JSON` 与打印 |
+| **PDF 阅读批注** (`.pdf`) | 基于 Mozilla PDF.js：流式阅读、大纲缩略图、全文搜索、自适应缩放与明暗主题适配；提供高亮、下划线/删除线、手绘涂鸦、文字批注、图章与签名 | `Cmd+S / Ctrl+S` 原地静默覆盖保存（无冗余弹窗），修改状态双向实时同步 |
+| **纯文本轻量编辑** | 原生支持 `.txt`、`.json` 等常见纯文本与配置文件的快速查看、轻量修改与原地保存 | 直接读写本地文件 |
 
-除了 Markdown 写作，MarkNotePro 还将工程图表、理工科数学建模、思维导图、加密密码库与专业 PDF 阅读批注能力直接纳入同一个本地工作区，所有模块均随客户端本地打包、**100% 离线可用**，无需依赖外部网页或云端账号：
+### 2. KDBX 加密密码库、2FA 与 SSH/SFTP 安全工作台
 
-| 创作引擎 | 文件后缀 | 支持模式与核心特性 | 导出与格式支持 |
-| --- | --- | --- | --- |
-| **Draw.io 绘图引擎** | `.drawio` | 流程图、系统架构图、UML、ER 图、网络拓扑图、思维导图等完整图形库；支持多标签页保活切换、快捷键保存与自动保存状态同步 | 支持导出 `PNG`、`JPEG`、`SVG`、`PDF`、`HTML`、`XML` 等格式 |
-| **GeoGebra 数学套件** | `.ggb` | <ul><li>**绘图计算（Graphing）**：函数图像、导数积分、滑动条、数值表格与完整几何作图工具集</li><li>**几何（Geometry）**：尺规作图、多边形、圆锥曲线、度量与几何变换</li><li>**3D 计算器（3D Graphing）**：空间曲面、立体几何、空间向量与平面交线</li><li>**CAS 计算机代数**：符号微积分、方程精确求解、因式分解与矩阵运算</li><li>**概率统计（Probability）**：正态/二项/泊松等概率分布可视化与区间概率计算</li><li>**科学计算器（Scientific）**：函数定义、数值表格对照与科学运算</li></ul> | 插入的图片自动内嵌封装于 `.ggb` 包内；支持导出 `.ggb`、`.png`、`.svg`、`.pdf`、`.stl`（3D 打印）及直接打印 |
-| **MindMap 思维导图** | `.smm` | <ul><li>**6 种专业结构**：思维导图、逻辑结构图、目录组织图、组织结构图、时间轴、鱼骨图，支持在新建或编辑时自由切换</li><li>**丰富节点元素**：自由节点、节点富文本、LaTeX 数学公式、节点图标/贴纸、超链接、关联线、概要节点、外框、备注与自定义标签</li><li>**高效编辑辅助**：大纲视图双向同步编辑、节点搜索与批量替换、直观便捷的快捷键面板</li><li>**智能系统导入**：原生对接系统文件选择器，限制并支持导入 `.xmind`、`.md`、`.smm`、`.json`、`.mind` 格式；导入时自动在当前选定分区新建独立文件（自动防重名递增），导入完成立即自动打开</li></ul> | 支持导出多种通用格式及直接打印 |
-| **KDBX 加密密码库** | `.kdbx` | KeePass 兼容加密密码库，支持创建与解锁、分组、标签、历史版本、自定义字段、附件、回收站、批量导入导出与主密码重置；内置 2FA 动态口令计算与识别，以及 SSH / 终端会话一键快捷直连 | 密钥库由独立主密码加密保护；内置 KDBXWeb 与专业终端工作台，支持在工作区内管理 |
-| **PDF 阅读与批注引擎** | `.pdf` | 页面流式浏览、目录导航、文本选择与搜索；**文本高亮与划线**、**自由手绘涂鸦 (Ink)**、**添加文字批注**、**插入图片/图章**与**电子签名**；快捷键原地覆盖保存与暗色主题自适应 | 100% 离线，修改直接覆写保存源文件，无多余弹窗 |
+基于 [KDBXWeb](https://github.com/keeweb/kdbxweb) 构建本地 KeePass 兼容（`.kdbx`）凭据库与运维终端栈：
 
-## KDBX 加密密码库（含 2FA 与 SSH 直连支持）
+- **加密凭据管理**：独立主密码加密，支持分组、条目、自定义字段、标签筛选、附件预览、历史记录、回收站、主密码重置及受提取码保护的批量导入导出。
+- **TOTP 2FA 动态口令**：实时环形倒计时，支持扫码、**粘贴剪贴板截图 (`Cmd+V / Ctrl+V`)** 与 `otpauth://` / Base32 URI 批量导入去重；与终端交互防重放打通。
+- **SSH / 终端直连与传输**：**安全前提——须先建立 `.kdbx` 密钥库并绑定条目凭据**，方可从条目一键打开独立终端标签页发起 SSH/Telnet 连接（支持自动填充凭据与 **2FA 自动验证**）；终端侧边抽屉内置图形化 **SFTP 文件管理器**，并原生支持 **ZMODEM (`rz / sz`)** 传输。
 
-MarkNotePro 基于 [KDBXWeb](https://github.com/keeweb/kdbxweb) 集成 KeePass 兼容的 KDBX 密码库能力。每个 `.kdbx` 文件均以独立主密码加密，密码库内容、附件与历史记录保存于本地文件；支持在工作区内按分组管理密钥条目、标签筛选、附件预览、历史恢复、回收站恢复，以及条目的批量移动和受提取码保护的导入导出。
+### 3. 局域网共享与桌面效率套件
 
-### 核心安全与快捷能力
+- **局域网文件共享**：一键开启工作区或文件局域网共享，清晰划分**「我的分享」**与**「他人分享」**权限视图，无需第三方网盘即可在同网段设备间高速互传与预览。
+- **多工作区切换与迁移**：支持工作区快速切换，以及在分支/工作区变动时提供**自动合并提示**与**手动合并对比**防呆保护。
+- **全局截屏、贴图与剪贴板历史**：内置快捷键全局截屏、桌面置顶贴图（Pin）及本地剪贴板历史检索，写作与开发查错无缝衔接。
+- **工作区内链互通**：侧边栏一键复制工作区相对路径或 Markdown 链接，在笔记内点击即可直达同库的其他文档、图表、脑图或 PDF 标签页。
 
-- **2FA 双因素动态口令（TOTP）**：
-  - 原生支持基于时间的动态口令生成与实时环形倒计时显示。
-  - 支持直接扫描导入二维码图片、本地文件选择，或通过剪贴板直接粘贴（Cmd+V / Ctrl+V）屏幕截图自动识别 2FA 密钥。
-  - 支持通过文本框批量导入多条 `otpauth://` 链接或 Base32 密钥，自动按 issuer 命名并智能去重。
-  - 支持一键复制动态口令，并与终端会话交互登录防重放机制无缝打通。
-- **SSH / 终端快捷直连与运维管理**：
-  - 密钥条目原生支持绑定为终端会话（如 SSH、Telnet），保存主机、端口、用户名、密码、私钥与凭据。
-  - 在条目列表或详情页工具栏中点击**“直连终端”**图标，即可一键在工作区内打开独立终端标签页发起连接，自动读取密码与 2FA 口令。
-  - 内置图形化 **SFTP 侧边抽屉文件管理器**：支持远程服务器目录树浏览、文件上传/下载、重命名、新建文件（预置常用格式）、快捷编辑与删除二次确认防误触。
-  - 原生支持 **ZMODEM (rz / sz)** 文件上下传协议，终端体验与专业终端工具无异。
+## 工作区与 Git 联动
 
-### MarkNotePro 与 MarkTextPro 的能力对齐
-
-MarkNotePro 与 MarkTextPro 共同基于 KDBXWeb 与终端协议栈打造这套**一体化 KDBX 加密密码库与终端直连体系**，这是二者共有的核心底层能力：
-
-- **MarkNotePro**：将密码库与终端直连纳入“工作区 / 分区组 / 分区 / 文档”的结构化知识管理体系，适合团队知识库、运维笔记与凭据资产的一体化管理。
-- **MarkTextPro**：在真实文件夹、代码仓库与外部自由文件中直接创建和管理密码库，支持对项目本地凭据的随时加解密与一键直连。
-
-两者在密码库加解密、2FA 动态口令、SSH 终端直连与 SFTP 上的功能实现完全一致。
-
-## 笔记工作区模型
-
-MarkNotePro 的重点是“稳定的笔记结构”。根目录代表一个笔记工作区，根目录自身不折叠；根目录下展示分区组，分区组下可以继续包含子分区组或分区，分区下保存 Markdown 笔记、Draw.io 绘图、GeoGebra 数学文档、MindMap 思维导图与 KDBX 密码库。
-
-```mermaid
-flowchart TD
-  Root["笔记工作区根目录"] --> Group["分区组"]
-  Group --> SubGroup["子分区组"]
-  Group --> Area["分区"]
-  SubGroup --> Area2["分区"]
-  Area --> Note["Markdown 笔记 (.md)"]
-  Area --> Drawio["Draw.io 绘图 (.drawio)"]
-  Area --> GGB["GeoGebra 数学文档 (.ggb)"]
-  Area --> SMM["MindMap 思维导图 (.smm)"]
-  Area --> KDBX["KDBX 加密密码库 (.kdbx)"]
-  Area2 --> Note2["Markdown / Draw.io / GeoGebra / MindMap / KDBX"]
-  Root --> Attach["Attachments 附件目录"]
-
-  Attach -. "真实存在，但不显示在侧边栏" .-> Hidden["图片与附件资源"]
-```
-
-工作区规则：
-
-- 根目录用于承载整个笔记工作区，不作为普通笔记节点折叠。
-- 分区组用于组织分区或子分区组。
-- 分区用于保存 Markdown 笔记（`.md`）、Draw.io 绘图（`.drawio`）、GeoGebra 数学文档（`.ggb`）、MindMap 思维导图（`.smm`）与 KDBX 密码库（`.kdbx`）。
-- 附件目录（`Attachments`）用于保存 Markdown 插入的本地图片等资源，界面中默认隐藏；GeoGebra 与 MindMap 内部插入的图片等媒体资源直接封装在文件内部。
-- 删除分区组、分区、文档时会同步关闭相关已打开标签，避免编辑器继续指向旧路径。
-- 重命名或移动笔记结构时，会同步更新已打开文档的路径指向。
-
-## Git 联动
-
-MarkNotePro 把 Git 作为笔记工作区的版本管理能力，而不是额外割裂的工具。你可以在笔记区写作，也可以切换到 Git 区完成提交、拉取、推送和历史查看。
+MarkNotePro 将 **Git 工作流**（基于 GitHub Desktop 核心理念）与**结构化笔记工作区**深度绑定，支持仓库克隆、Diff 审阅、分支管理、历史回溯及一键提交推送。
 
 ```mermaid
 flowchart LR
-  Note["笔记区"] -- "点击 Git 按钮" --> Git["Git 区"]
-  Git -- "点击笔记按钮" --> Note
-  Git -- "选择仓库" --> Confirm{"确认切换仓库？"}
-  Confirm -- "确认，并勾选切换笔记工作区" --> Workspace["将笔记工作区切换到当前仓库或子目录"]
-  Confirm -- "确认，但不切换笔记工作区" --> GitOnly["仅切换 Git 仓库"]
-  Workspace --> Reload["关闭已打开笔记并重载工作区"]
-  Note -- "重命名根目录" --> Sync["同步更新受管 Git 仓库路径"]
-  Sync --> Git
+  subgraph Workspace["结构化笔记工作区"]
+    Root["根目录"] --> Group["分区组 / 子分区组"] --> Area["分区"]
+    Area --> Docs[".md / .drawio / .ggb / .smm / .kdbx / .pdf"]
+    Root -. "隐藏附件目录" .-> Attach["Attachments"]
+  end
+
+  Workspace <-->|"顶部视图切换"| Git["Git 工作区 (Diff / 分支 / 历史 / Push)"]
+  Git -->|"切换仓库"| Confirm{"是否同步切换工作区？"}
+  Confirm -->|"是"| Reload["安全切换并重载目录"]
+  Confirm -->|"否"| GitOnly["仅切换 Git 仓库"]
+  Root -->|"重命名根目录"| Sync["自动同步 Git 仓库路径"]
 ```
 
-联动关系：
+- **核心约束**：首用须选定本地工作区根目录；删除或移动分区/文档时，系统自动关闭或同步重定向已打开标签路径，避免脏写入。
 
-- Git 区可以选择仓库，切换前会确认，避免误点。
-- 默认可以勾选“切换笔记工作区”，让笔记工作区跟随当前 Git 仓库。
-- 也可以取消勾选，只切换 Git 仓库，保留当前笔记工作区。
-- 从 Git 区可以把当前仓库根目录或仓库子目录设置为笔记工作区。
-- 如果笔记根目录重命名，MarkNotePro 会同步更新受管 Git 仓库路径，避免 Git 区找不到仓库。
-- 允许 Git 仓库和笔记工作区不是同一个目录，适合更复杂的本地目录规划。
+## 安全规范
 
-### 数据安全与 Git 使用建议
+将 Git 作为个人知识与敏感凭据库同步底座时，请务必遵守以下规则：
 
-MarkNotePro 将 Git 作为知识工作区的核心版本控制与跨设备同步底座。在享受云端备份与协同便利的同时，请务必关注个人数据安全：
+1. **务必使用私有仓库（Private Repository）**：个人笔记、技术架构图、运维文档与业务规划严禁托管于公开 Git 仓库。
+2. **严禁推送 `.kdbx` 至公有仓库**：虽有 AES-256 / ChaCha20 加密，公开暴露密码库仍面临离线暴力爆破风险；若仓库必须开源，请确保在 `.gitignore` 中排除 `*.kdbx` 或拆分为独立私有库。
+3. **使用 16 位高强度主密码**：主密码决定 KDBX 抗爆破上限，建议设置满 16 位大小写字母与数字组合，避免弱口令或复用密码。
 
-1. **强烈建议使用私有仓库（Private Repository）**：
-   - 知识工作区往往承载着大量个人日常笔记、内部技术方案、业务规划、架构设计与工程图纸等隐私内容。请务必将远程 Git 仓库（如 GitHub、Gitee、GitLab 或自建 Git 服务）设置为**私有项目**，从源头杜绝个人敏感资料被搜索引擎收录或公开泄露。
-2. **严禁将 KDBX 密码库暴露到公有仓库**：
-   - 虽然 KDBX 采用业内高标准的对称加密算法（AES-256 / ChaCha20）并由主密码保护，但**切勿将 `.kdbx` 文件推送到任何公开仓库（Public Repository）**！
-   - 公开暴露密码库意味着攻击者可无限期下载该文件，并在离线环境下利用超级算力进行字典爆破和彩虹表攻击。
-   - 若必须使用公开仓库开源部分笔记，请务必将 `*.kdbx` 加入 `.gitignore` 规则中严格排除，或使用独立的私有仓库专门存放凭据资产。
-3. **设定极高强度的主密码**：
-   - KDBX 密码库的坚固程度完全取决于主密码的强度。软件支持 8-16 位大小写字母及数字，强烈建议设置满 16 位混合大小写字母与数字的高强度密码，杜绝使用任何简单弱口令或跨平台重复密码。
-
-## 截图与演示
-
-[查看完整功能展示图](docs/assets/screenshots/showcase-overview.png)
-
-<table>
-  <tr>
-    <td align="center" colspan="2">
-      <img src="docs/assets/screenshots/git-workspace-demo.gif" alt="MarkNotePro Git 操作演示" width="100%">
-      <br>
-      <sub>在笔记区和 Git 区之间切换，完成仓库操作与工作区联动</sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
-      <img src="docs/assets/screenshots/warning-callouts.png" alt="五种警告块样式" width="100%">
-      <br>
-      <sub>五种警告块样式</sub>
-    </td>
-    <td align="center">
-      <img src="docs/assets/screenshots/paragraph-menu-warning.png" alt="段落菜单与警告块" width="100%">
-      <br>
-      <sub>段落菜单与警告块</sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
-      <img src="docs/assets/screenshots/task-status-bulk-action.png" alt="任务状态批量编辑" width="100%">
-      <br>
-      <sub>任务状态批量编辑</sub>
-    </td>
-    <td align="center">
-      <img src="docs/assets/screenshots/list-indent-context-menu.png" alt="列表缩进菜单" width="100%">
-      <br>
-      <sub>列表缩进菜单</sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" colspan="2">
-      <img src="docs/assets/screenshots/insert-palette.png" alt="插入面板" width="100%">
-      <br>
-      <sub>插入面板</sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" colspan="2">
-      <img src="docs/assets/screenshots/table-toolkit-overview.png" alt="表格工具能力" width="100%">
-      <br>
-      <sub>表格工具能力</sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
-      <img src="docs/assets/screenshots/table-copy-paste.gif" alt="表格复制粘贴" width="100%">
-      <br>
-      <sub>表格复制粘贴</sub>
-    </td>
-    <td align="center">
-      <img src="docs/assets/screenshots/excel-table-interoperability.gif" alt="Excel 与 MarkNotePro 表格互操作" width="100%">
-      <br>
-      <sub>Excel 与 MarkNotePro 表格互操作</sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" colspan="2">
-      <img src="docs/assets/screenshots/git-workspace-overview.png" alt="MarkNotePro Git 工作区截图" width="100%">
-      <br>
-      <sub>集成 Git 工作区：查看变更、历史、分支并提交同步</sub>
-    </td>
-  </tr>
-</table>
-
-## 下载安装
+## 下载安装与源码构建
 
 ![platform](https://img.shields.io/static/v1.svg?label=Platform&message=Linux%20x64%20|%20macOS%20x64%2Farm64%20|%20Windows%20x64%2Farm64&style=for-the-badge)
 
-可直接通过 GitHub Releases 或 Gitee 镜像获取安装包：
-
-- **GitHub 官方 Releases 下载**：[https://github.com/scott20201225/marknote-pro/releases/latest](https://github.com/scott20201225/marknote-pro/releases/latest)
-- **Gitee 镜像仓库**：[https://gitee.com/cmflovekm/marknote-pro](https://gitee.com/cmflovekm/marknote-pro)
-
-> 💡 **兄弟项目**：如果您需要管理真实自由文件夹、代码仓库与外部技术文档，请前往 [MarkTextPro GitHub Releases](https://github.com/scott20201225/marktext-pro/releases/latest) 或 [MarkTextPro Gitee 镜像](https://gitee.com/cmflovekm/marktext-pro)。
-
-安装包格式对应：
-
-- macOS：`marknotepro-mac-(arm64|x64)-%version%.dmg`
-- Windows：`marknotepro-win-(x64|arm64)-%version%-setup.exe`
-- Linux：提供 `deb`、`rpm`、`snap`、`tar.gz` 等构建，具体以 Release 页面为准。
-
-## 开发
+- **GitHub Releases 官方下载**：[https://github.com/scott20201225/marknote-pro/releases/latest](https://github.com/scott20201225/marknote-pro/releases/latest)
+- **Gitee 国内镜像**：[https://gitee.com/cmflovekm/marknote-pro](https://gitee.com/cmflovekm/marknote-pro)
+- **安装包命名**：macOS `marknotepro-mac-(arm64|x64)-%version%.dmg` · Windows `marknotepro-win-(x64|arm64)-%version%-setup.exe` · Linux `deb / rpm / snap / tar.gz`
 
 ```bash
+# 本地开发调试
 pnpm install
 pnpm --filter marknotepro dev
-```
 
-构建桌面端：
-
-```bash
+# 打包桌面客户端
 pnpm --filter marknotepro build
 ```
 
-## 许可与商业授权
+## 开源协议与第三方声明
 
 本项目采用 **[MarkNotePro 非商业使用与商业授权许可协议](LICENSE)**：
 
-- **非商业用途免费**：个人学习、教学演示、学术研究及个人非商业知识管理可免费下载和使用。
-- **商业用途需授权（严禁未授权商用）**：未经版权所有人（[ScottCheng](https://github.com/scott20201225)）事先书面授权，严禁将 MarkNotePro（含源代码、二进制安装包、衍生修改版或内嵌模块）用于任何商业目的（包括但不限于直接或间接售卖、打包进商业产品/SaaS服务、企业商业化部署或抹除署名二次分发）。如需商业使用，请联系作者获取书面商业授权。
+- **非商业使用免费**：个人学习、教育演示、学术研究及个人文档管理可免费下载使用。
+- **商业使用须获授权**：未经著作权人（[ScottCheng](https://github.com/scott20201225)）事先书面授权，严禁将本项目（含源码、安装包、衍生版本或内置模块）用于销售、SaaS/商业产品集成、企业商用部署或去除版权标识后分发。商业合作请联系作者。
 
-### 内置核心组件协议声明
+<details>
+<summary>第三方开源与集成组件声明（8 项）</summary>
 
-MarkNotePro 集成了以下开源与第三方核心组件，各组件遵循其对应上游协议（详见 [LICENSE](LICENSE)）：
+- **draw.io (diagrams.net)**：[Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0) (`Copyright (c) 2005-present JGraph Ltd`)
+- **GeoGebra**：[GeoGebra License](https://www.geogebra.org/license)（源码遵循 **GPLv3**；软件、文档与语言资产遵循 **GeoGebra Non-Commercial License Agreement / CC BY-NC-SA 3.0**，仅限非商业使用免费）
+- **simple-mind-map**：[MIT License](https://github.com/wanglin2/mind-map/blob/main/LICENSE) (`Copyright (c) 2021-2023 The MindMap Team / wanglin2`)
+- **KDBXWeb**：[MIT License](https://github.com/keeweb/kdbxweb/blob/master/LICENSE) (`Copyright (C) 2021-2025 Antelle`)
+- **PDF.js**：[Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0) (`Copyright 2024 Mozilla Foundation`)
+- **Tabby**：[MIT License](https://github.com/Eugeny/tabby/blob/master/LICENSE) (`Copyright (c) 2017-present Eugenia Kim (Eugeny)`)
+- **GitHub Desktop**：MIT License (`Copyright (c) GitHub, Inc.`)
+- **MarkText & Muya**：MIT License (`Copyright (c) 2017-present Luo Ran & MarkText Contributors`)
 
-- **draw.io (diagrams.net)**：遵循 [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)（`Copyright (c) 2005-present JGraph Ltd`）。
-- **GeoGebra**：遵循 [GeoGebra License](https://www.geogebra.org/license)（源码遵循 **GPLv3**，软件、文档与语言资源遵循 **GeoGebra Non-Commercial License Agreement / CC BY-NC-SA 3.0**，仅限非商业用途免费使用，商业用途须同时遵守 GeoGebra 官方商业授权要求）。
-- **simple-mind-map (思绪思维导图)**：遵循 [MIT License](https://github.com/wanglin2/mind-map/blob/main/LICENSE)（`Copyright (c) 2021-2023 The MindMap Team / wanglin2`）。
-- **KDBXWeb**：遵循 [MIT License](https://github.com/keeweb/kdbxweb/blob/master/LICENSE)（`Copyright (C) 2021-2025 Antelle`），其完整许可证文本保留在 `packages/desktop/src/kdbxWebApp/kdbxweb/LICENSE`。
-- **Tabby**：遵循 [MIT License](https://github.com/Eugeny/tabby/blob/master/LICENSE)（`Copyright (c) 2017-present Eugenia Kim (Eugeny)`）。MarkNotePro 的终端会话与色盘配置参考其开源实现。
-- **PDF.js**：遵循 [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)（`Copyright 2024 Mozilla Foundation`），其完整许可证文本保留在 `packages/desktop/src/pdfWebApp/pdfjs/LICENSE`。
-- **GitHub Desktop**：遵循 MIT License（`Copyright (c) GitHub, Inc.`）。
-- **MarkText & Muya**：遵循 MIT License（`Copyright (c) 2017-present Luo Ran & MarkText Contributors`）。
+</details>
