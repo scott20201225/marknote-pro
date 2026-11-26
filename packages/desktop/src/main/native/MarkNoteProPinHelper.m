@@ -6093,6 +6093,7 @@ static void showCaptureOverlay(NSScreen *screen, NSImage *screenshot, NSArray<De
     // Stay strictly above macOS Menu Bar (24), Dock (20), Status Bar (25), and Popups (101)
     gCapturePanel.level = CGShieldingWindowLevel();
     gCapturePanel.releasedWhenClosed = NO;
+    gCapturePanel.animationBehavior = NSWindowAnimationBehaviorNone;
     gCapturePanel.collectionBehavior = NSWindowCollectionBehaviorCanJoinAllSpaces |
                                        NSWindowCollectionBehaviorFullScreenAuxiliary |
                                        NSWindowCollectionBehaviorStationary |
@@ -6102,8 +6103,10 @@ static void showCaptureOverlay(NSScreen *screen, NSImage *screenshot, NSArray<De
     gCapturePanel.movableByWindowBackground = NO;
     gCapturePanel.ignoresMouseEvents = NO;
     gCapturePanel.acceptsMouseMovedEvents = YES;
-    gCapturePanel.opaque = YES;
-    gCapturePanel.backgroundColor = [NSColor blackColor];
+    // Start invisible with clearColor so the 3600x2338 layer commits to WindowServer BEFORE revealing (zero black flash!)
+    gCapturePanel.opaque = NO;
+    gCapturePanel.backgroundColor = [NSColor clearColor];
+    gCapturePanel.alphaValue = 0.0;
     gCapturePanel.hasShadow = NO;
     gCapturePanel.appearance = AppTheme.currentTheme.isDark ?
         [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua] :
@@ -6115,15 +6118,25 @@ static void showCaptureOverlay(NSScreen *screen, NSImage *screenshot, NSArray<De
     gCapturePanel.overlayView = overlay;
     gCapturePanel.contentView = overlay;
 
-    // Pre-highlight the window currently under the cursor and render off-screen BEFORE ordering front to prevent flashing!
+    // Pre-highlight the window currently under the cursor and force synchronous GPU layer commit while alphaValue == 0.0
     NSPoint mouseGlobal = [NSEvent mouseLocation];
     NSPoint initialLocal = NSMakePoint(mouseGlobal.x - screenRect.origin.x, mouseGlobal.y - screenRect.origin.y);
     [overlay updateSmartHoverAtPoint:initialLocal];
-    [gCapturePanel setFrame:screenRect display:YES];
-    [overlay display];
-
+    [gCapturePanel setFrame:screenRect display:NO];
     [gCapturePanel makeKeyAndOrderFront:nil];
     [gCapturePanel orderFrontRegardless];
+    [overlay setNeedsDisplay:YES];
+    [gCapturePanel displayIfNeeded];
+    [CATransaction flush];
+
+    // Atomically reveal pre-rendered capture surface in a single VSync swap, then activate app behind it
+    [CATransaction begin];
+    [CATransaction setDisableActions:YES];
+    gCapturePanel.alphaValue = 1.0;
+    gCapturePanel.opaque = YES;
+    [CATransaction commit];
+    [CATransaction flush];
+
     if (@available(macOS 14.0, *)) {
         [NSApp activate];
     } else {
@@ -6148,9 +6161,11 @@ static NSImage *loadAndDecodeImageAtPath(NSString *imgPath, NSSize logicalSize) 
     // Force immediate raster decode into an offscreen bitmap context so first drawRect has zero lag/flash
     size_t w = CGImageGetWidth(cgImg);
     size_t h = CGImageGetHeight(cgImg);
-    CGColorSpaceRef cs = CGColorSpaceCreateWithName(kCGColorSpaceSRGB) ?: CGColorSpaceCreateDeviceRGB();
+    CGColorSpaceRef imgCS = CGImageGetColorSpace(cgImg);
+    CGColorSpaceRef fallbackCS = imgCS ? NULL : (CGColorSpaceCreateWithName(kCGColorSpaceSRGB) ?: CGColorSpaceCreateDeviceRGB());
+    CGColorSpaceRef cs = imgCS ?: fallbackCS;
     CGContextRef ctx = CGBitmapContextCreate(NULL, w, h, 8, w * 4, cs, kCGBitmapByteOrder32Host | kCGImageAlphaPremultipliedFirst);
-    CGColorSpaceRelease(cs);
+    if (fallbackCS) CGColorSpaceRelease(fallbackCS);
     NSImage *decoded = nil;
     if (ctx) {
         CGContextDrawImage(ctx, CGRectMake(0, 0, w, h), cgImg);
