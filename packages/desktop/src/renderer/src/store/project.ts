@@ -950,6 +950,16 @@ export const useProjectStore = defineStore('project', () => {
         })
       }
     })
+    bus.on('SIDEBAR::mark-share', () => {
+      const item = activeItem.value
+      if (item && item.pathname) {
+        void import('./markShare').then(({ useMarkShareStore }) => {
+          const markShareStore = useMarkShareStore()
+          void markShareStore.init()
+          markShareStore.openDevicePicker([item.pathname], item.name)
+        })
+      }
+    })
     bus.on('SIDEBAR::copy-path', () => {
       const pathname = activeItem.value?.pathname
       if (pathname) {

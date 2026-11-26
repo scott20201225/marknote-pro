@@ -53,8 +53,11 @@
           class="note-list-item"
           :class="{ current: currentFile?.pathname === file.pathname }"
           :title="file.pathname"
+          draggable="true"
           @click="handleFileClick(file)"
           @contextmenu.prevent.stop="showFileContextMenu($event, file)"
+          @dragstart="handleListFileDragStart($event, file)"
+          @dragend="handleListFileDragEnd"
         >
           <div class="note-list-main">
             <file-icon :name="file.name" />
@@ -318,6 +321,21 @@ const showFileContextMenu = (event: MouseEvent, file: TreeFileNode): void => {
   projectStore.SELECT_NOTE_PATH(window.path.dirname(file.pathname))
   projectStore.CHANGE_ACTIVE_ITEM(file)
   showContextMenu(event, file, rootPath.value, !!clipboard.value)
+}
+
+const handleListFileDragStart = (event: DragEvent, file: TreeFileNode): void => {
+  if (!file?.pathname || !event.dataTransfer) return
+  event.dataTransfer.effectAllowed = 'copy'
+  event.dataTransfer.setData('application/x-markshare-paths', JSON.stringify([file.pathname]))
+  void import('@/store/markShare').then(({ useMarkShareStore }) => {
+    useMarkShareStore().showDragRadar([file.pathname], false)
+  })
+}
+
+const handleListFileDragEnd = (): void => {
+  void import('@/store/markShare').then(({ useMarkShareStore }) => {
+    useMarkShareStore().scheduleHideDragRadar(150)
+  })
 }
 
 const showFileActionMenu = (event: MouseEvent, file: TreeFileNode): void => {

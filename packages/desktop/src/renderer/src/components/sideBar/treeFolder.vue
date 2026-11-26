@@ -8,8 +8,11 @@
         { active: activeItem?.pathname === folder.pathname || selectedNotePath === folder.pathname }
       ]"
       :title="folder.pathname"
+      draggable="true"
       @click="folderNameClick"
       @dblclick="folderNameDoubleClick"
+      @dragstart.stop="handleFolderDragStart"
+      @dragend="handleFolderDragEnd"
     >
       <el-icon
         v-if="showCollapseArrow"
@@ -98,6 +101,7 @@
 import { ref, onMounted, nextTick, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useProjectStore } from '@/store/project'
+import { useMarkShareStore } from '@/store/markShare'
 import { showContextMenu } from '../../contextMenu/sideBar'
 import bus from '../../bus'
 import File from './treeFile.vue'
@@ -128,6 +132,21 @@ const props = defineProps<{
 
 const { t } = useI18n()
 const projectStore = useProjectStore()
+const markShareStore = useMarkShareStore()
+
+const handleFolderDragStart = (event: DragEvent): void => {
+  if (!props.folder?.pathname || !event.dataTransfer) return
+  event.dataTransfer.effectAllowed = 'copy'
+  event.dataTransfer.setData(
+    'application/x-markshare-paths',
+    JSON.stringify([props.folder.pathname])
+  )
+  markShareStore.showDragRadar([props.folder.pathname], false)
+}
+
+const handleFolderDragEnd = (): void => {
+  markShareStore.scheduleHideDragRadar(150)
+}
 
 const createName = ref('')
 const newName = ref('')

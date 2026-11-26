@@ -60,6 +60,30 @@ export const sideBarIcons: SideBarIconEntry[] = [
     id: 'lanShare',
     name: () => t('sideBar.icons.lanShare'),
     icon: ShareIcon
+  },
+  {
+    id: 'markShare',
+    name: () => t('sideBar.icons.markShare'),
+    icon: {
+      render: () =>
+        h(
+          'svg',
+          {
+            viewBox: '0 0 24 24',
+            fill: 'none',
+            stroke: 'currentColor',
+            'stroke-width': '1.8',
+            'stroke-linecap': 'round',
+            'stroke-linejoin': 'round'
+          },
+          [
+            h('path', { d: 'M12 20a8 8 0 1 0-8-8' }),
+            h('path', { d: 'M12 16a4 4 0 1 0-4-4' }),
+            h('circle', { cx: '12', cy: '12', r: '1.5', fill: 'currentColor' }),
+            h('path', { d: 'M6 19l6-7 6 7' })
+          ]
+        )
+    }
   }
 ]
 

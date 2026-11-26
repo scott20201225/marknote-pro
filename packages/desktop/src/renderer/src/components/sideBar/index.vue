@@ -55,6 +55,7 @@
       />
       <side-bar-search v-show="rightColumn === 'search'" />
       <side-bar-lan-share v-show="rightColumn === 'lanShare'" />
+      <side-bar-mark-share v-show="rightColumn === 'markShare'" />
     </div>
     <div
       v-show="rightColumn"
@@ -75,6 +76,7 @@ import { sideBarIcons, sideBarBottomIcons, type SideBarIconEntry } from './help'
 import Tree from './tree.vue'
 import SideBarSearch from './search.vue'
 import SideBarLanShare from './lanShare.vue'
+import SideBarMarkShare from './markShare.vue'
 import { storeToRefs } from 'pinia'
 import bus from '@/bus'
 import type { TabDescriptor } from './types'

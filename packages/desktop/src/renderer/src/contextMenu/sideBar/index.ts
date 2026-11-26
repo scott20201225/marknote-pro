@@ -20,7 +20,8 @@ import {
   getExpandAll,
   getCollapseAll,
   getReloadWorkspace,
-  getShareLan
+  getShareLan,
+  getMarkShare
 } from './menuItems'
 import { popupContextMenu, type ContextMenuItem } from '../popupMenu'
 import { getNoteNodeKind } from '../../util/noteWorkspace'
@@ -95,7 +96,8 @@ export const showContextMenu = (
       SEPARATOR,
       getShowInFolder(),
       SEPARATOR,
-      getShareLan()
+      getShareLan(),
+      getMarkShare()
     ]
   } else if (kind === 'area') {
     contextItems = [
@@ -117,7 +119,8 @@ export const showContextMenu = (
       SEPARATOR,
       getShowInFolder(),
       SEPARATOR,
-      getShareLan()
+      getShareLan(),
+      getMarkShare()
     ]
   } else if (kind === 'document') {
     contextItems = [
@@ -137,7 +140,8 @@ export const showContextMenu = (
       SEPARATOR,
       getShowInFolder(),
       SEPARATOR,
-      getShareLan()
+      getShareLan(),
+      getMarkShare()
     ]
   } else {
     contextItems = [
@@ -159,7 +163,8 @@ export const showContextMenu = (
       SEPARATOR,
       getShowInFolder(),
       SEPARATOR,
-      getShareLan()
+      getShareLan(),
+      getMarkShare()
     ]
   }
 
@@ -208,7 +213,10 @@ export const showNoteListContextMenu = (
       SEPARATOR,
       getCopyPath(),
       SEPARATOR,
-      getShowInFolder()
+      getShowInFolder(),
+      SEPARATOR,
+      getShareLan(),
+      getMarkShare()
     ]
   } else if (kind === 'area') {
     contextItems = [
@@ -225,7 +233,10 @@ export const showNoteListContextMenu = (
       SEPARATOR,
       getCopyPath(),
       SEPARATOR,
-      getShowInFolder()
+      getShowInFolder(),
+      SEPARATOR,
+      getShareLan(),
+      getMarkShare()
     ]
   } else if (kind === 'document') {
     contextItems = [
@@ -242,7 +253,10 @@ export const showNoteListContextMenu = (
       SEPARATOR,
       getCopyPath(),
       SEPARATOR,
-      getShowInFolder()
+      getShowInFolder(),
+      SEPARATOR,
+      getShareLan(),
+      getMarkShare()
     ]
   } else {
     contextItems = [

@@ -205,6 +205,14 @@ export const getShareLan = () => ({
   }
 })
 
+export const getMarkShare = () => ({
+  label: t('contextMenu.sideBar.markShare'),
+  id: 'markShareMenuItem',
+  click(_menuItem: unknown, _browserWindow: unknown) {
+    contextMenu.markShare()
+  }
+})
+
 // Retained for backward compatibility
 export const NEW_FILE = getNewFile()
 export const NEW_DIRECTORY = getNewDirectory()

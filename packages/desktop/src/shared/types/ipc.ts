@@ -20,6 +20,14 @@
 import type { IKeyboardLayoutInfo, IKeyboardMapping } from 'native-keymap'
 import type { ClipboardItemRecord, PinWindowPayload, ScreenCaptureDisplayInfo } from './clipboard'
 import type {
+  MarkShareAcceptRequest,
+  MarkShareConfigState,
+  MarkShareDevice,
+  MarkShareHistoryRecord,
+  MarkShareOffer,
+  MarkShareSendRequest
+} from './markShare'
+import type {
   MarkdownDocument,
   TabOptions,
   BootstrapEditorConfig,
@@ -324,6 +332,29 @@ export interface IpcInvokeChannels {
   'mt::terminal:save-stored-server': { args: [config: ITerminalConnectionConfig]; ret: ITerminalConnectionConfig }
   'mt::terminal:delete-stored-server': { args: [id: string]; ret: boolean }
   'mt::terminal:test-latency': { args: [host: string, port?: number]; ret: number }
+  'mt::mark-share:get-state': {
+    args: []
+    ret: {
+      config: MarkShareConfigState
+      devices: MarkShareDevice[]
+      activeOffers: MarkShareOffer[]
+      history: MarkShareHistoryRecord[]
+    }
+  }
+  'mt::mark-share:set-enabled': { args: [enabled: boolean]; ret: MarkShareConfigState }
+  'mt::mark-share:set-auto-start': { args: [autoStart: boolean]; ret: MarkShareConfigState }
+  'mt::mark-share:set-default-save-dir': { args: [dirPath: string]; ret: MarkShareConfigState }
+  'mt::mark-share:set-device-alias': { args: [alias: string]; ret: MarkShareConfigState }
+  'mt::mark-share:set-peer-alias': { args: [peerKey: string, alias: string]; ret: MarkShareDevice[] }
+  'mt::mark-share:refresh-devices': { args: []; ret: MarkShareDevice[] }
+  'mt::mark-share:send': { args: [req: MarkShareSendRequest]; ret: MarkShareOffer }
+  'mt::mark-share:cancel': { args: [offerId: string]; ret: boolean }
+  'mt::mark-share:stop': { args: [offerId: string]; ret: boolean }
+  'mt::mark-share:accept': { args: [req: MarkShareAcceptRequest]; ret: MarkShareOffer }
+  'mt::mark-share:reject': { args: [offerId: string]; ret: boolean }
+  'mt::mark-share:clear-history': { args: []; ret: MarkShareHistoryRecord[] }
+  'mt::mark-share:open-path': { args: [targetPath: string]; ret: boolean }
+  'mt::mark-share:select-directory': { args: [defaultPath?: string]; ret: string | null }
   // Main derives the BrowserWindow via BrowserWindow.fromWebContents(e.sender);
   // no need to pass windowId. Payload is the editor+project+layout snapshot.
   'update-buffer-state': { args: [payload: unknown]; ret: void }
@@ -512,6 +543,21 @@ export interface IpcSendChannels {
   'mt::terminal:write': [payload: { sessionId: string; data: string }]
   'mt::terminal:resize': [payload: { sessionId: string; cols: number; rows: number }]
   'mt::terminal:2fa-answer': [payload: { promptId: string; code: string }]
+  'mt::mark-share:child-drag-enter': []
+  'mt::mark-share:show-notice': [
+    payload: { type: 'success' | 'warning' | 'error' | 'info'; message: string }
+  ]
+  'mt::mark-share:sync-hud-meta': [
+    payload: {
+      isDark?: boolean
+      labels?: {
+        waitingConfirmSec?: string
+        sasCode?: string
+        cancelSend?: string
+        stopTransfer?: string
+      }
+    }
+  ]
 }
 
 // =================================================================
@@ -713,6 +759,13 @@ export interface IpcMainEventChannels {
   'mt::terminal:stats': [payload: { sessionId: string; stats: IHardwareStats }]
   'mt::terminal:2fa-prompt': [payload: { sessionId: string; promptId: string; prompt: string; instruction?: string }]
   'mt::terminal:sftp-progress': [payload: { sessionId: string; progress: ISftpTransferProgress }]
+  'mt::mark-share:config-updated': [config: MarkShareConfigState]
+  'mt::mark-share:devices-updated': [devices: MarkShareDevice[]]
+  'mt::mark-share:sessions-updated': [sessions: MarkShareOffer[]]
+  'mt::mark-share:history-updated': [history: MarkShareHistoryRecord[]]
+  'mt::mark-share:incoming-offer': [offer: MarkShareOffer]
+  'mt::mark-share:session-ended': [offer: MarkShareOffer]
+  'mt::mark-share:child-drag-enter': []
 }
 
 // =================================================================

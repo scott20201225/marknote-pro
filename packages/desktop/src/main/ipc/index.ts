@@ -15,6 +15,7 @@ import { registerKdbxHandlers } from '../kdbx'
 import { registerTerminalHandlers } from '../terminal'
 import { registerClipboardIpcHandlers } from './clipboard'
 import { registerLanShareHandlers } from '../lanShare'
+import { registerMarkShareHandlers } from '../markShare'
 import { registerWorkspaceMigrationHandlers } from '../workspaceMigration'
 
 export const registerSandboxIpcHandlers = (): void => {
@@ -35,6 +36,7 @@ export const registerSandboxIpcHandlers = (): void => {
   registerTerminalHandlers()
   registerClipboardIpcHandlers()
   registerLanShareHandlers('marknotepro')
+  registerMarkShareHandlers('marknotepro')
   registerWorkspaceMigrationHandlers('marknotepro')
 }
 

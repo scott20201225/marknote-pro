@@ -95,6 +95,10 @@
   <switch-git-workspace-modal />
   <workspace-migration-modal />
   <about-dialog />
+  <mark-share-device-picker-modal />
+  <mark-share-drop-radar />
+  <mark-share-incoming-modal />
+  <mark-share-transfer-toast />
 </template>
 
 <script setup lang="ts">
@@ -119,6 +123,10 @@ import ImportModal from '@/components/import/index.vue'
 import CreateShareModal from '@/components/lanShare/createShareModal.vue'
 import RemoteShareModal from '@/components/lanShare/remoteShareModal.vue'
 import QrCodeModal from '@/components/lanShare/qrCodeModal.vue'
+import MarkShareDevicePickerModal from '@/components/markShare/MarkShareDevicePickerModal.vue'
+import MarkShareDropRadar from '@/components/markShare/MarkShareDropRadar.vue'
+import MarkShareIncomingModal from '@/components/markShare/MarkShareIncomingModal.vue'
+import MarkShareTransferToast from '@/components/markShare/MarkShareTransferToast.vue'
 import SwitchGitWorkspaceModal from '@/components/workspaceMigration/switchGitWorkspaceModal.vue'
 import WorkspaceMigrationModal from '@/components/workspaceMigration/workspaceMigrationModal.vue'
 import GitDesktop from '@/components/gitDesktop/index.vue'
@@ -140,6 +148,7 @@ import { useProjectStore } from '@/store/project'
 import { useAutoUpdatesStore } from '@/store/autoUpdates'
 import { useNotificationStore } from '@/store/notification'
 import { useHostOverlayStore } from '@/store/overlay'
+import { useMarkShareStore } from '@/store/markShare'
 import { getDrawioConfiguration } from '@/util/drawioConfiguration'
 import { getMindMapConfiguration } from '@/util/mindmapConfiguration'
 import { getPdfConfiguration } from '@/util/pdfConfiguration'
@@ -156,6 +165,7 @@ const autoUpdateStore = useAutoUpdatesStore()
 const commandCenterStore = useCommandCenterStore()
 const notificationStore = useNotificationStore()
 const hostOverlayStore = useHostOverlayStore()
+const markShareStore = useMarkShareStore()
 
 const timer = ref<ReturnType<typeof setTimeout> | null>(null)
 const workspacePrompted = ref(false)
@@ -587,40 +597,105 @@ watch(
 )
 
 const setupDragDropHandler = (): void => {
-  window.addEventListener(
-    'dragover',
-    (e: DragEvent) => {
-      if (!e.dataTransfer || !e.dataTransfer.types.length) return
+  const isNativeOrNonImportView = (): boolean => {
+    return (
+      workbench.value === 'git' ||
+      !!currentFile.value?.isDrawing ||
+      !!currentFile.value?.isGeoGebra ||
+      !!currentFile.value?.isMindMap ||
+      !!currentFile.value?.isPdf ||
+      !!currentFile.value?.isKdbx ||
+      !!currentFile.value?.isTerminal
+    )
+  }
 
-      if (e.dataTransfer.types.indexOf('Files') >= 0) {
-        if (
-          e.dataTransfer.items.length === 1 &&
-          e.dataTransfer.items[0]!.type.indexOf('image') > -1
-        ) {
-          // Do nothing
-        } else {
-          e.preventDefault()
-          if (timer.value) {
-            clearTimeout(timer.value)
-          }
-          timer.value = setTimeout(() => {
-            bus.emit('importDialog', false)
-          }, 300)
-          bus.emit('importDialog', true)
-        }
+  const onDragEnter = (e: DragEvent): void => {
+    if (!e.dataTransfer || !e.dataTransfer.types.length) return
+    const types = Array.from(e.dataTransfer.types)
+    if (types.includes('application/x-markshare-paths')) {
+      e.preventDefault()
+      markShareStore.showDragRadar(markShareStore.dragRadarPaths, false)
+      return
+    }
+    if (types.includes('Files')) {
+      markShareStore.showDragRadar(markShareStore.dragRadarPaths, true)
+    }
+  }
+
+  const onDragOver = (e: DragEvent): void => {
+    if (!e.dataTransfer || !e.dataTransfer.types.length) return
+
+    if (e.dataTransfer.types.indexOf('application/x-markshare-paths') >= 0) {
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'copy'
+      markShareStore.showDragRadar(markShareStore.dragRadarPaths, false)
+      return
+    }
+
+    if (e.dataTransfer.types.indexOf('Files') >= 0) {
+      markShareStore.showDragRadar(markShareStore.dragRadarPaths, true)
+
+      const targetEl = e.target as HTMLElement | null
+      const inMarkShareRadar = !!targetEl?.closest('.ms-radar-float')
+      const inKdbxDropZone = !!targetEl?.closest('.kdbx-qr-dropzone, .kdbx-batch-dropzone')
+
+      if (inMarkShareRadar) {
+        e.preventDefault()
         e.dataTransfer.dropEffect = 'copy'
-      } else if (e.dataTransfer.types.indexOf('text/uri-list') >= 0) {
-        // A web-link / web-image drag (e.g. an <img> dragged from a browser).
-        // The muya editor's own dragover/drop handlers accept these and insert
-        // an image block, so leave the drop enabled — forcing dropEffect='none'
-        // here would clobber the editor's 'copy' and suppress the drop event.
-      } else {
-        e.stopPropagation()
-        e.dataTransfer.dropEffect = 'none'
+        return
       }
-    },
-    false
-  )
+
+      if (inKdbxDropZone) {
+        return
+      }
+
+      if (isNativeOrNonImportView()) {
+        // Keep drag active across Draw.io / GeoGebra / MindMap / PDF / KDBX / Terminal / GitHub
+        // without opening the Markdown import modal.
+        e.preventDefault()
+        e.dataTransfer.dropEffect = 'copy'
+        return
+      }
+
+      if (
+        e.dataTransfer.items.length === 1 &&
+        e.dataTransfer.items[0]!.type.indexOf('image') > -1
+      ) {
+        // Let Muya editor insert dropped single images cleanly
+      } else {
+        e.preventDefault()
+        if (timer.value) {
+          clearTimeout(timer.value)
+        }
+        timer.value = setTimeout(() => {
+          bus.emit('importDialog', false)
+        }, 300)
+        bus.emit('importDialog', true)
+      }
+      e.dataTransfer.dropEffect = 'copy'
+    } else if (e.dataTransfer.types.indexOf('text/uri-list') >= 0) {
+      // A web-link / web-image drag (e.g. an <img> dragged from a browser).
+    } else {
+      e.stopPropagation()
+      e.dataTransfer.dropEffect = 'none'
+    }
+  }
+
+  const onDragLeave = (e: DragEvent): void => {
+    if (e.relatedTarget === null) {
+      markShareStore.scheduleHideDragRadar(150)
+    }
+  }
+
+  const onDragFinish = (): void => {
+    markShareStore.scheduleHideDragRadar(120)
+  }
+
+  window.addEventListener('dragenter', onDragEnter, true)
+  window.addEventListener('dragover', onDragOver, true)
+  window.addEventListener('dragleave', onDragLeave, true)
+  window.addEventListener('drop', onDragFinish, true)
+  window.addEventListener('dragend', onDragFinish, true)
 }
 onMounted(() => {
   window.addEventListener('marknotepro:switch-workbench', handleWorkbenchSwitch)
@@ -753,6 +828,7 @@ onMounted(() => {
   // module: notification
   notificationStore.listenForNotification()
 
+  void markShareStore.init()
   setupDragDropHandler()
 
   void commandCenterStore.LISTEN_COMMAND_CENTER_BUS().catch((error) => {

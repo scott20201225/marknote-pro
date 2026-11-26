@@ -4,6 +4,15 @@ All notable changes to **MarkNotePro** are documented in this file.
 
 ## [1.3.4] - 2026-11-26
 
+### ✨ New Features (MarkShare 局域网近场互传)
+- **拖拽 MarkShare 分享 / Drag-and-Drop MarkShare Sharing**：
+  - 从系统访达/桌面或左侧目录树拖拽文件与文件夹至应用窗口，自动唤起底部大卡片悬浮投放雷达（支持 **Markdown、Draw.io、GeoGebra、MindMap、PDF、KDBX、终端、GitHub 工作区与欢迎页** 全页面场景），清晰显示目标设备别名、系统类型、IP 与目标应用标识（`MarkNotePro` / `MarkTextPro`），悬停松手即可发起传输。
+- **右键 MarkShare 分享 / Context Menu MarkShare Sharing**：
+  - 在侧边栏文件或文件夹右键菜单新增 **MarkShare** 分享入口，支持选择一台或多台在线设备快速发起加密传输。
+- **双端跨应用加密互传与全链路体验完善**：
+  - 支持 `MarkNotePro` 与 `MarkTextPro` 基于独立 UDP 发现与传输通道互相发现并安全互传；传输会话全链路采用 X25519 + HKDF-SHA256 + AES-256-GCM 端到端加密与 4 位安全校验码（SAS）核验，提供 60 秒等待确认超时保护，确认后支持无限时大文件及多层文件夹传输。
+  - 采用基于 `deviceId:appType` 的唯一设备标识并将设备 ID 以 `Ev1:` 格式加密持久化，规避多网卡切换或同机双开冲突；双端配置、设备别名及收发记录完全隔离；接收确认按工作区下载目录自动预设路径并支持切换，支持原生跨视图浮卡/通知提示及收发记录左右方向与状态分离展示。
+
 ### 🐛 Bug Fixes & Improvements (macOS Native Capture)
 - **macOS 原生截图全屏置顶与防遮挡 / Fullscreen Shielding & Toolbar Layout**：
   - 将截图遮罩窗口从 `NSPanel` 调整为 `NSWindow` 并提升至 `CGShieldingWindowLevel()`，覆写 `constrainFrameRect:`，完整覆盖 macOS 菜单栏与 Dock 栏区域并修复关闭/贴图时的双重释放崩溃。
