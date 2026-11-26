@@ -2,6 +2,20 @@
 
 All notable changes to **MarkNotePro** are documented in this file.
 
+## [1.3.4] - 2026-11-26
+
+### 🐛 Bug Fixes & Improvements (macOS Native Capture)
+- **macOS 原生截图全屏置顶与防遮挡 / Fullscreen Shielding & Toolbar Layout**：
+  - 将截图遮罩窗口从 `NSPanel` 调整为 `NSWindow` 并提升至 `CGShieldingWindowLevel()`，覆写 `constrainFrameRect:`，完整覆盖 macOS 菜单栏与 Dock 栏区域并修复关闭/贴图时的双重释放崩溃。
+  - 升级截图工具栏为双行自适应智能布局，自动避让屏幕底部边缘与刘海屏安全区（`safeAreaInsets.top`），并支持按住手柄或工具栏背景拖拽移动。
+  - 修复贴近屏幕底部截图时工具栏右侧按钮命中测试偏移导致的无响应及贴图异常退出问题。
+- **macOS 智能窗口识别与零闪屏优化 / Smart Window Detection & Zero-Flash Rendering**：
+  - 在截取前通过 `CGWindowListCopyWindowInfo` 预采集可见窗口并支持悬停高亮与单击自动吸附选中，拖拽超过 4px 时平滑切换为自由框选。
+  - 禁用截图窗口揭示动画，先透明挂载并在 `CATransaction` 中强制完成首帧纹理提交后再原子显现并保留原图色彩空间，彻底消除启动黑屏闪屏（Windows / Linux 截屏逻辑未受任何影响）。
+
+### 📚 Documentation
+- 精简中英文 README，新增 25 帧功能演示 GIF 与最新对比截图，并清理非公开网盘链接。
+
 ## [1.3.3] - 2026-11-25
 
 ### ✨ Features & Improvements
