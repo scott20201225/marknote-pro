@@ -3,9 +3,11 @@
 #import <QuartzCore/QuartzCore.h>
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #import <ScreenCaptureKit/ScreenCaptureKit.h>
+#import <ImageIO/ImageIO.h>
 
 @class PinPanel;
 @class CapturePanel;
+@class DetectedWindowItem;
 @class ClipboardContentView;
 @class PinEditToolbarPanel;
 
@@ -17,7 +19,7 @@ static ClipboardPanel *gClipboardPanel = nil;
 
 static void sendEvent(NSDictionary *dict);
 static void createPin(NSDictionary *dict);
-static void showCaptureOverlay(NSScreen *screen, NSImage *screenshot);
+static void showCaptureOverlay(NSScreen *screen, NSImage *screenshot, NSArray<DetectedWindowItem *> *detectedWindows);
 static void startNativeCapture(NSString *passedImagePath);
 static void toggleClipboardPanel(void);
 static NSImage *getSvgIcon(NSString *iconId);
@@ -114,7 +116,8 @@ static NSDictionary<NSString *, NSDictionary<NSString *, NSString *> *> *gI18nDi
                 @"exitEdit": @"退出编辑",
                 @"copyImage": @"复制图片 (⌘C)",
                 @"saveImage": @"保存图片 (⌘S)",
-                @"closePin": @"关闭贴图 (Esc)"
+                @"closePin": @"关闭贴图 (Esc)",
+                @"clickToSelect": @"单击直接选取"
             },
             @"zh-TW": @{
                 @"toolbarDrag": @"拖曳移動工具列",
@@ -179,7 +182,8 @@ static NSDictionary<NSString *, NSDictionary<NSString *, NSString *> *> *gI18nDi
                 @"exitEdit": @"退出編輯",
                 @"copyImage": @"複製圖片 (⌘C)",
                 @"saveImage": @"儲存圖片 (⌘S)",
-                @"closePin": @"關閉貼圖 (Esc)"
+                @"closePin": @"關閉貼圖 (Esc)",
+                @"clickToSelect": @"單擊直接選取"
             },
             @"en": @{
                 @"toolbarDrag": @"Drag Toolbar",
@@ -244,7 +248,8 @@ static NSDictionary<NSString *, NSDictionary<NSString *, NSString *> *> *gI18nDi
                 @"exitEdit": @"Exit Edit",
                 @"copyImage": @"Copy Image (⌘C)",
                 @"saveImage": @"Save Image (⌘S)",
-                @"closePin": @"Close Pin (Esc)"
+                @"closePin": @"Close Pin (Esc)",
+                @"clickToSelect": @"Click to select"
             },
             @"ja": @{
                 @"toolbarDrag": @"ツールバーをドラッグ",
@@ -309,7 +314,8 @@ static NSDictionary<NSString *, NSDictionary<NSString *, NSString *> *> *gI18nDi
                 @"exitEdit": @"編集を終了",
                 @"copyImage": @"画像をコピー (⌘C)",
                 @"saveImage": @"画像を保存 (⌘S)",
-                @"closePin": @"ピンを閉じる (Esc)"
+                @"closePin": @"ピンを閉じる (Esc)",
+                @"clickToSelect": @"クリックで選択"
             },
             @"ko": @{
                 @"toolbarDrag": @"툴바 이동",
@@ -374,7 +380,8 @@ static NSDictionary<NSString *, NSDictionary<NSString *, NSString *> *> *gI18nDi
                 @"exitEdit": @"편집 종료",
                 @"copyImage": @"이미지 복사 (⌘C)",
                 @"saveImage": @"이미지 저장 (⌘S)",
-                @"closePin": @"핀 닫기 (Esc)"
+                @"closePin": @"핀 닫기 (Esc)",
+                @"clickToSelect": @"클릭하여 선택"
             },
             @"de": @{
                 @"toolbarDrag": @"Symbolleiste verschieben",
@@ -439,7 +446,8 @@ static NSDictionary<NSString *, NSDictionary<NSString *, NSString *> *> *gI18nDi
                 @"exitEdit": @"Bearbeitung beenden",
                 @"copyImage": @"Bild kopieren (⌘C)",
                 @"saveImage": @"Bild speichern (⌘S)",
-                @"closePin": @"Pin schließen (Esc)"
+                @"closePin": @"Pin schließen (Esc)",
+                @"clickToSelect": @"Klicken zum Auswählen"
             },
             @"fr": @{
                 @"toolbarDrag": @"Déplacer la barre d'outils",
@@ -504,7 +512,8 @@ static NSDictionary<NSString *, NSDictionary<NSString *, NSString *> *> *gI18nDi
                 @"exitEdit": @"Quitter l'édition",
                 @"copyImage": @"Copier l'image (⌘C)",
                 @"saveImage": @"Enregistrer (⌘S)",
-                @"closePin": @"Fermer l'épingle (Esc)"
+                @"closePin": @"Fermer l'épingle (Esc)",
+                @"clickToSelect": @"Cliquer pour sélectionner"
             },
             @"es": @{
                 @"toolbarDrag": @"Arrastrar barra",
@@ -569,7 +578,8 @@ static NSDictionary<NSString *, NSDictionary<NSString *, NSString *> *> *gI18nDi
                 @"exitEdit": @"Salir de edición",
                 @"copyImage": @"Copiar imagen (⌘C)",
                 @"saveImage": @"Guardar imagen (⌘S)",
-                @"closePin": @"Cerrar fijado (Esc)"
+                @"closePin": @"Cerrar fijado (Esc)",
+                @"clickToSelect": @"Clic para seleccionar"
             }
         };
     }
@@ -1158,6 +1168,9 @@ static NSImage *getSvgIcon(NSString *iconId) {
 @property (nonatomic, strong) NSColor *customNormalBgColor;
 @property (nonatomic, strong) NSColor *fixedBgColor;
 @property (nonatomic, assign) BOOL isSelected;
+@property (nonatomic, assign) BOOL isDragHandle;
+@property (nonatomic, assign) BOOL isDraggingNow;
+@property (nonatomic, copy) void (^onDragEvent)(NSEvent *event, NSInteger phase);
 @end
 
 @implementation HoverButton {
@@ -1192,12 +1205,46 @@ static NSImage *getSvgIcon(NSString *iconId) {
 }
 
 - (void)cursorUpdate:(NSEvent *)event {
-    [[NSCursor pointingHandCursor] set];
+    if (_isDragHandle) {
+        [(_isDraggingNow ? [NSCursor closedHandCursor] : [NSCursor openHandCursor]) set];
+    } else {
+        [[NSCursor pointingHandCursor] set];
+    }
 }
 
 - (void)resetCursorRects {
     [super resetCursorRects];
-    [self addCursorRect:self.bounds cursor:[NSCursor pointingHandCursor]];
+    if (_isDragHandle) {
+        [self addCursorRect:self.bounds cursor:(_isDraggingNow ? [NSCursor closedHandCursor] : [NSCursor openHandCursor])];
+    } else {
+        [self addCursorRect:self.bounds cursor:[NSCursor pointingHandCursor]];
+    }
+}
+
+- (void)mouseDown:(NSEvent *)event {
+    if (_isDragHandle) {
+        _isDraggingNow = YES;
+        if (_onDragEvent) _onDragEvent(event, 0);
+        return;
+    }
+    [super mouseDown:event];
+}
+
+- (void)mouseDragged:(NSEvent *)event {
+    if (_isDragHandle) {
+        if (_onDragEvent) _onDragEvent(event, 1);
+        return;
+    }
+    [super mouseDragged:event];
+}
+
+- (void)mouseUp:(NSEvent *)event {
+    if (_isDragHandle) {
+        _isDraggingNow = NO;
+        if (_onDragEvent) _onDragEvent(event, 2);
+        return;
+    }
+    [super mouseUp:event];
 }
 
 - (void)mouseEntered:(NSEvent *)event {
@@ -3867,15 +3914,112 @@ static void createPin(NSDictionary *dict) {
 
 #pragma mark - Native Screen Capture
 
+@interface DetectedWindowItem : NSObject
+@property (nonatomic, assign) NSRect frame;
+@property (nonatomic, copy) NSString *owner;
+@property (nonatomic, copy) NSString *title;
+@end
+
+@implementation DetectedWindowItem
+@end
+
+static NSArray<DetectedWindowItem *> *collectDetectedWindowsForScreen(NSScreen *targetScreen) {
+    if (!targetScreen) return @[];
+    CFArrayRef windowList = CGWindowListCopyWindowInfo(kCGWindowListOptionOnScreenOnly | kCGWindowListExcludeDesktopElements, kCGNullWindowID);
+    if (!windowList) return @[];
+
+    NSScreen *primaryScreen = [NSScreen screens].firstObject ?: targetScreen;
+    CGFloat primaryH = primaryScreen.frame.size.height;
+    NSRect screenFrame = targetScreen.frame;
+    NSRect localBounds = NSMakeRect(0, 0, screenFrame.size.width, screenFrame.size.height);
+    pid_t selfPid = [[NSProcessInfo processInfo] processIdentifier];
+
+    NSMutableArray<DetectedWindowItem *> *results = [NSMutableArray array];
+    CFIndex count = CFArrayGetCount(windowList);
+    for (CFIndex i = 0; i < count; i++) {
+        CFDictionaryRef info = (CFDictionaryRef)CFArrayGetValueAtIndex(windowList, i);
+
+        CFNumberRef pidRef = (CFNumberRef)CFDictionaryGetValue(info, kCGWindowOwnerPID);
+        int winPid = 0;
+        if (pidRef) CFNumberGetValue(pidRef, kCFNumberIntType, &winPid);
+        if (winPid == selfPid) continue;
+
+        CFNumberRef layerRef = (CFNumberRef)CFDictionaryGetValue(info, kCGWindowLayer);
+        int layer = -1;
+        if (layerRef) CFNumberGetValue(layerRef, kCFNumberIntType, &layer);
+        if (layer != 0 && layer != 3 && layer != 5 && layer != 8) continue;
+
+        CFNumberRef alphaRef = (CFNumberRef)CFDictionaryGetValue(info, kCGWindowAlpha);
+        float alpha = 1.0f;
+        if (alphaRef) CFNumberGetValue(alphaRef, kCFNumberFloatType, &alpha);
+        if (alpha <= 0.05f) continue;
+
+        CFStringRef ownerRef = (CFStringRef)CFDictionaryGetValue(info, kCGWindowOwnerName);
+        NSString *owner = ownerRef ? (__bridge NSString *)ownerRef : @"";
+        if ([owner isEqualToString:@"Dock"] ||
+            [owner isEqualToString:@"Window Server"] ||
+            [owner isEqualToString:@"Notification Center"] ||
+            [owner isEqualToString:@"Control Center"] ||
+            [owner isEqualToString:@"Spotlight"] ||
+            [owner isEqualToString:@"Wallpaper"] ||
+            [owner isEqualToString:@"WindowManager"]) {
+            continue;
+        }
+
+        CFDictionaryRef boundsRef = (CFDictionaryRef)CFDictionaryGetValue(info, kCGWindowBounds);
+        CGRect cgBounds = CGRectZero;
+        if (!boundsRef || !CGRectMakeWithDictionaryRepresentation(boundsRef, &cgBounds)) continue;
+        if (cgBounds.size.width < 80 || cgBounds.size.height < 60) continue;
+
+        // Convert CoreGraphics global top-left coordinates -> AppKit bottom-left -> local view bounds
+        CGFloat appKitY = primaryH - cgBounds.origin.y - cgBounds.size.height;
+        NSRect localRect = NSMakeRect(cgBounds.origin.x - screenFrame.origin.x,
+                                      appKitY - screenFrame.origin.y,
+                                      cgBounds.size.width,
+                                      cgBounds.size.height);
+        NSRect clipped = NSIntersectionRect(localRect, localBounds);
+        if (clipped.size.width < 60 || clipped.size.height < 50) continue;
+
+        CFStringRef titleRef = (CFStringRef)CFDictionaryGetValue(info, kCGWindowName);
+        NSString *title = titleRef ? (__bridge NSString *)titleRef : @"";
+
+        DetectedWindowItem *item = [[DetectedWindowItem alloc] init];
+        item.frame = NSMakeRect(round(clipped.origin.x), round(clipped.origin.y), round(clipped.size.width), round(clipped.size.height));
+        item.owner = owner ?: @"";
+        item.title = title ?: @"";
+        [results addObject:item];
+    }
+
+    CFRelease(windowList);
+    return results;
+}
+
 @interface CaptureOverlayView : NSView <NSTextFieldDelegate>
 @property (nonatomic, strong) NSImage *screenshotImage;
 @property (nonatomic, assign) NSRect selectionRect;
 @property (nonatomic, assign) BOOL hasSelection;
 
+// Smart Target Auto-Detection
+@property (nonatomic, strong) NSArray<DetectedWindowItem *> *detectedWindows;
+@property (nonatomic, strong) DetectedWindowItem *smartHoverItem;
+@property (nonatomic, assign) BOOL isMouseDownBeforeSelection;
+@property (nonatomic, assign) NSPoint preSelectDownPoint;
+@property (nonatomic, strong) DetectedWindowItem *potentialSmartCandidate;
+@property (nonatomic, assign) BOOL hasMovedSinceDown;
+@property (nonatomic, strong) NSTrackingArea *overlayTrackingArea;
+
 // Dragging / Resizing State
 @property (nonatomic, assign) HandleHitType activeDragHandle;
 @property (nonatomic, assign) NSPoint dragStartPoint;
 @property (nonatomic, assign) NSRect initialSelectionRect;
+
+// Toolbar Custom Dragging & Placement State
+@property (nonatomic, assign) BOOL toolbarHasCustomPos;
+@property (nonatomic, assign) NSPoint toolbarCustomOrigin;
+@property (nonatomic, assign) BOOL isDraggingToolbar;
+@property (nonatomic, assign) NSPoint toolbarDragStartLoc;
+@property (nonatomic, assign) NSPoint toolbarDragStartOrigin;
+@property (nonatomic, assign) NSInteger toolbarPlacementMode; // 0: below, 1: above, 2: insideBottom, 3: custom
 
 // Tool & Annotations
 @property (nonatomic, assign) AnnotationToolType activeTool;
@@ -3911,17 +4055,22 @@ static void createPin(NSDictionary *dict) {
 - (void)updateToolbarPositions;
 - (void)rebuildSecondaryToolbar;
 - (void)updateWatermarkUIState;
+- (void)updateSmartHoverAtPoint:(NSPoint)pt;
 - (NSImage *)compositeAnnotatedImage;
 - (void)commitInlineEditor;
 @end
 
-@interface CapturePanel : NSPanel
+@interface CapturePanel : NSWindow
 @property (nonatomic, strong) CaptureOverlayView *overlayView;
 @end
 
 @implementation CapturePanel
 - (BOOL)canBecomeKeyWindow { return YES; }
 - (BOOL)canBecomeMainWindow { return YES; }
+- (NSRect)constrainFrameRect:(NSRect)frameRect toScreen:(NSScreen *)screen {
+    // Prevent AppKit from shrinking the overlay window below the macOS Menu Bar
+    return frameRect;
+}
 @end
 
 static CapturePanel *gCapturePanel = nil;
@@ -4062,6 +4211,14 @@ static CapturePanel *gCapturePanel = nil;
             btn.contentTintColor = (i == 18) ? [NSColor colorWithSRGBRed:0.19 green:0.76 blue:0.36 alpha:1.0] :
                                    (i == 17) ? [NSColor colorWithSRGBRed:0.96 green:0.29 blue:0.27 alpha:1.0] :
                                    AppTheme.currentTheme.textColor;
+        }
+
+        if (i == 0) {
+            btn.isDragHandle = YES;
+            __weak typeof(self) weakSelf = self;
+            btn.onDragEvent = ^(NSEvent *ev, NSInteger phase) {
+                [weakSelf handleToolbarDragEvent:ev phase:phase];
+            };
         }
 
         if (i == 15) {
@@ -4342,6 +4499,54 @@ static CapturePanel *gCapturePanel = nil;
     }
 }
 
+- (CGFloat)topSafeMargin {
+    NSScreen *scr = self.window.screen ?: [NSScreen mainScreen];
+    if (@available(macOS 12.0, *)) {
+        CGFloat notchTop = scr.safeAreaInsets.top;
+        if (notchTop > 0.0) {
+            return MAX(8.0, notchTop + 6.0);
+        }
+    }
+    return 8.0;
+}
+
+- (void)updateCaptureWindowLevelForTextInput:(BOOL)editing {
+    if (!self.window) return;
+    if (editing) {
+        self.window.level = NSPopUpMenuWindowLevel; // Above MenuBar(24)/Dock(20), allows IME candidates to remain visible
+    } else {
+        self.window.level = CGShieldingWindowLevel();
+    }
+}
+
+- (void)handleToolbarDragEvent:(NSEvent *)event phase:(NSInteger)phase {
+    if (!_hasSelection || _primaryToolbarView.hidden) return;
+    NSPoint loc = [self convertPoint:event.locationInWindow fromView:nil];
+    if (phase == 0) {
+        _isDraggingToolbar = YES;
+        _toolbarDragStartLoc = loc;
+        _toolbarDragStartOrigin = _primaryToolbarView.frame.origin;
+        [[NSCursor closedHandCursor] set];
+    } else if (phase == 1) {
+        if (!_isDraggingToolbar) return;
+        CGFloat dx = loc.x - _toolbarDragStartLoc.x;
+        CGFloat dy = loc.y - _toolbarDragStartLoc.y;
+        CGFloat safeMargin = 8.0;
+        CGFloat topMargin = [self topSafeMargin];
+        CGFloat tbW = _primaryToolbarView.frame.size.width;
+        CGFloat tbH = _primaryToolbarView.frame.size.height;
+        CGFloat newX = MAX(safeMargin, MIN(self.bounds.size.width - tbW - safeMargin, _toolbarDragStartOrigin.x + dx));
+        CGFloat newY = MAX(safeMargin, MIN(self.bounds.size.height - tbH - topMargin, _toolbarDragStartOrigin.y + dy));
+        _toolbarHasCustomPos = YES;
+        _toolbarCustomOrigin = NSMakePoint(newX, newY);
+        [self updateToolbarPositions];
+        [[NSCursor closedHandCursor] set];
+    } else {
+        _isDraggingToolbar = NO;
+        [self.window invalidateCursorRectsForView:self];
+    }
+}
+
 - (void)updateToolbarPositions {
     if (!_hasSelection) {
         _primaryToolbarView.hidden = YES;
@@ -4350,72 +4555,83 @@ static CapturePanel *gCapturePanel = nil;
         return;
     }
 
-    NSRect labelFrame = _sizeLabel.frame;
-    labelFrame.origin.x = _selectionRect.origin.x;
-    labelFrame.origin.y = _selectionRect.origin.y + _selectionRect.size.height + 6.0;
-    if (labelFrame.origin.y + labelFrame.size.height > self.bounds.size.height - 4.0) {
-        labelFrame.origin.y = _selectionRect.origin.y + _selectionRect.size.height - 28.0;
-    }
-    _sizeLabel.frame = labelFrame;
-    _sizeLabel.stringValue = [NSString stringWithFormat:@"%.0f × %.0f px", _selectionRect.size.width, _selectionRect.size.height];
-    _sizeLabel.hidden = NO;
+    CGFloat viewW = self.bounds.size.width;
+    CGFloat viewH = self.bounds.size.height;
+    CGFloat safeMargin = 8.0;
+    CGFloat topMargin = [self topSafeMargin];
+    CGFloat safeMaxY = viewH - topMargin;
 
     CGFloat tbH = _primaryToolbarView.frame.size.height;
     CGFloat soH = _secondaryOptionsView.frame.size.height;
+    CGFloat selGap = 8.0;
+    CGFloat rowGap = 6.0;
     BOOL hasSecondary = (_activeTool != ToolNone || _isWatermarkActive);
-    CGFloat totalNeededH = tbH + (hasSecondary ? (soH + 6.0) : 0.0) + 8.0;
 
-    BOOL placeBelow = YES;
-    if (_selectionRect.origin.y - totalNeededH < 8.0) {
-        placeBelow = NO;
-    }
+    // Always evaluate outside space against the full two-row height
+    // so adding a secondary options row never pushes the toolbar off-screen!
+    CGFloat twoRowStackH = tbH + rowGap + soH;
+    CGFloat twoRowOutsideNeeded = selGap + twoRowStackH;
+
+    CGFloat selBottom = _selectionRect.origin.y;
+    CGFloat selTop = _selectionRect.origin.y + _selectionRect.size.height;
+    CGFloat spaceBelow = selBottom - safeMargin;
+    CGFloat spaceAbove = safeMaxY - selTop;
 
     NSRect tbFrame = _primaryToolbarView.frame;
     tbFrame.origin.x = _selectionRect.origin.x + (_selectionRect.size.width - tbFrame.size.width) / 2.0;
-    if (tbFrame.origin.x < 8.0) tbFrame.origin.x = 8.0;
-    if (tbFrame.origin.x + tbFrame.size.width > self.bounds.size.width - 8.0) {
-        tbFrame.origin.x = self.bounds.size.width - tbFrame.size.width - 8.0;
-    }
+    tbFrame.origin.x = MAX(safeMargin, MIN(viewW - tbFrame.size.width - safeMargin, tbFrame.origin.x));
 
-    if (placeBelow) {
-        // Below selection: Primary bar closest to selection, Secondary bar below it
-        tbFrame.origin.y = _selectionRect.origin.y - tbH - 8.0;
-        _primaryToolbarView.frame = tbFrame;
-        _primaryToolbarView.hidden = NO;
+    NSInteger mode = 0; // 0: below, 1: above, 2: insideBottom, 3: custom
+    BOOL secondaryBelowPrimary = YES;
 
-        if (hasSecondary) {
-            NSRect soFrame = _secondaryOptionsView.frame;
-            soFrame.origin.x = tbFrame.origin.x + (tbFrame.size.width - soFrame.size.width) / 2.0;
-            if (soFrame.origin.x < 8.0) soFrame.origin.x = 8.0;
-            if (soFrame.origin.x + soFrame.size.width > self.bounds.size.width - 8.0) {
-                soFrame.origin.x = self.bounds.size.width - soFrame.size.width - 8.0;
-            }
-            soFrame.origin.y = tbFrame.origin.y - soH - 6.0;
-            _secondaryOptionsView.frame = soFrame;
-            _secondaryOptionsView.hidden = NO;
+    if (_toolbarHasCustomPos) {
+        mode = 3;
+        tbFrame.origin.x = MAX(safeMargin, MIN(viewW - tbFrame.size.width - safeMargin, _toolbarCustomOrigin.x));
+        tbFrame.origin.y = MAX(safeMargin, MIN(safeMaxY - tbH, _toolbarCustomOrigin.y));
+        // Secondary prefers below primary if it fits, else flips above primary
+        if (tbFrame.origin.y - rowGap - soH >= safeMargin) {
+            secondaryBelowPrimary = YES;
         } else {
-            _secondaryOptionsView.hidden = YES;
+            secondaryBelowPrimary = NO;
         }
+    } else if (spaceBelow >= twoRowOutsideNeeded) {
+        // 1. Enough space below selection for two rows -> place below selection
+        mode = 0;
+        tbFrame.origin.y = selBottom - selGap - tbH;
+        secondaryBelowPrimary = YES;
+    } else if (spaceAbove >= twoRowOutsideNeeded) {
+        // 2. Below lacks two-row space, above has enough space -> place above selection
+        mode = 1;
+        tbFrame.origin.y = selTop + selGap;
+        secondaryBelowPrimary = NO;
     } else {
-        // Above selection: Primary bar closest to selection, Secondary bar above it
-        tbFrame.origin.y = _selectionRect.origin.y + _selectionRect.size.height + 8.0;
-        _primaryToolbarView.frame = tbFrame;
-        _primaryToolbarView.hidden = NO;
-
-        if (hasSecondary) {
-            NSRect soFrame = _secondaryOptionsView.frame;
-            soFrame.origin.x = tbFrame.origin.x + (tbFrame.size.width - soFrame.size.width) / 2.0;
-            if (soFrame.origin.x < 8.0) soFrame.origin.x = 8.0;
-            if (soFrame.origin.x + soFrame.size.width > self.bounds.size.width - 8.0) {
-                soFrame.origin.x = self.bounds.size.width - soFrame.size.width - 8.0;
-            }
-            soFrame.origin.y = tbFrame.origin.y + tbH + 6.0;
-            _secondaryOptionsView.frame = soFrame;
-            _secondaryOptionsView.hidden = NO;
-        } else {
-            _secondaryOptionsView.hidden = YES;
-        }
+        // 3. Neither below nor above fits two rows -> place inside bottom of selection
+        mode = 2;
+        tbFrame.origin.y = MAX(safeMargin, MIN(safeMaxY - tbH, selBottom + selGap));
+        secondaryBelowPrimary = NO; // Anchor Primary near bottom edge; open Secondary above it so Primary never jumps
     }
+
+    _toolbarPlacementMode = mode;
+    _primaryToolbarView.frame = tbFrame;
+    _primaryToolbarView.hidden = NO;
+
+    if (hasSecondary) {
+        NSRect soFrame = _secondaryOptionsView.frame;
+        soFrame.origin.x = tbFrame.origin.x + (tbFrame.size.width - soFrame.size.width) / 2.0;
+        soFrame.origin.x = MAX(safeMargin, MIN(viewW - soFrame.size.width - safeMargin, soFrame.origin.x));
+        soFrame.origin.y = secondaryBelowPrimary
+            ? (tbFrame.origin.y - rowGap - soH)
+            : (tbFrame.origin.y + tbH + rowGap);
+        soFrame.origin.y = MAX(safeMargin, MIN(safeMaxY - soH, soFrame.origin.y));
+        _secondaryOptionsView.frame = soFrame;
+        _secondaryOptionsView.hidden = NO;
+    } else {
+        _secondaryOptionsView.hidden = YES;
+    }
+
+    _sizeLabel.stringValue = [NSString stringWithFormat:@"%.0f × %.0f px", _selectionRect.size.width, _selectionRect.size.height];
+    _sizeLabel.frame = [self calcSizeLabelFrame:_selectionRect];
+    _sizeLabel.hidden = NO;
 }
 
 #pragma mark - Hit Testing for Handles
@@ -4448,44 +4664,94 @@ static CapturePanel *gCapturePanel = nil;
 }
 
 - (NSView *)hitTest:(NSPoint)point {
-    if (!_primaryToolbarView.hidden) {
-        NSPoint tbPt = [_primaryToolbarView convertPoint:point fromView:self.superview ?: self];
-        NSView *tbHit = [_primaryToolbarView hitTest:tbPt];
-        if (tbHit) return tbHit;
-    }
-    if (!_secondaryOptionsView.hidden) {
-        NSPoint soPt = [_secondaryOptionsView convertPoint:point fromView:self.superview ?: self];
-        NSView *soHit = [_secondaryOptionsView hitTest:soPt];
-        if (soHit) return soHit;
-    }
-    if (_inlineEditor && !_inlineEditor.hidden) {
-        NSPoint iePt = [_inlineEditor convertPoint:point fromView:self.superview ?: self];
-        NSView *ieHit = [_inlineEditor hitTest:iePt];
-        if (ieHit) return ieHit;
-    }
     return [super hitTest:point];
 }
 
 - (NSRect)calcSizeLabelFrame:(NSRect)sel {
     NSRect labelFrame = _sizeLabel.frame;
-    labelFrame.origin.x = sel.origin.x;
+    CGFloat maxSafeY = self.bounds.size.height - [self topSafeMargin];
+    labelFrame.origin.x = MAX(8.0, MIN(self.bounds.size.width - labelFrame.size.width - 8.0, sel.origin.x));
     labelFrame.origin.y = sel.origin.y + sel.size.height + 6.0;
-    if (labelFrame.origin.y + labelFrame.size.height > self.bounds.size.height - 4.0) {
+    BOOL collidesTop = (labelFrame.origin.y + labelFrame.size.height > maxSafeY);
+    BOOL collidesAboveToolbar = (!_primaryToolbarView.hidden && _toolbarPlacementMode == 1 && NSIntersectsRect(labelFrame, _primaryToolbarView.frame));
+    if ((collidesTop || collidesAboveToolbar) && sel.size.height >= 36.0) {
         labelFrame.origin.y = sel.origin.y + sel.size.height - 28.0;
+    } else if (collidesTop) {
+        labelFrame.origin.y = MAX(8.0, maxSafeY - labelFrame.size.height);
     }
     return labelFrame;
 }
 
 #pragma mark - Mouse Events & Resizing
 
+- (void)updateTrackingAreas {
+    [super updateTrackingAreas];
+    if (_overlayTrackingArea) {
+        [self removeTrackingArea:_overlayTrackingArea];
+    }
+    _overlayTrackingArea = [[NSTrackingArea alloc] initWithRect:self.bounds
+                                                        options:(NSTrackingMouseMoved |
+                                                                 NSTrackingActiveAlways |
+                                                                 NSTrackingInVisibleRect)
+                                                          owner:self
+                                                       userInfo:nil];
+    [self addTrackingArea:_overlayTrackingArea];
+}
+
+- (DetectedWindowItem *)findSmartWindowAtPoint:(NSPoint)pt {
+    for (DetectedWindowItem *item in _detectedWindows) {
+        if (NSPointInRect(pt, item.frame)) {
+            return item;
+        }
+    }
+    return nil;
+}
+
+- (void)updateSmartHoverAtPoint:(NSPoint)pt {
+    if (_hasSelection) {
+        if (_smartHoverItem) {
+            _smartHoverItem = nil;
+            [self setNeedsDisplay:YES];
+        }
+        return;
+    }
+    DetectedWindowItem *found = [self findSmartWindowAtPoint:pt];
+    BOOL changed = (found != _smartHoverItem);
+    if (!changed && found && _smartHoverItem) {
+        changed = !NSEqualRects(found.frame, _smartHoverItem.frame);
+    }
+    if (changed) {
+        _smartHoverItem = found;
+        [self.window invalidateCursorRectsForView:self];
+        [self setNeedsDisplay:YES];
+    }
+}
+
+- (void)mouseMoved:(NSEvent *)event {
+    if (!_hasSelection && !_isMouseDownBeforeSelection && _activeDragHandle == HitNone) {
+        NSPoint loc = [self convertPoint:event.locationInWindow fromView:nil];
+        [self updateSmartHoverAtPoint:loc];
+    }
+}
+
+- (BOOL)acceptsFirstMouse:(NSEvent *)event {
+    return YES;
+}
+
+- (void)rightMouseDown:(NSEvent *)event {
+    // Consume right-click so background apps or desktop context menus cannot be triggered during capture
+}
+
 - (void)mouseDown:(NSEvent *)event {
     NSPoint loc = [self convertPoint:event.locationInWindow fromView:nil];
 
-    // Toolbars get immediate pass-through
+    // Dragging on non-button background of either toolbar moves the toolbar pair
     if (!_primaryToolbarView.hidden && NSPointInRect(loc, _primaryToolbarView.frame)) {
+        [self handleToolbarDragEvent:event phase:0];
         return;
     }
     if (!_secondaryOptionsView.hidden && NSPointInRect(loc, _secondaryOptionsView.frame)) {
+        [self handleToolbarDragEvent:event phase:0];
         return;
     }
 
@@ -4504,19 +4770,23 @@ static CapturePanel *gCapturePanel = nil;
     _dragStartPoint = loc;
     _initialSelectionRect = _selectionRect;
 
-    // Initial selection creation
+    // Initial selection creation (supports click-to-snap detected window OR drag > 4px for custom area)
     if (!_hasSelection) {
-        _activeDragHandle = HitOutside;
-        _selectionRect = NSMakeRect(loc.x, loc.y, 0, 0);
+        _toolbarHasCustomPos = NO;
+        _isMouseDownBeforeSelection = YES;
+        _preSelectDownPoint = loc;
+        _potentialSmartCandidate = _smartHoverItem ?: [self findSmartWindowAtPoint:loc];
+        _hasMovedSinceDown = NO;
+        _activeDragHandle = HitNone;
         _sizeLabel.hidden = YES;
         _primaryToolbarView.hidden = YES;
         _secondaryOptionsView.hidden = YES;
-        [self setNeedsDisplay:YES];
         return;
     }
 
     // Handles resizing
     if (hit >= HitTopLeft && hit <= HitLeft) {
+        _toolbarHasCustomPos = NO;
         _activeDragHandle = hit;
         _primaryToolbarView.hidden = YES;
         _secondaryOptionsView.hidden = YES;
@@ -4530,6 +4800,7 @@ static CapturePanel *gCapturePanel = nil;
             _activeDragHandle = HitNone;
             [self startAnnotationAtPoint:loc];
         } else {
+            _toolbarHasCustomPos = NO;
             _activeDragHandle = HitInside;
             _primaryToolbarView.hidden = YES;
             _secondaryOptionsView.hidden = YES;
@@ -4549,7 +4820,28 @@ static CapturePanel *gCapturePanel = nil;
 }
 
 - (void)mouseDragged:(NSEvent *)event {
+    if (_isDraggingToolbar) {
+        [self handleToolbarDragEvent:event phase:1];
+        return;
+    }
+
     NSPoint loc = [self convertPoint:event.locationInWindow fromView:nil];
+
+    // Transition from smart-window candidate into manual rectangle drag once cursor moves > 4px
+    if (!_hasSelection && _isMouseDownBeforeSelection) {
+        if (hypot(loc.x - _preSelectDownPoint.x, loc.y - _preSelectDownPoint.y) > 4.0) {
+            _isMouseDownBeforeSelection = NO;
+            _hasMovedSinceDown = YES;
+            _smartHoverItem = nil;
+            _potentialSmartCandidate = nil;
+            _dragStartPoint = _preSelectDownPoint;
+            _activeDragHandle = HitOutside;
+            _selectionRect = NSMakeRect(_dragStartPoint.x, _dragStartPoint.y, 0, 0);
+        } else {
+            return;
+        }
+    }
+
     CGFloat dx = loc.x - _dragStartPoint.x;
     CGFloat dy = loc.y - _dragStartPoint.y;
 
@@ -4648,23 +4940,48 @@ static CapturePanel *gCapturePanel = nil;
 }
 
 - (void)mouseUp:(NSEvent *)event {
+    if (_isDraggingToolbar) {
+        [self handleToolbarDragEvent:event phase:2];
+        return;
+    }
+
     if (_currentDrawingItem) {
         [self finishAnnotation];
         [self setNeedsDisplay:YES];
         return;
     }
 
+    if (!_hasSelection && _isMouseDownBeforeSelection) {
+        _isMouseDownBeforeSelection = NO;
+        if (!_hasMovedSinceDown && _potentialSmartCandidate) {
+            _selectionRect = _potentialSmartCandidate.frame;
+            _hasSelection = YES;
+            _smartHoverItem = nil;
+            _potentialSmartCandidate = nil;
+            _activeDragHandle = HitNone;
+            [self updateToolbarPositions];
+            [self.window invalidateCursorRectsForView:self];
+            [self setNeedsDisplay:YES];
+            return;
+        }
+        _potentialSmartCandidate = nil;
+    }
+
     if (!_hasSelection) {
         if (_selectionRect.size.width >= 10 && _selectionRect.size.height >= 10) {
             _hasSelection = YES;
+            _smartHoverItem = nil;
             _activeDragHandle = HitNone;
             [self updateToolbarPositions];
         } else {
             _hasSelection = NO;
             _selectionRect = NSZeroRect;
+            _activeDragHandle = HitNone;
             _sizeLabel.hidden = YES;
             _primaryToolbarView.hidden = YES;
             _secondaryOptionsView.hidden = YES;
+            NSPoint loc = [self convertPoint:event.locationInWindow fromView:nil];
+            [self updateSmartHoverAtPoint:loc];
         }
     } else {
         _activeDragHandle = HitNone;
@@ -4679,6 +4996,9 @@ static CapturePanel *gCapturePanel = nil;
     [super resetCursorRects];
 
     if (!_hasSelection) {
+        if (_smartHoverItem) {
+            [self addCursorRect:_smartHoverItem.frame cursor:[NSCursor pointingHandCursor]];
+        }
         [self addCursorRect:self.bounds cursor:[NSCursor crosshairCursor]];
         return;
     }
@@ -4740,6 +5060,7 @@ static CapturePanel *gCapturePanel = nil;
             [weakSelf cancelInlineEditor];
         };
 
+        [self updateCaptureWindowLevelForTextInput:YES];
         [self addSubview:_inlineEditor];
         [self.window makeFirstResponder:_inlineEditor.textView];
         return;
@@ -4820,6 +5141,7 @@ static CapturePanel *gCapturePanel = nil;
     if (_inlineEditor) {
         [_inlineEditor removeFromSuperview];
         _inlineEditor = nil;
+        [self updateCaptureWindowLevelForTextInput:NO];
         [self.window makeFirstResponder:self];
     }
 }
@@ -4834,12 +5156,77 @@ static CapturePanel *gCapturePanel = nil;
         [_screenshotImage drawInRect:self.bounds fromRect:NSZeroRect operation:NSCompositingOperationCopy fraction:1.0];
     }
 
-    // 2. Dim backdrop outside selection
-    [[NSColor colorWithWhite:0.0 alpha:0.45] setFill];
+    // 2. Dim backdrop outside selection (lighter before selection so smart target shines clearly)
+    BOOL shouldDrawCutout = (_selectionRect.size.width > 2 && _selectionRect.size.height > 2);
+    CGFloat dimAlpha = shouldDrawCutout ? 0.45 : 0.30;
+    [[NSColor colorWithWhite:0.0 alpha:dimAlpha] setFill];
     NSRectFillUsingOperation(self.bounds, NSCompositingOperationSourceOver);
 
+    // 2b. Smart Auto-Detected Window Highlight before manual selection starts
+    if (!_hasSelection && !shouldDrawCutout && _smartHoverItem) {
+        NSRect sm = _smartHoverItem.frame;
+        if (_screenshotImage) {
+            [_screenshotImage drawInRect:sm fromRect:sm operation:NSCompositingOperationCopy fraction:1.0];
+        }
+
+        NSColor *blueColor = [NSColor colorWithSRGBRed:0.20 green:0.43 blue:0.96 alpha:1.0];
+        [[blueColor colorWithAlphaComponent:0.10] setFill];
+        NSRectFillUsingOperation(sm, NSCompositingOperationSourceOver);
+
+        [blueColor setStroke];
+        NSBezierPath *smBorder = [NSBezierPath bezierPathWithRect:sm];
+        smBorder.lineWidth = 2.0;
+        [smBorder stroke];
+
+        // 4 corner L-brackets
+        CGFloat cLen = MIN(16.0, MIN(sm.size.width / 4.0, sm.size.height / 4.0));
+        NSBezierPath *brackets = [NSBezierPath bezierPath];
+        brackets.lineWidth = 3.0;
+        // Top-left (AppKit top = origin.y + size.height)
+        [brackets moveToPoint:NSMakePoint(sm.origin.x, sm.origin.y + sm.size.height - cLen)];
+        [brackets lineToPoint:NSMakePoint(sm.origin.x, sm.origin.y + sm.size.height)];
+        [brackets lineToPoint:NSMakePoint(sm.origin.x + cLen, sm.origin.y + sm.size.height)];
+        // Top-right
+        [brackets moveToPoint:NSMakePoint(sm.origin.x + sm.size.width - cLen, sm.origin.y + sm.size.height)];
+        [brackets lineToPoint:NSMakePoint(sm.origin.x + sm.size.width, sm.origin.y + sm.size.height)];
+        [brackets lineToPoint:NSMakePoint(sm.origin.x + sm.size.width, sm.origin.y + sm.size.height - cLen)];
+        // Bottom-left
+        [brackets moveToPoint:NSMakePoint(sm.origin.x, sm.origin.y + cLen)];
+        [brackets lineToPoint:NSMakePoint(sm.origin.x, sm.origin.y)];
+        [brackets lineToPoint:NSMakePoint(sm.origin.x + cLen, sm.origin.y)];
+        // Bottom-right
+        [brackets moveToPoint:NSMakePoint(sm.origin.x + sm.size.width - cLen, sm.origin.y)];
+        [brackets lineToPoint:NSMakePoint(sm.origin.x + sm.size.width, sm.origin.y)];
+        [brackets lineToPoint:NSMakePoint(sm.origin.x + sm.size.width, sm.origin.y + cLen)];
+        [brackets stroke];
+
+        // Smart pill badge above or inside top of window
+        NSString *prefix = (_smartHoverItem.owner.length > 0) ? [NSString stringWithFormat:@"%@  ·  ", _smartHoverItem.owner] : @"";
+        NSString *badgeText = [NSString stringWithFormat:@"%@%.0f × %.0f px  ·  %@", prefix, sm.size.width, sm.size.height, [I18N tr:@"clickToSelect"]];
+        NSDictionary *badgeAttrs = @{
+            NSFontAttributeName: [NSFont systemFontOfSize:12 weight:NSFontWeightSemibold],
+            NSForegroundColorAttributeName: [NSColor whiteColor]
+        };
+        NSSize txtSz = [badgeText sizeWithAttributes:badgeAttrs];
+        CGFloat badgeW = ceil(txtSz.width) + 20.0;
+        CGFloat badgeH = 26.0;
+        CGFloat maxSafeY = self.bounds.size.height - [self topSafeMargin];
+        CGFloat badgeX = MAX(8.0, MIN(self.bounds.size.width - badgeW - 8.0, sm.origin.x + 8.0));
+        CGFloat badgeY = sm.origin.y + sm.size.height + 6.0;
+        if (badgeY + badgeH > maxSafeY) {
+            badgeY = MAX(8.0, MIN(maxSafeY - badgeH, sm.origin.y + sm.size.height - badgeH - 8.0));
+        }
+        NSRect badgeRect = NSMakeRect(badgeX, badgeY, badgeW, badgeH);
+        [[NSColor colorWithSRGBRed:0.12 green:0.14 blue:0.18 alpha:0.92] setFill];
+        NSBezierPath *badgePath = [NSBezierPath bezierPathWithRoundedRect:badgeRect xRadius:6.0 yRadius:6.0];
+        [badgePath fill];
+        [[blueColor colorWithAlphaComponent:0.85] setStroke];
+        badgePath.lineWidth = 1.0;
+        [badgePath stroke];
+        [badgeText drawAtPoint:NSMakePoint(badgeX + 10.0, badgeY + (badgeH - txtSz.height) / 2.0) withAttributes:badgeAttrs];
+    }
+
     // 3. Clear window inside selection
-    BOOL shouldDrawCutout = (_selectionRect.size.width > 2 && _selectionRect.size.height > 2);
     if (shouldDrawCutout) {
         if (_screenshotImage) {
             [_screenshotImage drawInRect:_selectionRect fromRect:_selectionRect operation:NSCompositingOperationCopy fraction:1.0];
@@ -5489,6 +5876,18 @@ static CapturePanel *gCapturePanel = nil;
     }
 }
 
+- (void)controlTextDidBeginEditing:(NSNotification *)notification {
+    if (notification.object == _watermarkInputField) {
+        [self updateCaptureWindowLevelForTextInput:YES];
+    }
+}
+
+- (void)controlTextDidEndEditing:(NSNotification *)notification {
+    if (notification.object == _watermarkInputField) {
+        [self updateCaptureWindowLevelForTextInput:NO];
+    }
+}
+
 - (void)controlTextDidChange:(NSNotification *)notification {
     if (notification.object == _watermarkInputField) {
         _watermarkText = _watermarkInputField.stringValue;
@@ -5685,17 +6084,26 @@ static CapturePanel *gCapturePanel = nil;
 
 @end
 
-static void showCaptureOverlay(NSScreen *screen, NSImage *screenshot) {
+static void showCaptureOverlay(NSScreen *screen, NSImage *screenshot, NSArray<DetectedWindowItem *> *detectedWindows) {
     NSRect screenRect = screen.frame;
     gCapturePanel = [[CapturePanel alloc] initWithContentRect:screenRect
                                                     styleMask:NSWindowStyleMaskBorderless
                                                       backing:NSBackingStoreBuffered
                                                         defer:NO];
-    gCapturePanel.level = NSStatusWindowLevel;
+    // Stay strictly above macOS Menu Bar (24), Dock (20), Status Bar (25), and Popups (101)
+    gCapturePanel.level = CGShieldingWindowLevel();
+    gCapturePanel.releasedWhenClosed = NO;
     gCapturePanel.collectionBehavior = NSWindowCollectionBehaviorCanJoinAllSpaces |
-                                       NSWindowCollectionBehaviorFullScreenAuxiliary;
-    gCapturePanel.backgroundColor = [NSColor clearColor];
-    gCapturePanel.opaque = NO;
+                                       NSWindowCollectionBehaviorFullScreenAuxiliary |
+                                       NSWindowCollectionBehaviorStationary |
+                                       NSWindowCollectionBehaviorIgnoresCycle;
+    gCapturePanel.hidesOnDeactivate = NO;
+    gCapturePanel.canHide = NO;
+    gCapturePanel.movableByWindowBackground = NO;
+    gCapturePanel.ignoresMouseEvents = NO;
+    gCapturePanel.acceptsMouseMovedEvents = YES;
+    gCapturePanel.opaque = YES;
+    gCapturePanel.backgroundColor = [NSColor blackColor];
     gCapturePanel.hasShadow = NO;
     gCapturePanel.appearance = AppTheme.currentTheme.isDark ?
         [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua] :
@@ -5703,13 +6111,88 @@ static void showCaptureOverlay(NSScreen *screen, NSImage *screenshot) {
 
     CaptureOverlayView *overlay = [[CaptureOverlayView alloc] initWithFrame:NSMakeRect(0, 0, screenRect.size.width, screenRect.size.height)
                                                                 screenshot:screenshot];
+    overlay.detectedWindows = detectedWindows ?: @[];
     gCapturePanel.overlayView = overlay;
     gCapturePanel.contentView = overlay;
 
-    [NSApp activateIgnoringOtherApps:YES];
+    // Pre-highlight the window currently under the cursor and render off-screen BEFORE ordering front to prevent flashing!
+    NSPoint mouseGlobal = [NSEvent mouseLocation];
+    NSPoint initialLocal = NSMakePoint(mouseGlobal.x - screenRect.origin.x, mouseGlobal.y - screenRect.origin.y);
+    [overlay updateSmartHoverAtPoint:initialLocal];
+    [gCapturePanel setFrame:screenRect display:YES];
+    [overlay display];
+
     [gCapturePanel makeKeyAndOrderFront:nil];
+    [gCapturePanel orderFrontRegardless];
+    if (@available(macOS 14.0, *)) {
+        [NSApp activate];
+    } else {
+        #pragma clang diagnostic push
+        #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+        [NSApp activateIgnoringOtherApps:YES];
+        #pragma clang diagnostic pop
+    }
     [gCapturePanel makeFirstResponder:overlay];
+    [gCapturePanel invalidateCursorRectsForView:overlay];
     sendEvent(@{ @"event": @"capture-started" });
+}
+
+static NSImage *loadAndDecodeImageAtPath(NSString *imgPath, NSSize logicalSize) {
+    NSData *imgData = [NSData dataWithContentsOfFile:imgPath];
+    if (!imgData) return nil;
+    CGImageSourceRef src = CGImageSourceCreateWithData((__bridge CFDataRef)imgData, NULL);
+    if (!src) return [[NSImage alloc] initWithContentsOfFile:imgPath];
+    CGImageRef cgImg = CGImageSourceCreateImageAtIndex(src, 0, NULL);
+    CFRelease(src);
+    if (!cgImg) return [[NSImage alloc] initWithContentsOfFile:imgPath];
+    // Force immediate raster decode into an offscreen bitmap context so first drawRect has zero lag/flash
+    size_t w = CGImageGetWidth(cgImg);
+    size_t h = CGImageGetHeight(cgImg);
+    CGColorSpaceRef cs = CGColorSpaceCreateWithName(kCGColorSpaceSRGB) ?: CGColorSpaceCreateDeviceRGB();
+    CGContextRef ctx = CGBitmapContextCreate(NULL, w, h, 8, w * 4, cs, kCGBitmapByteOrder32Host | kCGImageAlphaPremultipliedFirst);
+    CGColorSpaceRelease(cs);
+    NSImage *decoded = nil;
+    if (ctx) {
+        CGContextDrawImage(ctx, CGRectMake(0, 0, w, h), cgImg);
+        CGImageRef decodedCG = CGBitmapContextCreateImage(ctx);
+        CGContextRelease(ctx);
+        if (decodedCG) {
+            decoded = [[NSImage alloc] initWithCGImage:decodedCG size:logicalSize];
+            CGImageRelease(decodedCG);
+        }
+    }
+    if (!decoded) {
+        decoded = [[NSImage alloc] initWithCGImage:cgImg size:logicalSize];
+    }
+    CGImageRelease(cgImg);
+    return decoded;
+}
+
+static void fallbackScreencaptureAndShow(NSScreen *targetScreen, NSArray<DetectedWindowItem *> *detectedWindows) {
+    NSScreen *primaryScreen = [NSScreen screens].firstObject ?: targetScreen;
+    CGFloat primaryH = primaryScreen.frame.size.height;
+    NSRect sf = targetScreen.frame;
+    CGFloat cgY = primaryH - sf.origin.y - sf.size.height;
+
+    NSString *tmpPath = [NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"marknote_cap_%ld.png", (long)[[NSDate date] timeIntervalSince1970]]];
+    NSTask *task = [[NSTask alloc] init];
+    task.launchPath = @"/usr/sbin/screencapture";
+    task.arguments = @[
+        @"-x",
+        @"-R",
+        [NSString stringWithFormat:@"%.0f,%.0f,%.0f,%.0f", sf.origin.x, cgY, sf.size.width, sf.size.height],
+        tmpPath
+    ];
+    [task launch];
+    [task waitUntilExit];
+
+    if ([[NSFileManager defaultManager] fileExistsAtPath:tmpPath]) {
+        NSImage *nsImg = loadAndDecodeImageAtPath(tmpPath, sf.size);
+        [[NSFileManager defaultManager] removeItemAtPath:tmpPath error:nil];
+        if (nsImg) {
+            showCaptureOverlay(targetScreen, nsImg, detectedWindows);
+        }
+    }
 }
 
 static void startNativeCapture(NSString *passedImagePath) {
@@ -5733,49 +6216,61 @@ static void startNativeCapture(NSString *passedImagePath) {
             }
         }
 
+        // Collect on-screen window list BEFORE overlay window exists
+        NSArray<DetectedWindowItem *> *detectedWindows = collectDetectedWindowsForScreen(targetScreen);
+
         if (passedImagePath && [[NSFileManager defaultManager] fileExistsAtPath:passedImagePath]) {
-            NSImage *img = [[NSImage alloc] initWithContentsOfFile:passedImagePath];
+            NSImage *img = loadAndDecodeImageAtPath(passedImagePath, targetScreen.frame.size);
             if (img) {
-                showCaptureOverlay(targetScreen, img);
-                return;
-            }
-        }
-
-        NSString *tmpPath = [NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"marknote_cap_%ld.png", (long)[[NSDate date] timeIntervalSince1970]]];
-        NSTask *task = [[NSTask alloc] init];
-        task.launchPath = @"/usr/sbin/screencapture";
-        task.arguments = @[@"-x", tmpPath];
-        [task launch];
-        [task waitUntilExit];
-
-        if ([[NSFileManager defaultManager] fileExistsAtPath:tmpPath]) {
-            NSImage *nsImg = [[NSImage alloc] initWithContentsOfFile:tmpPath];
-            [[NSFileManager defaultManager] removeItemAtPath:tmpPath error:nil];
-            if (nsImg) {
-                showCaptureOverlay(targetScreen, nsImg);
+                showCaptureOverlay(targetScreen, img, detectedWindows);
                 return;
             }
         }
 
         if (@available(macOS 14.0, *)) {
+            CGDirectDisplayID targetDispId = [[targetScreen.deviceDescription objectForKey:@"NSScreenNumber"] unsignedIntValue];
+            CGFloat scale = targetScreen.backingScaleFactor > 0 ? targetScreen.backingScaleFactor : 2.0;
             [SCShareableContent getShareableContentWithCompletionHandler:^(SCShareableContent *content, NSError *error) {
+                SCDisplay *matchedDisp = nil;
                 if (content && content.displays.count > 0) {
-                    SCDisplay *disp = content.displays[0];
-                    SCContentFilter *filter = [[SCContentFilter alloc] initWithDisplay:disp excludingWindows:@[]];
+                    for (SCDisplay *d in content.displays) {
+                        if (d.displayID == targetDispId) {
+                            matchedDisp = d;
+                            break;
+                        }
+                    }
+                    if (!matchedDisp) matchedDisp = content.displays[0];
+                }
+                if (matchedDisp) {
+                    SCContentFilter *filter = [[SCContentFilter alloc] initWithDisplay:matchedDisp excludingWindows:@[]];
                     SCStreamConfiguration *config = [[SCStreamConfiguration alloc] init];
-                    config.width = disp.width;
-                    config.height = disp.height;
+                    config.width = (size_t)round(matchedDisp.width * scale);
+                    config.height = (size_t)round(matchedDisp.height * scale);
+                    config.showsCursor = NO;
                     [SCScreenshotManager captureImageWithFilter:filter configuration:config completionHandler:^(CGImageRef imgRef, NSError *err) {
                         if (imgRef) {
+                            CGImageRetain(imgRef);
                             dispatch_async(dispatch_get_main_queue(), ^{
                                 NSImage *nsImg = [[NSImage alloc] initWithCGImage:imgRef size:targetScreen.frame.size];
-                                showCaptureOverlay(targetScreen, nsImg);
+                                CGImageRelease(imgRef);
+                                showCaptureOverlay(targetScreen, nsImg, detectedWindows);
+                            });
+                        } else {
+                            dispatch_async(dispatch_get_main_queue(), ^{
+                                fallbackScreencaptureAndShow(targetScreen, detectedWindows);
                             });
                         }
                     }];
+                    return;
                 }
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    fallbackScreencaptureAndShow(targetScreen, detectedWindows);
+                });
             }];
+            return;
         }
+
+        fallbackScreencaptureAndShow(targetScreen, detectedWindows);
     });
 }
 
