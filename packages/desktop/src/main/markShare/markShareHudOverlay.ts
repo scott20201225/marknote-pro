@@ -1,5 +1,6 @@
 import { BrowserWindow, nativeTheme } from 'electron'
 import type { MarkShareOffer } from '../../shared/types/markShare'
+import { t } from '../i18n'
 
 export type MarkShareHudNoticeType = 'success' | 'warning' | 'error' | 'info'
 
@@ -163,10 +164,10 @@ const TRANSFER_HUD_HTML = `<!DOCTYPE html>
     isDark: true,
     items: [],
     labels: {
-      waitingConfirmSec: '等待确认 {sec}s',
-      sasCode: '安全校验码',
-      cancelSend: '取消发送',
-      stopTransfer: '停止传输'
+      waitingConfirmSec: 'Waiting {sec}s',
+      sasCode: 'Security Code',
+      cancelSend: 'Cancel',
+      stopTransfer: 'Stop'
     }
   };
   let tickTimer = null;
@@ -199,7 +200,7 @@ const TRANSFER_HUD_HTML = `<!DOCTYPE html>
   }
 
   function formatTemplate(tpl, sec) {
-    return String(tpl || '等待确认 {sec}s').replace('{sec}', String(sec));
+    return String(tpl || 'Waiting {sec}s').replace('{sec}', String(sec));
   }
 
   function getRemainSec(expiresAt) {
@@ -233,10 +234,10 @@ const TRANSFER_HUD_HTML = `<!DOCTYPE html>
       const statusText = isPending ? formatTemplate(labels.waitingConfirmSec, sec) : (pct + '%');
       const barWidth = isPending ? Math.min(100, (sec / 60) * 100) : pct;
       const bottomLeft = isPending
-        ? (esc(labels.sasCode || '安全校验码') + ': <b>' + esc(item.sasCode) + '</b>')
+        ? (esc(labels.sasCode || 'Security Code') + ': <b>' + esc(item.sasCode) + '</b>')
         : (formatSize(item.transferredBytes) + ' / ' + formatSize(item.totalBytes));
       const actionType = isPending ? 'cancel' : 'stop';
-      const btnText = isPending ? (labels.cancelSend || '取消发送') : (labels.stopTransfer || '停止传输');
+      const btnText = isPending ? (labels.cancelSend || 'Cancel') : (labels.stopTransfer || 'Stop');
       const peerName = item.peerDevice && item.peerDevice.deviceName ? item.peerDevice.deviceName : '';
       const osType = item.peerDevice && item.peerDevice.osType ? item.peerDevice.osType : 'linux';
       const fileTitle = item.currentFileName || item.rootLabel || '';
@@ -389,17 +390,27 @@ export class MarkShareHudOverlay {
   private noticeReady = false
 
   private isDark = nativeTheme.shouldUseDarkColors
-  private labels: Required<NonNullable<MarkShareHudMeta['labels']>> = {
-    waitingConfirmSec: '等待确认 {sec}s',
-    sasCode: '安全校验码',
-    cancelSend: '取消发送',
-    stopTransfer: '停止传输'
+  private hasCustomLabels = false
+  private labels: Required<NonNullable<MarkShareHudMeta['labels']>> = this.getDefaultLabels()
+
+  private getDefaultLabels(): Required<NonNullable<MarkShareHudMeta['labels']>> {
+    return {
+      waitingConfirmSec: t('markShare.waitingConfirmSec', { sec: '__SEC__' }).replace('__SEC__', '{sec}'),
+      sasCode: t('markShare.sasCode'),
+      cancelSend: t('markShare.cancelSend'),
+      stopTransfer: t('markShare.stopTransfer')
+    }
   }
   private activeTransfers: MarkShareOffer[] = []
   private notices: ActiveNoticeItem[] = []
   private noticeCounter = 0
 
   private readonly onOwnerBoundsOrState = (): void => {
+    this.syncAllVisibilityAndBounds()
+  }
+
+  private readonly onOwnerFullScreenChanged = (): void => {
+    this.destroyHudWindows()
     this.syncAllVisibilityAndBounds()
   }
 
@@ -413,6 +424,10 @@ export class MarkShareHudOverlay {
     this.destroyHudWindows()
   }
 
+  private isDarwinFullScreen(owner: BrowserWindow): boolean {
+    return process.platform === 'darwin' && (owner.isFullScreen() || owner.isSimpleFullScreen())
+  }
+
   constructor(handlers: TransferHudHandlers) {
     this.handlers = handlers
   }
@@ -422,12 +437,15 @@ export class MarkShareHudOverlay {
       this.isDark = meta.isDark
     }
     if (meta.labels) {
+      this.hasCustomLabels = true
       this.labels = {
         waitingConfirmSec: meta.labels.waitingConfirmSec || this.labels.waitingConfirmSec,
         sasCode: meta.labels.sasCode || this.labels.sasCode,
         cancelSend: meta.labels.cancelSend || this.labels.cancelSend,
         stopTransfer: meta.labels.stopTransfer || this.labels.stopTransfer
       }
+    } else if (!this.hasCustomLabels) {
+      this.labels = this.getDefaultLabels()
     }
     if (this.activeTransfers.length > 0) {
       this.flushTransferState()
@@ -438,6 +456,9 @@ export class MarkShareHudOverlay {
   }
 
   public updateTransfers(offers: MarkShareOffer[]): void {
+    if (!this.hasCustomLabels) {
+      this.labels = this.getDefaultLabels()
+    }
     this.activeTransfers = offers.filter(
       (o) => o.state === 'transferring' || (o.direction === 'send' && o.state === 'pending')
     )
@@ -453,41 +474,50 @@ export class MarkShareHudOverlay {
     const win = this.ensureTransferWindow(owner)
     this.syncTransferBounds(owner, win)
     this.flushTransferState()
-    if (owner.isVisible() && !owner.isMinimized() && !win.isVisible()) {
+    const canShow =
+      owner.isVisible() &&
+      !owner.isMinimized() &&
+      (!this.isDarwinFullScreen(owner) || owner.isFocused())
+    if (canShow && !win.isVisible()) {
       win.showInactive()
     }
   }
 
   public showOutcomeBanner(offer: MarkShareOffer): void {
-    const peerName = offer.peerDevice?.deviceName || '对端设备'
+    const peerName = offer.peerDevice?.deviceName || t('markShare.peerFallback')
     if (offer.state === 'completed') {
       this.showNotice(
         'success',
         offer.direction === 'send'
-          ? `MarkShare 发送完成：${offer.rootLabel} → ${peerName}`
-          : `MarkShare 接收完成：${offer.rootLabel}（已保存）`
+          ? t('markShare.hudCompletedSend', { label: offer.rootLabel, peer: peerName })
+          : t('markShare.hudCompletedReceive', { label: offer.rootLabel })
       )
     } else if (offer.state === 'rejected') {
       if (offer.direction === 'send') {
-        this.showNotice('warning', `${peerName} 拒绝接收「${offer.rootLabel}」`)
+        this.showNotice('warning', t('markShare.hudRejectedSend', { peer: peerName, label: offer.rootLabel }))
       }
     } else if (offer.state === 'expired') {
       this.showNotice(
         'warning',
         offer.direction === 'send'
-          ? `等待 ${peerName} 确认超时（1 分钟未接受），传输已终止`
-          : `来自 ${peerName} 的传输请求超时（1 分钟未确认），已自动中断`
+          ? t('markShare.hudExpiredSend', { peer: peerName })
+          : t('markShare.hudExpiredReceive', { peer: peerName })
       )
     } else if (offer.state === 'cancelled') {
       if (offer.direction === 'receive') {
-        this.showNotice('info', `${peerName} 已取消发送「${offer.rootLabel}」`)
+        this.showNotice(
+          'info',
+          t('markShare.hudCancelledReceive', { peer: peerName, label: offer.rootLabel })
+        )
       }
     } else if (offer.state === 'stopped') {
-      this.showNotice('info', `已停止传输「${offer.rootLabel}」`)
+      this.showNotice('info', t('markShare.hudStopped', { label: offer.rootLabel }))
     } else if (offer.state === 'failed') {
       this.showNotice(
         'error',
-        `传输「${offer.rootLabel}」失败${offer.errorMessage ? `：${offer.errorMessage}` : ''}`
+        offer.errorMessage
+          ? t('markShare.hudFailedReason', { label: offer.rootLabel, reason: offer.errorMessage })
+          : t('markShare.hudFailed', { label: offer.rootLabel })
       )
     }
   }
@@ -513,7 +543,11 @@ export class MarkShareHudOverlay {
     const win = this.ensureNoticeWindow(owner)
     this.syncNoticeBounds(owner, win)
     this.flushNoticeState()
-    if (owner.isVisible() && !owner.isMinimized() && !win.isVisible()) {
+    const canShow =
+      owner.isVisible() &&
+      !owner.isMinimized() &&
+      (!this.isDarwinFullScreen(owner) || owner.isFocused())
+    if (canShow && !win.isVisible()) {
       win.showInactive()
     }
   }
@@ -570,6 +604,10 @@ export class MarkShareHudOverlay {
       nextOwner.on('resize', this.onOwnerBoundsOrState)
       nextOwner.on('show', this.onOwnerBoundsOrState)
       nextOwner.on('restore', this.onOwnerBoundsOrState)
+      nextOwner.on('focus', this.onOwnerBoundsOrState)
+      nextOwner.on('blur', this.onOwnerBoundsOrState)
+      nextOwner.on('enter-full-screen', this.onOwnerFullScreenChanged)
+      nextOwner.on('leave-full-screen', this.onOwnerFullScreenChanged)
       nextOwner.on('minimize', this.onOwnerHidden)
       nextOwner.on('hide', this.onOwnerHidden)
       nextOwner.on('closed', this.onOwnerClosed)
@@ -583,6 +621,10 @@ export class MarkShareHudOverlay {
     this.ownerWin.removeListener('resize', this.onOwnerBoundsOrState)
     this.ownerWin.removeListener('show', this.onOwnerBoundsOrState)
     this.ownerWin.removeListener('restore', this.onOwnerBoundsOrState)
+    this.ownerWin.removeListener('focus', this.onOwnerBoundsOrState)
+    this.ownerWin.removeListener('blur', this.onOwnerBoundsOrState)
+    this.ownerWin.removeListener('enter-full-screen', this.onOwnerFullScreenChanged)
+    this.ownerWin.removeListener('leave-full-screen', this.onOwnerFullScreenChanged)
     this.ownerWin.removeListener('minimize', this.onOwnerHidden)
     this.ownerWin.removeListener('hide', this.onOwnerHidden)
     this.ownerWin.removeListener('closed', this.onOwnerClosed)
@@ -593,15 +635,26 @@ export class MarkShareHudOverlay {
       return this.transferWin
     }
     this.transferReady = false
+    const isOsx = process.platform === 'darwin'
+    const isFs = this.isDarwinFullScreen(owner)
     const win = new BrowserWindow({
-      parent: owner,
+      parent: isFs ? undefined : owner,
       width: 314,
       height: 128,
+      minWidth: 220,
+      maxWidth: 314,
+      type: isOsx ? 'panel' : undefined,
       transparent: true,
       frame: false,
       hasShadow: false,
       focusable: false,
       skipTaskbar: true,
+      fullscreen: false,
+      fullscreenable: false,
+      maximizable: false,
+      minimizable: false,
+      useContentSize: true,
+      alwaysOnTop: isFs,
       resizable: false,
       movable: false,
       show: false,
@@ -611,6 +664,13 @@ export class MarkShareHudOverlay {
         sandbox: true
       }
     })
+    if (isFs) {
+      win.setAlwaysOnTop(true, 'floating')
+      win.setVisibleOnAllWorkspaces(true, {
+        visibleOnFullScreen: true,
+        skipTransformProcessType: true
+      })
+    }
     hudWindows.add(win)
     this.transferWin = win
 
@@ -652,15 +712,26 @@ export class MarkShareHudOverlay {
       return this.noticeWin
     }
     this.noticeReady = false
+    const isOsx = process.platform === 'darwin'
+    const isFs = this.isDarwinFullScreen(owner)
     const win = new BrowserWindow({
-      parent: owner,
+      parent: isFs ? undefined : owner,
       width: 540,
       height: 84,
+      minWidth: 260,
+      maxWidth: 540,
+      type: isOsx ? 'panel' : undefined,
       transparent: true,
       frame: false,
       hasShadow: false,
       focusable: false,
       skipTaskbar: true,
+      fullscreen: false,
+      fullscreenable: false,
+      maximizable: false,
+      minimizable: false,
+      useContentSize: true,
+      alwaysOnTop: isFs,
       resizable: false,
       movable: false,
       show: false,
@@ -670,6 +741,13 @@ export class MarkShareHudOverlay {
         sandbox: true
       }
     })
+    if (isFs) {
+      win.setAlwaysOnTop(true, 'floating')
+      win.setVisibleOnAllWorkspaces(true, {
+        visibleOnFullScreen: true,
+        skipTransformProcessType: true
+      })
+    }
     win.setIgnoreMouseEvents(true)
     hudWindows.add(win)
     this.noticeWin = win
@@ -715,17 +793,19 @@ export class MarkShareHudOverlay {
   private syncAllVisibilityAndBounds(): void {
     const owner = this.ownerWin
     if (!owner || owner.isDestroyed()) return
-    if (!owner.isVisible() || owner.isMinimized()) {
+    if (!owner.isVisible() || owner.isMinimized() || (this.isDarwinFullScreen(owner) && !owner.isFocused())) {
       this.hideBothWindows()
       return
     }
-    if (this.transferWin && !this.transferWin.isDestroyed() && this.activeTransfers.length > 0) {
-      this.syncTransferBounds(owner, this.transferWin)
-      if (!this.transferWin.isVisible()) this.transferWin.showInactive()
+    if (this.activeTransfers.length > 0) {
+      const win = this.ensureTransferWindow(owner)
+      this.syncTransferBounds(owner, win)
+      if (!win.isVisible()) win.showInactive()
     }
-    if (this.noticeWin && !this.noticeWin.isDestroyed() && this.notices.length > 0) {
-      this.syncNoticeBounds(owner, this.noticeWin)
-      if (!this.noticeWin.isVisible()) this.noticeWin.showInactive()
+    if (this.notices.length > 0) {
+      const win = this.ensureNoticeWindow(owner)
+      this.syncNoticeBounds(owner, win)
+      if (!win.isVisible()) win.showInactive()
     }
   }
 
@@ -736,6 +816,8 @@ export class MarkShareHudOverlay {
     const height = Math.min(Math.max(120, rect.height - 80), count * 104 + Math.max(0, count - 1) * 8 + 20)
     const x = Math.round(rect.x + rect.width - width - 8)
     const y = Math.round(rect.y + rect.height - height - 8)
+    win.setMinimumSize(width, height)
+    win.setMaximumSize(width, height)
     win.setContentBounds({ x, y, width, height })
   }
 
@@ -746,6 +828,8 @@ export class MarkShareHudOverlay {
     const height = Math.min(220, count * 52 + 24)
     const x = Math.round(rect.x + (rect.width - width) / 2)
     const y = Math.round(rect.y + 44)
+    win.setMinimumSize(width, height)
+    win.setMaximumSize(width, height)
     win.setContentBounds({ x, y, width, height })
   }
 

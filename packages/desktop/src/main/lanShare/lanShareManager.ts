@@ -5,14 +5,21 @@ import os from 'os'
 import http from 'http'
 import { app } from 'electron'
 import { EventEmitter } from 'events'
+import crypto from 'crypto'
 import type {
   LanShareRecord,
   LanShareFileItem,
+  LanShareConflictPreview,
+  LanShareConflictPreviewRequest,
+  LanShareDownloadBatchRequest,
+  LanShareDownloadBatchResult,
   CreateLanShareOptions,
   DiscoveredLanShare
 } from '../../shared/types/lanShare'
+import { buildTransferPlan } from '../utils/transferConflictResolver'
 import { LanShareServer } from './lanShareServer'
 import { LanDiscovery } from './lanDiscovery'
+import { getCurrentLanguage, t } from '../i18n'
 
 export class LanShareManager extends EventEmitter {
   private shares: Map<string, LanShareRecord> = new Map()
@@ -86,7 +93,7 @@ export class LanShareManager extends EventEmitter {
     }
 
     if (fileItems.length === 0) {
-      throw new Error('未选择有效的文件进行分享')
+      throw new Error(t('lanShare.errNoValidFilesToShare'))
     }
 
     const ip = this.getLocalLanIp()
@@ -105,7 +112,7 @@ export class LanShareManager extends EventEmitter {
       updatedAt: Date.now()
     }
 
-    const server = new LanShareServer(record)
+    const server = new LanShareServer(record, this.appType)
     const boundPort = await server.start(record.port)
     record.port = boundPort
     record.url = `http://${ip}:${boundPort}`
@@ -140,7 +147,7 @@ export class LanShareManager extends EventEmitter {
 
   public async resumeShare(id: string): Promise<LanShareRecord> {
     const record = this.shares.get(id)
-    if (!record) throw new Error('分享记录不存在')
+    if (!record) throw new Error(t('lanShare.errShareRecordNotFound'))
 
     // Stop existing if any
     const existingServer = this.servers.get(id)
@@ -162,13 +169,13 @@ export class LanShareManager extends EventEmitter {
       } catch {}
     }
     if (validFiles.length === 0) {
-      throw new Error('分享的文件已全部不存在，无法继续分享')
+      throw new Error(t('lanShare.errAllSharedFilesMissing'))
     }
     record.files = validFiles
 
     const ip = this.getLocalLanIp()
     record.ip = ip
-    const server = new LanShareServer(record)
+    const server = new LanShareServer(record, this.appType)
     const port = await server.start(record.port || this.defaultPort)
     record.port = port
     record.url = `http://${ip}:${port}`
@@ -249,7 +256,8 @@ export class LanShareManager extends EventEmitter {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Content-Length': Buffer.byteLength(postData)
+              'Content-Length': Buffer.byteLength(postData),
+              'Accept-Language': getCurrentLanguage()
             },
             timeout: 5000
           },
@@ -266,11 +274,11 @@ export class LanShareManager extends EventEmitter {
                 } else if (res.statusCode === 429) {
                   resolve({
                     success: false,
-                    error: '该IP因连续输错密码5次已被锁定30分钟，禁止访问',
+                    error: t('lanShare.errIpLocked30Min'),
                     locked: true
                   })
                 } else {
-                  resolve({ success: false, error: '提取密码错误' })
+                  resolve({ success: false, error: t('lanShare.errWrongPassword') })
                 }
               }
             })
@@ -278,11 +286,14 @@ export class LanShareManager extends EventEmitter {
         )
 
         req.on('error', (err) => {
-          resolve({ success: false, error: '网络连接失败: ' + err.message })
+          resolve({
+            success: false,
+            error: t('lanShare.errNetworkConnectFailed', { error: err.message })
+          })
         })
         req.on('timeout', () => {
           req.destroy()
-          resolve({ success: false, error: '连接超时' })
+          resolve({ success: false, error: t('lanShare.errConnectionTimeout') })
         })
         req.write(postData)
         req.end()
@@ -292,23 +303,29 @@ export class LanShareManager extends EventEmitter {
     })
   }
 
-  public async fetchRemoteFiles(remoteUrl: string, token?: string): Promise<{ title: string; files: any[] }> {
+  public async fetchRemoteFiles(
+    remoteUrl: string,
+    token?: string
+  ): Promise<{ title: string; isFolder?: boolean; rootFolderName?: string; files: any[] }> {
     return new Promise((resolve, reject) => {
       try {
         const url = new URL('/api/files', remoteUrl)
         if (token) url.searchParams.set('token', token)
 
-        const req = http.get(url, { timeout: 6000 }, (res) => {
+        const req = http.get(
+          url,
+          { headers: { 'Accept-Language': getCurrentLanguage() }, timeout: 6000 },
+          (res) => {
           if (res.statusCode === 429) {
-            reject(new Error('该IP因连续输错密码5次已被锁定30分钟，禁止访问'))
+            reject(new Error(t('lanShare.errIpLocked30Min')))
             return
           }
           if (res.statusCode === 401) {
-            reject(new Error('需要提取密码'))
+            reject(new Error(t('lanShare.errPasswordRequired')))
             return
           }
           if (res.statusCode !== 200) {
-            reject(new Error(`请求失败 (HTTP ${res.statusCode})`))
+            reject(new Error(t('lanShare.errRequestFailedHttp', { status: res.statusCode ?? 0 })))
             return
           }
           let data = ''
@@ -325,12 +342,96 @@ export class LanShareManager extends EventEmitter {
         req.on('error', reject)
         req.on('timeout', () => {
           req.destroy()
-          reject(new Error('请求超时'))
+          reject(new Error(t('lanShare.errRequestTimeout')))
         })
       } catch (err) {
         reject(err)
       }
     })
+  }
+
+  public previewRemoteDownloadConflicts(
+    request: LanShareConflictPreviewRequest
+  ): LanShareConflictPreview {
+    const resolvedDir = path.resolve(request.targetDir)
+    const plan = buildTransferPlan({
+      receiverAppType: this.appType,
+      senderAppType: request.senderAppType || 'marktextpro',
+      chosenDir: resolvedDir,
+      workspaceRoot: request.workspaceRoot,
+      pathMode: request.pathMode || 'preserve',
+      conflictStrategy: 'rename',
+      items: request.files.map((f) => ({
+        id: f.id,
+        relativePath: f.relativePath || f.name || 'shared-file',
+        name: f.name || path.basename(f.relativePath || 'shared-file'),
+        isDirectory: false
+      }))
+    })
+    return {
+      totalFiles: plan.totalFiles,
+      conflictCount: plan.conflictCount,
+      conflictSamples: plan.conflictSamples
+    }
+  }
+
+  public async downloadRemoteFilesBatch(
+    request: LanShareDownloadBatchRequest,
+    onProgress?: (progress: { current: number; total: number; fileName: string }) => void
+  ): Promise<LanShareDownloadBatchResult> {
+    const resolvedDir = path.resolve(request.targetDir)
+    await fsPromises.mkdir(resolvedDir, { recursive: true })
+
+    const plan = buildTransferPlan({
+      receiverAppType: this.appType,
+      senderAppType: request.senderAppType || 'marktextpro',
+      chosenDir: resolvedDir,
+      workspaceRoot: request.workspaceRoot,
+      pathMode: request.pathMode || 'preserve',
+      conflictStrategy: request.conflictStrategy || 'rename',
+      items: request.files.map((f) => ({
+        id: f.id,
+        relativePath: f.relativePath || f.name || 'shared-file',
+        name: f.name || path.basename(f.relativePath || 'shared-file'),
+        isDirectory: false
+      }))
+    })
+
+    let downloadedCount = 0
+    let renamedCount = 0
+    let overwrittenCount = 0
+    let skippedCount = 0
+    const total = request.files.length
+
+    for (let i = 0; i < total; i++) {
+      const file = request.files[i]!
+      const decision = plan.decisions.get(file.id)
+      onProgress?.({ current: i + 1, total, fileName: file.name || file.relativePath })
+
+      if (!decision || decision.action === 'skip') {
+        skippedCount++
+        continue
+      }
+
+      await this.downloadRemoteFile(
+        request.remoteUrl,
+        file.id,
+        decision.destAbsPath,
+        request.token,
+        request.password
+      )
+      if (decision.action === 'rename') renamedCount++
+      else if (decision.action === 'overwrite') overwrittenCount++
+      else downloadedCount++
+    }
+
+    return {
+      totalFiles: total,
+      downloadedCount,
+      renamedCount,
+      overwrittenCount,
+      skippedCount
+    }
   }
 
   public async downloadRemoteFile(
@@ -341,39 +442,70 @@ export class LanShareManager extends EventEmitter {
     password?: string
   ): Promise<string> {
     return new Promise((resolve, reject) => {
+      let partPath = ''
+      let settled = false
+      const fail = (err: unknown): void => {
+        if (settled) return
+        settled = true
+        if (partPath) {
+          void fsPromises.rm(partPath, { force: true }).catch(() => {})
+        }
+        reject(err)
+      }
+
       try {
         const url = new URL(`/api/download/${fileId}`, remoteUrl)
         if (password) url.searchParams.set('password', password)
         if (token) url.searchParams.set('token', token)
 
-        const req = http.get(url, { timeout: 30000 }, (res) => {
+        const req = http.get(
+          url,
+          { headers: { 'Accept-Language': getCurrentLanguage() }, timeout: 30000 },
+          (res) => {
           if (res.statusCode === 429) {
-            reject(new Error('该IP因连续输错密码5次已被锁定30分钟，禁止下载'))
+            fail(new Error(t('lanShare.errIpLockedDownload')))
             return
           }
           if (res.statusCode !== 200) {
-            reject(new Error(`下载失败 (HTTP ${res.statusCode})`))
+            fail(new Error(t('lanShare.errDownloadFailedHttp', { status: res.statusCode ?? 0 })))
             return
           }
 
-          // Ensure directory exists
-          fs.mkdirSync(path.dirname(destPath), { recursive: true })
-          const fileStream = fs.createWriteStream(destPath)
-          res.pipe(fileStream)
+          try {
+            fs.mkdirSync(path.dirname(destPath), { recursive: true })
+            partPath = `${destPath}.tmp.${crypto.randomBytes(4).toString('hex')}.part`
+            const fileStream = fs.createWriteStream(partPath)
+            res.pipe(fileStream)
 
-          fileStream.on('finish', () => {
-            fileStream.close(() => resolve(destPath))
-          })
-          fileStream.on('error', reject)
+            res.on('error', (err) => {
+              fileStream.destroy()
+              fail(err)
+            })
+            fileStream.on('finish', () => {
+              fileStream.close(() => {
+                if (settled) return
+                fsPromises
+                  .rename(partPath, destPath)
+                  .then(() => {
+                    settled = true
+                    resolve(destPath)
+                  })
+                  .catch(fail)
+              })
+            })
+            fileStream.on('error', fail)
+          } catch (ioErr) {
+            fail(ioErr)
+          }
         })
 
-        req.on('error', reject)
+        req.on('error', fail)
         req.on('timeout', () => {
           req.destroy()
-          reject(new Error('下载超时'))
+          fail(new Error(t('lanShare.errDownloadTimeout')))
         })
       } catch (err) {
-        reject(err)
+        fail(err)
       }
     })
   }

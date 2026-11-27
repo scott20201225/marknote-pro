@@ -6,6 +6,8 @@ import path from 'path'
 import crypto from 'crypto'
 import type { LanShareRecord, LanShareFileItem } from '../../shared/types/lanShare'
 import { createZipBuffer } from './zipUtil'
+import { getTranslation, SUPPORTED_LANGUAGES } from 'common/i18n'
+import { getCurrentLanguage } from '../i18n'
 // @ts-ignore
 import { marked } from 'marked'
 
@@ -66,13 +68,48 @@ export class IpLockManager {
 
 export class LanShareServer {
   public share: LanShareRecord
+  private readonly appType: 'marknotepro' | 'marktextpro'
   private server: http.Server | null = null
   private openSockets: Set<Socket> = new Set()
   private validTokens: Set<string> = new Set()
   private serverSecret: string = crypto.randomBytes(16).toString('hex')
 
-  constructor(share: LanShareRecord) {
+  constructor(share: LanShareRecord, appType: 'marknotepro' | 'marktextpro' = 'marknotepro') {
     this.share = share
+    this.appType = appType
+  }
+
+  private get brandName(): string {
+    return this.appType === 'marktextpro' ? 'MarkTextPro' : 'MarkNotePro'
+  }
+
+  private resolveRequestLanguage(req?: http.IncomingMessage): string {
+    const header = String(req?.headers['accept-language'] || '').trim()
+    if (header) {
+      const candidates = header
+        .split(',')
+        .map((part) => part.split(';')[0]?.trim())
+        .filter((tag): tag is string => !!tag)
+      for (const rawTag of candidates) {
+        const lower = rawTag.toLowerCase()
+        const exact = SUPPORTED_LANGUAGES.find((l) => l.toLowerCase() === lower)
+        if (exact) return exact
+        if (lower.startsWith('zh-tw') || lower.startsWith('zh-hk') || lower.startsWith('zh-mo') || lower.startsWith('zh-hant')) {
+          return 'zh-TW'
+        }
+        if (lower.startsWith('zh')) {
+          return 'zh-CN'
+        }
+        const base = lower.split('-')[0]
+        const baseMatch = SUPPORTED_LANGUAGES.find((l) => l.toLowerCase() === base)
+        if (baseMatch) return baseMatch
+      }
+    }
+    return getCurrentLanguage()
+  }
+
+  private tr(lang: string, key: string, params: Record<string, string | number> = {}): string {
+    return getTranslation(key, lang, params)
   }
 
   public async start(preferredPort: number = 9527): Promise<number> {
@@ -216,6 +253,8 @@ export class LanShareServer {
     const parsedUrl = new URL(req.url || '/', `http://${host}`)
     const pathname = decodeURIComponent(parsedUrl.pathname)
 
+    const lang = this.resolveRequestLanguage(req)
+
     // Client IP extraction & lockout check (连续密码错误5次锁定30分钟)
     const clientIp = IpLockManager.normalizeIp(
       (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress
@@ -228,13 +267,15 @@ export class LanShareServer {
         !pathname.startsWith('/api/')
       ) {
         res.writeHead(429, { 'Content-Type': 'text/html; charset=utf-8' })
-        res.end(this.renderLockedHtml(lockStatus.remainingMinutes))
+        res.end(this.renderLockedHtml(lockStatus.remainingMinutes, lang))
       } else {
         res.writeHead(429, { 'Content-Type': 'application/json; charset=utf-8' })
         res.end(
           JSON.stringify({
             success: false,
-            error: `该IP因密码连续错误5次已被锁定30分钟，还剩 ${lockStatus.remainingMinutes} 分钟解除锁定`,
+            error: this.tr(lang, 'lanShare.errIpLockedRemaining', {
+              minutes: lockStatus.remainingMinutes
+            }),
             locked: true,
             remainingMinutes: lockStatus.remainingMinutes
           })
@@ -287,7 +328,7 @@ export class LanShareServer {
           res.end(
             JSON.stringify({
               success: false,
-              error: '密码连续错误5次，该IP已被锁定30分钟，禁止访问',
+              error: this.tr(lang, 'lanShare.errIpLocked30Min'),
               locked: true,
               remainingMinutes: failResult.remainingMinutes
             })
@@ -297,7 +338,9 @@ export class LanShareServer {
           res.end(
             JSON.stringify({
               success: false,
-              error: `提取密码错误（剩余尝试次数：${failResult.remainingAttempts}次）`,
+              error: this.tr(lang, 'lanShare.errWrongPasswordAttempts', {
+                attempts: failResult.remainingAttempts
+              }),
               remainingAttempts: failResult.remainingAttempts
             })
           )
@@ -313,7 +356,7 @@ export class LanShareServer {
     if (pathname === '/api/files') {
       if (!isAuthed) {
         res.writeHead(401, { 'Content-Type': 'application/json; charset=utf-8' })
-        res.end(JSON.stringify({ error: '需要输入提取密码' }))
+        res.end(JSON.stringify({ error: this.tr(lang, 'lanShare.errPasswordRequired') }))
         return
       }
 
@@ -328,7 +371,15 @@ export class LanShareServer {
       }))
 
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
-      res.end(JSON.stringify({ title: this.share.title, files }))
+      res.end(
+        JSON.stringify({
+          title: this.share.title,
+          isFolder: !!this.share.isFolder,
+          rootFolderName:
+            this.share.isFolder && this.share.rootPath ? path.basename(this.share.rootPath) : '',
+          files
+        })
+      )
       return
     }
 
@@ -339,7 +390,7 @@ export class LanShareServer {
       // 安全校验：fileId 仅允许字母、数字、下划线和短横线，严禁任何路径分隔符或点号
       if (!fileId || !/^[a-zA-Z0-9_-]+$/.test(fileId)) {
         res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' })
-        res.end(JSON.stringify({ error: '无效的文件ID，禁止通过路径参数访问服务器文件' }))
+        res.end(JSON.stringify({ error: this.tr(lang, 'lanShare.errInvalidFileId') }))
         return
       }
 
@@ -347,7 +398,7 @@ export class LanShareServer {
       const file = this.share.files.find((f) => f.id === fileId)
       if (!file) {
         res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' })
-        res.end('文件不存在或未在分享列表中')
+        res.end(this.tr(lang, 'lanShare.errFileNotInShare'))
         return
       }
 
@@ -371,7 +422,7 @@ export class LanShareServer {
               res.writeHead(429, { 'Content-Type': 'application/json; charset=utf-8' })
               res.end(
                 JSON.stringify({
-                  error: '密码连续错误5次，该IP已被锁定30分钟，禁止访问',
+                  error: this.tr(lang, 'lanShare.errIpLocked30Min'),
                   locked: true,
                   remainingMinutes: failResult.remainingMinutes
                 })
@@ -380,7 +431,9 @@ export class LanShareServer {
               res.writeHead(401, { 'Content-Type': 'application/json; charset=utf-8' })
               res.end(
                 JSON.stringify({
-                  error: `提取密码错误（剩余尝试次数：${failResult.remainingAttempts}次）`,
+                  error: this.tr(lang, 'lanShare.errWrongPasswordAttempts', {
+                    attempts: failResult.remainingAttempts
+                  }),
                   remainingAttempts: failResult.remainingAttempts
                 })
               )
@@ -394,7 +447,7 @@ export class LanShareServer {
 
       if (!authed) {
         res.writeHead(401, { 'Content-Type': 'application/json; charset=utf-8' })
-        res.end(JSON.stringify({ error: '下载需要提供正确的提取密码' }))
+        res.end(JSON.stringify({ error: this.tr(lang, 'lanShare.errDownloadAuthRequired') }))
         return
       }
 
@@ -411,7 +464,7 @@ export class LanShareServer {
         readStream.pipe(res)
       } catch (err) {
         res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' })
-        res.end('读取文件失败: ' + String(err))
+        res.end(this.tr(lang, 'lanShare.errReadFileFailed', { error: String(err) }))
       }
       return
     }
@@ -434,7 +487,7 @@ export class LanShareServer {
               res.writeHead(429, { 'Content-Type': 'application/json; charset=utf-8' })
               res.end(
                 JSON.stringify({
-                  error: '密码连续错误5次，该IP已被锁定30分钟，禁止访问',
+                  error: this.tr(lang, 'lanShare.errIpLocked30Min'),
                   locked: true,
                   remainingMinutes: failResult.remainingMinutes
                 })
@@ -443,7 +496,9 @@ export class LanShareServer {
               res.writeHead(401, { 'Content-Type': 'application/json; charset=utf-8' })
               res.end(
                 JSON.stringify({
-                  error: `提取密码错误（剩余尝试次数：${failResult.remainingAttempts}次）`,
+                  error: this.tr(lang, 'lanShare.errWrongPasswordAttempts', {
+                    attempts: failResult.remainingAttempts
+                  }),
                   remainingAttempts: failResult.remainingAttempts
                 })
               )
@@ -455,7 +510,7 @@ export class LanShareServer {
 
       if (!authed) {
         res.writeHead(401, { 'Content-Type': 'application/json; charset=utf-8' })
-        res.end(JSON.stringify({ error: '需要输入提取密码' }))
+        res.end(JSON.stringify({ error: this.tr(lang, 'lanShare.errPasswordRequired') }))
         return
       }
 
@@ -484,7 +539,7 @@ export class LanShareServer {
         res.end(zipBuffer)
       } catch (err) {
         res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' })
-        res.end('打包 ZIP 失败: ' + String(err))
+        res.end(this.tr(lang, 'lanShare.errZipFailed', { error: String(err) }))
       }
       return
     }
@@ -494,38 +549,38 @@ export class LanShareServer {
       const fileId = pathname.replace('/api/preview/', '').trim()
       if (!fileId || !/^[a-zA-Z0-9_-]+$/.test(fileId)) {
         res.writeHead(400, { 'Content-Type': 'text/html; charset=utf-8' })
-        res.end('<h2>无效的文件ID</h2>')
+        res.end(`<h2>${this.escapeHtml(this.tr(lang, 'lanShare.errInvalidFileIdHeading'))}</h2>`)
         return
       }
 
       if (!isAuthed) {
         res.writeHead(401, { 'Content-Type': 'text/html; charset=utf-8' })
-        res.end('<h2>需要输入提取密码</h2>')
+        res.end(`<h2>${this.escapeHtml(this.tr(lang, 'lanShare.errPasswordRequiredHeading'))}</h2>`)
         return
       }
 
       const file = this.share.files.find((f) => f.id === fileId)
       if (!file) {
         res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' })
-        res.end('<h2>文件未找到</h2>')
+        res.end(`<h2>${this.escapeHtml(this.tr(lang, 'lanShare.errFileNotFoundHeading'))}</h2>`)
         return
       }
 
       try {
         const content = await fsPromises.readFile(file.absolutePath, 'utf8')
-        const html = this.renderMarkdownReaderHtml(file.name, content, file.id)
+        const html = this.renderMarkdownReaderHtml(file.name, content, file.id, lang)
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
         res.end(html)
       } catch (err) {
         res.writeHead(500, { 'Content-Type': 'text/html; charset=utf-8' })
-        res.end('<h2>读取失败</h2>')
+        res.end(`<h2>${this.escapeHtml(this.tr(lang, 'lanShare.errReadFailedHeading'))}</h2>`)
       }
       return
     }
 
     // 7. Web UI: Browser / Mobile Portal
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
-    res.end(this.renderPortalHtml(isAuthed))
+    res.end(this.renderPortalHtml(isAuthed, lang))
   }
 
   private readRequestBody(req: http.IncomingMessage): Promise<string> {
@@ -543,27 +598,39 @@ export class LanShareServer {
     })
   }
 
-  private renderPortalHtml(isAuthed: boolean): string {
+  private renderPortalHtml(isAuthed: boolean, lang: string): string {
     const hasPassword = !!this.share.password
     let displayTitle = this.share.title
     if (!displayTitle) {
       if (hasPassword && !isAuthed) {
-        displayTitle = '局域网加密分享'
+        displayTitle = this.tr(lang, 'lanShare.webEncryptedTitle')
       } else {
-        displayTitle = this.share.files.length === 1
-          ? this.share.files[0].name
-          : (this.share.files.length > 1 ? `${this.share.files[0].name} 等 ${this.share.files.length} 个文件` : '局域网文件分享')
+        displayTitle =
+          this.share.files.length === 1
+            ? this.share.files[0].name
+            : this.share.files.length > 1
+              ? this.tr(lang, 'lanShare.webTitleMore', {
+                  first: this.share.files[0].name,
+                  count: this.share.files.length
+                })
+              : this.tr(lang, 'lanShare.webDefaultTitle')
       }
     }
     const title = this.escapeHtml(displayTitle)
+    const pageTitle = this.escapeHtml(
+      this.tr(lang, 'lanShare.webPageTitle', {
+        title: displayTitle,
+        brand: this.brandName
+      })
+    )
     const fileCount = this.share.files.length
 
     return `<!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="${this.escapeHtml(lang)}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>${title} - MarkNote LAN Share</title>
+  <title>${pageTitle}</title>
   <style>
     :root {
       --primary: #2563eb;
@@ -747,9 +814,9 @@ export class LanShareServer {
 <body>
   <div class="container">
     <div class="header">
-      <div class="badge">局域网专属分享</div>
+      <div class="badge">${this.escapeHtml(this.tr(lang, 'lanShare.webBadge'))}</div>
       <h1>${title}</h1>
-      <div class="subtitle">共 ${fileCount} 个共享文件 · 实时内网直连</div>
+      <div class="subtitle">${this.escapeHtml(this.tr(lang, 'lanShare.webSubtitle', { count: fileCount }))}</div>
     </div>
 
     ${
@@ -757,11 +824,11 @@ export class LanShareServer {
         ? `
     <div class="card password-box">
       <div style="font-size: 40px; margin-bottom: 8px;">🔒</div>
-      <h2 style="font-size: 18px; margin-bottom: 6px;">请输入提取密码</h2>
-      <p style="font-size: 13px; color: var(--text-muted);">此分享设有安全保护，请输入 10~18 位提取码（连续错5次将锁定30分钟）</p>
-      <input id="pwdInput" class="password-input" type="text" maxlength="18" placeholder="10-18位大小写字母与数字" autofocus autocomplete="off" />
+      <h2 style="font-size: 18px; margin-bottom: 6px;">${this.escapeHtml(this.tr(lang, 'lanShare.webEnterPwdHeading'))}</h2>
+      <p style="font-size: 13px; color: var(--text-muted);">${this.escapeHtml(this.tr(lang, 'lanShare.webEnterPwdDesc'))}</p>
+      <input id="pwdInput" class="password-input" type="text" maxlength="18" placeholder="${this.escapeHtml(this.tr(lang, 'lanShare.webPwdPlaceholder'))}" autofocus autocomplete="off" />
       <div>
-        <button id="verifyBtn" class="btn btn-primary" onclick="verifyPassword()">确认提取</button>
+        <button id="verifyBtn" class="btn btn-primary" onclick="verifyPassword()">${this.escapeHtml(this.tr(lang, 'lanShare.webVerifyBtn'))}</button>
       </div>
       <div id="errMsg" class="error-msg"></div>
     </div>
@@ -769,8 +836,8 @@ export class LanShareServer {
         : `
     <div class="card">
       <div class="actions-bar">
-        <span style="font-size: 14px; font-weight: 600; color: var(--text-muted);">文件列表 (${fileCount})</span>
-        <a href="/api/download-all" class="btn btn-primary btn-sm">📦 打包下载全部 (.zip)</a>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-muted);">${this.escapeHtml(this.tr(lang, 'lanShare.webFileListCount', { count: fileCount }))}</span>
+        <a href="/api/download-all" class="btn btn-primary btn-sm">${this.escapeHtml(this.tr(lang, 'lanShare.webDownloadAllZip'))}</a>
       </div>
       <div id="fileList">
         ${this.share.files
@@ -778,19 +845,20 @@ export class LanShareServer {
             const isMd = ['.md', '.markdown'].includes(f.extension.toLowerCase())
             const sizeStr = this.formatSize(f.size)
             const safeName = this.escapeHtml(f.name)
+            const fileExtLabel = this.escapeHtml(f.extension || this.tr(lang, 'lanShare.fileFallback'))
             return `
         <div class="file-item">
           <div class="file-info">
             <div class="file-name">${safeName}</div>
-            <div class="file-meta">${sizeStr} · ${f.extension || '文件'}</div>
+            <div class="file-meta">${sizeStr} · ${fileExtLabel}</div>
           </div>
           <div class="file-actions">
             ${
               isMd
-                ? `<a href="/api/preview/${f.id}" class="btn btn-outline btn-sm">在线阅读</a>`
+                ? `<a href="/api/preview/${f.id}" class="btn btn-outline btn-sm">${this.escapeHtml(this.tr(lang, 'lanShare.webOnlineRead'))}</a>`
                 : ''
             }
-            <a href="/api/download/${f.id}" class="btn btn-primary btn-sm">下载</a>
+            <a href="/api/download/${f.id}" class="btn btn-primary btn-sm">${this.escapeHtml(this.tr(lang, 'lanShare.webDownload'))}</a>
           </div>
         </div>
         `
@@ -801,10 +869,20 @@ export class LanShareServer {
     `
     }
 
-    <div class="footer">由 MarkNote Suite 局域网服务提供</div>
+    <div class="footer">${this.escapeHtml(this.tr(lang, 'lanShare.webFooter', { brand: this.brandName }))}</div>
   </div>
 
   <script>
+    const I18N = ${JSON.stringify({
+      pwdEmpty: this.tr(lang, 'lanShare.webJsPwdEmpty'),
+      pwdLength: this.tr(lang, 'lanShare.webJsPwdLength'),
+      verifying: this.tr(lang, 'lanShare.webJsVerifying'),
+      wrongPwd: this.tr(lang, 'lanShare.errWrongPassword'),
+      locked: this.tr(lang, 'lanShare.webJsLocked'),
+      verifyBtn: this.tr(lang, 'lanShare.webVerifyBtn'),
+      connectError: this.tr(lang, 'lanShare.webJsConnectError')
+    }).replace(/</g, '\\u003c')};
+
     const pwdInput = document.getElementById('pwdInput');
     if (pwdInput) {
       pwdInput.addEventListener('keydown', (e) => {
@@ -827,16 +905,16 @@ export class LanShareServer {
       const errMsg = document.getElementById('errMsg');
       const verifyBtn = document.getElementById('verifyBtn');
       if (!pwd) {
-        errMsg.innerText = '请输入提取密码';
+        errMsg.innerText = I18N.pwdEmpty;
         return;
       }
       if (pwd.length < 10 || pwd.length > 18) {
-        errMsg.innerText = '提取密码长度必须在 10 ~ 18 位之间';
+        errMsg.innerText = I18N.pwdLength;
         return;
       }
       errMsg.innerText = '';
       verifyBtn.disabled = true;
-      verifyBtn.innerText = '校验中...';
+      verifyBtn.innerText = I18N.verifying;
 
       try {
         const res = await fetch('/api/verify', {
@@ -848,20 +926,20 @@ export class LanShareServer {
         if (data.success) {
           window.location.reload();
         } else {
-          errMsg.innerText = data.error || '提取密码错误';
+          errMsg.innerText = data.error || I18N.wrongPwd;
           if (data.locked) {
             verifyBtn.disabled = true;
-            verifyBtn.innerText = '已被安全锁定';
+            verifyBtn.innerText = I18N.locked;
           } else {
             verifyBtn.disabled = false;
-            verifyBtn.innerText = '确认提取';
+            verifyBtn.innerText = I18N.verifyBtn;
             if (pwdInput) pwdInput.select();
           }
         }
       } catch (e) {
-        errMsg.innerText = '连接服务器失败或已被拒绝';
+        errMsg.innerText = I18N.connectError;
         verifyBtn.disabled = false;
-        verifyBtn.innerText = '确认提取';
+        verifyBtn.innerText = I18N.verifyBtn;
       }
     }
   </script>
@@ -869,13 +947,13 @@ export class LanShareServer {
 </html>`
   }
 
-  private renderLockedHtml(remainingMinutes: number): string {
+  private renderLockedHtml(remainingMinutes: number, lang: string): string {
     return `<!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="${this.escapeHtml(lang)}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>访问受限 - IP 已被锁定</title>
+  <title>${this.escapeHtml(this.tr(lang, 'lanShare.webLockedTitle'))}</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; padding: 16px; box-sizing: border-box; text-align: center; }
     .box { background: #1e293b; padding: 36px 24px; border-radius: 14px; border: 1px solid #ef4444; max-width: 440px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5); }
@@ -887,25 +965,26 @@ export class LanShareServer {
 <body>
   <div class="box">
     <div style="font-size: 52px; margin-bottom: 12px;">🚫</div>
-    <h1>当前 IP 已被安全锁定</h1>
-    <p>由于该 IP 地址连续输入提取密码错误达到 5 次，为防止暴力破解，系统已限制该 IP 访问与下载分享资源 30 分钟。</p>
-    <div class="time">剩余锁定时间：约 ${remainingMinutes} 分钟</div>
-    <p>请等待锁定时间结束后再尝试访问。</p>
+    <h1>${this.escapeHtml(this.tr(lang, 'lanShare.webLockedHeading'))}</h1>
+    <p>${this.escapeHtml(this.tr(lang, 'lanShare.webLockedDesc'))}</p>
+    <div class="time">${this.escapeHtml(this.tr(lang, 'lanShare.webLockedRemaining', { minutes: remainingMinutes }))}</div>
+    <p>${this.escapeHtml(this.tr(lang, 'lanShare.webLockedWait'))}</p>
   </div>
 </body>
 </html>`
   }
 
-  private renderMarkdownReaderHtml(fileName: string, content: string, fileId: string): string {
+  private renderMarkdownReaderHtml(fileName: string, content: string, fileId: string, lang: string): string {
     const safeTitle = this.escapeHtml(fileName)
+    const readerSuffix = this.escapeHtml(this.tr(lang, 'lanShare.webReaderSuffix'))
     const safeBody = this.convertMarkdownToHtml(content)
 
     return `<!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="${this.escapeHtml(lang)}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>${safeTitle} - 在线阅读</title>
+  <title>${safeTitle} - ${readerSuffix}</title>
   <style>
     :root {
       --primary: #2563eb;
@@ -1110,8 +1189,8 @@ export class LanShareServer {
 </head>
 <body>
   <div class="top-nav">
-    <a href="/" class="nav-btn">← 返回文件列表</a>
-    <a href="/api/download/${fileId}" class="nav-btn">📥 下载源文件 (.md)</a>
+    <a href="/" class="nav-btn">${this.escapeHtml(this.tr(lang, 'lanShare.webBackToList'))}</a>
+    <a href="/api/download/${fileId}" class="nav-btn">${this.escapeHtml(this.tr(lang, 'lanShare.webDownloadSource'))}</a>
   </div>
   <div class="article">
     ${safeBody}

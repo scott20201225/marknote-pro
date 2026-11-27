@@ -75,7 +75,7 @@
         <div class="loc-header">
           <span class="loc-title">{{ t('lanShare.saveLocation') }}</span>
           <span class="loc-tip">
-            {{ isMarkNote ? t('lanShare.markNoteAreaOnlyTip') : t('lanShare.workspaceTip') }}
+            {{ targetLocationTip }}
           </span>
         </div>
         <div class="loc-select-row">
@@ -86,6 +86,7 @@
             size="small"
             filterable
             class="loc-select"
+            @change="userChangedSavePath = true"
           >
             <el-option
               v-for="opt in folderOptions"
@@ -117,6 +118,37 @@
         <div class="loc-current-path" :title="targetSavePath">
           {{ targetSavePath || t('lanShare.unspecified') }}
         </div>
+
+        <!-- 目录结构策略（默认保留路径信息） -->
+        <div class="conflict-strategy-row">
+          <span class="conflict-label">{{ t('lanShare.pathModeLabel') }}</span>
+          <el-radio-group v-model="pathMode" size="small">
+            <el-radio-button value="preserve">{{ t('lanShare.pathModePreserve') }}</el-radio-button>
+            <el-radio-button value="flatten">{{ t('lanShare.pathModeFlatten') }}</el-radio-button>
+          </el-radio-group>
+        </div>
+
+        <!-- 重名冲突策略选择 -->
+        <div class="conflict-strategy-row">
+          <span class="conflict-label">{{ t('lanShare.conflictStrategyLabel') }}</span>
+          <el-radio-group v-model="conflictStrategy" size="small">
+            <el-radio-button value="rename">{{ t('lanShare.strategyRename') }}</el-radio-button>
+            <el-radio-button value="skip">{{ t('lanShare.strategySkip') }}</el-radio-button>
+            <el-radio-button value="overwrite">{{ t('lanShare.strategyOverwrite') }}</el-radio-button>
+          </el-radio-group>
+        </div>
+        <div
+          v-if="conflictPreview && conflictPreview.conflictCount > 0"
+          class="conflict-preview-tip"
+          :class="`strategy-${conflictStrategy}`"
+        >
+          {{
+            t('lanShare.conflictPreviewTip', {
+              count: conflictPreview.conflictCount,
+              action: conflictActionText
+            })
+          }}
+        </div>
       </div>
 
       <div v-if="downloading" class="download-progress-box">
@@ -142,12 +174,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import bus from '@/bus'
 import { useProjectStore } from '@/store/project'
-import type { DiscoveredLanShare } from '@shared/types/lanShare'
+import type {
+  DiscoveredLanShare,
+  LanShareConflictPreview,
+  LanShareConflictStrategy,
+  LanSharePathMode
+} from '@shared/types/lanShare'
 
 const { t } = useI18n()
 const visible = ref(false)
@@ -165,6 +202,12 @@ const selectedIds = ref<string[]>([])
 const downloading = ref(false)
 const downloadProgressText = ref('')
 const targetSavePath = ref('')
+const pathMode = ref<LanSharePathMode>('preserve')
+const conflictStrategy = ref<LanShareConflictStrategy>('rename')
+const conflictPreview = ref<LanShareConflictPreview | null>(null)
+const remoteIsFolder = ref(false)
+const remoteRootFolderName = ref('')
+const userChangedSavePath = ref(false)
 
 const projectStore = useProjectStore()
 
@@ -185,33 +228,41 @@ const hasWorkspace = computed(() => {
   return !!projectStore.projectTree?.pathname
 })
 
+const isFolderShare = computed(() => {
+  if (remoteIsFolder.value || share.value?.isFolder) return true
+  if (remoteFiles.value.some((f) => String(f.relativePath || '').includes('/'))) return true
+  return (share.value?.fileCount ?? 0) > 1
+})
+
 interface FolderOption {
   label: string
   value: string
   tag?: string
 }
 
-const collectAreas = (
+const collectGroupsAndAreas = (
   node: any,
-  result: { path: string; display: string }[],
-  groupName: string = ''
+  groups: { path: string; display: string }[],
+  areas: { path: string; display: string }[],
+  groupPathPrefix: string = ''
 ) => {
   if (!node) return
   const name = node.name || ''
-  let currentGroup = groupName
+  let nextPrefix = groupPathPrefix
   if (name.startsWith('GROUP_')) {
-    currentGroup = name.replace(/^GROUP_/, '')
-  }
-
-  if (name.startsWith('AREA_')) {
+    const clean = name.replace(/^GROUP_/, '')
+    const display = groupPathPrefix ? `${groupPathPrefix}/${clean}` : clean
+    groups.push({ path: node.pathname, display })
+    nextPrefix = display
+  } else if (name.startsWith('AREA_')) {
     const areaName = name.replace(/^AREA_/, '')
-    const display = currentGroup ? `[${currentGroup}] ${areaName}` : areaName
-    result.push({ path: node.pathname, display })
+    const display = groupPathPrefix ? `[${groupPathPrefix}] ${areaName}` : areaName
+    areas.push({ path: node.pathname, display })
   }
 
   if (Array.isArray(node.folders)) {
     for (const child of node.folders) {
-      collectAreas(child, result, currentGroup)
+      collectGroupsAndAreas(child, groups, areas, nextPrefix)
     }
   }
 }
@@ -240,19 +291,49 @@ const folderOptions = computed<FolderOption[]>(() => {
   const options: FolderOption[] = []
 
   if (isMarkNote.value) {
-    // 1. MarkNotePro: 默认 {工作区}/GROUP_Dump/AREA_Downloads
-    const defaultPath = `${root}/GROUP_Dump/AREA_Downloads`
-    options.push({
-      label: t('lanShare.defaultAreaLabel'),
-      value: defaultPath,
-      tag: t('lanShare.tagRecommended')
-    })
+    const defaultAreaPath = `${root}/GROUP_Dump/AREA_Downloads`
+    const defaultFoldersPath = `${root}/GROUP_Dump/GROUP_Folders`
 
-    // 2. 扫描工作区内已有的所有 AREA（只能选择AREA）
+    if (isFolderShare.value) {
+      options.push({
+        label: t('lanShare.defaultGroupFoldersLabel'),
+        value: defaultFoldersPath,
+        tag: t('lanShare.tagRecommended')
+      })
+      options.push({
+        label: t('lanShare.defaultAreaLabel'),
+        value: defaultAreaPath,
+        tag: t('lanShare.tagArea')
+      })
+    } else {
+      options.push({
+        label: t('lanShare.defaultAreaLabel'),
+        value: defaultAreaPath,
+        tag: t('lanShare.tagRecommended')
+      })
+      options.push({
+        label: t('lanShare.defaultGroupFoldersLabel'),
+        value: defaultFoldersPath,
+        tag: t('lanShare.tagGroup')
+      })
+    }
+
+    const existingGroups: { path: string; display: string }[] = []
     const existingAreas: { path: string; display: string }[] = []
-    collectAreas(projectStore.projectTree, existingAreas)
+    collectGroupsAndAreas(projectStore.projectTree, existingGroups, existingAreas)
+
+    for (const grp of existingGroups) {
+      if (grp.path !== defaultFoldersPath) {
+        options.push({
+          label: `📁 ${grp.display}`,
+          value: grp.path,
+          tag: t('lanShare.tagGroup')
+        })
+      }
+    }
+
     for (const area of existingAreas) {
-      if (area.path !== defaultPath) {
+      if (area.path !== defaultAreaPath) {
         options.push({
           label: `📑 ${area.display}`,
           value: area.path,
@@ -260,20 +341,59 @@ const folderOptions = computed<FolderOption[]>(() => {
         })
       }
     }
-  } else {
-    // 1. marktext-pro: 默认 {工作区}/Dump/Downloads
-    const defaultPath = `${root}/Dump/Downloads`
+
+    const rootName =
+      projectStore.projectTree?.name ||
+      root.split(/[/\\]/).pop() ||
+      t('lanShare.tagWorkspaceRoot')
     options.push({
-      label: t('lanShare.defaultFolderLabel'),
-      value: defaultPath,
-      tag: t('lanShare.tagRecommended')
+      label: `📦 ${rootName}`,
+      value: root,
+      tag: t('lanShare.tagWorkspaceRoot')
+    })
+  } else {
+    const defaultDownloadsPath = `${root}/Dump/Downloads`
+    const defaultFoldersPath = `${root}/Dump/Folders`
+
+    if (isFolderShare.value) {
+      options.push({
+        label: t('lanShare.defaultFoldersLabel'),
+        value: defaultFoldersPath,
+        tag: t('lanShare.tagRecommended')
+      })
+      options.push({
+        label: t('lanShare.defaultFolderLabel'),
+        value: defaultDownloadsPath,
+        tag: t('lanShare.tagFolder')
+      })
+    } else {
+      options.push({
+        label: t('lanShare.defaultFolderLabel'),
+        value: defaultDownloadsPath,
+        tag: t('lanShare.tagRecommended')
+      })
+      options.push({
+        label: t('lanShare.defaultFoldersLabel'),
+        value: defaultFoldersPath,
+        tag: t('lanShare.tagFolder')
+      })
+    }
+
+    const rootName =
+      projectStore.projectTree?.name ||
+      root.split(/[/\\]/).pop() ||
+      t('lanShare.tagWorkspaceRoot')
+    options.push({
+      label: `📦 ${rootName}`,
+      value: root,
+      tag: t('lanShare.tagWorkspaceRoot')
     })
 
     // 2. 扫描工作区内所有文件夹
     const existingFolders: { path: string; display: string }[] = []
     collectFolders(projectStore.projectTree, existingFolders, root)
     for (const folder of existingFolders) {
-      if (folder.path !== defaultPath) {
+      if (folder.path !== defaultDownloadsPath && folder.path !== defaultFoldersPath) {
         options.push({
           label: `📁 ${folder.display}`,
           value: folder.path,
@@ -286,16 +406,44 @@ const folderOptions = computed<FolderOption[]>(() => {
   return options
 })
 
+const targetLocationTip = computed(() => {
+  if (!isMarkNote.value) {
+    return pathMode.value === 'flatten' ? t('lanShare.pathModeFlattenTip') : t('lanShare.workspaceTip')
+  }
+  if (pathMode.value === 'flatten') {
+    return t('lanShare.pathModeFlattenTip')
+  }
+  const base = targetSavePath.value.split(/[/\\]/).pop() || ''
+  if (base.startsWith('AREA_')) {
+    return t('lanShare.markNoteAreaTip')
+  }
+  if (share.value?.app === 'marknotepro') {
+    return t('lanShare.markNoteGroupPreserveTip')
+  }
+  return t('lanShare.markNoteGroupConvertTip')
+})
+
+const conflictActionText = computed(() => {
+  if (conflictStrategy.value === 'skip') return t('lanShare.actionSkip')
+  if (conflictStrategy.value === 'overwrite') return t('lanShare.actionOverwrite')
+  return t('lanShare.actionRename')
+})
+
 const initTargetSavePath = () => {
   const root = projectStore.projectTree?.pathname
   if (!root) {
     targetSavePath.value = ''
     return
   }
+  const useFoldersDir = isFolderShare.value && pathMode.value === 'preserve'
   if (isMarkNote.value) {
-    targetSavePath.value = `${root}/GROUP_Dump/AREA_Downloads`
+    targetSavePath.value = useFoldersDir
+      ? `${root}/GROUP_Dump/GROUP_Folders`
+      : `${root}/GROUP_Dump/AREA_Downloads`
   } else {
-    targetSavePath.value = `${root}/Dump/Downloads`
+    targetSavePath.value = useFoldersDir
+      ? `${root}/Dump/Folders`
+      : `${root}/Dump/Downloads`
   }
 }
 
@@ -304,13 +452,7 @@ const selectCustomFolder = async () => {
     'mt::lan-share:select-destination-folder'
   )
   if (selected) {
-    if (isMarkNote.value) {
-      const base = selected.split(/[/\\]/).pop() || ''
-      if (!base.startsWith('AREA_')) {
-        ElMessage.warning(t('lanShare.markNoteAreaPathWarn'))
-        return
-      }
-    }
+    userChangedSavePath.value = true
     targetSavePath.value = selected
   }
 }
@@ -347,6 +489,12 @@ const openModal = async (targetShare: DiscoveredLanShare) => {
   authToken.value = ''
   remoteFiles.value = []
   selectedIds.value = []
+  remoteIsFolder.value = !!targetShare.isFolder
+  remoteRootFolderName.value = targetShare.rootFolderName || ''
+  userChangedSavePath.value = false
+  pathMode.value = 'preserve'
+  conflictStrategy.value = 'rename'
+  conflictPreview.value = null
   initTargetSavePath()
   visible.value = true
 
@@ -399,6 +547,18 @@ const fetchFiles = async () => {
       authToken.value
     )
     remoteFiles.value = data.files || []
+    remoteIsFolder.value =
+      typeof data.isFolder === 'boolean'
+        ? data.isFolder
+        : Boolean(share.value?.isFolder) ||
+          remoteFiles.value.some((f: any) => String(f.relativePath || '').includes('/'))
+    remoteRootFolderName.value =
+      data.rootFolderName ||
+      share.value?.rootFolderName ||
+      (remoteIsFolder.value ? String(data.title || share.value?.title || '').trim() : '')
+    if (!userChangedSavePath.value) {
+      initTargetSavePath()
+    }
     // 默认全选远程文件以方便快速下载
     selectedIds.value = remoteFiles.value.map((f) => f.id)
   } catch (err: any) {
@@ -407,6 +567,59 @@ const fetchFiles = async () => {
     loadingFiles.value = false
   }
 }
+
+const buildBatchFileItem = (f: any) => {
+  const rawRel = String(f.relativePath || f.name || 'shared-file').replace(/^[/\\]+/, '')
+  const rootName = remoteRootFolderName.value.replace(/^[/\\]+|[/\\]+$/g, '')
+  const withRoot =
+    isFolderShare.value && rootName && !rawRel.startsWith(`${rootName}/`)
+      ? `${rootName}/${rawRel}`
+      : rawRel
+  return {
+    id: f.id,
+    name: f.name,
+    relativePath: withRoot
+  }
+}
+
+const refreshConflictPreview = async () => {
+  if (!visible.value || (!isVerified.value && needPassword.value)) {
+    conflictPreview.value = null
+    return
+  }
+  const targetDir = targetSavePath.value
+  const targets = remoteFiles.value.filter((f) => selectedIds.value.includes(f.id))
+  if (!targetDir || targets.length === 0) {
+    conflictPreview.value = null
+    return
+  }
+  try {
+    const res = await window.electron.ipcRenderer.invoke('mt::lan-share:preview-conflicts', {
+      targetDir,
+      workspaceRoot: projectStore.projectTree?.pathname || undefined,
+      senderAppType: share.value?.app,
+      pathMode: pathMode.value,
+      files: targets.map(buildBatchFileItem)
+    })
+    conflictPreview.value = res
+  } catch {
+    conflictPreview.value = null
+  }
+}
+
+watch(pathMode, () => {
+  if (!userChangedSavePath.value) {
+    initTargetSavePath()
+  }
+})
+
+watch(
+  [visible, isVerified, targetSavePath, selectedIds, remoteFiles, pathMode],
+  () => {
+    void refreshConflictPreview()
+  },
+  { deep: true }
+)
 
 const startDownload = async () => {
   if (!share.value || selectedIds.value.length === 0) return
@@ -417,47 +630,51 @@ const startDownload = async () => {
       'mt::lan-share:select-destination-folder'
     )
     if (!selected) return
-    if (isMarkNote.value) {
-      const base = selected.split(/[/\\]/).pop() || ''
-      if (!base.startsWith('AREA_')) {
-        ElMessage.warning(t('lanShare.markNoteAreaPathWarn'))
-        return
-      }
-    }
     targetDir = selected
   }
 
   downloading.value = true
-  let successCount = 0
+  downloadProgressText.value = ''
+
+  const unsubscribeProgress = window.electron.ipcRenderer.on(
+    'mt::lan-share:download-progress',
+    (_event: any, payload: { index: number; total: number; name: string }) => {
+      downloadProgressText.value = `${payload.index}/${payload.total} ${payload.name}`
+    }
+  )
 
   try {
     const targets = remoteFiles.value.filter((f) => selectedIds.value.includes(f.id))
-    for (let i = 0; i < targets.length; i++) {
-      const file = targets[i]
-      downloadProgressText.value = `${i + 1}/${targets.length} ${file.name}`
+    const result = await window.electron.ipcRenderer.invoke('mt::lan-share:download-batch', {
+      remoteUrl: share.value.url,
+      targetDir,
+      workspaceRoot: projectStore.projectTree?.pathname || undefined,
+      senderAppType: share.value.app,
+      pathMode: pathMode.value,
+      conflictStrategy: conflictStrategy.value,
+      token: authToken.value,
+      password: passwordInput.value,
+      files: targets.map(buildBatchFileItem)
+    })
 
-      // MarkNotePro 模式下直接归入所选 AREA 分区；marktext-pro 下保持相对文件路径
-      const fileName = isMarkNote.value
-        ? (file.name || 'note.md')
-        : (file.relativePath || file.name || 'shared-file')
-      const destPath = `${targetDir}/${fileName}`
-
-      await window.electron.ipcRenderer.invoke(
-        'mt::lan-share:download-remote-file',
-        share.value.url,
-        file.id,
-        destPath,
-        authToken.value,
-        passwordInput.value
-      )
-      successCount++
-    }
-
-    ElMessage.success(t('lanShare.downloadSuccessToDir', { count: successCount, dir: targetDir }))
+    ElMessage.success(
+      t('lanShare.downloadBatchResult', {
+        downloaded: result.downloadedCount,
+        renamed: result.renamedCount,
+        skipped: result.skippedCount,
+        overwritten: result.overwrittenCount,
+        dir: targetDir
+      })
+    )
 
     // 如果保存位置在当前打开的工作区内，主动触发刷新工作区侧边栏树
     const rootPath = projectStore.projectTree?.pathname
-    if (rootPath && targetDir.startsWith(rootPath)) {
+    if (
+      rootPath &&
+      (targetDir === rootPath ||
+        targetDir.startsWith(`${rootPath}/`) ||
+        targetDir.startsWith(`${rootPath}\\`))
+    ) {
       window.electron.ipcRenderer.send('mt::reload-workspace', rootPath)
     }
 
@@ -465,6 +682,7 @@ const startDownload = async () => {
   } catch (err: any) {
     ElMessage.error(t('lanShare.downloadErrorErr', { error: err.message }))
   } finally {
+    unsubscribeProgress()
     downloading.value = false
   }
 }
@@ -681,6 +899,32 @@ onBeforeUnmount(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.conflict-strategy-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.conflict-label {
+  font-size: 12px;
+  color: var(--sideBarColor, rgba(255, 255, 255, 0.8));
+}
+
+.conflict-preview-tip {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(230, 162, 60, 0.14);
+  color: #e6a23c;
+}
+
+.conflict-preview-tip.strategy-overwrite {
+  background: rgba(245, 108, 108, 0.14);
+  color: #f56c6c;
 }
 </style>
 

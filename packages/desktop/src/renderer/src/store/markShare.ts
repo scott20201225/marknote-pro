@@ -2,10 +2,14 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import type {
   MarkShareConfigState,
+  MarkShareConflictPreview,
+  MarkShareConflictStrategy,
   MarkShareDevice,
   MarkShareHistoryRecord,
-  MarkShareOffer
+  MarkShareOffer,
+  MarkSharePathMode
 } from '@shared/types/markShare'
+import { t } from '../i18n'
 
 export interface MarkShareDragPayload {
   paths: string[]
@@ -188,7 +192,10 @@ export const useMarkShareStore = defineStore('markShare', () => {
       throw failed[0]!.reason
     }
     if (failed.length > 0) {
-      showNotice('warning', `部分设备发送发起失败（${failed.length}/${results.length}）`)
+      showNotice(
+        'warning',
+        t('markShare.errPartialSendFailed', { failed: failed.length, total: results.length })
+      )
     }
   }
 
@@ -200,15 +207,35 @@ export const useMarkShareStore = defineStore('markShare', () => {
     await window.electron.ipcRenderer.invoke('mt::mark-share:stop', String(offerId))
   }
 
+  async function previewIncomingConflicts(
+    offerId: string,
+    saveDir?: string,
+    workspaceRoot?: string,
+    pathMode: MarkSharePathMode = 'preserve'
+  ): Promise<MarkShareConflictPreview> {
+    return (await window.electron.ipcRenderer.invoke('mt::mark-share:preview-conflicts', {
+      offerId: String(offerId),
+      saveDir: saveDir ? String(saveDir) : undefined,
+      workspaceRoot: workspaceRoot ? String(workspaceRoot) : undefined,
+      pathMode
+    })) as MarkShareConflictPreview
+  }
+
   async function acceptOffer(
     offerId: string,
     saveDir?: string,
-    setAsDefaultSaveDir = false
+    setAsDefaultSaveDir = false,
+    workspaceRoot?: string,
+    conflictStrategy: MarkShareConflictStrategy = 'rename',
+    pathMode: MarkSharePathMode = 'preserve'
   ): Promise<void> {
     await window.electron.ipcRenderer.invoke('mt::mark-share:accept', {
       offerId: String(offerId),
       saveDir: saveDir ? String(saveDir) : undefined,
-      setAsDefaultSaveDir: Boolean(setAsDefaultSaveDir)
+      setAsDefaultSaveDir: Boolean(setAsDefaultSaveDir),
+      workspaceRoot: workspaceRoot ? String(workspaceRoot) : undefined,
+      pathMode,
+      conflictStrategy
     })
   }
 
@@ -222,8 +249,16 @@ export const useMarkShareStore = defineStore('markShare', () => {
     )) as MarkShareHistoryRecord[]
   }
 
-  async function openPath(targetPath: string): Promise<void> {
-    await window.electron.ipcRenderer.invoke('mt::mark-share:open-path', String(targetPath))
+  async function openPath(target: string | string[]): Promise<void> {
+    const payload = Array.isArray(target)
+      ? { paths: target.map((p) => String(p)).filter(Boolean) }
+      : String(target || '')
+    const res = await window.electron.ipcRenderer.invoke('mt::mark-share:open-path', payload)
+    if (res && typeof res === 'object' && !res.ok) {
+      showNotice('warning', res.error || t('markShare.errTargetNotFound'))
+    } else if (res === false) {
+      showNotice('warning', t('markShare.errTargetNotFound'))
+    }
   }
 
   function openDevicePicker(paths: string[], label?: string): void {
@@ -295,6 +330,7 @@ export const useMarkShareStore = defineStore('markShare', () => {
     sendToDevices,
     cancelOffer,
     stopTransfer,
+    previewIncomingConflicts,
     acceptOffer,
     rejectOffer,
     clearHistory,

@@ -74,6 +74,30 @@
       </div>
     </div>
 
+    <!-- Non-destructive warning for pre-existing unrecognized folders in MarkNotePro workspace -->
+    <div v-if="unrecognizedFolders.length > 0" class="ms-unrecognized-box">
+      <div class="ms-unrec-title">
+        ⚠️ {{ t('markShare.unrecognizedFoldersTitle', { count: unrecognizedFolders.length }) }}
+      </div>
+      <div class="ms-unrec-desc">{{ t('markShare.unrecognizedFoldersDesc') }}</div>
+      <div class="ms-unrec-list">
+        <div
+          v-for="item in unrecognizedFolders.slice(0, 3)"
+          :key="item.pathname"
+          class="ms-unrec-item"
+        >
+          <span class="ms-unrec-path" :title="item.relPath">{{ item.relPath }}</span>
+          <button
+            type="button"
+            class="ms-unrec-open-btn"
+            @click="markShareStore.openPath(item.pathname)"
+          >
+            {{ t('markShare.openFolderAction') }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Navigation Tabs: Online Devices | Send/Receive History -->
     <div class="ms-tab-nav">
       <div
@@ -246,6 +270,9 @@
                 </svg>
                 <span>{{ rec.direction === 'send' ? t('markShare.directionSend') : t('markShare.directionReceive') }}</span>
               </span>
+              <span class="ms-type-badge" :class="rec.rootType === 'file' ? 'file' : 'folder'">
+                {{ rec.rootType === 'file' ? `📄 ${t('markShare.typeFile')}` : `📁 ${t('markShare.typeFolder')}` }}
+              </span>
               <span class="ms-rec-title" :title="rec.rootLabel">{{ rec.rootLabel }}</span>
             </div>
             <span class="ms-rec-state" :class="rec.state">
@@ -260,21 +287,25 @@
             </span>
           </div>
           <div class="ms-rec-subline">
+            <template v-if="rec.rootType !== 'file' || rec.totalFiles > 1">
+              <span>{{ rec.totalFiles }} {{ t('markShare.filesUnit') }}</span>
+              <span>·</span>
+            </template>
             <span>{{ formatSize(rec.totalBytes) }}</span>
             <span>·</span>
             <span>{{ formatTime(rec.finishedAt) }}</span>
           </div>
           <div
-            v-if="rec.direction === 'receive' && rec.state === 'completed' && (rec.savedRootPath || rec.saveDir)"
+            v-if="getRecordOpenCandidates(rec).length > 0 && (rec.direction === 'send' || rec.state === 'completed')"
             class="ms-rec-actions"
           >
-            <span class="ms-rec-path" :title="rec.savedRootPath || rec.saveDir">
-              {{ rec.savedRootPath || rec.saveDir }}
+            <span class="ms-rec-path" :title="getRecordDisplayPath(rec)">
+              {{ getRecordDisplayPath(rec) }}
             </span>
             <button
               type="button"
               class="ms-rec-btn"
-              @click="markShareStore.openPath(rec.savedRootPath || rec.saveDir || '')"
+              @click="openRecordFolder(rec)"
             >
               {{ t('markShare.openFolder') }}
             </button>
@@ -289,6 +320,8 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMarkShareStore } from '@/store/markShare'
+import { useProjectStore } from '@/store/project'
+import { getNoteNodeKind } from '@/util/noteWorkspace'
 import type {
   MarkShareDevice,
   MarkShareHistoryRecord,
@@ -298,6 +331,7 @@ import OsDeviceIcon from '../markShare/OsDeviceIcon.vue'
 
 const { t } = useI18n()
 const markShareStore = useMarkShareStore()
+const projectStore = useProjectStore()
 
 const activeTab = ref<'devices' | 'history'>('devices')
 const historyFilter = ref<'all' | 'send' | 'receive'>('all')
@@ -307,6 +341,30 @@ const editingSelfAlias = ref(false)
 const selfAliasDraft = ref('')
 const editingPeerKey = ref<string | null>(null)
 const peerAliasDraft = ref('')
+
+const unrecognizedFolders = computed(() => {
+  const rootTree = projectStore.projectTree
+  const rootPath = rootTree?.pathname
+  if (!rootTree || !rootPath) return []
+  const items: Array<{ pathname: string; relPath: string }> = []
+  const visit = (node: any) => {
+    if (!node || !Array.isArray(node.folders)) return
+    for (const child of node.folders) {
+      if (!child?.pathname) continue
+      const kind = getNoteNodeKind(child, rootPath)
+      if (kind === 'otherFolder') {
+        const rel = child.pathname
+          .slice(rootPath.length)
+          .replace(/^[/\\]+/, '')
+        items.push({ pathname: child.pathname, relPath: rel || child.name })
+      } else {
+        visit(child)
+      }
+    }
+  }
+  visit(rootTree)
+  return items
+})
 
 onMounted(() => {
   void markShareStore.init()
@@ -326,6 +384,30 @@ const osLabel = (os: MarkShareOsType): string => {
 
 const stateLabel = (state: MarkShareHistoryRecord['state']): string => {
   return t(`markShare.state.${state}`)
+}
+
+const getRecordDisplayPath = (rec: MarkShareHistoryRecord): string => {
+  if (rec.direction === 'send') {
+    return rec.sourcePaths?.[0] || ''
+  }
+  return rec.savedRootPath || rec.savedPaths?.[0] || rec.saveDir || ''
+}
+
+const getRecordOpenCandidates = (rec: MarkShareHistoryRecord): string[] => {
+  if (rec.direction === 'send') {
+    return Array.isArray(rec.sourcePaths) ? rec.sourcePaths.filter(Boolean) : []
+  }
+  return [
+    rec.savedRootPath,
+    ...(Array.isArray(rec.savedPaths) ? rec.savedPaths : []),
+    rec.saveDir
+  ].filter((p): p is string => Boolean(p && p.trim()))
+}
+
+const openRecordFolder = (rec: MarkShareHistoryRecord): void => {
+  const candidates = getRecordOpenCandidates(rec)
+  if (candidates.length === 0) return
+  void markShareStore.openPath(candidates)
 }
 
 const formatSize = (bytes: number): string => {
@@ -630,6 +712,62 @@ const onDeviceDrop = async (peerKey: string, e: DragEvent): Promise<void> => {
   opacity: 0.75;
 }
 
+.ms-unrecognized-box {
+  margin: 8px 10px 4px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(230, 162, 60, 0.35);
+  background: rgba(230, 162, 60, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ms-unrec-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #e6a23c;
+}
+
+.ms-unrec-desc {
+  font-size: 11px;
+  line-height: 1.4;
+  opacity: 0.8;
+}
+
+.ms-unrec-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.ms-unrec-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.ms-unrec-path {
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.9;
+}
+
+.ms-unrec-open-btn {
+  flex-shrink: 0;
+  border: 1px solid rgba(230, 162, 60, 0.45);
+  background: transparent;
+  color: #e6a23c;
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
 .ms-device-card {
   display: flex;
   align-items: center;
@@ -818,6 +956,29 @@ const onDeviceDrop = async (peerKey: string, e: DragEvent): Promise<void> => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.ms-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  background: rgba(148, 163, 184, 0.16);
+  color: var(--sideBarColor);
+}
+
+.ms-type-badge.folder {
+  background: rgba(245, 158, 11, 0.14);
+  color: #f59e0b;
+}
+
+.ms-type-badge.file {
+  background: rgba(56, 189, 248, 0.14);
+  color: #38bdf8;
 }
 
 .ms-rec-state {

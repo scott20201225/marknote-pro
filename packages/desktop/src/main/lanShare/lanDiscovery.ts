@@ -1,5 +1,6 @@
 import dgram from 'dgram'
 import os from 'os'
+import path from 'path'
 import { EventEmitter } from 'events'
 import type { DiscoveredLanShare, LanShareRecord } from '../../shared/types/lanShare'
 
@@ -93,6 +94,8 @@ export class LanDiscovery extends EventEmitter {
         title: share.title || '',
         port: share.port,
         hasPassword: !!share.password,
+        isFolder: !!share.isFolder,
+        rootFolderName: share.isFolder && share.rootPath ? path.basename(share.rootPath) : '',
         fileCount: share.files.length
       }
     }
@@ -153,6 +156,8 @@ export class LanDiscovery extends EventEmitter {
         port: share.port,
         url,
         hasPassword: !!share.hasPassword,
+        isFolder: typeof share.isFolder === 'boolean' ? share.isFolder : undefined,
+        rootFolderName: typeof share.rootFolderName === 'string' ? share.rootFolderName : '',
         fileCount: share.fileCount || 0,
         lastSeen: now
       }

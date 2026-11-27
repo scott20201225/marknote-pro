@@ -114,8 +114,28 @@ export interface MarkShareSendRequest {
   paths: string[]
 }
 
+export type MarkShareConflictStrategy = 'rename' | 'skip' | 'overwrite'
+export type MarkSharePathMode = 'preserve' | 'flatten'
+
 export interface MarkShareAcceptRequest {
   offerId: string
   saveDir?: string
   setAsDefaultSaveDir?: boolean
+  workspaceRoot?: string
+  pathMode?: MarkSharePathMode
+  conflictStrategy?: MarkShareConflictStrategy
+}
+
+export interface MarkShareConflictPreviewRequest {
+  offerId: string
+  saveDir?: string
+  workspaceRoot?: string
+  pathMode?: MarkSharePathMode
+}
+
+export interface MarkShareConflictPreview {
+  targetDir: string
+  totalFiles: number
+  conflictCount: number
+  conflictSamples: string[]
 }

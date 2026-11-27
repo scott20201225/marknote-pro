@@ -1,6 +1,11 @@
 import { ipcMain, BrowserWindow, dialog, app } from 'electron'
-import type { CreateLanShareOptions } from '../../shared/types/lanShare'
+import type {
+  CreateLanShareOptions,
+  LanShareConflictPreviewRequest,
+  LanShareDownloadBatchRequest
+} from '../../shared/types/lanShare'
 import { getLanShareManager, LanShareManager } from './lanShareManager'
+import { t } from '../i18n'
 
 export const registerLanShareHandlers = (appType: 'marknotepro' | 'marktextpro' = 'marknotepro'): void => {
   const manager = getLanShareManager(appType)
@@ -69,6 +74,24 @@ export const registerLanShareHandlers = (appType: 'marknotepro' | 'marktextpro' 
   })
 
   ipcMain.handle(
+    'mt::lan-share:preview-conflicts',
+    async (_event, req: LanShareConflictPreviewRequest) => {
+      return manager.previewRemoteDownloadConflicts(req)
+    }
+  )
+
+  ipcMain.handle(
+    'mt::lan-share:download-batch',
+    async (event, req: LanShareDownloadBatchRequest) => {
+      return manager.downloadRemoteFilesBatch(req, (progress) => {
+        if (!event.sender.isDestroyed()) {
+          event.sender.send('mt::lan-share:download-progress', progress)
+        }
+      })
+    }
+  )
+
+  ipcMain.handle(
     'mt::lan-share:download-remote-file',
     async (
       _event,
@@ -85,7 +108,7 @@ export const registerLanShareHandlers = (appType: 'marknotepro' | 'marktextpro' 
   ipcMain.handle('mt::lan-share:select-destination-folder', async (event) => {
     const win = BrowserWindow.fromWebContents(event.sender)
     const result = await dialog.showOpenDialog(win || BrowserWindow.getFocusedWindow()!, {
-      title: '选择保存目录',
+      title: t('lanShare.selectDestDirTitle'),
       properties: ['openDirectory', 'createDirectory']
     })
     return result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0]

@@ -20,8 +20,16 @@
 import type { IKeyboardLayoutInfo, IKeyboardMapping } from 'native-keymap'
 import type { ClipboardItemRecord, PinWindowPayload, ScreenCaptureDisplayInfo } from './clipboard'
 import type {
+  LanShareConflictPreview,
+  LanShareConflictPreviewRequest,
+  LanShareDownloadBatchRequest,
+  LanShareDownloadBatchResult
+} from './lanShare'
+import type {
   MarkShareAcceptRequest,
   MarkShareConfigState,
+  MarkShareConflictPreview,
+  MarkShareConflictPreviewRequest,
   MarkShareDevice,
   MarkShareHistoryRecord,
   MarkShareOffer,
@@ -350,10 +358,25 @@ export interface IpcInvokeChannels {
   'mt::mark-share:send': { args: [req: MarkShareSendRequest]; ret: MarkShareOffer }
   'mt::mark-share:cancel': { args: [offerId: string]; ret: boolean }
   'mt::mark-share:stop': { args: [offerId: string]; ret: boolean }
+  'mt::lan-share:preview-conflicts': {
+    args: [req: LanShareConflictPreviewRequest]
+    ret: LanShareConflictPreview
+  }
+  'mt::lan-share:download-batch': {
+    args: [req: LanShareDownloadBatchRequest]
+    ret: LanShareDownloadBatchResult
+  }
   'mt::mark-share:accept': { args: [req: MarkShareAcceptRequest]; ret: MarkShareOffer }
+  'mt::mark-share:preview-conflicts': {
+    args: [req: MarkShareConflictPreviewRequest]
+    ret: MarkShareConflictPreview
+  }
   'mt::mark-share:reject': { args: [offerId: string]; ret: boolean }
   'mt::mark-share:clear-history': { args: []; ret: MarkShareHistoryRecord[] }
-  'mt::mark-share:open-path': { args: [targetPath: string]; ret: boolean }
+  'mt::mark-share:open-path': {
+    args: [targetPath: string | { paths?: string[] }]
+    ret: boolean | { ok: boolean; openedPath?: string; fallbackParent?: boolean; error?: string }
+  }
   'mt::mark-share:select-directory': { args: [defaultPath?: string]; ret: string | null }
   // Main derives the BrowserWindow via BrowserWindow.fromWebContents(e.sender);
   // no need to pass windowId. Payload is the editor+project+layout snapshot.
@@ -759,6 +782,7 @@ export interface IpcMainEventChannels {
   'mt::terminal:stats': [payload: { sessionId: string; stats: IHardwareStats }]
   'mt::terminal:2fa-prompt': [payload: { sessionId: string; promptId: string; prompt: string; instruction?: string }]
   'mt::terminal:sftp-progress': [payload: { sessionId: string; progress: ISftpTransferProgress }]
+  'mt::lan-share:download-progress': [payload: { index: number; total: number; name: string }]
   'mt::mark-share:config-updated': [config: MarkShareConfigState]
   'mt::mark-share:devices-updated': [devices: MarkShareDevice[]]
   'mt::mark-share:sessions-updated': [sessions: MarkShareOffer[]]

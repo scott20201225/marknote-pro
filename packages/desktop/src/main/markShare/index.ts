@@ -1,11 +1,16 @@
+import fs from 'fs'
+import fsPromises from 'fs/promises'
+import path from 'path'
 import { app, BrowserWindow, dialog, ipcMain, Notification, shell, type WebContents } from 'electron'
 import type {
   MarkShareAcceptRequest,
   MarkShareAppType,
+  MarkShareConflictPreviewRequest,
   MarkShareOffer,
   MarkShareSendRequest
 } from '../../shared/types/markShare'
 import { getMarkShareManager, MarkShareManager } from './markShareManager'
+import { t } from '../i18n'
 import {
   MarkShareHudOverlay,
   isMarkShareHudWindow,
@@ -60,8 +65,8 @@ export const registerMarkShareHandlers = (appType: MarkShareAppType = 'marknotep
     const focused = BrowserWindow.getFocusedWindow()
     if (!focused && Notification.isSupported()) {
       const n = new Notification({
-        title: `MarkShare 传输请求 · ${offer.peerDevice.deviceName}`,
-        body: `向你发送「${offer.rootLabel}」，请在 1 分钟内确认接收`
+        title: t('markShare.notifyIncomingTitle', { device: offer.peerDevice.deviceName }),
+        body: t('markShare.notifyIncomingBody', { label: offer.rootLabel })
       })
       n.on('click', () => {
         const win = BrowserWindow.getAllWindows().find(
@@ -204,6 +209,13 @@ export const registerMarkShareHandlers = (appType: MarkShareAppType = 'marknotep
     return manager.acceptIncomingOffer(req)
   })
 
+  ipcMain.handle(
+    'mt::mark-share:preview-conflicts',
+    async (_event, req: MarkShareConflictPreviewRequest) => {
+      return manager.previewIncomingConflicts(req.offerId, req.saveDir, req.workspaceRoot, req.pathMode)
+    }
+  )
+
   ipcMain.handle('mt::mark-share:reject', async (_event, offerId: string) => {
     await manager.rejectIncomingOffer(offerId)
     return true
@@ -213,11 +225,67 @@ export const registerMarkShareHandlers = (appType: MarkShareAppType = 'marknotep
     return manager.clearHistory()
   })
 
-  ipcMain.handle('mt::mark-share:open-path', async (_event, targetPath: string) => {
-    if (!targetPath) return false
-    shell.showItemInFolder(targetPath)
-    return true
-  })
+  ipcMain.handle(
+    'mt::mark-share:open-path',
+    async (_event, input: string | { paths?: string[] }) => {
+      const rawList =
+        typeof input === 'string'
+          ? [input]
+          : Array.isArray(input?.paths)
+            ? input.paths
+            : []
+      const candidates = rawList.map((p) => String(p || '').trim()).filter(Boolean)
+      if (candidates.length === 0) {
+        return { ok: false, error: t('markShare.errHistoryNoPath') }
+      }
+
+      const openResolved = async (
+        resolved: string,
+        fallbackParent = false
+      ): Promise<{ ok: boolean; openedPath?: string; fallbackParent?: boolean }> => {
+        const st = await fsPromises.stat(resolved)
+        if (st.isDirectory()) {
+          const err = await shell.openPath(resolved)
+          if (!err) {
+            return { ok: true, openedPath: resolved, fallbackParent }
+          }
+          shell.showItemInFolder(resolved)
+          return { ok: true, openedPath: resolved, fallbackParent }
+        }
+        shell.showItemInFolder(resolved)
+        return { ok: true, openedPath: resolved, fallbackParent }
+      }
+
+      for (const candidate of candidates) {
+        const resolved = path.resolve(candidate)
+        if (!fs.existsSync(resolved)) continue
+        try {
+          return await openResolved(resolved, false)
+        } catch {
+          // Try next candidate
+        }
+      }
+
+      for (const candidate of candidates) {
+        let current = path.dirname(path.resolve(candidate))
+        while (current && current !== path.dirname(current)) {
+          if (fs.existsSync(current)) {
+            try {
+              const st = await fsPromises.stat(current)
+              if (st.isDirectory()) {
+                return await openResolved(current, true)
+              }
+            } catch {
+              // Walk upward
+            }
+          }
+          current = path.dirname(current)
+        }
+      }
+
+      return { ok: false, error: t('markShare.errTargetNotFound') }
+    }
+  )
 
   ipcMain.handle('mt::mark-share:select-directory', async (event, defaultPath?: string) => {
     const win = BrowserWindow.fromWebContents(event.sender) || BrowserWindow.getFocusedWindow()

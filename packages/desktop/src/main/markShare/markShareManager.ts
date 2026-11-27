@@ -10,6 +10,7 @@ import type {
   MarkShareAcceptRequest,
   MarkShareAppType,
   MarkShareConfigState,
+  MarkShareConflictPreview,
   MarkShareDevice,
   MarkShareHistoryRecord,
   MarkShareManifestItem,
@@ -17,6 +18,7 @@ import type {
   MarkShareOsType,
   MarkShareSessionState
 } from '../../shared/types/markShare'
+import { buildTransferPlan } from '../utils/transferConflictResolver'
 import {
   MARKSHARE_CHUNK_BYTES,
   MARKSHARE_CONFIRM_TTL_MS,
@@ -42,6 +44,7 @@ import {
   resolveMarkShareDeviceIdFromStored,
   tryAcquireHardwareDeviceId
 } from './markShareDiscovery'
+import { t } from '../i18n'
 
 const MAX_HISTORY_RECORDS = 200
 const MAX_JSON_BODY_BYTES = 16 * 1024 * 1024
@@ -83,7 +86,9 @@ interface ReceiverOfferSession {
   confirmTimer: NodeJS.Timeout | null
   sseRes: ServerResponse | null
   sseKeepaliveTimer: NodeJS.Timeout | null
-  topLevelRemap: Map<string, string>
+  targetRelPathByFileId: Map<string, string>
+  skippedFileIds: Set<string>
+  skipMkdir: boolean
   activePartFiles: Set<string>
   activeWriteStreams: Set<fs.WriteStream>
   receivedFileShas: Map<string, string>
@@ -99,6 +104,7 @@ interface SenderOfferSession {
   sseReq: http.ClientRequest | null
   abortController: AbortController
   filePathById: Map<string, string>
+  skippedFileIds: Set<string>
   aborted: boolean
 }
 
@@ -146,18 +152,6 @@ export function getDefaultMarkShareSaveDir(): string {
   } catch {
     return path.join(os.homedir(), 'Downloads')
   }
-}
-
-function formatUniqueName(dirPath: string, baseName: string, isDir: boolean): string {
-  let candidate = baseName
-  let index = 1
-  const ext = isDir ? '' : path.extname(baseName)
-  const stem = isDir ? baseName : baseName.slice(0, baseName.length - ext.length)
-  while (fs.existsSync(path.join(dirPath, candidate))) {
-    candidate = `${stem} (${index})${ext}`
-    index++
-  }
-  return candidate
 }
 
 async function readJsonBody<T>(req: IncomingMessage, maxBytes = MAX_JSON_BODY_BYTES): Promise<T> {
@@ -351,7 +345,7 @@ async function scanPathsToManifest(inputPaths: string[]): Promise<{
   }
 
   if (items.length === 0) {
-    throw new Error('No transferable files or folders found')
+    throw new Error(t('markShare.errNoTransferableItems'))
   }
 
   const rootType: 'file' | 'folder' | 'mixed' =
@@ -360,7 +354,7 @@ async function scanPathsToManifest(inputPaths: string[]): Promise<{
   const rootLabel =
     rootLabels.length === 1
       ? rootLabels[0]!
-      : `${rootLabels[0]} 等 ${rootLabels.length} 项`
+      : t('markShare.multiItemsLabel', { first: rootLabels[0]!, count: rootLabels.length })
 
   return { items, filePathById, totalFiles, totalBytes, rootLabel, rootType }
 }
@@ -575,7 +569,7 @@ export class MarkShareManager extends EventEmitter {
 
   public async setDefaultSaveDir(dirPath: string): Promise<MarkShareConfigState> {
     const trimmed = dirPath.trim()
-    if (!trimmed) throw new Error('Save directory cannot be empty')
+    if (!trimmed) throw new Error(t('markShare.errSaveDirEmpty'))
     this.config.defaultSaveDir = path.resolve(trimmed)
     await this.saveConfig()
     this.emit('config-updated', this.getConfigState())
@@ -620,10 +614,10 @@ export class MarkShareManager extends EventEmitter {
   public async sendToDevice(targetPeerKey: string, rawPaths: string[]): Promise<MarkShareOffer> {
     const peer = this.getDevices().find((d) => d.peerKey === targetPeerKey)
     if (!peer) {
-      throw new Error('目标设备已离线或未开启 MarkShare')
+      throw new Error(t('markShare.errPeerOffline'))
     }
     if (!rawPaths || rawPaths.length === 0) {
-      throw new Error('请选择至少一个文件或文件夹')
+      throw new Error(t('markShare.errSelectAtLeastOne'))
     }
 
     const scan = await scanPathsToManifest(rawPaths)
@@ -714,6 +708,7 @@ export class MarkShareManager extends EventEmitter {
       sseReq: null,
       abortController: new AbortController(),
       filePathById: scan.filePathById,
+      skippedFileIds: new Set(),
       aborted: false
     }
 
@@ -810,15 +805,60 @@ export class MarkShareManager extends EventEmitter {
   }
 
   /**
+   * Receiver: preview filename collisions and planned folder layout before accepting.
+   */
+  public previewIncomingConflicts(
+    offerId: string,
+    saveDir?: string,
+    workspaceRoot?: string,
+    pathMode: 'preserve' | 'flatten' = 'preserve'
+  ): MarkShareConflictPreview {
+    const session = this.incomingSessions.get(offerId)
+    const chosenDir = saveDir?.trim()
+      ? path.resolve(saveDir.trim())
+      : this.config.defaultSaveDir
+    if (!session) {
+      return {
+        targetDir: chosenDir,
+        totalFiles: 0,
+        conflictCount: 0,
+        conflictSamples: []
+      }
+    }
+
+    const plan = buildTransferPlan({
+      receiverAppType: this.appType,
+      senderAppType: session.offer.peerDevice.appType,
+      chosenDir,
+      workspaceRoot,
+      pathMode,
+      items: session.offer.items.map((item) => ({
+        id: item.fileId,
+        relativePath: item.relativePath,
+        name: item.name,
+        isDirectory: item.isDirectory
+      })),
+      conflictStrategy: 'rename'
+    })
+
+    return {
+      targetDir: chosenDir,
+      totalFiles: plan.totalFiles,
+      conflictCount: plan.conflictCount,
+      conflictSamples: plan.conflictSamples
+    }
+  }
+
+  /**
    * Receiver: accept an incoming offer within 60s, clear confirmation limit, and prepare disk target.
    */
   public async acceptIncomingOffer(request: MarkShareAcceptRequest): Promise<MarkShareOffer> {
     const session = this.incomingSessions.get(request.offerId)
     if (!session) {
-      throw new Error('传输请求已过期或不存在')
+      throw new Error(t('markShare.errOfferExpiredOrMissing'))
     }
     if (session.offer.state !== 'pending') {
-      throw new Error('该传输请求已处理')
+      throw new Error(t('markShare.errOfferAlreadyHandled'))
     }
 
     const chosenDir = request.saveDir?.trim()
@@ -834,18 +874,30 @@ export class MarkShareManager extends EventEmitter {
     // Clear 60s confirmation limit — once accepted, transfer has NO overall time cap!
     this.clearConfirmTimer(session)
 
-    // Pre-compute top-level collision remapping so folders never merge accidentally over existing files
-    const topGroups = new Map<string, boolean>()
-    for (const item of session.offer.items) {
-      const firstSeg = item.relativePath.replace(/\\/g, '/').split('/')[0]!
-      const isTopDir = item.relativePath.includes('/') || item.isDirectory
-      if (!topGroups.has(firstSeg)) {
-        topGroups.set(firstSeg, isTopDir)
+    const plan = buildTransferPlan({
+      receiverAppType: this.appType,
+      senderAppType: session.offer.peerDevice.appType,
+      chosenDir,
+      workspaceRoot: request.workspaceRoot,
+      pathMode: request.pathMode || 'preserve',
+      items: session.offer.items.map((item) => ({
+        id: item.fileId,
+        relativePath: item.relativePath,
+        name: item.name,
+        isDirectory: item.isDirectory
+      })),
+      conflictStrategy: request.conflictStrategy || 'rename'
+    })
+
+    session.targetRelPathByFileId.clear()
+    session.skippedFileIds.clear()
+    session.skipMkdir = plan.skipMkdir
+    for (const [fileId, decision] of plan.decisions.entries()) {
+      if (decision.action === 'skip') {
+        session.skippedFileIds.add(fileId)
+      } else {
+        session.targetRelPathByFileId.set(fileId, decision.targetRelPosix)
       }
-    }
-    for (const [topName, isTopDir] of topGroups.entries()) {
-      const uniqueTop = formatUniqueName(chosenDir, topName, isTopDir)
-      session.topLevelRemap.set(topName, uniqueTop)
     }
 
     const token = crypto.randomBytes(32).toString('hex')
@@ -854,13 +906,28 @@ export class MarkShareManager extends EventEmitter {
     session.offer.state = 'transferring'
     session.offer.expiresAt = 0
 
-    const firstTop = session.offer.items[0]?.relativePath.split('/')[0]
-    if (firstTop) {
-      const mapped = session.topLevelRemap.get(firstTop) || firstTop
-      session.offer.savedRootPath = path.join(chosenDir, mapped)
+    const activeDecisions = Array.from(plan.decisions.values()).filter((d) => d.action !== 'skip')
+    const topDirs = new Set(
+      activeDecisions
+        .filter((d) => d.targetRelPosix.includes('/'))
+        .map((d) => d.targetRelPosix.split('/')[0]!)
+    )
+    const hasTopLevelFlatFiles = activeDecisions.some((d) => !d.targetRelPosix.includes('/'))
+
+    if (session.offer.rootType === 'file' && plan.singleFileAbsPath) {
+      session.offer.savedRootPath = plan.singleFileAbsPath
+    } else if (!hasTopLevelFlatFiles && topDirs.size === 1) {
+      session.offer.savedRootPath = path.join(chosenDir, Array.from(topDirs)[0]!)
+    } else {
+      session.offer.savedRootPath = chosenDir
     }
 
-    this.pushSseEvent(session, 'accept', { sessionToken: token, saveDir: chosenDir })
+    this.pushSseEvent(session, 'accept', {
+      sessionToken: token,
+      saveDir: chosenDir,
+      skippedFileIds: Array.from(session.skippedFileIds),
+      skipMkdir: session.skipMkdir
+    })
     this.emit('sessions-updated', this.getActiveOffers())
 
     return { ...session.offer }
@@ -916,7 +983,7 @@ export class MarkShareManager extends EventEmitter {
         })
         res.on('end', () => {
           if (!session.aborted && session.offer.state === 'pending') {
-            void this.finalizeSenderSession(session, 'failed', '对端连接已断开')
+            void this.finalizeSenderSession(session, 'failed', t('markShare.errPeerDisconnected'))
           }
         })
       }
@@ -956,10 +1023,15 @@ export class MarkShareManager extends EventEmitter {
         // Accepted! Clear 60s confirmation timeout immediately -> unlimited transfer time
         this.clearConfirmTimer(session)
         session.sessionToken = String(payload.sessionToken || '')
+        session.skippedFileIds = new Set(
+          Array.isArray(payload.skippedFileIds)
+            ? payload.skippedFileIds.map((id) => String(id))
+            : []
+        )
         session.offer.state = 'transferring'
         session.offer.expiresAt = 0
         this.emit('sessions-updated', this.getActiveOffers())
-        void this.streamAllFilesToPeer(session)
+        void this.streamAllFilesToPeer(session, Boolean(payload.skipMkdir))
       } else if (eventName === 'reject') {
         if (session.aborted) return
         session.aborted = true
@@ -982,9 +1054,9 @@ export class MarkShareManager extends EventEmitter {
     }
   }
 
-  private async streamAllFilesToPeer(session: SenderOfferSession): Promise<void> {
+  private async streamAllFilesToPeer(session: SenderOfferSession, skipMkdir = false): Promise<void> {
     try {
-      const emptyDirs = session.offer.items.filter((i) => i.isDirectory)
+      const emptyDirs = skipMkdir ? [] : session.offer.items.filter((i) => i.isDirectory)
       if (emptyDirs.length > 0 && !session.aborted) {
         const dirEnv = encryptJson(
           session.sessionKey,
@@ -1010,9 +1082,16 @@ export class MarkShareManager extends EventEmitter {
         if (item.isDirectory) continue
         if (session.aborted) return
 
+        if (session.skippedFileIds.has(item.fileId)) {
+          session.offer.transferredFiles++
+          session.offer.transferredBytes += item.size
+          this.emitThrottledProgress(true)
+          continue
+        }
+
         const absPath = session.filePathById.get(item.fileId)
         if (!absPath) {
-          throw new Error(`找不到本地文件: ${item.relativePath}`)
+          throw new Error(t('markShare.errLocalFileNotFound', { path: item.relativePath }))
         }
 
         session.offer.currentFileName = item.name
@@ -1242,7 +1321,7 @@ export class MarkShareManager extends EventEmitter {
       })
       srv.listen(preferredPort, '0.0.0.0', onListening)
       setTimeout(() => {
-        if (!srv.listening) reject(new Error('Failed to start MarkShare HTTP server'))
+        if (!srv.listening) reject(new Error(t('markShare.errServerStartFailed')))
       }, 5000)
     })
 
@@ -1453,7 +1532,9 @@ export class MarkShareManager extends EventEmitter {
       confirmTimer: null,
       sseRes: null,
       sseKeepaliveTimer: null,
-      topLevelRemap: new Map(),
+      targetRelPathByFileId: new Map(),
+      skippedFileIds: new Set(),
+      skipMkdir: false,
       activePartFiles: new Set(),
       activeWriteStreams: new Set(),
       receivedFileShas: new Map(),
@@ -1592,10 +1673,13 @@ export class MarkShareManager extends EventEmitter {
       body.envelope,
       `mkdir:${session.handshakeId}:${session.offer.offerId}`
     )
+    if (session.skipMkdir) {
+      this.sendJson(res, 200, { ok: true })
+      return
+    }
     const saveDir = session.offer.saveDir!
     for (const rel of payload.dirs) {
-      const mappedRel = this.applyTopLevelRemap(session, rel)
-      const dest = resolveSafeRelativePath(saveDir, mappedRel)
+      const dest = resolveSafeRelativePath(saveDir, rel)
       await fsPromises.mkdir(dest, { recursive: true })
     }
     this.sendJson(res, 200, { ok: true })
@@ -1620,7 +1704,18 @@ export class MarkShareManager extends EventEmitter {
 
     req.setTimeout(0)
 
-    const mappedRel = this.applyTopLevelRemap(session, item.relativePath)
+    if (session.skippedFileIds.has(fileId)) {
+      for await (const _chunk of req) {
+        if (session.aborted) break
+      }
+      session.offer.transferredBytes += item.size
+      session.receivedFileShas.set(fileId, 'SKIPPED:::SKIPPED:::SKIPPED')
+      this.emitThrottledProgress()
+      this.sendJson(res, 200, { ok: true, skipped: true })
+      return
+    }
+
+    const mappedRel = session.targetRelPathByFileId.get(fileId) || item.relativePath
     const finalPath = resolveSafeRelativePath(session.offer.saveDir!, mappedRel)
     await fsPromises.mkdir(path.dirname(finalPath), { recursive: true })
 
@@ -1641,7 +1736,7 @@ export class MarkShareManager extends EventEmitter {
 
       for await (const raw of req) {
         if (session.aborted || session.offer.state !== 'transferring') {
-          throw new Error('Transfer stopped')
+          throw new Error(t('markShare.errTransferStopped'))
         }
         const chunk = Buffer.isBuffer(raw) ? raw : Buffer.from(raw)
         pendingBuf = pendingBuf.length > 0 ? Buffer.concat([pendingBuf, chunk]) : chunk
@@ -1680,7 +1775,13 @@ export class MarkShareManager extends EventEmitter {
         throw new Error('Truncated encrypted frame at stream end')
       }
       if (writtenBytes !== item.size) {
-        throw new Error(`Size mismatch for ${item.relativePath}: got ${writtenBytes}, expected ${item.size}`)
+        throw new Error(
+          t('markShare.errSizeMismatch', {
+            path: item.relativePath,
+            actual: writtenBytes,
+            expected: item.size
+          })
+        )
       }
 
       await new Promise<void>((resolveEnd, rejectEnd) => {
@@ -1709,6 +1810,7 @@ export class MarkShareManager extends EventEmitter {
     const session = this.validateReceiverTransferAuth(body.handshakeId, body.sessionToken)
     let matched: { partPath: string; finalPath: string; sha: string; fileId: string } | null = null
     for (const [fileId, meta] of session.receivedFileShas.entries()) {
+      let shaMismatch = false
       try {
         const parsed = decryptJson<{ offerId: string; fileId: string; sha256: string }>(
           session.sessionKey,
@@ -1716,13 +1818,18 @@ export class MarkShareManager extends EventEmitter {
           `file-done:${session.handshakeId}:${fileId}`
         )
         const [partPath, finalPath, actualSha] = meta.split(':::')
+        if (partPath === 'SKIPPED') {
+          matched = { partPath: 'SKIPPED', finalPath: 'SKIPPED', sha: 'SKIPPED', fileId }
+          break
+        }
         if (parsed.sha256 !== actualSha) {
-          throw new Error(`SHA-256 verification failed for ${fileId}`)
+          shaMismatch = true
+          throw new Error(t('markShare.errShaMismatch', { id: fileId }))
         }
         matched = { partPath: partPath!, finalPath: finalPath!, sha: actualSha!, fileId }
         break
       } catch (err) {
-        if (err instanceof Error && err.message.startsWith('SHA-256 verification failed')) {
+        if (shaMismatch) {
           throw err
         }
       }
@@ -1733,12 +1840,13 @@ export class MarkShareManager extends EventEmitter {
       return
     }
 
-    await fsPromises.rename(matched.partPath, matched.finalPath)
-    session.activePartFiles.delete(matched.partPath)
+    if (matched.partPath !== 'SKIPPED') {
+      await fsPromises.rename(matched.partPath, matched.finalPath)
+      session.activePartFiles.delete(matched.partPath)
+      if (!session.offer.savedPaths) session.offer.savedPaths = []
+      session.offer.savedPaths.push(matched.finalPath)
+    }
     session.receivedFileShas.delete(matched.fileId)
-
-    if (!session.offer.savedPaths) session.offer.savedPaths = []
-    session.offer.savedPaths.push(matched.finalPath)
     session.offer.transferredFiles++
     this.emitThrottledProgress(true)
 
@@ -1785,14 +1893,6 @@ export class MarkShareManager extends EventEmitter {
       throw new Error('Invalid sessionToken')
     }
     return session
-  }
-
-  private applyTopLevelRemap(session: ReceiverOfferSession, relativePath: string): string {
-    const parts = relativePath.replace(/\\/g, '/').split('/')
-    const mappedTop = session.topLevelRemap.get(parts[0]!)
-    if (!mappedTop) return relativePath
-    parts[0] = mappedTop
-    return parts.join('/')
   }
 
   private pushSseEvent(
@@ -2009,10 +2109,10 @@ export class MarkShareManager extends EventEmitter {
   }
 
   private async appendHistory(record: MarkShareHistoryRecord): Promise<void> {
-    this.history.unshift(record)
-    if (this.history.length > MAX_HISTORY_RECORDS) {
-      this.history = this.history.slice(0, MAX_HISTORY_RECORDS)
-    }
+    this.history = [record, ...this.history.filter((r) => r.id !== record.id)].slice(
+      0,
+      MAX_HISTORY_RECORDS
+    )
     await this.saveHistory()
     this.emit('history-updated', this.getHistory())
   }

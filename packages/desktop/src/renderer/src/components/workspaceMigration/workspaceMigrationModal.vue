@@ -82,7 +82,7 @@
         </template>
       </div>
 
-      <!-- 冲突文件解决策略（切换提示：不迁移[默认] / 跳过 / 覆盖；手动合并：跳过[默认] / 覆盖） -->
+      <!-- 冲突文件解决策略（切换提示：不迁移[默认] / 跳过 / 自动重命名 / 覆盖；手动合并：跳过[默认] / 自动重命名 / 覆盖） -->
       <div class="section-box">
         <label class="section-label">{{ t('workspaceMigration.conflictStrategyLabel') }}</label>
         <div class="strategy-options">
@@ -115,6 +115,18 @@
 
           <div
             class="strategy-card"
+            :class="{ active: conflictStrategy === 'rename' }"
+            @click="conflictStrategy = 'rename'"
+          >
+            <div class="strategy-header">
+              <span class="radio-dot" :class="{ active: conflictStrategy === 'rename' }" />
+              <span class="strategy-title">{{ t('workspaceMigration.strategyRenameTitle') }}</span>
+            </div>
+            <div class="strategy-desc">{{ t('workspaceMigration.strategyRenameDesc') }}</div>
+          </div>
+
+          <div
+            class="strategy-card"
             :class="{ active: conflictStrategy === 'overwrite' }"
             @click="conflictStrategy = 'overwrite'"
           >
@@ -125,13 +137,6 @@
             <div class="strategy-desc">{{ t('workspaceMigration.strategyOverwriteDesc') }}</div>
           </div>
         </div>
-      </div>
-
-      <!-- MarkNotePro 结构化分区兼容提示 -->
-      <div v-if="isMarkNote && preview?.hasScatteredFiles && conflictStrategy !== 'none'" class="scattered-option">
-        <el-checkbox v-model="wrapScatteredInArea">
-          {{ t('workspaceMigration.wrapScatteredLabel') }}
-        </el-checkbox>
       </div>
     </div>
 
@@ -382,6 +387,7 @@ const handleConfirm = async (): Promise<void> => {
       'success',
       t('workspaceMigration.migrationSuccess', {
         copied: result.copiedCount,
+        renamed: result.renamedCount ?? 0,
         overwritten: result.overwrittenCount,
         skipped: result.skippedCount
       })
@@ -635,10 +641,6 @@ onBeforeUnmount(() => {
   font-size: 12px;
   color: var(--sideBarTextColor, var(--el-text-color-secondary));
   padding-left: 22px;
-}
-
-.scattered-option {
-  padding-top: 2px;
 }
 </style>
 

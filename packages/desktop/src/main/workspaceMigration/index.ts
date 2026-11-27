@@ -10,6 +10,12 @@ import type {
   WorkspaceMigrationResult,
   WorkspaceSwitchEntry
 } from '../../shared/types/workspaceMigration'
+import {
+  allocateUniqueRelativeFilePath,
+  copyFileAtomically,
+  isMarkNoteGroupVisibleSpecialDoc,
+  mapPlainRelPosixToMarkNote
+} from '../utils/transferConflictResolver'
 
 const IGNORED_NAMES = new Set([
   '.git',
@@ -145,14 +151,27 @@ interface ScannedFileEntry {
 const isStructuredMarkNoteRelPath = (relPath: string): boolean => {
   const parts = relPath.split(path.sep).filter(Boolean)
   if (parts.length === 0) return false
+  if (parts.length === 1) {
+    return isMarkNoteGroupVisibleSpecialDoc(parts[0])
+  }
   const top = parts[0]
   if (top === 'Attachments') return true
+  if (top.startsWith('AREA_')) {
+    return parts.length === 2 || parts[1] === 'Attachments'
+  }
   if (top.startsWith('GROUP_')) {
-    if (parts.length >= 2 && (parts[1].startsWith('AREA_') || parts[1] === 'Attachments')) {
+    let idx = 1
+    while (idx < parts.length - 1 && parts[idx].startsWith('GROUP_')) {
+      idx++
+    }
+    if (idx === parts.length - 1) {
+      return isMarkNoteGroupVisibleSpecialDoc(parts[idx])
+    }
+    if (parts[idx] === 'Attachments') {
       return true
     }
-    if (parts.length === 2 && /\.kdbx$/i.test(parts[1])) {
-      return true
+    if (parts[idx].startsWith('AREA_')) {
+      return idx + 1 === parts.length - 1 || parts[idx + 1] === 'Attachments'
     }
   }
   return false
@@ -199,9 +218,16 @@ const computeTargetRelPath = (
   wrapScatteredInArea: boolean
 ): string => {
   if (entry.isScattered && wrapScatteredInArea) {
-    return path.join('GROUP_Migrated', 'AREA_Imported', entry.relPath)
+    const relPosix = entry.relPath.split(path.sep).join('/')
+    const mapped = mapPlainRelPosixToMarkNote(relPosix, 'GROUP_Migrated/AREA_Imported')
+    return path.join(...mapped.split('/'))
   }
   return entry.relPath
+}
+
+const isAttachmentRelPath = (relPath: string): boolean => {
+  const parts = relPath.split(/[\\/]/).filter(Boolean)
+  return parts.slice(0, -1).includes('Attachments')
 }
 
 const isSameOrNested = (sourceDir: string, targetDir: string): boolean => {
@@ -270,6 +296,10 @@ export const previewWorkspaceMigration = async (
   for (const entry of files) {
     if (entry.isScattered) hasScatteredFiles = true
     const targetRelPath = computeTargetRelPath(entry, isMarkNote && wrapScatteredInArea)
+    // Attachments use <name>-<md5>.ext and are always overwritten directly on merge
+    if (isAttachmentRelPath(targetRelPath)) {
+      continue
+    }
     const destPath = path.join(resolvedTarget, targetRelPath)
     if (fs.existsSync(destPath)) {
       conflictFiles.push(targetRelPath)
@@ -293,6 +323,7 @@ export const executeWorkspaceMigration = async (
     return {
       cancelled: true,
       copiedCount: 0,
+      renamedCount: 0,
       overwrittenCount: 0,
       skippedCount: 0,
       totalProcessed: 0
@@ -311,25 +342,48 @@ export const executeWorkspaceMigration = async (
   await fsPromises.mkdir(resolvedTarget, { recursive: true })
 
   let copiedCount = 0
+  let renamedCount = 0
   let overwrittenCount = 0
   let skippedCount = 0
+  const reservedRelPaths = new Set<string>()
 
   for (const entry of files) {
     const targetRelPath = computeTargetRelPath(entry, wrapScattered)
+    const relPosix = targetRelPath.split(path.sep).join('/')
     const destPath = path.join(resolvedTarget, targetRelPath)
     const exists = fs.existsSync(destPath)
+    const inBatchCollision = reservedRelPaths.has(relPosix)
 
-    if (exists) {
+    // Attachments carry <name>-<md5>.ext and always overwrite on same filename
+    if (isAttachmentRelPath(targetRelPath)) {
+      reservedRelPaths.add(relPosix)
+      await copyFileAtomically(entry.sourcePath, destPath)
+      if (exists || inBatchCollision) {
+        overwrittenCount++
+      } else {
+        copiedCount++
+      }
+      continue
+    }
+
+    if (exists || inBatchCollision) {
       if (options.conflictStrategy === 'skip') {
         skippedCount++
         continue
       }
-      await fsPromises.mkdir(path.dirname(destPath), { recursive: true })
-      await fsPromises.copyFile(entry.sourcePath, destPath)
+      if (options.conflictStrategy === 'rename' || inBatchCollision) {
+        const uniqueRel = allocateUniqueRelativeFilePath(resolvedTarget, relPosix, reservedRelPaths)
+        const renamedDest = path.join(resolvedTarget, ...uniqueRel.split('/'))
+        await copyFileAtomically(entry.sourcePath, renamedDest)
+        renamedCount++
+        continue
+      }
+      reservedRelPaths.add(relPosix)
+      await copyFileAtomically(entry.sourcePath, destPath)
       overwrittenCount++
     } else {
-      await fsPromises.mkdir(path.dirname(destPath), { recursive: true })
-      await fsPromises.copyFile(entry.sourcePath, destPath)
+      reservedRelPaths.add(relPosix)
+      await copyFileAtomically(entry.sourcePath, destPath)
       copiedCount++
     }
   }
@@ -337,6 +391,7 @@ export const executeWorkspaceMigration = async (
   return {
     cancelled: false,
     copiedCount,
+    renamedCount,
     overwrittenCount,
     skippedCount,
     totalProcessed: files.length

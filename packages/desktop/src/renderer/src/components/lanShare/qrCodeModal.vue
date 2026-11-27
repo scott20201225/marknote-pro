@@ -75,7 +75,12 @@
       <div v-if="share.password" class="info-card password-card">
         <span class="card-label">{{ t('lanShare.passwordLabel') }}</span>
         <span class="password-val">{{ share.password }}</span>
-        <el-button link type="primary" size="small" @click="copyText(share.password, t('lanShare.copyPasswordSuccess'))">
+        <el-button
+          type="primary"
+          plain
+          size="small"
+          @click="copyTextWithBlur($event, share.password, t('lanShare.copyPasswordSuccess'))"
+        >
           {{ t('lanShare.copyPassword') }}
         </el-button>
       </div>
@@ -83,7 +88,12 @@
       <!-- 局域网访问地址展示与单独复制 -->
       <div class="info-card url-card">
         <div class="url-text" :title="share.url">{{ share.url }}</div>
-        <el-button type="primary" plain size="small" @click="copyText(share.url, t('lanShare.copyLinkSuccess'))">
+        <el-button
+          type="primary"
+          plain
+          size="small"
+          @click="copyTextWithBlur($event, share.url, t('lanShare.copyLinkSuccess'))"
+        >
           {{ t('lanShare.copyLink') }}
         </el-button>
       </div>
@@ -147,6 +157,12 @@ const copyText = (text: string, msg: string) => {
     navigator.clipboard.writeText(text)
   }
   ElMessage.success(msg)
+}
+
+const copyTextWithBlur = (event: MouseEvent, text: string, msg: string) => {
+  const btn = event.currentTarget as HTMLElement | null
+  btn?.blur?.()
+  copyText(text, msg)
 }
 
 const copyShareInfo = () => {
@@ -360,5 +376,17 @@ onBeforeUnmount(() => {
 
 .lan-share-qr-dialog .el-dialog__close {
   color: var(--sideBarTextColor, rgba(255, 255, 255, 0.6)) !important;
+}
+
+.lan-share-qr-dialog .el-button--primary.is-plain:focus {
+  background-color: rgba(64, 158, 255, 0.14) !important;
+  border-color: rgba(64, 158, 255, 0.5) !important;
+  color: var(--el-color-primary, #409eff) !important;
+}
+
+.lan-share-qr-dialog .el-button--primary.is-plain:hover {
+  background-color: var(--el-color-primary, #409eff) !important;
+  border-color: var(--el-color-primary, #409eff) !important;
+  color: #ffffff !important;
 }
 </style>

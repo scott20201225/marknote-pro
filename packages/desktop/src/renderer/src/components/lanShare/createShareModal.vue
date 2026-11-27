@@ -223,7 +223,12 @@ const openModal = async (payload: { pathname: string; isDirectory?: boolean; tit
   targetPath.value = payload.pathname
   isFolder.value = !!payload.isDirectory
   // 标题支持选填：默认留空，用户自主选择是否填写
-  shareTitle.value = payload.title && payload.title !== '工作区' ? payload.title : ''
+  const rawTitle = (payload.title || '').trim()
+  const isGenericWorkspaceTitle =
+    rawTitle === '工作区' ||
+    rawTitle === 'Workspace' ||
+    rawTitle === t('lanShare.tagWorkspaceRoot')
+  shareTitle.value = rawTitle && !isGenericWorkspaceTitle ? rawTitle : ''
   password.value = generateSecurePassword(12)
   searchFilter.value = ''
   selectedFiles.value = []
@@ -289,7 +294,11 @@ const startShare = async () => {
     // 弹出二维码与链接查看面板
     bus.emit('LAN_SHARE::open-qr-modal', record)
   } catch (err: any) {
-    ElMessage.error(t('lanShare.shareStartFailed', { error: err.message }))
+    const cleanMsg = String(err?.message || err).replace(
+      /^Error invoking remote method [^:]+:\s*(?:Error:\s*)?/,
+      ''
+    )
+    ElMessage.error(t('lanShare.shareStartFailed', { error: cleanMsg }))
   } finally {
     submitting.value = false
   }

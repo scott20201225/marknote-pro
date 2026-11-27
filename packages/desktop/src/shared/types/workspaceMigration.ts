@@ -1,4 +1,4 @@
-export type ConflictResolutionStrategy = 'skip' | 'overwrite' | 'none'
+export type ConflictResolutionStrategy = 'rename' | 'skip' | 'overwrite' | 'none'
 
 export interface GitRepositoryCacheEntry {
   id: number
@@ -41,6 +41,7 @@ export interface WorkspaceMigrationOptions {
 export interface WorkspaceMigrationResult {
   cancelled: boolean
   copiedCount: number
+  renamedCount: number
   overwrittenCount: number
   skippedCount: number
   totalProcessed: number

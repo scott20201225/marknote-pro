@@ -66,13 +66,8 @@
       <div class="ms-save-section">
         <div class="ms-save-label">
           {{ t('lanShare.saveLocationLabel') }}
-          <span class="ms-save-hint">
-            <template v-if="hasWorkspace && isMarkNote">
-              （{{ t('lanShare.markNoteAreaHint') }}）
-            </template>
-            <template v-else-if="hasWorkspace">
-              （{{ t('lanShare.markTextFolderHint') }}）
-            </template>
+          <span v-if="targetHintText" class="ms-save-hint">
+            （{{ targetHintText }}）
           </span>
         </div>
         <div class="ms-save-row">
@@ -85,6 +80,7 @@
             allow-create
             default-first-option
             class="ms-loc-select"
+            @change="userChangedSavePath = true"
           >
             <el-option
               v-for="opt in folderOptions"
@@ -116,6 +112,37 @@
         <div class="ms-save-current-path" :title="chosenDir">
           {{ chosenDir || t('lanShare.unspecified') }}
         </div>
+
+        <!-- 目录结构策略（默认保留路径信息） -->
+        <div class="ms-conflict-row">
+          <span class="ms-conflict-label">{{ t('lanShare.pathModeLabel') }}</span>
+          <el-radio-group v-model="pathMode" size="small">
+            <el-radio-button value="preserve">{{ t('lanShare.pathModePreserve') }}</el-radio-button>
+            <el-radio-button value="flatten">{{ t('lanShare.pathModeFlatten') }}</el-radio-button>
+          </el-radio-group>
+        </div>
+
+        <!-- 重名冲突策略 -->
+        <div class="ms-conflict-row">
+          <span class="ms-conflict-label">{{ t('lanShare.conflictStrategyLabel') }}</span>
+          <el-radio-group v-model="conflictStrategy" size="small">
+            <el-radio-button value="rename">{{ t('lanShare.strategyRename') }}</el-radio-button>
+            <el-radio-button value="skip">{{ t('lanShare.strategySkip') }}</el-radio-button>
+            <el-radio-button value="overwrite">{{ t('lanShare.strategyOverwrite') }}</el-radio-button>
+          </el-radio-group>
+        </div>
+        <div
+          v-if="conflictPreview && conflictPreview.conflictCount > 0"
+          class="ms-conflict-tip"
+          :class="`strategy-${conflictStrategy}`"
+        >
+          {{
+            t('lanShare.conflictPreviewTip', {
+              count: conflictPreview.conflictCount,
+              action: conflictActionText
+            })
+          }}
+        </div>
       </div>
     </div>
 
@@ -145,6 +172,12 @@ import { useMarkShareStore } from '@/store/markShare'
 import { useProjectStore } from '@/store/project'
 import OsDeviceIcon from './OsDeviceIcon.vue'
 
+import type {
+  MarkShareConflictPreview,
+  MarkShareConflictStrategy,
+  MarkSharePathMode
+} from '@shared/types/markShare'
+
 interface FolderOption {
   label: string
   value: string
@@ -163,8 +196,12 @@ const projectStore = useProjectStore()
 
 const offer = computed(() => markShareStore.currentIncomingOffer)
 const chosenDir = ref('')
+const userChangedSavePath = ref(false)
+const pathMode = ref<MarkSharePathMode>('preserve')
 const busy = ref(false)
 const nowTick = ref(Date.now())
+const conflictStrategy = ref<MarkShareConflictStrategy>('rename')
+const conflictPreview = ref<MarkShareConflictPreview | null>(null)
 
 let tickTimer: ReturnType<typeof setInterval> | null = null
 
@@ -176,25 +213,33 @@ const isMarkNote = computed(() => {
 })
 
 const hasWorkspace = computed(() => !!projectStore.projectTree?.pathname)
+const isFolderShare = computed(
+  () => offer.value?.rootType === 'folder' || offer.value?.rootType === 'mixed'
+)
 
-const collectAreas = (
+const collectGroupsAndAreas = (
   node: TreeFolderLike | null | undefined,
-  result: { path: string; display: string }[],
-  groupName = ''
+  groups: { path: string; display: string }[],
+  areas: { path: string; display: string }[],
+  groupPrefix = ''
 ): void => {
   if (!node) return
   const name = node.name || ''
-  const currentGroup = name.startsWith('GROUP_') ? name.replace(/^GROUP_/, '') : groupName
-
-  if (name.startsWith('AREA_') && node.pathname) {
+  let nextPrefix = groupPrefix
+  if (name.startsWith('GROUP_') && node.pathname) {
+    const clean = name.replace(/^GROUP_/, '')
+    const display = groupPrefix ? `${groupPrefix}/${clean}` : clean
+    groups.push({ path: node.pathname, display })
+    nextPrefix = display
+  } else if (name.startsWith('AREA_') && node.pathname) {
     const areaName = name.replace(/^AREA_/, '')
-    const display = currentGroup ? `[${currentGroup}] ${areaName}` : areaName
-    result.push({ path: node.pathname, display })
+    const display = groupPrefix ? `[${groupPrefix}] ${areaName}` : areaName
+    areas.push({ path: node.pathname, display })
   }
 
   if (Array.isArray(node.folders)) {
     for (const child of node.folders) {
-      collectAreas(child, result, currentGroup)
+      collectGroupsAndAreas(child, groups, areas, nextPrefix)
     }
   }
 }
@@ -230,17 +275,49 @@ const folderOptions = computed<FolderOption[]>(() => {
   const options: FolderOption[] = []
 
   if (isMarkNote.value) {
-    const defaultPath = joinPath(root, 'GROUP_Dump', 'AREA_Downloads')
-    options.push({
-      label: t('lanShare.defaultAreaLabel'),
-      value: defaultPath,
-      tag: t('lanShare.tagRecommended')
-    })
+    const defaultAreaPath = joinPath(root, 'GROUP_Dump', 'AREA_Downloads')
+    const defaultFoldersPath = joinPath(root, 'GROUP_Dump', 'GROUP_Folders')
 
+    if (isFolderShare.value) {
+      options.push({
+        label: t('lanShare.defaultGroupFoldersLabel'),
+        value: defaultFoldersPath,
+        tag: t('lanShare.tagRecommended')
+      })
+      options.push({
+        label: t('lanShare.defaultAreaLabel'),
+        value: defaultAreaPath,
+        tag: t('lanShare.tagArea')
+      })
+    } else {
+      options.push({
+        label: t('lanShare.defaultAreaLabel'),
+        value: defaultAreaPath,
+        tag: t('lanShare.tagRecommended')
+      })
+      options.push({
+        label: t('lanShare.defaultGroupFoldersLabel'),
+        value: defaultFoldersPath,
+        tag: t('lanShare.tagGroup')
+      })
+    }
+
+    const existingGroups: { path: string; display: string }[] = []
     const existingAreas: { path: string; display: string }[] = []
-    collectAreas(projectStore.projectTree as TreeFolderLike, existingAreas)
+    collectGroupsAndAreas(projectStore.projectTree as TreeFolderLike, existingGroups, existingAreas)
+
+    for (const grp of existingGroups) {
+      if (grp.path !== defaultFoldersPath) {
+        options.push({
+          label: `📁 ${grp.display}`,
+          value: grp.path,
+          tag: t('lanShare.tagGroup')
+        })
+      }
+    }
+
     for (const area of existingAreas) {
-      if (area.path !== defaultPath) {
+      if (area.path !== defaultAreaPath) {
         options.push({
           label: `📑 ${area.display}`,
           value: area.path,
@@ -248,18 +325,58 @@ const folderOptions = computed<FolderOption[]>(() => {
         })
       }
     }
-  } else {
-    const defaultPath = joinPath(root, 'Dump', 'Downloads')
+
+    const rootName =
+      projectStore.projectTree?.name ||
+      root.split(/[/\\]/).pop() ||
+      t('lanShare.tagWorkspaceRoot')
     options.push({
-      label: t('lanShare.defaultFolderLabel'),
-      value: defaultPath,
-      tag: t('lanShare.tagRecommended')
+      label: `📦 ${rootName}`,
+      value: root,
+      tag: t('lanShare.tagWorkspaceRoot')
+    })
+  } else {
+    const defaultDownloadsPath = joinPath(root, 'Dump', 'Downloads')
+    const defaultFoldersPath = joinPath(root, 'Dump', 'Folders')
+
+    if (isFolderShare.value) {
+      options.push({
+        label: t('lanShare.defaultFoldersLabel'),
+        value: defaultFoldersPath,
+        tag: t('lanShare.tagRecommended')
+      })
+      options.push({
+        label: t('lanShare.defaultFolderLabel'),
+        value: defaultDownloadsPath,
+        tag: t('lanShare.tagFolder')
+      })
+    } else {
+      options.push({
+        label: t('lanShare.defaultFolderLabel'),
+        value: defaultDownloadsPath,
+        tag: t('lanShare.tagRecommended')
+      })
+      options.push({
+        label: t('lanShare.defaultFoldersLabel'),
+        value: defaultFoldersPath,
+        tag: t('lanShare.tagFolder')
+      })
+    }
+
+    const rootName =
+      projectStore.projectTree?.name ||
+      root.split(/[/\\]/).pop() ||
+      t('lanShare.tagWorkspaceRoot')
+    options.push({
+      label: `📦 ${rootName}`,
+      value: root,
+      tag: t('lanShare.tagWorkspaceRoot')
     })
 
     const existingFolders: { path: string; display: string }[] = []
     collectFolders(projectStore.projectTree as TreeFolderLike, existingFolders, root)
     for (const folder of existingFolders) {
-      if (folder.path !== defaultPath) {
+      if (folder.path !== defaultDownloadsPath && folder.path !== defaultFoldersPath) {
         options.push({
           label: `📁 ${folder.display}`,
           value: folder.path,
@@ -272,15 +389,61 @@ const folderOptions = computed<FolderOption[]>(() => {
   return options
 })
 
+const targetHintText = computed(() => {
+  if (!hasWorkspace.value) return ''
+  if (pathMode.value === 'flatten') {
+    return t('lanShare.pathModeFlattenTip')
+  }
+  if (!isMarkNote.value) return t('lanShare.markTextFolderHint')
+  const base = chosenDir.value.split(/[/\\]/).pop() || ''
+  if (base.startsWith('AREA_')) {
+    return t('lanShare.markNoteAreaTip')
+  }
+  if (offer.value?.peerDevice?.appType === 'marknotepro') {
+    return t('lanShare.markNoteGroupPreserveTip')
+  }
+  return t('lanShare.markNoteGroupConvertTip')
+})
+
+const conflictActionText = computed(() => {
+  if (conflictStrategy.value === 'skip') return t('lanShare.actionSkip')
+  if (conflictStrategy.value === 'overwrite') return t('lanShare.actionOverwrite')
+  return t('lanShare.actionRename')
+})
+
 const initTargetSavePath = (): void => {
   const root = projectStore.projectTree?.pathname
   if (root) {
-    chosenDir.value = isMarkNote.value
-      ? joinPath(root, 'GROUP_Dump', 'AREA_Downloads')
-      : joinPath(root, 'Dump', 'Downloads')
+    const useFoldersDir = isFolderShare.value && pathMode.value === 'preserve'
+    if (isMarkNote.value) {
+      chosenDir.value = useFoldersDir
+        ? joinPath(root, 'GROUP_Dump', 'GROUP_Folders')
+        : joinPath(root, 'GROUP_Dump', 'AREA_Downloads')
+    } else {
+      chosenDir.value = useFoldersDir
+        ? joinPath(root, 'Dump', 'Folders')
+        : joinPath(root, 'Dump', 'Downloads')
+    }
     return
   }
   chosenDir.value = markShareStore.config.defaultSaveDir || ''
+}
+
+const refreshConflictPreview = async (): Promise<void> => {
+  if (!offer.value || !chosenDir.value) {
+    conflictPreview.value = null
+    return
+  }
+  try {
+    conflictPreview.value = await markShareStore.previewIncomingConflicts(
+      offer.value.offerId,
+      chosenDir.value,
+      projectStore.projectTree?.pathname || undefined,
+      pathMode.value
+    )
+  } catch {
+    conflictPreview.value = null
+  }
 }
 
 const startTick = () => {
@@ -303,15 +466,31 @@ watch(
   (next) => {
     if (next) {
       bus.emit('host-overlay:show', 'markshare-incoming-modal')
+      userChangedSavePath.value = false
+      pathMode.value = 'preserve'
+      conflictStrategy.value = 'rename'
+      conflictPreview.value = null
       initTargetSavePath()
       startTick()
+      void refreshConflictPreview()
     } else {
       bus.emit('host-overlay:hide', 'markshare-incoming-modal')
+      conflictPreview.value = null
       stopTick()
     }
   },
   { immediate: true }
 )
+
+watch(pathMode, () => {
+  if (!userChangedSavePath.value) {
+    initTargetSavePath()
+  }
+})
+
+watch([chosenDir, pathMode], () => {
+  void refreshConflictPreview()
+})
 
 onBeforeUnmount(() => {
   stopTick()
@@ -336,14 +515,24 @@ const formatSize = (bytes: number): string => {
 
 const handleChooseDir = async (): Promise<void> => {
   const dir = await markShareStore.selectDirectory(chosenDir.value)
-  if (dir) chosenDir.value = dir
+  if (dir) {
+    userChangedSavePath.value = true
+    chosenDir.value = dir
+  }
 }
 
 const handleAccept = async (): Promise<void> => {
   if (!offer.value || !chosenDir.value) return
   busy.value = true
   try {
-    await markShareStore.acceptOffer(offer.value.offerId, chosenDir.value, false)
+    await markShareStore.acceptOffer(
+      offer.value.offerId,
+      chosenDir.value,
+      false,
+      projectStore.projectTree?.pathname || undefined,
+      conflictStrategy.value,
+      pathMode.value
+    )
   } catch (err) {
     markShareStore.showNotice('error', err instanceof Error ? err.message : String(err))
   } finally {
@@ -559,6 +748,32 @@ const handleReject = async (): Promise<void> => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.ms-conflict-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.ms-conflict-label {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.ms-conflict-tip {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(230, 162, 60, 0.14);
+  color: #e6a23c;
+}
+
+.ms-conflict-tip.strategy-overwrite {
+  background: rgba(245, 108, 108, 0.14);
+  color: #f56c6c;
 }
 
 .ms-in-footer {

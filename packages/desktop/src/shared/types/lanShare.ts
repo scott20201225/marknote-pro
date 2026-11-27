@@ -34,6 +34,8 @@ export interface DiscoveredLanShare {
   port: number
   url: string
   hasPassword: boolean
+  isFolder?: boolean
+  rootFolderName?: string
   fileCount: number
   fileNames?: string[]
   lastSeen: number
@@ -46,6 +48,49 @@ export interface RemoteSharedFile {
   size: number
   isDirectory: boolean
   extension: string
+}
+
+export type LanShareConflictStrategy = 'rename' | 'skip' | 'overwrite'
+export type LanSharePathMode = 'preserve' | 'flatten'
+
+export interface LanShareDownloadBatchItem {
+  id: string
+  name: string
+  relativePath: string
+}
+
+export interface LanShareConflictPreviewRequest {
+  targetDir: string
+  workspaceRoot?: string
+  senderAppType?: 'marknotepro' | 'marktextpro'
+  pathMode?: LanSharePathMode
+  files: LanShareDownloadBatchItem[]
+}
+
+export interface LanShareConflictPreview {
+  totalFiles: number
+  conflictCount: number
+  conflictSamples: string[]
+}
+
+export interface LanShareDownloadBatchRequest {
+  remoteUrl: string
+  targetDir: string
+  workspaceRoot?: string
+  senderAppType?: 'marknotepro' | 'marktextpro'
+  pathMode?: LanSharePathMode
+  conflictStrategy: LanShareConflictStrategy
+  token?: string
+  password?: string
+  files: LanShareDownloadBatchItem[]
+}
+
+export interface LanShareDownloadBatchResult {
+  totalFiles: number
+  downloadedCount: number
+  renamedCount: number
+  overwrittenCount: number
+  skippedCount: number
 }
 
 export interface CreateLanShareOptions {
