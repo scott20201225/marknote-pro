@@ -2,6 +2,15 @@
 
 All notable changes to **MarkNotePro** are documented in this file.
 
+## [1.3.6] - 2026-11-27
+
+### 🐛 Bug Fixes & Improvements (macOS Screenshot & MarkShare UX)
+- **macOS 拖拽与全局截图热键冲突修复 / Drag + Screenshot Deadlock Fix**：
+  - 修复 macOS 下拖拽文件过程中触发内置截图热键导致工具栏按钮失灵、屏幕被冻结遮挡且无法按 `ESC` 退出的严重问题（移除 `CGShieldingWindowLevel()` 全屏遮罩锁定、等待鼠标左键释放后再激活截图窗口、为 `HoverButton` 增加 `acceptsFirstMouse`、增加全局 `ESC` 热键与 Space 切换自动退出兜底，以及截屏关闭时同步隐藏 MarkShare 投放雷达）。
+- **MarkShare 侧边栏与拖拽投放雷达体验优化 / MarkShare UX & Drop Radar Polish**：
+  - 清理 `LAN Share` 侧边栏底部的重复 MarkShare 设备区；移除开关旁“（临时开启）”冗余字样，并在 MarkShare 侧边栏新增使用说明提示卡片（明确支持从访达等工作区外部拖拽文件与文件夹分享）。
+  - 修复浮窗换行时设备圆形图标纵向挤压变形，增加拖拽上下边缘热区平滑自动滚动（带 `▲`/`▼` 方向提示与高刷屏帧率自适应），同时恢复自适应宽高并全面锁定横向零滚动条溢出防御。
+
 ## [1.3.5] - 2026-11-27
 
 ### ✨ Features & Improvements (LAN Share / MarkShare & Migration)

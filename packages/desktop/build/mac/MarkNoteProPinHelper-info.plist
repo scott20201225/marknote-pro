@@ -13,7 +13,7 @@
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.3.5</string>
+    <string>1.3.6</string>
     <key>NSScreenCaptureUsageDescription</key>
     <string>MarkNoteProPinHelper 需要屏幕录制权限以捕获屏幕画面和支持智能截图与贴图功能。</string>
     <key>NSAccessibilityUsageDescription</key>
