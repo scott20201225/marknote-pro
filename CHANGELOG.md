@@ -2,6 +2,23 @@
 
 All notable changes to **MarkNotePro** are documented in this file.
 
+## [1.3.5] - 2026-11-27
+
+### ✨ Features & Improvements (LAN Share / MarkShare & Migration)
+- **统一目录结构与重名冲突策略 / Unified Path Layout & Conflict Resolution Policy**：
+  - `LAN Share` 与 `MarkShare` 接收端统一提供“**目录结构**（保留路径信息 [默认] / 所有文件放在一个文件夹）”与“**重名冲突**（自动重命名 / 跳过 / 覆盖）”选项，并结合所选目标路径与目录策略实时预览冲突文件数量；所有文件写入均采用 `.tmp.<hex>.part` + 原子重命名。
+  - 修复 `LAN Share` 分享文件夹时顶层目录名丢失导致的路径压平问题，保持与 `MarkShare` 一致的目录层级策略（`MarkTextPro → MarkNotePro` 自动转换 `AREA_` / `GROUP_` / 同级 `AREA_+GROUP_`；默认接收目录文件夹归入 `GROUP_Dump/GROUP_Folders`，单文件归入 `GROUP_Dump/AREA_Downloads`）。
+  - 工作区迁移（手动合并与切换自动迁移）新增“重命名”冲突策略，附件目录 `Attachments/` 始终直接合并覆盖且不再误报同名冲突提示，并自动在后台转换非 `MarkNotePro` 普通目录。
+- **MarkShare 历史记录与交互优化 / Transfer Records & UI Fixes**：
+  - 将 MarkShare 传输记录按每次会话（`offerId`）合并为单条记录，准确区分并展示「文件 / 文件夹」标识与文件总数；同时支持“发送记录”与“接收记录”点击“打开目录”快速定位文件或目录（带上级目录回退）。
+  - 修复二维码弹窗“复制提取密码”按钮点击失焦后背景异常残留高亮的问题。
+
+### 🐛 Bug Fixes & i18n
+- **macOS 全屏模式 MarkShare 浮窗修复 / Fullscreen HUD Overlay Fix**：
+  - 为 macOS 下 `MarkShareHudOverlay` 启用 `type: 'panel'`、禁用全屏平铺并锁定窗口最小/最大尺寸，避免主窗口处于原生全屏空间时右下角传输小卡片被系统横向拉伸为顶部整行长条。
+- **全量 11 国多语言本地化补全 / Full 11-Locale i18n Completion**：
+  - 补全 `LAN Share` 与 `MarkShare` 在 `de / es / fr / it / ja / ko / pt / tr` 中的全部缺译键值（共 266 个键全面覆盖），并将主进程弹窗、错误提示、桌面通知、HUD 结果横幅以及局域网分享 Web 门户/在线阅读页接入动态本地化。
+
 ## [1.3.4] - 2026-11-26
 
 ### ✨ New Features (MarkShare 局域网近场互传)
