@@ -1736,7 +1736,7 @@
     "noDevicesShort": "No online MarkShare devices",
     "statusEnabled": "Discoverable",
     "statusDisabled": "Off",
-    "enableSwitch": "Enable MarkShare (Temporary)",
+    "enableSwitch": "Enable MarkShare",
     "enableDesc": "Allow nearby devices to discover and send files directly",
     "autoStartSwitch": "Start with app",
     "autoStartDesc": "Automatically enable MarkShare whenever the app launches",
@@ -1798,6 +1798,8 @@
     "errServerStartFailed": "Failed to start MarkShare HTTP server",
     "errTransferStopped": "Transfer stopped",
     "errSizeMismatch": "Size mismatch for {path}: got {actual}, expected {expected}",
-    "errShaMismatch": "SHA-256 verification failed for {id}"
+    "errShaMismatch": "SHA-256 verification failed for {id}",
+    "usageTipTitle": "How to Use",
+    "usageTipDesc": "Drag any files or folders from outside the workspace (Finder / Explorer / Desktop) or from the sidebar tree into the app window or onto a device card below; or right-click any sidebar item and choose \"MarkShare to Device...\" to send to multiple peers."
   }
 }

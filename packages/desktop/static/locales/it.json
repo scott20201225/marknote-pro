@@ -2098,7 +2098,7 @@
     "noDevicesShort": "Nessun dispositivo MarkShare online",
     "statusEnabled": "Rilevabile",
     "statusDisabled": "Spento",
-    "enableSwitch": "Attiva MarkShare (Temporaneo)",
+    "enableSwitch": "Attiva MarkShare",
     "enableDesc": "Consenti ai dispositivi vicini di rilevare e inviare file direttamente",
     "autoStartSwitch": "Avvia con l'app",
     "autoStartDesc": "Attiva automaticamente MarkShare all'avvio dell'app",
@@ -2160,6 +2160,8 @@
     "errServerStartFailed": "Avvio del server MarkShare non riuscito",
     "errTransferStopped": "Trasferimento interrotto",
     "errSizeMismatch": "Dimensione errata per {path}: ricevuti {actual}, attesi {expected}",
-    "errShaMismatch": "Verifica SHA-256 non riuscita per {id}"
+    "errShaMismatch": "Verifica SHA-256 non riuscita per {id}",
+    "usageTipTitle": "Come usare",
+    "usageTipDesc": "Trascina file o cartelle dall'esterno (Finder / Esplora / Scrivania) o dalla barra laterale nella finestra dell'app o su un dispositivo qui sotto; oppure fai clic destro → «Invia con MarkShare...» per inviare a più dispositivi."
   }
 }

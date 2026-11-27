@@ -2,7 +2,7 @@ import path from 'path'
 import fs from 'fs'
 import { spawn, ChildProcess } from 'child_process'
 import readline from 'readline'
-import { app, ipcMain, nativeTheme } from 'electron'
+import { app, BrowserWindow, globalShortcut, ipcMain, nativeTheme } from 'electron'
 import log from 'electron-log'
 import { isOsx } from '../config'
 
@@ -34,6 +34,8 @@ export class MacNativeHelper {
   private _pendingPins: MacPinPayload[] = []
   private _activePins = new Map<string, MacPinPayload>()
   private _eventListeners = new Set<MacPinEventHandler>()
+  private _isCapturingNative = false
+  private _registeredEscapeShortcut = false
 
   private constructor() {
     if (isOsx) {
@@ -175,9 +177,11 @@ export class MacNativeHelper {
         log.info(`[MacNativeHelper] Process exited: code=${code}, signal=${signal}`)
         this._isReady = false
         this._proc = null
+        this.clearCaptureEscapeShortcut()
       })
 
       app.on('will-quit', () => {
+        this.clearCaptureEscapeShortcut()
         this.kill()
       })
 
@@ -200,6 +204,22 @@ export class MacNativeHelper {
       return
     }
 
+    if (msg.event === 'capture-started') {
+      this._isCapturingNative = true
+      this.ensureCaptureEscapeShortcut()
+      for (const win of BrowserWindow.getAllWindows()) {
+        if (!win.isDestroyed()) {
+          win.webContents.send('mt::mark-share:force-hide-radar')
+        }
+      }
+    } else if (
+      msg.event === 'capture-cancelled' ||
+      msg.event === 'captured-and-copied' ||
+      msg.event === 'captured-and-saved'
+    ) {
+      this.clearCaptureEscapeShortcut()
+    }
+
     if (msg.event === 'closed' && msg.pinId) {
       this._activePins.delete(msg.pinId)
     }
@@ -213,17 +233,60 @@ export class MacNativeHelper {
     }
   }
 
+  private ensureCaptureEscapeShortcut(): void {
+    if (!isOsx || this._registeredEscapeShortcut) return
+    try {
+      if (!globalShortcut.isRegistered('Escape')) {
+        const ok = globalShortcut.register('Escape', () => {
+          if (this._isCapturingNative) {
+            log.info('[MacNativeHelper] Escape global failsafe triggered -> cancelling native capture')
+            this.cancelCapture()
+          }
+        })
+        if (ok) {
+          this._registeredEscapeShortcut = true
+        }
+      }
+    } catch (err) {
+      log.warn('[MacNativeHelper] Failed to register Escape capture failsafe:', err)
+    }
+  }
+
+  private clearCaptureEscapeShortcut(): void {
+    this._isCapturingNative = false
+    if (!this._registeredEscapeShortcut) return
+    this._registeredEscapeShortcut = false
+    try {
+      globalShortcut.unregister('Escape')
+    } catch {}
+  }
+
+  public cancelCapture(): boolean {
+    this.clearCaptureEscapeShortcut()
+    if (!isOsx || !this._proc || !this._proc.stdin) return false
+    try {
+      this._proc.stdin.write(JSON.stringify({ action: 'cancel-capture' }) + '\n')
+      return true
+    } catch (err) {
+      log.warn('[MacNativeHelper] Error sending cancel-capture action:', err)
+      return false
+    }
+  }
+
   public startCapture(imagePath?: string): boolean {
     if (!isOsx) return false
     this.ensureRunning()
     if (!this._proc || !this._proc.stdin) return false
     try {
+      this._isCapturingNative = true
+      this.ensureCaptureEscapeShortcut()
       const { theme, lang } = this.getCurrentThemeAndLanguage()
       log.info(`[MacNativeHelper] Sending capture action to native helper (theme=${theme}, lang=${lang})`)
       const cmd = JSON.stringify({ action: 'capture', imagePath, theme, lang })
       this._proc.stdin.write(cmd + '\n')
       return true
     } catch (err) {
+      this.clearCaptureEscapeShortcut()
       log.error('[MacNativeHelper] Error sending capture action:', err)
       return false
     }

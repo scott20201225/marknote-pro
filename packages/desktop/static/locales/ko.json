@@ -2098,7 +2098,7 @@
     "noDevicesShort": "온라인 MarkShare 기기 없음",
     "statusEnabled": "검색 가능",
     "statusDisabled": "꺼짐",
-    "enableSwitch": "MarkShare 켜기 (임시)",
+    "enableSwitch": "MarkShare 켜기",
     "enableDesc": "주변 기기가 이 기기를 찾고 파일을 직접 보낼 수 있도록 허용",
     "autoStartSwitch": "앱 시작 시 켜기",
     "autoStartDesc": "앱 실행 시 MarkShare를 자동으로 켭니다",
@@ -2160,6 +2160,8 @@
     "errServerStartFailed": "MarkShare 로컬 서버를 시작하지 못했습니다",
     "errTransferStopped": "전송이 중지되었습니다",
     "errSizeMismatch": "{path} 크기 불일치 (수신 {actual}, 예상 {expected})",
-    "errShaMismatch": "{id} SHA-256 무결성 검증 실패"
+    "errShaMismatch": "{id} SHA-256 무결성 검증 실패",
+    "usageTipTitle": "사용 팁",
+    "usageTipDesc": "작업 공간 외부(Finder / 탐색기 / 바탕 화면 / 폴더) 또는 왼쪽 사이드바 트리에서 파일·폴더를 앱 창이나 아래 기기 카드로 직접 드래그하여 보낼 수 있으며, 우클릭 「MarkShare로 보내기...」로 여러 기기에 동시 전송할 수도 있습니다."
   }
 }

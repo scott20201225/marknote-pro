@@ -85,6 +85,9 @@ export const useMarkShareStore = defineStore('markShare', () => {
     ipc.on('mt::mark-share:child-drag-enter', () => {
       showDragRadar(dragRadarPaths.value, true)
     })
+    ipc.on('mt::mark-share:force-hide-radar', () => {
+      hideDragRadarNow()
+    })
 
     try {
       const state = (await ipc.invoke('mt::mark-share:get-state')) as {

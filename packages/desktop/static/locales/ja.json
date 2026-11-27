@@ -2098,7 +2098,7 @@
     "noDevicesShort": "オンラインの MarkShare デバイスはありません",
     "statusEnabled": "検出可能",
     "statusDisabled": "オフ",
-    "enableSwitch": "MarkShare を有効化（一時的）",
+    "enableSwitch": "MarkShare を有効にする",
     "enableDesc": "近くのデバイスが検出してファイルを直接送信できるようにする",
     "autoStartSwitch": "起動時に開始",
     "autoStartDesc": "アプリ起動時に MarkShare を自動で有効にする",
@@ -2160,6 +2160,8 @@
     "errServerStartFailed": "MarkShare ローカルサーバーの起動に失敗しました",
     "errTransferStopped": "転送が停止されました",
     "errSizeMismatch": "{path} のサイズが一致しません（受信 {actual} / 期待 {expected}）",
-    "errShaMismatch": "{id} の SHA-256 整合性検証に失敗しました"
+    "errShaMismatch": "{id} の SHA-256 整合性検証に失敗しました",
+    "usageTipTitle": "使い方ヒント",
+    "usageTipDesc": "ワークスペース外（Finder / デスクトップ / 任意のフォルダ）または左側のサイドバーツリーからファイルやフォルダをアプリウィンドウや下のデバイスカードへ直接ドラッグ＆ドロップして送信できます。右クリック「MarkShare で送信...」で複数台への同時送信も可能です。"
   }
 }

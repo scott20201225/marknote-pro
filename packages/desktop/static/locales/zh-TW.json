@@ -2136,7 +2136,7 @@
     "noDevicesShort": "暫無開啟 MarkShare 的線上裝置",
     "statusEnabled": "可被發現",
     "statusDisabled": "未開啟",
-    "enableSwitch": "開啟 MarkShare（暫時開啟）",
+    "enableSwitch": "開啟 MarkShare",
     "enableDesc": "開啟後允許附近裝置發現並向本機直傳檔案",
     "autoStartSwitch": "跟隨程式啟動",
     "autoStartDesc": "每次啟動程式時自動開啟 MarkShare",
@@ -2198,6 +2198,8 @@
     "errServerStartFailed": "無法啟動 MarkShare 本機傳輸服務",
     "errTransferStopped": "傳輸已停止",
     "errSizeMismatch": "檔案 {path} 大小驗證失敗（收到 {actual} 位元組，預期 {expected} 位元組）",
-    "errShaMismatch": "檔案 {id} 完整性驗證（SHA-256）失敗"
+    "errShaMismatch": "檔案 {id} 完整性驗證（SHA-256）失敗",
+    "usageTipTitle": "使用提示",
+    "usageTipDesc": "支援直接從工作區外部（系統訪達 / 桌面 / 資料夾）或左側工作區拖曳任意檔案與資料夾至應用視窗或下方裝置卡片傳送；也可在側邊欄右鍵「MarkShare 傳送給裝置...」同時發給多台裝置。"
   }
 }

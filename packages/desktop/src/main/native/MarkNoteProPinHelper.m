@@ -1221,7 +1221,23 @@ static NSImage *getSvgIcon(NSString *iconId) {
     }
 }
 
+- (BOOL)acceptsFirstMouse:(NSEvent *)event {
+    return YES;
+}
+
 - (void)mouseDown:(NSEvent *)event {
+    if (self.window && [self.window isKindOfClass:NSClassFromString(@"CapturePanel")]) {
+        if (![NSApp isActive] || !self.window.isKeyWindow) {
+            if (@available(macOS 14.0, *)) {
+                [NSApp activate];
+            }
+            #pragma clang diagnostic push
+            #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+            [NSApp activateIgnoringOtherApps:YES];
+            #pragma clang diagnostic pop
+            [self.window makeKeyAndOrderFront:nil];
+        }
+    }
     if (_isDragHandle) {
         _isDraggingNow = YES;
         if (_onDragEvent) _onDragEvent(event, 0);
@@ -4058,6 +4074,7 @@ static NSArray<DetectedWindowItem *> *collectDetectedWindowsForScreen(NSScreen *
 - (void)updateSmartHoverAtPoint:(NSPoint)pt;
 - (NSImage *)compositeAnnotatedImage;
 - (void)commitInlineEditor;
+- (void)cancelAction;
 @end
 
 @interface CapturePanel : NSWindow
@@ -4067,6 +4084,9 @@ static NSArray<DetectedWindowItem *> *collectDetectedWindowsForScreen(NSScreen *
 @implementation CapturePanel
 - (BOOL)canBecomeKeyWindow { return YES; }
 - (BOOL)canBecomeMainWindow { return YES; }
+- (void)cancelOperation:(id)sender {
+    [self.overlayView cancelAction];
+}
 - (NSRect)constrainFrameRect:(NSRect)frameRect toScreen:(NSScreen *)screen {
     // Prevent AppKit from shrinking the overlay window below the macOS Menu Bar
     return frameRect;
@@ -4074,6 +4094,31 @@ static NSArray<DetectedWindowItem *> *collectDetectedWindowsForScreen(NSScreen *
 @end
 
 static CapturePanel *gCapturePanel = nil;
+static id gCaptureEscLocalMonitor = nil;
+static id gCaptureEscGlobalMonitor = nil;
+static id gCaptureSpaceObserver = nil;
+static NSUInteger gCaptureGeneration = 0;
+
+static NSWindowLevel captureOverlayWindowLevel(void) {
+    // Above Menu Bar (24), Dock (20), PopUps (101) & CoreDrag (500),
+    // yet strictly below ScreenSaver (1000), Command+Tab App Switcher, Mission Control & Force Quit.
+    return (NSWindowLevel)CGWindowLevelForKey(kCGDraggingWindowLevelKey) + 50;
+}
+
+static void cleanupCaptureMonitors(void) {
+    if (gCaptureEscLocalMonitor) {
+        [NSEvent removeMonitor:gCaptureEscLocalMonitor];
+        gCaptureEscLocalMonitor = nil;
+    }
+    if (gCaptureEscGlobalMonitor) {
+        [NSEvent removeMonitor:gCaptureEscGlobalMonitor];
+        gCaptureEscGlobalMonitor = nil;
+    }
+    if (gCaptureSpaceObserver) {
+        [[[NSWorkspace sharedWorkspace] notificationCenter] removeObserver:gCaptureSpaceObserver];
+        gCaptureSpaceObserver = nil;
+    }
+}
 
 @implementation CaptureOverlayView
 
@@ -4515,7 +4560,7 @@ static CapturePanel *gCapturePanel = nil;
     if (editing) {
         self.window.level = NSPopUpMenuWindowLevel; // Above MenuBar(24)/Dock(20), allows IME candidates to remain visible
     } else {
-        self.window.level = CGShieldingWindowLevel();
+        self.window.level = captureOverlayWindowLevel();
     }
 }
 
@@ -4743,6 +4788,17 @@ static CapturePanel *gCapturePanel = nil;
 }
 
 - (void)mouseDown:(NSEvent *)event {
+    if (![NSApp isActive] || (self.window && !self.window.isKeyWindow)) {
+        if (@available(macOS 14.0, *)) {
+            [NSApp activate];
+        }
+        #pragma clang diagnostic push
+        #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+        [NSApp activateIgnoringOtherApps:YES];
+        #pragma clang diagnostic pop
+        [self.window makeKeyAndOrderFront:nil];
+        [self.window makeFirstResponder:self];
+    }
     NSPoint loc = [self convertPoint:event.locationInWindow fromView:nil];
 
     // Dragging on non-button background of either toolbar moves the toolbar pair
@@ -6025,11 +6081,17 @@ static CapturePanel *gCapturePanel = nil;
 }
 
 - (void)cancelAction {
+    gCaptureGeneration++;
+    cleanupCaptureMonitors();
     if (gCapturePanel) {
         [gCapturePanel close];
         gCapturePanel = nil;
     }
     sendEvent(@{ @"event": @"capture-cancelled" });
+}
+
+- (void)cancelOperation:(id)sender {
+    [self cancelAction];
 }
 
 - (void)selectToolByTag:(NSInteger)tag {
@@ -6085,18 +6147,23 @@ static CapturePanel *gCapturePanel = nil;
 @end
 
 static void showCaptureOverlay(NSScreen *screen, NSImage *screenshot, NSArray<DetectedWindowItem *> *detectedWindows) {
+    cleanupCaptureMonitors();
+    if (gCapturePanel) {
+        [gCapturePanel close];
+        gCapturePanel = nil;
+    }
     NSRect screenRect = screen.frame;
     gCapturePanel = [[CapturePanel alloc] initWithContentRect:screenRect
                                                     styleMask:NSWindowStyleMaskBorderless
                                                       backing:NSBackingStoreBuffered
                                                         defer:NO];
-    // Stay strictly above macOS Menu Bar (24), Dock (20), Status Bar (25), and Popups (101)
-    gCapturePanel.level = CGShieldingWindowLevel();
+    // Stay above macOS Menu Bar (24), Dock (20), PopUps (101), and CoreDrag (500),
+    // without blocking Command+Tab, Mission Control, Desktop Spaces, or Force Quit.
+    gCapturePanel.level = captureOverlayWindowLevel();
     gCapturePanel.releasedWhenClosed = NO;
     gCapturePanel.animationBehavior = NSWindowAnimationBehaviorNone;
-    gCapturePanel.collectionBehavior = NSWindowCollectionBehaviorCanJoinAllSpaces |
+    gCapturePanel.collectionBehavior = NSWindowCollectionBehaviorMoveToActiveSpace |
                                        NSWindowCollectionBehaviorFullScreenAuxiliary |
-                                       NSWindowCollectionBehaviorStationary |
                                        NSWindowCollectionBehaviorIgnoresCycle;
     gCapturePanel.hidesOnDeactivate = NO;
     gCapturePanel.canHide = NO;
@@ -6139,14 +6206,69 @@ static void showCaptureOverlay(NSScreen *screen, NSImage *screenshot, NSArray<De
 
     if (@available(macOS 14.0, *)) {
         [NSApp activate];
-    } else {
-        #pragma clang diagnostic push
-        #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-        [NSApp activateIgnoringOtherApps:YES];
-        #pragma clang diagnostic pop
     }
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    [NSApp activateIgnoringOtherApps:YES];
+    #pragma clang diagnostic pop
+    [gCapturePanel makeKeyAndOrderFront:nil];
     [gCapturePanel makeFirstResponder:overlay];
     [gCapturePanel invalidateCursorRectsForView:overlay];
+
+    __weak CaptureOverlayView *weakOverlay = overlay;
+    gCaptureEscLocalMonitor = [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskKeyDown handler:^NSEvent *(NSEvent *ev) {
+        if (ev.keyCode == 53 && gCapturePanel) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                CaptureOverlayView *ov = weakOverlay;
+                if (ov) {
+                    [ov cancelAction];
+                } else {
+                    cleanupCaptureMonitors();
+                    if (gCapturePanel) {
+                        [gCapturePanel close];
+                        gCapturePanel = nil;
+                    }
+                    sendEvent(@{ @"event": @"capture-cancelled" });
+                }
+            });
+            return nil;
+        }
+        return ev;
+    }];
+
+    gCaptureEscGlobalMonitor = [NSEvent addGlobalMonitorForEventsMatchingMask:NSEventMaskKeyDown handler:^(NSEvent *ev) {
+        if (ev.keyCode == 53 && gCapturePanel) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                CaptureOverlayView *ov = weakOverlay;
+                if (ov) {
+                    [ov cancelAction];
+                } else {
+                    cleanupCaptureMonitors();
+                    if (gCapturePanel) {
+                        [gCapturePanel close];
+                        gCapturePanel = nil;
+                    }
+                    sendEvent(@{ @"event": @"capture-cancelled" });
+                }
+            });
+        }
+    }];
+
+    gCaptureSpaceObserver = [[[NSWorkspace sharedWorkspace] notificationCenter] addObserverForName:NSWorkspaceActiveSpaceDidChangeNotification
+                                                                                           object:nil
+                                                                                            queue:[NSOperationQueue mainQueue]
+                                                                                       usingBlock:^(__unused NSNotification *note) {
+        CaptureOverlayView *ov = weakOverlay;
+        if (ov) {
+            [ov cancelAction];
+        } else if (gCapturePanel) {
+            cleanupCaptureMonitors();
+            [gCapturePanel close];
+            gCapturePanel = nil;
+            sendEvent(@{ @"event": @"capture-cancelled" });
+        }
+    }];
+
     sendEvent(@{ @"event": @"capture-started" });
 }
 
@@ -6183,7 +6305,18 @@ static NSImage *loadAndDecodeImageAtPath(NSString *imgPath, NSSize logicalSize) 
     return decoded;
 }
 
-static void fallbackScreencaptureAndShow(NSScreen *targetScreen, NSArray<DetectedWindowItem *> *detectedWindows) {
+static void presentCaptureWhenMouseReleased(NSScreen *screen, NSImage *screenshot, NSArray<DetectedWindowItem *> *detectedWindows, NSUInteger gen, int attemptsLeft) {
+    if (gen != gCaptureGeneration) return;
+    if ([NSEvent pressedMouseButtons] != 0 && attemptsLeft > 0) {
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(30 * NSEC_PER_MSEC)), dispatch_get_main_queue(), ^{
+            presentCaptureWhenMouseReleased(screen, screenshot, detectedWindows, gen, attemptsLeft - 1);
+        });
+        return;
+    }
+    showCaptureOverlay(screen, screenshot, detectedWindows);
+}
+
+static void fallbackScreencaptureAndShow(NSScreen *targetScreen, NSArray<DetectedWindowItem *> *detectedWindows, NSUInteger gen) {
     NSScreen *primaryScreen = [NSScreen screens].firstObject ?: targetScreen;
     CGFloat primaryH = primaryScreen.frame.size.height;
     NSRect sf = targetScreen.frame;
@@ -6205,7 +6338,7 @@ static void fallbackScreencaptureAndShow(NSScreen *targetScreen, NSArray<Detecte
         NSImage *nsImg = loadAndDecodeImageAtPath(tmpPath, sf.size);
         [[NSFileManager defaultManager] removeItemAtPath:tmpPath error:nil];
         if (nsImg) {
-            showCaptureOverlay(targetScreen, nsImg, detectedWindows);
+            presentCaptureWhenMouseReleased(targetScreen, nsImg, detectedWindows, gen, 60);
         }
     }
 }
@@ -6213,6 +6346,9 @@ static void fallbackScreencaptureAndShow(NSScreen *targetScreen, NSArray<Detecte
 static void startNativeCapture(NSString *passedImagePath) {
     dispatch_async(dispatch_get_main_queue(), ^{
         [AppTheme loadUserPreferences];
+        gCaptureGeneration++;
+        NSUInteger captureGen = gCaptureGeneration;
+        cleanupCaptureMonitors();
         if (gClipboardPanel) {
             [gClipboardPanel close];
             gClipboardPanel = nil;
@@ -6237,7 +6373,7 @@ static void startNativeCapture(NSString *passedImagePath) {
         if (passedImagePath && [[NSFileManager defaultManager] fileExistsAtPath:passedImagePath]) {
             NSImage *img = loadAndDecodeImageAtPath(passedImagePath, targetScreen.frame.size);
             if (img) {
-                showCaptureOverlay(targetScreen, img, detectedWindows);
+                presentCaptureWhenMouseReleased(targetScreen, img, detectedWindows, captureGen, 60);
                 return;
             }
         }
@@ -6268,24 +6404,24 @@ static void startNativeCapture(NSString *passedImagePath) {
                             dispatch_async(dispatch_get_main_queue(), ^{
                                 NSImage *nsImg = [[NSImage alloc] initWithCGImage:imgRef size:targetScreen.frame.size];
                                 CGImageRelease(imgRef);
-                                showCaptureOverlay(targetScreen, nsImg, detectedWindows);
+                                presentCaptureWhenMouseReleased(targetScreen, nsImg, detectedWindows, captureGen, 60);
                             });
                         } else {
                             dispatch_async(dispatch_get_main_queue(), ^{
-                                fallbackScreencaptureAndShow(targetScreen, detectedWindows);
+                                fallbackScreencaptureAndShow(targetScreen, detectedWindows, captureGen);
                             });
                         }
                     }];
                     return;
                 }
                 dispatch_async(dispatch_get_main_queue(), ^{
-                    fallbackScreencaptureAndShow(targetScreen, detectedWindows);
+                    fallbackScreencaptureAndShow(targetScreen, detectedWindows, captureGen);
                 });
             }];
             return;
         }
 
-        fallbackScreencaptureAndShow(targetScreen, detectedWindows);
+        fallbackScreencaptureAndShow(targetScreen, detectedWindows, captureGen);
     });
 }
 
@@ -7685,6 +7821,16 @@ static void processLine(NSString *line) {
         createPin(dict);
     } else if ([action isEqualToString:@"capture"]) {
         startNativeCapture(dict[@"imagePath"]);
+    } else if ([action isEqualToString:@"cancel-capture"]) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            gCaptureGeneration++;
+            if (gCapturePanel && gCapturePanel.overlayView) {
+                [gCapturePanel.overlayView cancelAction];
+            } else {
+                cleanupCaptureMonitors();
+                sendEvent(@{ @"event": @"capture-cancelled" });
+            }
+        });
     } else if ([action isEqualToString:@"clipboard"]) {
         toggleClipboardPanel();
     } else if ([action isEqualToString:@"theme"]) {

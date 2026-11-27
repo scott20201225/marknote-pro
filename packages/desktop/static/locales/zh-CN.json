@@ -2313,7 +2313,7 @@
     "noDevicesShort": "暂无开启 MarkShare 的在线设备",
     "statusEnabled": "可被发现",
     "statusDisabled": "未开启",
-    "enableSwitch": "开启 MarkShare（临时开启）",
+    "enableSwitch": "开启 MarkShare",
     "enableDesc": "开启后允许周围设备发现并向本机直传文件",
     "autoStartSwitch": "跟随程序启动",
     "autoStartDesc": "每次启动程序时自动开启 MarkShare",
@@ -2375,6 +2375,8 @@
     "errServerStartFailed": "无法启动 MarkShare 本地传输服务",
     "errTransferStopped": "传输已停止",
     "errSizeMismatch": "文件 {path} 大小校验失败（收到 {actual} 字节，预期 {expected} 字节）",
-    "errShaMismatch": "文件 {id} 完整性校验（SHA-256）失败"
+    "errShaMismatch": "文件 {id} 完整性校验（SHA-256）失败",
+    "usageTipTitle": "使用提示",
+    "usageTipDesc": "支持直接从工作区外部（系统访达 / 桌面 / 文件夹）或左侧工作区拖拽任意文件与文件夹至应用窗口或下方设备卡片发送；也可在侧边栏右键「MarkShare 发送给设备...」同时发给多台设备。"
   }
 }

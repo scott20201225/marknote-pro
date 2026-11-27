@@ -2098,7 +2098,7 @@
     "noDevicesShort": "Çevrimiçi MarkShare cihazı yok",
     "statusEnabled": "Bulunabilir",
     "statusDisabled": "Kapalı",
-    "enableSwitch": "MarkShare'i Etkinleştir (Geçici)",
+    "enableSwitch": "MarkShare'i Etkinleştir",
     "enableDesc": "Yakındaki cihazların bulmasına ve doğrudan dosya göndermesine izin ver",
     "autoStartSwitch": "Uygulama ile başlat",
     "autoStartDesc": "Uygulama açıldığında MarkShare'i otomatik etkinleştir",
@@ -2160,6 +2160,8 @@
     "errServerStartFailed": "MarkShare yerel sunucusu başlatılamadı",
     "errTransferStopped": "Aktarım durduruldu",
     "errSizeMismatch": "{path} için boyut uyuşmazlığı: alınan {actual}, beklenen {expected}",
-    "errShaMismatch": "{id} için SHA-256 doğrulaması başarısız"
+    "errShaMismatch": "{id} için SHA-256 doğrulaması başarısız",
+    "usageTipTitle": "Nasıl Kullanılır",
+    "usageTipDesc": "Çalışma alanı dışından (Finder / Gezgin / Masaüstü) veya kenar çubuğundan herhangi bir dosya ya da klasörü uygulama penceresine veya aşağıdaki cihaz kartına sürükleyip bırakın; sağ tıklayıp \"MarkShare ile Gönder...\" ile birden çok cihaza aynı anda gönderin."
   }
 }

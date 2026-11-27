@@ -184,6 +184,11 @@
             </template>
           </div>
         </div>
+
+        <div class="ms-usage-tip-box">
+          <div class="ms-usage-tip-title">💡 {{ t('markShare.usageTipTitle') }}</div>
+          <div class="ms-usage-tip-desc">{{ t('markShare.usageTipDesc') }}</div>
+        </div>
       </div>
 
       <!-- 2. Send & Receive Records -->
@@ -710,6 +715,28 @@ const onDeviceDrop = async (peerKey: string, e: DragEvent): Promise<void> => {
   font-size: 11px;
   line-height: 1.45;
   opacity: 0.75;
+}
+
+.ms-usage-tip-box {
+  margin-top: 4px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(128, 128, 128, 0.18);
+  background: rgba(128, 128, 128, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ms-usage-tip-title {
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.ms-usage-tip-desc {
+  font-size: 11px;
+  line-height: 1.5;
+  opacity: 0.78;
 }
 
 .ms-unrecognized-box {

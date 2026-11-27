@@ -2099,7 +2099,7 @@
     "noDevicesShort": "Keine MarkShare-Geräte online",
     "statusEnabled": "Auffindbar",
     "statusDisabled": "Aus",
-    "enableSwitch": "MarkShare aktivieren (Temporär)",
+    "enableSwitch": "MarkShare aktivieren",
     "enableDesc": "Geräten in der Nähe ermöglichen, Dateien direkt zu senden",
     "autoStartSwitch": "Mit App starten",
     "autoStartDesc": "MarkShare beim Start der App automatisch aktivieren",
@@ -2161,6 +2161,8 @@
     "errServerStartFailed": "MarkShare-Server konnte nicht gestartet werden",
     "errTransferStopped": "Übertragung gestoppt",
     "errSizeMismatch": "Größenabweichung für {path}: erhalten {actual}, erwartet {expected}",
-    "errShaMismatch": "SHA-256-Prüfung fehlgeschlagen für {id}"
+    "errShaMismatch": "SHA-256-Prüfung fehlgeschlagen für {id}",
+    "usageTipTitle": "Bedienungshinweis",
+    "usageTipDesc": "Ziehen Sie beliebige Dateien oder Ordner von außerhalb (Finder / Explorer / Schreibtisch) oder aus dem Arbeitsbereich direkt ins App-Fenster bzw. auf eine Gerätekarte unten; per Rechtsklick → „Per MarkShare senden...“ auch an mehrere Geräte gleichzeitig."
   }
 }

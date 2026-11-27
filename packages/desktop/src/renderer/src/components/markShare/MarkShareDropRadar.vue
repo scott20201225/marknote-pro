@@ -3,6 +3,7 @@
     <transition name="ms-radar-fade">
       <div
         v-if="markShareStore.dragRadarVisible"
+        ref="radarFloatRef"
         class="ms-radar-float"
         :style="dynamicContainerStyle"
         @dragenter.prevent.stop="onRadarEnter"
@@ -31,41 +32,63 @@
           <div class="ms-radar-empty-text">{{ t('markShare.noDevicesDesc') }}</div>
         </div>
 
-        <div v-else class="ms-radar-grid" :style="dynamicGridStyle">
+        <div v-else class="ms-radar-scroll-wrap">
           <div
-            v-for="device in markShareStore.devices"
-            :key="device.peerKey"
-            class="ms-radar-device-item"
-            :class="{ hovered: hoveredId === device.peerKey }"
-            @dragenter.prevent.stop="onCircleEnter(device.peerKey)"
-            @dragover.prevent.stop="onCircleOver(device.peerKey, $event)"
-            @dragleave.stop="onCircleLeave(device.peerKey)"
-            @drop.prevent.stop="onCircleDrop(device.peerKey, $event)"
+            v-if="canScrollUp"
+            class="ms-scroll-edge top"
+            :class="{ active: autoScrollDir === -1 }"
           >
-            <div class="ms-device-circle">
-              <div class="ms-circle-icon">
-                <os-device-icon :os-type="device.osType" />
+            <span class="ms-scroll-chevron">▲</span>
+          </div>
+          <div
+            ref="scrollContainerRef"
+            class="ms-radar-scroll"
+            @scroll="syncScrollBounds"
+          >
+            <div class="ms-radar-grid" :style="dynamicGridStyle">
+              <div
+                v-for="device in markShareStore.devices"
+                :key="device.peerKey"
+                class="ms-radar-device-item"
+                :class="{ hovered: hoveredId === device.peerKey }"
+                @dragenter.prevent.stop="onCircleEnter(device.peerKey, $event)"
+                @dragover.prevent.stop="onCircleOver(device.peerKey, $event)"
+                @dragleave.stop="onCircleLeave(device.peerKey)"
+                @drop.prevent.stop="onCircleDrop(device.peerKey, $event)"
+              >
+                <div class="ms-device-circle">
+                  <div class="ms-circle-icon">
+                    <os-device-icon :os-type="device.osType" />
+                  </div>
+                </div>
+                <div class="ms-circle-name" :title="device.deviceName">
+                  {{ device.deviceName }}
+                </div>
+                <div class="ms-circle-badges">
+                  <span v-if="device.isSameHost" class="ms-radar-local">{{ t('markShare.localHost') }}</span>
+                  <span class="ms-radar-app" :class="device.appType">
+                    {{ device.appType === 'marktextpro' ? 'MarkTextPro' : 'MarkNotePro' }}
+                  </span>
+                </div>
+                <div class="ms-circle-meta">
+                  {{ osShort(device.osType) }} · {{ device.hostIp }}
+                </div>
+                <div
+                  v-if="device.hostname && device.hostname !== device.deviceName"
+                  class="ms-circle-host"
+                  :title="device.hostname"
+                >
+                  {{ device.hostname }}
+                </div>
               </div>
             </div>
-            <div class="ms-circle-name" :title="device.deviceName">
-              {{ device.deviceName }}
-            </div>
-            <div class="ms-circle-badges">
-              <span v-if="device.isSameHost" class="ms-radar-local">{{ t('markShare.localHost') }}</span>
-              <span class="ms-radar-app" :class="device.appType">
-                {{ device.appType === 'marktextpro' ? 'MarkTextPro' : 'MarkNotePro' }}
-              </span>
-            </div>
-            <div class="ms-circle-meta">
-              {{ osShort(device.osType) }} · {{ device.hostIp }}
-            </div>
-            <div
-              v-if="device.hostname && device.hostname !== device.deviceName"
-              class="ms-circle-host"
-              :title="device.hostname"
-            >
-              {{ device.hostname }}
-            </div>
+          </div>
+          <div
+            v-if="canScrollDown"
+            class="ms-scroll-edge bottom"
+            :class="{ active: autoScrollDir === 1 }"
+          >
+            <span class="ms-scroll-chevron">▼</span>
           </div>
         </div>
       </div>
@@ -74,7 +97,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import bus from '@/bus'
 import { useMarkShareStore } from '@/store/markShare'
@@ -84,20 +107,199 @@ import OsDeviceIcon from './OsDeviceIcon.vue'
 const { t } = useI18n()
 const markShareStore = useMarkShareStore()
 const hoveredId = ref<string | null>(null)
+const radarFloatRef = ref<HTMLElement | null>(null)
+const scrollContainerRef = ref<HTMLElement | null>(null)
+const canScrollUp = ref(false)
+const canScrollDown = ref(false)
+const autoScrollDir = ref<-1 | 0 | 1>(0)
+
+let autoScrollRaf: number | null = null
+let lastFrameTime = 0
+let lastPointerY: number | null = null
+let scrollRemainder = 0
+let windowListenersAttached = false
+
+const syncScrollBounds = (): void => {
+  const el = scrollContainerRef.value
+  if (!el) {
+    canScrollUp.value = false
+    canScrollDown.value = false
+    return
+  }
+  const maxScrollTop = el.scrollHeight - el.clientHeight
+  canScrollUp.value = el.scrollTop > 1
+  canScrollDown.value = maxScrollTop > 2 && el.scrollTop < maxScrollTop - 1
+}
+
+const computeAutoScroll = (clientY: number): { dir: -1 | 0 | 1; speed: number } => {
+  const floatEl = radarFloatRef.value
+  const scrollEl = scrollContainerRef.value
+  if (!floatEl || !scrollEl) return { dir: 0, speed: 0 }
+
+  const maxScrollTop = scrollEl.scrollHeight - scrollEl.clientHeight
+  if (maxScrollTop <= 2) return { dir: 0, speed: 0 }
+
+  const floatRect = floatEl.getBoundingClientRect()
+  const scrollRect = scrollEl.getBoundingClientRect()
+  const hotZone = Math.min(60, Math.max(44, scrollRect.height * 0.25))
+
+  const upperThreshold = scrollRect.top + hotZone
+  if (clientY <= upperThreshold && clientY >= floatRect.top - 8 && scrollEl.scrollTop > 0.5) {
+    const depth = Math.min(1, Math.max(0, (upperThreshold - clientY) / hotZone))
+    const speed = 220 + 400 * Math.pow(depth, 1.15)
+    return { dir: -1, speed }
+  }
+
+  const lowerThreshold = scrollRect.bottom - hotZone
+  if (
+    clientY >= lowerThreshold &&
+    clientY <= floatRect.bottom + 8 &&
+    scrollEl.scrollTop < maxScrollTop - 0.5
+  ) {
+    const depth = Math.min(1, Math.max(0, (clientY - lowerThreshold) / hotZone))
+    const speed = 220 + 400 * Math.pow(depth, 1.15)
+    return { dir: 1, speed }
+  }
+
+  return { dir: 0, speed: 0 }
+}
+
+const stopAutoScroll = (): void => {
+  if (autoScrollRaf !== null) {
+    cancelAnimationFrame(autoScrollRaf)
+    autoScrollRaf = null
+  }
+  lastFrameTime = 0
+  lastPointerY = null
+  scrollRemainder = 0
+  autoScrollDir.value = 0
+}
+
+const stepAutoScroll = (now: number): void => {
+  autoScrollRaf = null
+  if (!markShareStore.dragRadarVisible || lastPointerY === null) {
+    stopAutoScroll()
+    return
+  }
+
+  const scrollEl = scrollContainerRef.value
+  if (!scrollEl) {
+    stopAutoScroll()
+    return
+  }
+
+  const { dir, speed } = computeAutoScroll(lastPointerY)
+  if (dir === 0 || speed <= 0) {
+    autoScrollDir.value = 0
+    lastFrameTime = 0
+    scrollRemainder = 0
+    syncScrollBounds()
+    return
+  }
+
+  autoScrollDir.value = dir
+  const dt = lastFrameTime > 0 ? Math.min(0.05, (now - lastFrameTime) / 1000) : 1 / 60
+  lastFrameTime = now
+
+  const step = dir * speed * dt + scrollRemainder
+  const whole = step > 0 ? Math.floor(step) : Math.ceil(step)
+  scrollRemainder = step - whole
+  if (whole !== 0) {
+    scrollEl.scrollTop += whole
+    syncScrollBounds()
+  }
+
+  const stillNeeded = computeAutoScroll(lastPointerY)
+  if (stillNeeded.dir !== 0) {
+    autoScrollRaf = requestAnimationFrame(stepAutoScroll)
+  } else {
+    autoScrollDir.value = 0
+    lastFrameTime = 0
+    scrollRemainder = 0
+    syncScrollBounds()
+  }
+}
+
+const updateDragScrollFromEvent = (e: DragEvent): void => {
+  if (e.clientX === 0 && e.clientY === 0) return
+  lastPointerY = e.clientY
+  const { dir } = computeAutoScroll(e.clientY)
+  autoScrollDir.value = dir
+  if (dir === 0) {
+    if (autoScrollRaf !== null) {
+      cancelAnimationFrame(autoScrollRaf)
+      autoScrollRaf = null
+    }
+    lastFrameTime = 0
+    scrollRemainder = 0
+    return
+  }
+  if (autoScrollRaf === null) {
+    lastFrameTime = performance.now()
+    autoScrollRaf = requestAnimationFrame(stepAutoScroll)
+  }
+}
+
+const onWindowDragOverCapture = (e: DragEvent): void => {
+  const floatEl = radarFloatRef.value
+  if (!floatEl || !(e.target instanceof Node) || !floatEl.contains(e.target)) {
+    stopAutoScroll()
+  }
+}
+
+const onWindowDragFinish = (): void => {
+  stopAutoScroll()
+}
+
+const attachWindowListeners = (): void => {
+  if (windowListenersAttached) return
+  windowListenersAttached = true
+  window.addEventListener('dragover', onWindowDragOverCapture, true)
+  window.addEventListener('dragend', onWindowDragFinish, true)
+  window.addEventListener('drop', onWindowDragFinish, true)
+  window.addEventListener('blur', onWindowDragFinish)
+}
+
+const detachWindowListeners = (): void => {
+  if (!windowListenersAttached) return
+  windowListenersAttached = false
+  window.removeEventListener('dragover', onWindowDragOverCapture, true)
+  window.removeEventListener('dragend', onWindowDragFinish, true)
+  window.removeEventListener('drop', onWindowDragFinish, true)
+  window.removeEventListener('blur', onWindowDragFinish)
+}
 
 watch(
   () => markShareStore.dragRadarVisible,
   (visible) => {
     if (visible) {
       hoveredId.value = null
+      attachWindowListeners()
       bus.emit('host-overlay:show', 'markshare-drag-radar')
       void markShareStore.refreshDevices()
+      void nextTick(() => syncScrollBounds())
     } else {
       hoveredId.value = null
+      stopAutoScroll()
+      detachWindowListeners()
       bus.emit('host-overlay:hide', 'markshare-drag-radar')
     }
   }
 )
+
+watch(
+  () => markShareStore.devices.length,
+  () => {
+    if (markShareStore.dragRadarVisible) {
+      void nextTick(() => syncScrollBounds())
+    }
+  }
+)
+
+onBeforeUnmount(() => {
+  stopAutoScroll()
+  detachWindowListeners()
+})
 
 const columnCount = computed(() => {
   const n = markShareStore.devices.length
@@ -107,16 +309,16 @@ const columnCount = computed(() => {
 })
 
 const dynamicContainerStyle = computed(() => {
-  const cols = columnCount.value
   const n = markShareStore.devices.length
-  const widthPx = n === 0 ? 400 : Math.min(780, Math.max(400, cols * 226 + 56))
+  const cols = columnCount.value
+  const widthPx = n === 0 ? 400 : Math.min(760, Math.max(400, cols * 232 + 56))
   return {
     width: `${widthPx}px`
   }
 })
 
 const dynamicGridStyle = computed(() => ({
-  gridTemplateColumns: `repeat(${columnCount.value}, minmax(208px, 1fr))`
+  gridTemplateColumns: `repeat(${columnCount.value}, minmax(0, 1fr))`
 }))
 
 const osShort = (os: MarkShareOsType): string => {
@@ -125,29 +327,49 @@ const osShort = (os: MarkShareOsType): string => {
   return 'Linux'
 }
 
-const onRadarEnter = (): void => {
+const onRadarEnter = (e: DragEvent): void => {
   bus.emit('importDialog', false)
+  updateDragScrollFromEvent(e)
 }
 
-const onRadarOver = (): void => {
+const onRadarOver = (e: DragEvent): void => {
   bus.emit('importDialog', false)
+  updateDragScrollFromEvent(e)
   if (markShareStore.dragRadarVisible) {
     markShareStore.showDragRadar(markShareStore.dragRadarPaths, markShareStore.dragRadarIsExternal)
   }
 }
 
-const onRadarLeave = (): void => {
-  // Handled gently by global dragleave / drop timer
+const onRadarLeave = (e: DragEvent): void => {
+  const floatEl = radarFloatRef.value
+  if (!floatEl) {
+    stopAutoScroll()
+    return
+  }
+  if (e.relatedTarget instanceof Node && floatEl.contains(e.relatedTarget)) {
+    return
+  }
+  const rect = floatEl.getBoundingClientRect()
+  const insideRect =
+    e.clientX >= rect.left &&
+    e.clientX <= rect.right &&
+    e.clientY >= rect.top &&
+    e.clientY <= rect.bottom
+  if (!insideRect || e.relatedTarget !== null) {
+    stopAutoScroll()
+  }
 }
 
 const onRadarDropFallback = (): void => {
   hoveredId.value = null
+  stopAutoScroll()
   markShareStore.hideDragRadarNow()
 }
 
-const onCircleEnter = (instanceId: string): void => {
+const onCircleEnter = (instanceId: string, e: DragEvent): void => {
   hoveredId.value = instanceId
   bus.emit('importDialog', false)
+  updateDragScrollFromEvent(e)
 }
 
 const onCircleOver = (instanceId: string, e: DragEvent): void => {
@@ -156,6 +378,7 @@ const onCircleOver = (instanceId: string, e: DragEvent): void => {
   if (e.dataTransfer) {
     e.dataTransfer.dropEffect = 'copy'
   }
+  updateDragScrollFromEvent(e)
   markShareStore.showDragRadar(markShareStore.dragRadarPaths, markShareStore.dragRadarIsExternal)
 }
 
@@ -195,6 +418,7 @@ const extractDroppedPaths = (e: DragEvent): string[] => {
 
 const onCircleDrop = async (instanceId: string, e: DragEvent): Promise<void> => {
   hoveredId.value = null
+  stopAutoScroll()
   bus.emit('importDialog', false)
   const paths = extractDroppedPaths(e)
   markShareStore.hideDragRadarNow()
@@ -221,6 +445,8 @@ const onCircleDrop = async (instanceId: string, e: DragEvent): Promise<void> => 
   bottom: 36px;
   transform: translateX(-50%);
   z-index: 9998;
+  display: flex;
+  flex-direction: column;
   padding: 18px 22px 20px;
   border-radius: 20px;
   background: var(--floatBgColor, rgba(24, 28, 38, 0.94));
@@ -230,6 +456,8 @@ const onCircleDrop = async (instanceId: string, e: DragEvent): Promise<void> => 
   border: 1px solid rgba(148, 163, 184, 0.32);
   box-shadow: 0 24px 56px rgba(0, 0, 0, 0.42);
   max-width: 92vw;
+  max-height: 80vh;
+  box-sizing: border-box;
   pointer-events: auto;
 }
 
@@ -266,9 +494,11 @@ const onCircleDrop = async (instanceId: string, e: DragEvent): Promise<void> => 
 }
 
 .ms-radar-empty {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   padding: 12px 8px 6px;
   text-align: center;
 }
@@ -291,15 +521,84 @@ const onCircleDrop = async (instanceId: string, e: DragEvent): Promise<void> => 
   line-height: 1.45;
 }
 
-.ms-radar-grid {
-  display: grid;
-  gap: 14px;
-  max-height: 360px;
+.ms-radar-scroll-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ms-radar-scroll {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  max-height: min(396px, calc(78vh - 84px));
+  overflow-x: hidden;
   overflow-y: auto;
+}
+
+.ms-scroll-edge {
+  position: absolute;
+  left: 0;
+  right: 10px;
+  height: 22px;
+  pointer-events: none;
+  z-index: 3;
+  display: flex;
+  justify-content: center;
+  border-radius: 8px;
+  color: rgba(148, 163, 184, 0.72);
+  transition: background 0.14s ease, color 0.14s ease;
+}
+
+.ms-scroll-edge.top {
+  top: 0;
+  align-items: flex-start;
+  padding-top: 2px;
+  background: linear-gradient(to bottom, rgba(148, 163, 184, 0.14), transparent);
+}
+
+.ms-scroll-edge.bottom {
+  bottom: 0;
+  align-items: flex-end;
+  padding-bottom: 2px;
+  background: linear-gradient(to top, rgba(148, 163, 184, 0.14), transparent);
+}
+
+.ms-scroll-edge.top.active {
+  color: #38bdf8;
+  background: linear-gradient(to bottom, rgba(56, 189, 248, 0.24), transparent);
+}
+
+.ms-scroll-edge.bottom.active {
+  color: #38bdf8;
+  background: linear-gradient(to top, rgba(56, 189, 248, 0.24), transparent);
+}
+
+.ms-scroll-chevron {
+  font-size: 9px;
+  line-height: 1;
+}
+
+.ms-radar-grid {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  display: grid;
+  grid-auto-rows: max-content;
+  gap: 14px;
+  padding: 6px 4px;
   justify-items: stretch;
+  align-content: start;
 }
 
 .ms-radar-device-item {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   min-height: 156px;
   display: flex;
   flex-direction: column;
@@ -309,31 +608,36 @@ const onCircleDrop = async (instanceId: string, e: DragEvent): Promise<void> => 
   border-radius: 16px;
   border: 1.5px dashed rgba(148, 163, 184, 0.32);
   background: rgba(148, 163, 184, 0.06);
-  transition: transform 0.16s ease, background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+  transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
 }
 
 .ms-radar-device-item.hovered {
-  transform: scale(1.03);
   border-style: solid;
   border-color: #38bdf8;
   background: rgba(56, 189, 248, 0.18);
-  box-shadow: 0 8px 24px rgba(56, 189, 248, 0.22);
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25), 0 8px 20px rgba(56, 189, 248, 0.2);
 }
 
 .ms-device-circle {
   position: relative;
+  flex-shrink: 0;
   width: 72px;
   height: 72px;
+  min-width: 72px;
+  min-height: 72px;
+  aspect-ratio: 1 / 1;
+  box-sizing: border-box;
   border-radius: 50%;
   background: linear-gradient(145deg, rgba(56, 189, 248, 0.22), rgba(99, 102, 241, 0.22));
   border: 2px solid rgba(148, 163, 184, 0.42);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
 }
 
 .ms-radar-device-item.hovered .ms-device-circle {
+  transform: scale(1.06);
   border-color: #38bdf8;
   box-shadow: 0 0 0 6px rgba(56, 189, 248, 0.24);
 }
@@ -390,10 +694,12 @@ const onCircleDrop = async (instanceId: string, e: DragEvent): Promise<void> => 
 
 .ms-circle-meta {
   margin-top: 4px;
+  width: 100%;
   font-size: 11px;
   opacity: 0.78;
   text-align: center;
   word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .ms-circle-host {
@@ -403,6 +709,7 @@ const onCircleDrop = async (instanceId: string, e: DragEvent): Promise<void> => 
   width: 100%;
   text-align: center;
   word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .ms-radar-fade-enter-active,

@@ -790,6 +790,7 @@ export interface IpcMainEventChannels {
   'mt::mark-share:incoming-offer': [offer: MarkShareOffer]
   'mt::mark-share:session-ended': [offer: MarkShareOffer]
   'mt::mark-share:child-drag-enter': []
+  'mt::mark-share:force-hide-radar': []
 }
 
 // =================================================================
