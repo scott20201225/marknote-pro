@@ -3,8 +3,8 @@
 <h1 align="center">MarkNotePro</h1>
 
 <div align="center">
-  <strong>本地结构化笔记与一体化多模态工作台</strong><br>
-  以「工作区 → 分区组 → 分区 → 文档」清晰沉淀长期知识库；并集成生产力工作台能力：Markdown、Draw.io、GeoGebra、MindMap、PDF 专业批注、KDBX 密码库（2FA & SSH/SFTP 直连）、LAN Share / MarkShare 局域网互传与 Git 版本控制。<br>
+  <strong>本地结构化笔记（兼一体化多模态知识工作台）</strong><br>
+  围绕「工作区 → 分区组 → 分区 → 文档」构建体系化知识库，左侧按分区管理长期笔记，右侧原生集成 Markdown、Draw.io 架构图、GeoGebra 数学建模、MindMap 思维导图与 PDF 专业批注；内置 KDBX 加密密钥库与 2FA 动态口令，支持通过密钥库发起 SSH/SFTP 直连（自动 2FA 验证）与 ZMODEM 传输，提供 LAN Share / MarkShare 局域网互传、全局截屏贴图与剪贴板历史，并无缝联动 Git 进行版本管理、提交与同步。<br>
   <sub>支持 Linux、macOS、Windows（核心创作与加密引擎 100% 离线可用）</sub>
 </div>
 
@@ -61,9 +61,9 @@
 
 ## 产品定位与双产品对比
 
-**MarkNotePro** 定位为**本地结构化笔记**：采用「工作区 → 分区组 → 分区 → 文档」层级沉淀个人与团队长期知识库，侧边栏只呈现受支持的标准目录与知识资产，避免工程杂项干扰；工作台能力（Git、图表、密码库、终端与局域网互传）作为增强底座深度内置。
+**MarkNotePro** 首先是一款**本地优先的结构化笔记软件**：左侧围绕「工作区 → 分区组（支持子组）→ 分区 → 文档」沉淀长期知识资产，主动过滤工程杂项干扰；右侧则集成了多模态编辑器、KDBX 密码与运维终端、局域网互传及 Git 工作台能力。
 
-姊妹项目 **MarkTextPro** 则定位为**本地开放式文档**：直接映射真实文件夹并打开外部独立文档。同一项目目录在两款产品中的视图对比如下：
+姊妹项目 **[MarkTextPro](https://github.com/scott20201225/marktext-pro)** 则定位于**本地开放式文档管理器**：完整保留原生真实目录树，适合代码仓库与工作区外独立文档的敏捷打开与批注。同一项目目录在两款产品中的视图对比如下：
 
 <table>
   <tr>

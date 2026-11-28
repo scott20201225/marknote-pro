@@ -3,8 +3,8 @@
 <h1 align="center">MarkNotePro</h1>
 
 <div align="center">
-  <strong>Local Structured Notes & All-in-One Multimodal Workbench</strong><br>
-  Organize long-term knowledge clearly by Workspace → Section Group → Section → Document, backed by a built-in productivity workbench: Markdown, Draw.io, GeoGebra, MindMap, PDF annotation, KDBX keystore (2FA & SSH/SFTP), LAN Share / MarkShare transfer, and Git version control.<br>
+  <strong>Local Structured Notes (with Built-in Multimodal Knowledge Workbench)</strong><br>
+  Build systematic long-term knowledge by Workspace → Section Group → Section → Document: organize notes in the left section tree, and natively open Markdown, Draw.io diagrams, GeoGebra math models, MindMaps, and PDF annotations on the right. Includes an encrypted KDBX vault with TOTP 2FA, vault-backed SSH/SFTP direct connect (auto-2FA login) & ZMODEM transfer, LAN Share / MarkShare local transfers, global screenshot pinning, clipboard history, and seamless Git version sync.<br>
   <sub>Linux · macOS · Windows (Core creation & encryption engines work 100% offline)</sub>
 </div>
 
@@ -61,9 +61,9 @@ A complete overview covering local structured notes, Markdown & enhanced tables,
 
 ## Positioning & Product Comparison
 
-**MarkNotePro** is a **local structured note-taking app**: it organizes long-term personal and team knowledge through a **Workspace → Section Group → Section → Document** hierarchy while filtering out unrelated project clutter, with multimodal creation, security workbench tools, and LAN sharing built in underneath.
+**MarkNotePro** is first and foremost a **local-first structured note-taking app**: the left sidebar manages long-term knowledge assets through a **Workspace → Section Group (nested) → Section → Document** hierarchy while filtering out engineering clutter, while the right pane integrates multimodal editors, KDBX/SSH security workbench tools, LAN file sharing, and Git synchronization.
 
-Its sibling **[MarkTextPro](https://github.com/scott20201225/marktext-pro)** is a **local open-filesystem document editor** tailored for raw directory trees and standalone external files. Visual comparison of the same directory opened in both products:
+Its sibling **[MarkTextPro](https://github.com/scott20201225/marktext-pro)** is a **local open-filesystem document editor** that preserves authentic folder trees for codebases and standalone external files. Visual comparison of the same directory opened in both products:
 
 <table>
   <tr>
