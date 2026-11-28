@@ -3,8 +3,8 @@
 <h1 align="center">MarkNotePro</h1>
 
 <div align="center">
-  <strong>本地优先的结构化多模态知识与生产力工作台</strong><br>
-  围绕分区层级组织长期知识库：原生集成 Markdown、Draw.io、GeoGebra、MindMap、PDF 专业批注、KDBX 密码库（2FA & SSH/SFTP 直连）、局域网共享与 Git 版本控制。<br>
+  <strong>本地结构化笔记与一体化多模态工作台</strong><br>
+  以「工作区 → 分区组 → 分区 → 文档」清晰沉淀长期知识库；并集成生产力工作台能力：Markdown、Draw.io、GeoGebra、MindMap、PDF 专业批注、KDBX 密码库（2FA & SSH/SFTP 直连）、LAN Share / MarkShare 局域网互传与 Git 版本控制。<br>
   <sub>支持 Linux、macOS、Windows（核心创作与加密引擎 100% 离线可用）</sub>
 </div>
 
@@ -53,7 +53,7 @@
 
 ## 功能演示
 
-一站式覆盖结构化笔记、Markdown 排版与增强表格、Draw.io 架构图、MindMap 脑图、Git 版本控制、GeoGebra 建模、KDBX 密码库（2FA/SSH）、多工作区无缝迁移、全局截屏贴图与剪贴板历史、局域网共享及 PDF 原地批注：
+一站式覆盖本地结构化笔记、Markdown 排版与增强表格、Draw.io 架构图、MindMap 脑图、Git 版本控制、GeoGebra 建模、KDBX 密码库（2FA/SSH）、多工作区无缝迁移、全局截屏贴图与剪贴板历史、LAN Share / MarkShare 局域网互传及 PDF 原地批注：
 
 <p align="center">
   <img src="docs/assets/screenshots/feature-showcase.gif" alt="MarkNotePro 全功能综合演示" width="100%">
@@ -61,9 +61,9 @@
 
 ## 产品定位与双产品对比
 
-**MarkNotePro** 面向长期笔记与体系化知识沉淀：采用「工作区 → 分区组 → 分区 → 文档」层级组织知识，侧边栏只呈现受支持的标准目录与知识资产，避免工程杂项文件干扰。
+**MarkNotePro** 定位为**本地结构化笔记**：采用「工作区 → 分区组 → 分区 → 文档」层级沉淀个人与团队长期知识库，侧边栏只呈现受支持的标准目录与知识资产，避免工程杂项干扰；工作台能力（Git、图表、密码库、终端与局域网互传）作为增强底座深度内置。
 
-同一项目目录在姊妹产品中的视图对比如下：
+姊妹项目 **MarkTextPro** 则定位为**本地开放式文档**：直接映射真实文件夹并打开外部独立文档。同一项目目录在两款产品中的视图对比如下：
 
 <table>
   <tr>
@@ -82,9 +82,10 @@
 
 | 维度 | MarkNotePro（本仓库） | [MarkTextPro](https://github.com/scott20201225/marktext-pro)（姊妹项目） |
 | --- | --- | --- |
+| **核心定位** | **本地结构化笔记**（体系化知识沉淀） | **本地开放式文档**（真实目录与外部独立文件处理） |
 | **组织模型** | 笔记工作区、分区组（支持子组）、分区与文档，支持 Tree / List 双视图 | 开放文件系统，完整展示真实目录，支持打开工作区外独立文件 |
 | **适用场景** | 个人长期知识库、体系化笔记、团队研发文档、本地凭据与资料归档 | 代码仓库协作、项目文档编辑、自由文件夹与临时多模态文件处理 |
-| **共同底座** | 共享同一套离线多模态引擎、KDBX/2FA/SSH 安全工作台、Git 集成与效率套件 | 同左 |
+| **工作台底座** | 共享同一套离线多模态引擎、KDBX/2FA/SSH 工作台、Git 集成与局域网互传套件 | 同左 |
 | **仓库与下载** | [GitHub Releases](https://github.com/scott20201225/marknote-pro/releases/latest) · [Gitee 镜像](https://gitee.com/cmflovekm/marknote-pro) | [GitHub Releases](https://github.com/scott20201225/marktext-pro/releases/latest) · [Gitee 镜像](https://gitee.com/cmflovekm/marktext-pro) |
 
 ## 核心能力矩阵
@@ -112,7 +113,8 @@
 
 ### 3. 局域网共享与桌面效率套件
 
-- **局域网文件共享**：一键开启工作区或文件局域网共享，清晰划分**「我的分享」**与**「他人分享」**权限视图，无需第三方网盘即可在同网段设备间高速互传与预览。
+- **LAN Share 局域网网页共享**：一键发布目录或文档共享链接与二维码，支持密码验证、**「我的分享 / 他人分享」**双视图及浏览器在线浏览下载，并统一支持目录保留策略与重名冲突处理。
+- **MarkShare 近场点对点快传**：同局域网基于 mDNS/UDP 自动发现设备，支持**拖拽文件/文件夹至悬浮投放雷达**或右键多设备一键加密直传（X25519 + AES-256-GCM + SAS 校验码），可在 `MarkNotePro` 与 `MarkTextPro` 间跨应用互通并智能归档。
 - **多工作区切换与迁移**：支持工作区快速切换，以及在分支/工作区变动时提供**自动合并提示**与**手动合并对比**防呆保护。
 - **全局截屏、贴图与剪贴板历史**：内置快捷键全局截屏、桌面置顶贴图（Pin）及本地剪贴板历史检索，写作与开发查错无缝衔接。
 - **工作区内链互通**：侧边栏一键复制工作区相对路径或 Markdown 链接，在笔记内点击即可直达同库的其他文档、图表、脑图或 PDF 标签页。

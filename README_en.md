@@ -3,8 +3,8 @@
 <h1 align="center">MarkNotePro</h1>
 
 <div align="center">
-  <strong>Local-First Structured Multimodal Knowledge & Productivity Workbench</strong><br>
-  Organize long-term knowledge by hierarchical sections with native Markdown, Draw.io, GeoGebra, MindMap, PDF annotation, KDBX keystore (2FA & SSH/SFTP), LAN sharing, and Git version control.<br>
+  <strong>Local Structured Notes & All-in-One Multimodal Workbench</strong><br>
+  Organize long-term knowledge clearly by Workspace → Section Group → Section → Document, backed by a built-in productivity workbench: Markdown, Draw.io, GeoGebra, MindMap, PDF annotation, KDBX keystore (2FA & SSH/SFTP), LAN Share / MarkShare transfer, and Git version control.<br>
   <sub>Linux · macOS · Windows (Core creation & encryption engines work 100% offline)</sub>
 </div>
 
@@ -53,7 +53,7 @@
 
 ## Feature Showcase
 
-A complete overview covering structured notes, Markdown & enhanced tables, Draw.io diagrams, MindMaps, Git workflows, GeoGebra modeling, KDBX keystores (2FA/SSH), multi-workspace switching & migration, screenshot pinning, clipboard history, LAN sharing, and in-place PDF annotation:
+A complete overview covering local structured notes, Markdown & enhanced tables, Draw.io diagrams, MindMaps, Git workflows, GeoGebra modeling, KDBX keystores (2FA/SSH), multi-workspace switching & migration, screenshot pinning, clipboard history, LAN Share / MarkShare P2P transfer, and in-place PDF annotation:
 
 <p align="center">
   <img src="docs/assets/screenshots/feature-showcase.gif" alt="MarkNotePro Feature Showcase" width="100%">
@@ -61,9 +61,9 @@ A complete overview covering structured notes, Markdown & enhanced tables, Draw.
 
 ## Positioning & Product Comparison
 
-**MarkNotePro** is engineered for systematic knowledge bases using a **Workspace → Section Group → Section → Document** hierarchy. Its sidebar intentionally filters out unrelated project clutter so your knowledge stays clean and focused.
+**MarkNotePro** is a **local structured note-taking app**: it organizes long-term personal and team knowledge through a **Workspace → Section Group → Section → Document** hierarchy while filtering out unrelated project clutter, with multimodal creation, security workbench tools, and LAN sharing built in underneath.
 
-Visual comparison of the same directory opened in both sibling products:
+Its sibling **[MarkTextPro](https://github.com/scott20201225/marktext-pro)** is a **local open-filesystem document editor** tailored for raw directory trees and standalone external files. Visual comparison of the same directory opened in both products:
 
 <table>
   <tr>
@@ -82,9 +82,10 @@ Visual comparison of the same directory opened in both sibling products:
 
 | Dimension | MarkNotePro (This Repo) | [MarkTextPro](https://github.com/scott20201225/marktext-pro) (Sibling Project) |
 | --- | --- | --- |
+| **Core Positioning** | **Local Structured Notes** (knowledge hierarchy & PKM) | **Local Open-Filesystem Docs** (raw folders & external files) |
 | **Organization** | Structured Workspace / Section Groups / Sections / Docs (Tree & List modes) | Open file system directory trees plus standalone external file editing |
 | **Best For** | Personal PKM, structured technical notes, research assets & local vaults | Code repositories, project READMEs, free folders & ad-hoc file editing |
-| **Shared Stack** | Identical offline engines, KDBX/2FA/SSH workbench, Git integration & utilities | Same |
+| **Built-in Workbench** | Identical offline engines, KDBX/2FA/SSH workbench, Git integration & LAN transfer | Same |
 | **Links** | [GitHub Releases](https://github.com/scott20201225/marknote-pro/releases/latest) · [Gitee Mirror](https://gitee.com/cmflovekm/marknote-pro) | [GitHub Releases](https://github.com/scott20201225/marktext-pro/releases/latest) · [Gitee Mirror](https://gitee.com/cmflovekm/marktext-pro) |
 
 ## Core Capabilities
@@ -112,7 +113,8 @@ Powered by [KDBXWeb](https://github.com/keeweb/kdbxweb) and an integrated termin
 
 ### 3. LAN Sharing & Desktop Productivity Suite
 
-- **LAN File Sharing**: One-click local network sharing with separated **"My Shares"** and **"Shared With Me"** views for effortless cross-device transfers on the same LAN.
+- **LAN Share Portal**: One-click LAN publishing with QR codes, passcode lock, **"My Shares / Shared With Me"** views, and configurable folder layout & conflict resolution.
+- **MarkShare P2P Direct Transfer**: Automatic LAN peer discovery with **drag-and-drop radar overlay** and multi-device context-menu push (X25519 + AES-256-GCM + SAS verification), interoperable between `MarkNotePro` and `MarkTextPro`.
 - **Multi-Workspace Switch & Migration**: Switch workspaces smoothly with built-in **auto-merge prompts** and **manual conflict resolution**.
 - **Screenshot, Screen Pinning & Clipboard History**: Global hotkey capture, always-on-top screen pins, and searchable local clipboard history.
 - **Workspace Internal Links**: Copy relative paths or Markdown links from the sidebar to jump directly across notes, diagrams, math models, mind maps, and PDF tabs.
